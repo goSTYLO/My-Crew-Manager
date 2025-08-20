@@ -66,6 +66,7 @@ export default function LoginPage() {
   const [socialLoading, setSocialLoading] = useState<string | null>(null);
   const [message, setMessage] = useState<{ text: string; type: 'error' | 'success' } | null>(null);
 
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
@@ -249,7 +250,8 @@ export default function LoginPage() {
             <div className="text-center">
               <p className="text-gray-600">
                 Don't have an account?{' '}
-                <button className="text-blue-600 font-medium">Sign up for free</button>
+                <button onClick={() => navigate("/signup")}
+                  className="text-blue-600 font-medium hover:underline">Sign up for free</button>
               </p>
             </div>
           </form>

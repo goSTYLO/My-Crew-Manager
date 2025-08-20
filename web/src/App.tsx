@@ -2,6 +2,8 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import SignIn from './pages/signIn';
 import MainFrame from './pages/mainFrame'; 
+import SignUp from './pages/signUp'; 
+import CreateTask from './pages/createTask'; 
 const App: React.FC = () => {
   return (
     <Router>
@@ -13,8 +15,10 @@ const App: React.FC = () => {
         
         {/* Fallback: redirect unknown paths to root */}
         <Route path="/main" element={<MainFrame />} />
+        <Route path="/signUp" element={<SignUp />} />
+        <Route path="/create" element={<CreateTask />} />
         
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<Navigate to="/signIn" replace />} />
       </Routes>
     </Router>
   );

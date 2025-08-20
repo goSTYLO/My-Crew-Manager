@@ -59,11 +59,11 @@ const Dashboard = () => {
   const navigationItems = [
     { name: 'Dashboard', icon: LayoutDashboard, active: true },
     { name: 'Project', icon: FolderOpen, active: false },
-    { name: 'Task', icon: CheckSquare, active: false },
+    { name: 'Task', icon: CheckSquare, active: false, action: () => navigate('/create')  },
     { name: 'Work Logs', icon: Clock, active: false },
     { name: 'Performance', icon: TrendingUp, active: false },
     { name: 'Settings', icon: Settings, active: false },
-    { name: "Logout", icon: LogOut, active: false, action: () => navigate('/signin') },
+    { name: "Logout", icon: LogOut, active: false, action: () => navigate('/signIn') },
   ];
   
 
@@ -138,7 +138,7 @@ const Dashboard = () => {
           <div className="flex items-center space-x-4">
             {/* Menu button (always visible now) */}
             <button 
-              className="p-2 text-gray-500 hover:text-gray-700"
+              className="p-2 text-gray-500 hover:text-gray-700 "
               onClick={() => setSidebarOpen(true)}
             >
               <Menu className="w-6 h-6" />
@@ -158,7 +158,7 @@ const Dashboard = () => {
             </div>
             
             {/* Notifications */}
-            <button className="p-2 text-gray-500 hover:text-gray-700 relative -ml-2">
+            <button className="p-2 text-gray-500 hover:text-gray-700 relative -ml-2" title="Notifications" aria-label="Notifications">
               <Bell className="w-6 h-6" />
               <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full"></span>
             </button>
