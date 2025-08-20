@@ -1,3 +1,3 @@
-Django==4.2.7
-djangorestframework==3.20.1
-psycopg2-binary==2.9.9
+Django
+djangorestframework
+psycopg2-binary
