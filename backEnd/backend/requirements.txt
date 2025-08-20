@@ -1,4 +1,3 @@
 Django
 djangorestframework
-djangorestframework-authtoken
 psycopg2-binary
