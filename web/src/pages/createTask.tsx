@@ -120,10 +120,7 @@ const TaskForm: React.FC<{ onSubmit: (task: Omit<Task, 'id'>) => void; onCancel?
     };
 
     return (
-        <div className="bg-white p-6 rounded-lg">
-            <div className="mb-6">
-                <h2 className="text-2xl font-semibold text-gray-800">Tasks / Create Tasks</h2>
-            </div>
+        <div className="bg-white p-6 rounded-lg border border-gray-200">
             
             <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid grid-cols-2 gap-6">
@@ -468,6 +465,9 @@ const CreateTask = () => {
 
                 {/* Main Content Area */}
                 <main className="flex-1 p-6">
+                    <div className="mb-6">
+                        <h2 className="text-2xl font-semibold text-gray-800">Tasks / Create Tasks</h2>
+                    </div>
                     <TaskForm onSubmit={handleCreateTask} />
                 </main>
             </div>

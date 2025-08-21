@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
     Search,
     Bell,
@@ -357,17 +358,18 @@ const CreateProject = () => {
     const [projectModel] = useState(() => new ProjectModel());
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
     const [projectController] = useState(() => new ProjectController(projectModel));
+    const navigate = useNavigate();
     const [projects, setProjects] = useState<Project[]>([]);
 
     const navigationItems = [
-        { name: "Dashboard", icon: LayoutDashboard, action: () => console.log("Dashboard") },
-        { name: "Project", icon: FolderOpen, action: () => console.log("Project") },
-        { name: "Task", icon: CheckSquare, active: true, action: () => console.log("Task") },
-        { name: "Work Logs", icon: Clock, action: () => console.log("Work Logs") },
-        { name: "Performance", icon: TrendingUp, action: () => console.log("Performance") },
-        { name: "Settings", icon: Settings, action: () => console.log("Settings") },
-        { name: "Logout", icon: LogOut, active: false, action: () => setShowLogoutConfirm(true) },
-    ];
+        { name: "Dashboard", icon: LayoutDashboard, action: () => navigate("/main") },
+        { name: "Project", icon: FolderOpen, active: true, action: () => navigate("/projects") },
+        { name: "Task", icon: CheckSquare, action: () => navigate("/create") },
+        { name: "Work Logs", icon: Clock, action: () => navigate("/worklogs") },
+        { name: "Performance", icon: TrendingUp, action: () => navigate("/performance") },
+        { name: "Settings", icon: Settings, action: () => navigate("/settings") },
+        { name: "Logout", icon: LogOut, action: () => setShowLogoutConfirm(true) },
+      ];
 
     const Sidebar = ({ className = "" }) => (
         <div className={`bg-white shadow-lg h-full ${className}`}>
