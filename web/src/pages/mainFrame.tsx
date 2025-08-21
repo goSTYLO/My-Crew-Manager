@@ -54,16 +54,17 @@ const performanceData = [
 
 const Dashboard = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const navigate = useNavigate();
   
   const navigationItems = [
     { name: 'Dashboard', icon: LayoutDashboard, active: true },
-    { name: 'Project', icon: FolderOpen, active: false },
+    { name: 'Project', icon: FolderOpen, active: false, action: () => navigate('/projects')  },
     { name: 'Task', icon: CheckSquare, active: false, action: () => navigate('/create')  },
     { name: 'Work Logs', icon: Clock, active: false },
     { name: 'Performance', icon: TrendingUp, active: false },
     { name: 'Settings', icon: Settings, active: false },
-    { name: "Logout", icon: LogOut, active: false, action: () => navigate('/signIn') },
+    { name: "Logout", icon: LogOut, active: false, action: () => setShowLogoutConfirm(true) },
   ];
   
 
@@ -98,6 +99,30 @@ const Dashboard = () => {
 
   return (
     <div className="flex h-screen bg-gray-50">
+       {/* Logout Confirmation Modal */}
+       {showLogoutConfirm && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-[999]">
+          <div className="bg-white rounded-xl shadow-lg p-6 w-96">
+            <h2 className="text-lg font-semibold text-gray-800 mb-4">
+              Are you sure you want to logout?
+            </h2>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => setShowLogoutConfirm(false)}
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => navigate('/signIn')}
+                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
+              >
+                Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       
 
       {/* Sidebar Overlay (works for all screen sizes) */}
@@ -180,7 +205,7 @@ const Dashboard = () => {
         {/* Dashboard Content */}
         <main className="flex-1 p-4 lg:p-6 overflow-auto space-y-6">
         <div className="flex items-center justify-between mb-6">
-                <h2 className="text-lg font-semibold text-gray-800">Dashboard</h2>
+                <h2 className="text-2xl font-semibold text-gray-800">Dashboard</h2>
               </div>
           {/* Row 1: Projects + Tasks */}
           <div className="grid grid-cols-2 lg:grid-cols-2 gap-6">

@@ -1,0 +1,361 @@
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { 
+  Search, 
+  Bell, 
+  Settings, 
+  LayoutDashboard, 
+  FolderOpen, 
+  CheckSquare, 
+  Clock, 
+  TrendingUp,
+  Menu,
+  X,
+  LogOut
+} from 'lucide-react';
+   
+const Projects = () => {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const navigate = useNavigate();
+  
+  const navigationItems = [
+    { name: 'Dashboard', icon: LayoutDashboard, active: false, action: () => navigate('/main') },
+    { name: 'Project', icon: FolderOpen, active: true, action: () => navigate('/projects') },
+    { name: 'Task', icon: CheckSquare, active: false, action: () => navigate('/create')},
+    { name: 'Work Logs', icon: Clock, active: false },
+    { name: 'Performance', icon: TrendingUp, active: false },
+    { name: 'Settings', icon: Settings, active: false },
+    { name: "Logout", icon: LogOut, active: false, action: () => setShowLogoutConfirm(true) },
+  ];
+  
+
+  const Sidebar = ({ className = '' }) => (
+    <div className={`bg-white shadow-lg h-full ${className}`}>
+      {/* Logo */}
+      <div className="p-6 border-b border-gray-200">
+        <div className="flex items-center space-x-3">
+          <span className="text-xl font-semibold text-gray-800">MyCrewManager</span>
+        </div>
+      </div>
+      
+      {/* Navigation */}
+      <nav className="mt-6">
+      {navigationItems.map((item) => (
+        <button
+            key={item.name}
+            onClick={item.action ? item.action : undefined}
+            className={`flex items-center px-6 py-3 text-left w-full transition-colors ${
+            item.active
+                ? 'bg-blue-50 border-r-4 border-blue-600 text-blue-600'
+                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+            }`}
+        >
+            <item.icon className="w-5 h-5 mr-3" />
+            {item.name}
+        </button>
+        ))}
+      </nav>
+    </div>
+  );
+
+  return (
+    <div className="flex h-screen bg-gray-50">
+        {/* Logout Confirmation Modal */}
+            {showLogoutConfirm && (
+                <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-[999]">
+                <div className="bg-white rounded-xl shadow-lg p-6 w-96">
+                    <h2 className="text-lg font-semibold text-gray-800 mb-4">
+                    Are you sure you want to logout?
+                    </h2>
+                    <div className="flex justify-end space-x-3">
+                    <button
+                        onClick={() => setShowLogoutConfirm(false)}
+                        className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        onClick={() => navigate('/signIn')}
+                        className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
+                    >
+                        Logout
+                    </button>
+                    </div>
+                </div>
+                </div>
+            )}
+      
+
+      {/* Sidebar Overlay (works for all screen sizes) */}
+        <div
+        className={`fixed inset-0 z-50 flex transition-opacity duration-300 ${
+            sidebarOpen ? 'opacity-100 visible' : 'opacity-0 invisible'
+        }`}
+        >
+        {/* Background overlay */}
+        <div
+            className="fixed inset-0 bg-black opacity-50"
+            onClick={() => setSidebarOpen(false)}
+        />
+
+        {/* Sidebar panel */}
+        <div
+            className={`relative flex flex-col w-64 bg-white transform transition-transform duration-300 ${
+            sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+            }`}
+        >
+            <div className="absolute top-4 right-4">
+            <button
+                onClick={() => setSidebarOpen(false)}
+                className="p-2 text-gray-500"
+            >
+                <X className="w-6 h-6" />
+            </button>
+            </div>
+            <Sidebar />
+        </div>
+        </div>
+
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Top Navbar */}
+        <header className="bg-white shadow-sm border-b border-gray-200 px-4 lg:px-6 py-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            {/* Menu button (always visible now) */}
+            <button 
+              className="p-2 text-gray-500 hover:text-gray-700"
+              onClick={() => setSidebarOpen(true)}
+            >
+              <Menu className="w-6 h-6" />
+            </button>
+            <h1 className="text-2xl font-semibold text-gray-800">MyCrewManager</h1>
+          </div>
+          
+          <div className="flex items-center space-x-4">
+            {/* Search Bar */}
+            <div className="block relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search for anything..."
+                className="pl-10 pr-4 py-2 w-[500px] border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+            
+            {/* Notifications */}
+            <button className="p-2 text-gray-500 hover:text-gray-700 relative -ml-2" title="Notifications">
+              <Bell className="w-6 h-6" />
+              <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full"></span>
+            </button>
+            
+            {/* User Profile */}
+            <div className="flex items-center space-x-3">
+              <div className="sm:block">
+                <p className="text-sm font-medium text-gray-800">John Wayne</p>
+                <p className="text-xs text-gray-500">Philippines</p>
+              </div>
+              <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white font-medium">
+                JW
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+        {/* Projects Content */}
+        <main className="flex-1 p-4 lg:p-6 overflow-auto space-y-6">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-semibold text-gray-800">Projects</h2>
+            {/* Right side: files info */}
+              <div className="flex items-center space-x-10">
+                <button onClick={() => navigate("/create-project")} className="px-14 py-3 bg-white text-black text-sm font-medium border border-gray-300 rounded-lg shadow hover:text-white hover:bg-blue-500 transition-colors">Create</button>
+              </div>
+        </div>
+          {/* Row 1: Projects + Tasks */}
+          <div className="grid grid-cols-3 lg:grid-cols-3 gap-6">
+            
+            {/* Projects Card 1 */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-2">
+                     <h2 className="text-lg font-semibold text-gray-800">Adoddle</h2>
+                     <button className="text-gray-500 hover:text-blue-500 transition-colors " title="Edit Project">
+                     <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        strokeWidth={1.5}
+                        stroke="currentColor"
+                        className="w-5 h-5"
+                     >
+                        <path
+                           strokeLinecap="round"
+                           strokeLinejoin="round"
+                           d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 
+                           1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 
+                           1-1.897 1.13L6 18l.8-2.685a4.5 4.5 
+                           0 0 1 1.13-1.897l8.932-8.931Zm0 
+                           0L19.5 7.125M18 14v4.75A2.25 2.25 
+                           0 0 1 15.75 21H5.25A2.25 2.25 
+                           0 0 1 3 18.75V8.25A2.25 2.25 
+                           0 0 1 5.25 6H10"
+                        />
+                  </svg>
+                  </button>
+               </div>
+
+                  {/* Right side: offtrack */}
+                  <div className="flex items-center space-x-2">
+                    <button className="px-4 py-2 bg-white text-black text-sm font-medium border border-gray-300 rounded-lg shadow hover:text-red-600 hover:bg-red-200 transition-colors"> Offtrack </button>
+                  </div>
+               </div>
+
+              {/* Divider Line */}
+              <hr className="border-t-1.7 border-black mb-5" />
+
+               {/* Projects Wrapper */}
+              <div className="rounded-xl p-4 bg-transparent">
+
+              {/* Project Description Only */}
+              <div className="rounded-xl p-4 bg-transparent">
+                <p className="text-gray-600 text-sm leading-relaxed">
+                  Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt 
+                  ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation 
+                  ullamco laboris nisi ut aliquip ex ea commodo consequat.
+                </p>
+
+                  {/* Built-in reserved space for members */}
+                  <div className="h-20 mt-6 flex items-center justify-center bg-gray-50 rounded-lg">
+                    <p className="text-gray-400 text-sm">Members section (reserved)</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Projects Card 2 */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-2">
+                     <h2 className="text-lg font-semibold text-gray-800">Adoddle</h2>
+                     <button className="text-gray-500 hover:text-blue-500 transition-colors " title="Edit Project">
+                     <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        strokeWidth={1.5}
+                        stroke="currentColor"
+                        className="w-5 h-5"
+                     >
+                        <path
+                           strokeLinecap="round"
+                           strokeLinejoin="round"
+                           d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 
+                           1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 
+                           1-1.897 1.13L6 18l.8-2.685a4.5 4.5 
+                           0 0 1 1.13-1.897l8.932-8.931Zm0 
+                           0L19.5 7.125M18 14v4.75A2.25 2.25 
+                           0 0 1 15.75 21H5.25A2.25 2.25 
+                           0 0 1 3 18.75V8.25A2.25 2.25 
+                           0 0 1 5.25 6H10"
+                        />
+                  </svg>
+                  </button>
+               </div>
+
+                  {/* Right side: offtrack */}
+                  <div className="flex items-center space-x-2">
+                    <button className="px-4 py-2 bg-white text-black text-sm font-medium border border-gray-300 rounded-lg shadow hover:text-red-600 hover:bg-red-200 transition-colors"> Offtrack </button>
+                  </div>
+               </div>
+
+              {/* Divider Line */}
+              <hr className="border-t-1.7 border-black mb-5" />
+
+               {/* Projects Wrapper */}
+              <div className="rounded-xl p-4 bg-transparent">
+
+              {/* Project Description Only */}
+              <div className="rounded-xl p-4 bg-transparent">
+                <p className="text-gray-600 text-sm leading-relaxed">
+                  Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt 
+                  ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation 
+                  ullamco laboris nisi ut aliquip ex ea commodo consequat.
+                </p>
+
+                  {/* Built-in reserved space for members */}
+                  <div className="h-20 mt-6 flex items-center justify-center bg-gray-50 rounded-lg">
+                    <p className="text-gray-400 text-sm">Members section (reserved)</p>
+                  </div>
+                </div>
+              </div>
+            </div>  
+
+
+            {/* Projects Card */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-2">
+                     <h2 className="text-lg font-semibold text-gray-800">Adoddle</h2>
+                     <button className="text-gray-500 hover:text-blue-500 transition-colors" title="Project Card Edit">
+                     <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        strokeWidth={1.5}
+                        stroke="currentColor"
+                        className="w-5 h-5"
+                     >
+                        <path
+                           strokeLinecap="round"
+                           strokeLinejoin="round"
+                           d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 
+                           1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 
+                           1-1.897 1.13L6 18l.8-2.685a4.5 4.5 
+                           0 0 1 1.13-1.897l8.932-8.931Zm0 
+                           0L19.5 7.125M18 14v4.75A2.25 2.25 
+                           0 0 1 15.75 21H5.25A2.25 2.25 
+                           0 0 1 3 18.75V8.25A2.25 2.25 
+                           0 0 1 5.25 6H10"
+                        />
+                  </svg>
+                  </button>
+               </div>
+
+                  {/* Right side: offtrack */}
+                  <div className="flex items-center space-x-2">
+                    <button className="px-4 py-2 bg-white text-black text-sm font-medium border border-gray-300 rounded-lg shadow hover:text-red-600 hover:bg-red-200 transition-colors"> Offtrack </button>
+                  </div>
+               </div>
+
+              {/* Divider Line */}
+              <hr className="border-t-1.7 border-black mb-5" />
+
+               {/* Projects Wrapper */}
+              <div className="rounded-xl p-4 bg-transparent">
+
+              {/* Project Description Only */}
+              <div className="rounded-xl p-4 bg-transparent">
+                <p className="text-gray-600 text-sm leading-relaxed">
+                  Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt 
+                  ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation 
+                  ullamco laboris nisi ut aliquip ex ea commodo consequat.
+                </p>
+
+                  {/* Built-in reserved space for members */}
+                  <div className="h-20 mt-6 flex items-center justify-center bg-gray-50 rounded-lg">
+                    <p className="text-gray-400 text-sm">Members section (reserved)</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+          </div>
+        </main>
+      </div>
+    </div>
+  );
+};
+
+export default Projects;

@@ -1,9 +1,11 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import SignIn from './pages/signIn';
-import MainFrame from './pages/mainFrame'; 
 import SignUp from './pages/signUp'; 
+import MainFrame from './pages/mainFrame'; 
+import Projects from './pages/projects'; 
 import CreateTask from './pages/createTask'; 
+import CreateProject from './pages/createProject'; 
 const App: React.FC = () => {
   return (
     <Router>
@@ -17,6 +19,8 @@ const App: React.FC = () => {
         <Route path="/main" element={<MainFrame />} />
         <Route path="/signUp" element={<SignUp />} />
         <Route path="/create" element={<CreateTask />} />
+        <Route path="/projects" element={<Projects />} />
+        <Route path="/create-project" element={<CreateProject />} />
         
         <Route path="*" element={<Navigate to="/signIn" replace />} />
       </Routes>

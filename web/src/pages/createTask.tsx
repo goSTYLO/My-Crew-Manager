@@ -122,7 +122,7 @@ const TaskForm: React.FC<{ onSubmit: (task: Omit<Task, 'id'>) => void; onCancel?
     return (
         <div className="bg-white p-6 rounded-lg">
             <div className="mb-6">
-                <h2 className="text-xl font-semibold text-gray-800">Tasks / Create Tasks</h2>
+                <h2 className="text-2xl font-semibold text-gray-800">Tasks / Create Tasks</h2>
             </div>
             
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -305,6 +305,7 @@ const TaskForm: React.FC<{ onSubmit: (task: Omit<Task, 'id'>) => void; onCancel?
 const CreateTask = () => {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [taskModel] = useState(() => new TaskModel());
+    const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
     const [taskController] = useState(() => new TaskController(taskModel));
     const [tasks, setTasks] = useState<Task[]>([]);
     const navigate = useNavigate();
@@ -316,7 +317,7 @@ const CreateTask = () => {
         { name: "Work Logs", icon: Clock, action: () => navigate("/worklogs") },
         { name: "Performance", icon: TrendingUp, action: () => navigate("/performance") },
         { name: "Settings", icon: Settings, action: () => navigate("/settings") },
-        { name: "Logout", icon: LogOut, action: () => navigate("/signIn") },
+        { name: "Logout", icon: LogOut, active: false, action: () => setShowLogoutConfirm(true) },
     ];
 
     const handleCreateTask = (taskData: Omit<Task, 'id'>) => {
@@ -358,6 +359,30 @@ const CreateTask = () => {
 
     return (
         <div className="flex h-screen bg-gray-50">
+            {/* Logout Confirmation Modal */}
+                {showLogoutConfirm && (
+                    <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-[999]">
+                    <div className="bg-white rounded-xl shadow-lg p-6 w-96">
+                        <h2 className="text-lg font-semibold text-gray-800 mb-4">
+                        Are you sure you want to logout?
+                        </h2>
+                        <div className="flex justify-end space-x-3">
+                        <button
+                            onClick={() => setShowLogoutConfirm(false)}
+                            className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={() => navigate('/signIn')}
+                            className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
+                        >
+                            Logout
+                        </button>
+                        </div>
+                    </div>
+                    </div>
+                )}
             {/* Sidebar Overlay */}
             <div
                 className={`fixed inset-0 z-50 flex transition-opacity duration-300 ${
