@@ -1,7 +1,0 @@
-Django
-djangorestframework
-psycopg2-binary
-
-transformers
-langchain
-langchain-huggingface
