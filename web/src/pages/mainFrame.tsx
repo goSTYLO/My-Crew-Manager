@@ -62,8 +62,8 @@ const Dashboard = () => {
     { name: 'Project', icon: FolderOpen, active: false, action: () => navigate('/projects')  },
     { name: 'Task', icon: CheckSquare, active: false, action: () => navigate('/create')  },
     { name: 'Work Logs', icon: Clock, active: false },
-    { name: 'Performance', icon: TrendingUp, active: false },
-    { name: 'Settings', icon: Settings, active: false },
+    { name: 'Performance', icon: TrendingUp, active: false, action: () => navigate('/performance')  },
+    { name: 'Settings', icon: Settings, active: false, action: () => navigate('/settings') },
     { name: "Logout", icon: LogOut, active: false, action: () => setShowLogoutConfirm(true) },
   ];
   

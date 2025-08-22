@@ -6,6 +6,9 @@ import MainFrame from './pages/mainFrame';
 import Projects from './pages/projects'; 
 import CreateTask from './pages/createTask'; 
 import CreateProject from './pages/createProject'; 
+import Performance from './pages/performance'; 
+import Settings from './pages/settings'; 
+
 const App: React.FC = () => {
   return (
     <Router>
@@ -21,6 +24,8 @@ const App: React.FC = () => {
         <Route path="/create" element={<CreateTask />} />
         <Route path="/projects" element={<Projects />} />
         <Route path="/create-project" element={<CreateProject />} />
+        <Route path="/performance" element={<Performance />} />
+        <Route path="/settings" element={<Settings />} />
         
         <Route path="*" element={<Navigate to="/signIn" replace />} />
       </Routes>
