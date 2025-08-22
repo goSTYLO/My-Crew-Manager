@@ -1,29 +1,56 @@
-from transformers import pipeline
-from langchain_community.llms import HuggingFacePipeline
-from langchain.prompts import PromptTemplate
-from langchain.chains import LLMChain
+from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
+from langchain_huggingface import HuggingFacePipeline
+import torch
 
-# Load the Project Management LLM from Hugging Face using pipeline
-def load_project_manager_llm(model_id: str = "ai-in-projectmanagement/ProjectManagementLLM") -> HuggingFacePipeline:
+# 🔧 Model IDs
+MODELS = {
+    "phi": "microsoft/phi-2",
+    "tinyllama": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+    "qwen": "Qwen/Qwen2-0.5B-Instruct"
+}
+
+# 🔁 Loader Function
+def load_llm(model_id: str) -> HuggingFacePipeline:
+    tokenizer = AutoTokenizer.from_pretrained(model_id)
+    model = AutoModelForCausalLM.from_pretrained(
+        model_id,
+        torch_dtype=torch.float16,
+        device_map=None
+    ).to("cuda")
+
     text_gen = pipeline(
         "text-generation",
-        model=model_id,
-        device=0,  # 👈 Use GPU
-        max_new_tokens=512,
-        temperature=0.7,
+        model=model,
+        tokenizer=tokenizer,
+        max_new_tokens=256,  # ⬆️ Longer responses
         do_sample=True
     )
+
     return HuggingFacePipeline(pipeline=text_gen)
 
-# Build a LangChain LLMChain for task breakdowns
-def build_task_breakdown_chain() -> LLMChain:
-    llm = load_project_manager_llm()
-    prompt = PromptTemplate.from_template(
-        "Break down the following project into tasks: {project_description}"
-    )
-    return LLMChain(llm=llm, prompt=prompt)
+# 🧠 Load All Models
+llms = {
+    "phi": load_llm(MODELS["phi"]),
+    "tinyllama": load_llm(MODELS["tinyllama"]),
+    "qwen": load_llm(MODELS["qwen"])
+}
 
+# 🧪 Simple Test Prompts
+TEST_PROMPTS = {
+    "phi": "List 3 tasks for setting up a Django backend.",
+    "tinyllama": "Summarize this: Django is a Python web framework.",
+    "qwen": "Estimate how long it takes to build a basic API with Django."
+}
+
+# 🔗 Combine Responses
 if __name__ == "__main__":
-    chain = build_task_breakdown_chain()
-    result = chain.run("Build a mobile app for remote team coordination")
-    print(result)
+    combined_output = []
+
+    for name, llm in llms.items():
+        print(f"\n🧠 {name.upper()} Response:\n")
+        response = llm.invoke(TEST_PROMPTS[name])
+        print(response)
+        combined_output.append(f"{name.upper()}:\n{response}\n")
+
+    print("\n🔗 COMBINED RESPONSE:\n")
+    print("\n".join(combined_output))
