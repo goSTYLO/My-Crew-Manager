@@ -1,29 +1,31 @@
-#DJANGO
+# DJANGO
 Django
 djangorestframework
 psycopg2-binary
 
-#HuggingFace
+# HuggingFace + LangChain
 transformers
 huggingface_hub
 langchain
 langchain-huggingface
 langchain-community
 
-#LLM_Dependencies
+# PyTorch (CUDA 12.8 for RTX 4050 — install manually)
+# torch, torchvision, torchaudio should be installed via:
+# pip install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cu128
 
-#PyTorch
-torch
-torchvision
-torchaudio
-
-#ProjectManagerLLM
+# LLM Dependencies
+datasets
+peft
+trl
 accelerate
 sentencepiece
-# onnxruntime  # Optional — Di pa supported sa Python 3.13 (Naka 3.13 ako eh)
 
-#Donut
+# Donut OCR
 donut-python
 pytorch-lightning==1.6.4
 timm==0.5.4
 pillow
+
+# Optional (Not yet supported in Python 3.13)
+# onnxruntime
