@@ -23,7 +23,7 @@ sentencepiece
 
 # Donut OCR
 donut-python
-pytorch-lightning==1.6.4
+pytorch-lightning==2.2.3
 timm==0.5.4
 pillow
 
