@@ -22,7 +22,7 @@ def load_llm(model_id: str) -> HuggingFacePipeline:
         "text-generation",
         model=model,
         tokenizer=tokenizer,
-        max_new_tokens=256,  # ⬆️ Longer responses
+        max_new_tokens=128,  # ⬆️ Longer responses
         do_sample=True
     )
 
@@ -38,7 +38,7 @@ llms = {
 # 🧪 Simple Test Prompts
 TEST_PROMPTS = {
     "phi": "List 3 tasks for setting up a Django backend.",
-    "tinyllama": "Summarize this: Django is a Python web framework.",
+    "tinyllama": "explain this: Django is a Python web framework.",
     "qwen": "Estimate how long it takes to build a basic API with Django."
 }
 
