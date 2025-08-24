@@ -53,7 +53,7 @@ const Performance = () => {
 
     const navigationItems = [
         { name: "Dashboard", icon: LayoutDashboard, action: () => navigate("/main") },
-        { name: "Project", icon: FolderOpen, action: () => navigate("/projects") },
+        { name: 'Project', icon: FolderOpen, action: () => navigate('/main-projects')  },
         { name: "Task", icon: CheckSquare, action: () => navigate("/create") },
         { name: "Work Logs", icon: Clock, action: () => navigate("/worklogs") },
         { name: "Performance", icon: TrendingUp, active: true, action: () => navigate("/performance") },

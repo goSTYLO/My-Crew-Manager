@@ -59,7 +59,7 @@ const Dashboard = () => {
   
   const navigationItems = [
     { name: 'Dashboard', icon: LayoutDashboard, active: true },
-    { name: 'Project', icon: FolderOpen, active: false, action: () => navigate('/projects')  },
+    { name: 'Project', icon: FolderOpen, active: false, action: () => navigate('/main-projects')  },
     { name: 'Task', icon: CheckSquare, active: false, action: () => navigate('/create')  },
     { name: 'Work Logs', icon: Clock, active: false },
     { name: 'Performance', icon: TrendingUp, active: false, action: () => navigate('/performance')  },

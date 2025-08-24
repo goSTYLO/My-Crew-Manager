@@ -1,13 +1,14 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import SignIn from './pages/signIn';
-import SignUp from './pages/signUp'; 
-import MainFrame from './pages/mainFrame'; 
-import Projects from './pages/projects'; 
-import CreateTask from './pages/createTask'; 
-import CreateProject from './pages/createProject'; 
-import Performance from './pages/performance'; 
-import Settings from './pages/settings'; 
+import SignIn from './view_pages/manager/signIn';
+import SignUp from './view_pages/manager/signUp'; 
+import MainFrame from './view_pages/manager/mainFrame'; 
+import MainProjects from './view_pages/manager/projects_main'; 
+import Projects from './view_pages/manager/monitorProjects'; 
+import CreateProject from './view_pages/manager/createProjects'; 
+import CreateTask from './view_pages/manager/createTask'; 
+import Performance from './view_pages/manager/performance'; 
+import Settings from './view_pages/manager/settings'; 
 
 const App: React.FC = () => {
   return (
@@ -22,6 +23,7 @@ const App: React.FC = () => {
         <Route path="/main" element={<MainFrame />} />
         <Route path="/signUp" element={<SignUp />} />
         <Route path="/create" element={<CreateTask />} />
+        <Route path="/main-projects" element={<MainProjects />} />
         <Route path="/projects" element={<Projects />} />
         <Route path="/create-project" element={<CreateProject />} />
         <Route path="/performance" element={<Performance />} />

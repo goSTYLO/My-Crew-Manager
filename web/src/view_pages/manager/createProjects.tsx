@@ -363,7 +363,7 @@ const CreateProject = () => {
 
     const navigationItems = [
         { name: "Dashboard", icon: LayoutDashboard, action: () => navigate("/main") },
-        { name: "Project", icon: FolderOpen, active: true, action: () => navigate("/projects") },
+        { name: 'Project', icon: FolderOpen, active: true, action: () => navigate('/main-projects')  },
         { name: "Task", icon: CheckSquare, action: () => navigate("/create") },
         { name: "Work Logs", icon: Clock, action: () => navigate("/worklogs") },
         { name: "Performance", icon: TrendingUp, action: () => navigate("/performance") },
