@@ -147,7 +147,7 @@ class _SplashScreenState extends State<SplashScreen>
                       },
                     ),
 
-                    SizedBox(height: 4.h),
+                    SizedBox(height: 1.h), // <-- Reduced spacing
 
                     // App Name
                     Text(
@@ -161,7 +161,7 @@ class _SplashScreenState extends State<SplashScreen>
                       textAlign: TextAlign.center,
                     ),
 
-                    SizedBox(height: 1.h),
+                    SizedBox(height: 3.h),
 
                     // Tagline
                     Text(
@@ -192,26 +192,18 @@ class _SplashScreenState extends State<SplashScreen>
 
   Widget _buildLogoSection() {
     return Container(
-      width: 25.w,
-      height: 25.w,
+      width: 50.w,
+      height: 50.w,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: AppTheme.lightTheme.colorScheme.primary,
-        boxShadow: [
-          BoxShadow(
-            color:
-                AppTheme.lightTheme.colorScheme.primary.withValues(alpha: 0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-            spreadRadius: 2,
-          ),
-        ],
+        color: Colors.transparent, // <-- Make background transparent
       ),
       child: Center(
-        child: CustomIconWidget(
-          iconName: 'person',
-          color: AppTheme.lightTheme.colorScheme.onPrimary,
-          size: 12.w,
+        child: Image.asset(
+          'assets/images/logo.png',
+          width: 100.w, // Make logo larger to fill the circle
+          height: 100.w,
+          fit: BoxFit.contain,
         ),
       ),
     );

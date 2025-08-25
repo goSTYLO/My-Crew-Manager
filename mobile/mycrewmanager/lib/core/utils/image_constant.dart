@@ -4,6 +4,6 @@ class ImageConstant {
     static const String imgIconlyLightNotification = 'assets/images/iconly_light_notification.png';
     static const String imgArrowleft = 'assets/images/iconly_light_arrow_left.png';
     static const String imgArrowright = 'assets/images/iconly_light_arrow_right.png';
-    static const String imgMenu = 'assets/images/menu.png'; // Update the path as needed
+    static const String imgMenu = 'assets/images/Menu.png'; // Update the path as needed
 
 }
