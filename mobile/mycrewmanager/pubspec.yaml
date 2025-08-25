@@ -17,12 +17,13 @@ dependencies:
   shared_preferences: ^2.2.2 # Required for local data storage
   web: ^1.1.1
   
+  
   # Feature dependencies - safe to modify
   cached_network_image: ^3.3.1
   connectivity_plus: ^6.1.4
   dio: ^5.4.0
   fluttertoast: ^8.2.4
-  fl_chart: ^0.65.0
+  fl_chart: ^0.66.0
   camera: ^0.10.5+5
   image_picker: ^1.0.4
   permission_handler: ^11.1.0
