@@ -27,5 +27,7 @@ pytorch-lightning==2.2.3
 timm==0.5.4
 pillow
 
+# PDF Parser
+pdfplumber
 # Optional (Not yet supported in Python 3.13)
 # onnxruntime
