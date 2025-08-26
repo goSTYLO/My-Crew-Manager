@@ -1,31 +1,20 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { 
-  Search, 
-  Bell, 
-  Settings, 
-  LayoutDashboard, 
-  FolderOpen, 
-  CheckSquare, 
-  Clock, 
-  TrendingUp,
-  Folder,
-  Menu,
-  X,
-  LogOut
-} from 'lucide-react';
-import { 
-  PieChart, 
-  Pie, 
-  Cell, 
-  LineChart, 
-  Line, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer 
-} from 'recharts';
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Search, Bell, Menu, X, FolderOpen, Folder  } from "lucide-react";
+import Sidebar from "../../components/sidebar"; // <-- import Sidebar
+import {
+  PieChart,
+  Pie,
+  Cell,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
+
 
 // Sample data for charts
 const taskData = [
@@ -57,46 +46,7 @@ const Dashboard = () => {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const navigate = useNavigate();
   
-  const navigationItems = [
-    { name: 'Dashboard', icon: LayoutDashboard, active: true },
-    { name: 'Project', icon: FolderOpen, active: false, action: () => navigate('/main-projects')  },
-    { name: 'Task', icon: CheckSquare, active: false, action: () => navigate('/create')  },
-    { name: 'Work Logs', icon: Clock, active: false },
-    { name: 'Performance', icon: TrendingUp, active: false, action: () => navigate('/performance')  },
-    { name: 'Settings', icon: Settings, active: false, action: () => navigate('/settings') },
-    { name: "Logout", icon: LogOut, active: false, action: () => setShowLogoutConfirm(true) },
-  ];
   
-
-  const Sidebar = ({ className = '' }) => (
-    <div className={`bg-white shadow-lg h-full ${className}`}>
-      {/* Logo */}
-      <div className="p-6 border-b border-gray-200">
-        <div className="flex items-center space-x-3">
-          <span className="text-xl font-semibold text-gray-800">MyCrewManager</span>
-        </div>
-      </div>
-      
-      {/* Navigation */}
-      <nav className="mt-6">
-      {navigationItems.map((item) => (
-        <button
-            key={item.name}
-            onClick={item.action ? item.action : undefined}
-            className={`flex items-center px-6 py-3 text-left w-full transition-colors ${
-            item.active
-                ? 'bg-blue-50 border-r-4 border-blue-600 text-blue-600'
-                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-            }`}
-        >
-            <item.icon className="w-5 h-5 mr-3" />
-            {item.name}
-        </button>
-        ))}
-      </nav>
-    </div>
-  );
-
   return (
     <div className="flex h-screen bg-gray-50">
        {/* Logout Confirmation Modal */}
@@ -151,7 +101,7 @@ const Dashboard = () => {
                 <X className="w-6 h-6" />
             </button>
             </div>
-            <Sidebar />
+            <Sidebar onLogout={() => setShowLogoutConfirm(true)} />
         </div>
         </div>
 
@@ -240,7 +190,8 @@ const Dashboard = () => {
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="flex items-center justify-between mb-7">
               <h2 className="text-lg font-semibold text-gray-800">Tasks</h2>
-              <select className="text-sm border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <label htmlFor="timeframe-select" className="sr-only">Select Timeframe</label>
+              <select id="timeframe-select" className="text-sm border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500">
                 <option>This Week</option>
                 <option>Last Week</option>
                 <option>This Month</option>
@@ -262,8 +213,8 @@ const Dashboard = () => {
                     labelLine={false}
                     label={({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
                       const radius = innerRadius + (outerRadius - innerRadius) / 2;
-                      const x = cx + radius * Math.cos(-midAngle * (Math.PI / 180));
-                      const y = cy + radius * Math.sin(-midAngle * (Math.PI / 180));
+                      const x = cx + radius * Math.cos(-(midAngle ?? 0) * (Math.PI / 180));
+                      const y = cy + radius * Math.sin(-(midAngle ?? 0) * (Math.PI / 180));
                       return (
                         <text
                           x={x}
@@ -274,7 +225,7 @@ const Dashboard = () => {
                           fontSize={13}
                           fontWeight="bold"
                         >
-                          {`${(percent * 100).toFixed(0)}%`}
+                          {`${((percent ?? 0) * 100).toFixed(0)}%`}
                         </text>
                       );
                     }}
@@ -311,7 +262,8 @@ const Dashboard = () => {
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-lg font-semibold text-gray-800">Work Log</h2>
-                <select className="text-sm border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <label htmlFor="performance-timeframe" className="sr-only">Select Timeframe</label>
+                <select id="performance-timeframe" className="text-sm border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500">
                   <option>This Week</option>
                   <option>Last Week</option>
                   <option>This Month</option>
@@ -364,7 +316,8 @@ const Dashboard = () => {
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-lg font-semibold text-gray-800">Performance</h2>
-                <select className="text-sm border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <label htmlFor="performance-select" className="sr-only">Performance Timeframe</label>
+                <select id="performance-select" className="text-sm border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500">
                   <option>This Week</option>
                   <option>Last Week</option>
                   <option>This Month</option>

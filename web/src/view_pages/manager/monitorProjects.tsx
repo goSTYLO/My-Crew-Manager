@@ -1,17 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import Sidebar from "../../components/sidebar"; // <-- import Sidebar
 import { 
   Search, 
   Bell, 
-  Settings, 
-  LayoutDashboard, 
-  FolderOpen, 
-  CheckSquare, 
-  Clock, 
-  TrendingUp,
   Menu,
   X,
-  LogOut
 } from 'lucide-react';
 
    
@@ -20,15 +14,6 @@ const Projects = () => {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const navigate = useNavigate();
   
-  const navigationItems = [
-    { name: 'Dashboard', icon: LayoutDashboard, active: false, action: () => navigate('/main') },
-    { name: 'Project', icon: FolderOpen, active: true, action: () => navigate('/main-projects')  },
-    { name: 'Task', icon: CheckSquare, active: false, action: () => navigate('/create')},
-    { name: 'Work Logs', icon: Clock, active: false },
-    { name: 'Performance', icon: TrendingUp, active: false },
-    { name: 'Settings', icon: Settings, active: false, action: () => navigate('/settings') },
-    { name: "Logout", icon: LogOut, active: false, action: () => setShowLogoutConfirm(true) },
-  ];
 
   // Members data (example)
   const members = [
@@ -65,38 +50,6 @@ const Projects = () => {
     </div>
   );
 
-
-
-  
-
-  const Sidebar = ({ className = '' }) => (
-    <div className={`bg-white shadow-lg h-full ${className}`}>
-      {/* Logo */}
-      <div className="p-6 border-b border-gray-200">
-        <div className="flex items-center space-x-3">
-          <span className="text-xl font-semibold text-gray-800">MyCrewManager</span>
-        </div>
-      </div>
-      
-      {/* Navigation */}
-      <nav className="mt-6">
-      {navigationItems.map((item) => (
-        <button
-            key={item.name}
-            onClick={item.action ? item.action : undefined}
-            className={`flex items-center px-6 py-3 text-left w-full transition-colors ${
-            item.active
-                ? 'bg-blue-50 border-r-4 border-blue-600 text-blue-600'
-                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-            }`}
-        >
-            <item.icon className="w-5 h-5 mr-3" />
-            {item.name}
-        </button>
-        ))}
-      </nav>
-    </div>
-  );
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -152,7 +105,7 @@ const Projects = () => {
                 <X className="w-6 h-6" />
             </button>
             </div>
-            <Sidebar />
+            <Sidebar onLogout={() => setShowLogoutConfirm(true)}/>
         </div>
         </div>
 
