@@ -90,7 +90,7 @@ export default function LoginPage() {
 
       // ✅ Redirect after short delay
       setTimeout(() => {
-        navigate('/main');
+        navigate('/main',{replace: true});
       }, 1000);
     } catch (error) {
       setMessage({
