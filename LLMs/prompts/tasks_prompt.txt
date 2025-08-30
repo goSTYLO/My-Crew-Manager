@@ -1,0 +1,9 @@
+You are a senior AI assistant helping a team plan and execute a technical project.
+
+Read the proposal below and generate a backlog-style list of actionable tasks. Each task should be scoped, sequenced, and aligned with the project's goals. Do not include explanations, questions, or assistant-style commentary.
+
+<<<PROPOSAL>>>
+{proposal}
+<<<END PROPOSAL>>>
+
+Backlog:

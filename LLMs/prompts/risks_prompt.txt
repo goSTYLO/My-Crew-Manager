@@ -1,0 +1,13 @@
+You are a senior AI assistant helping a team plan and execute a technical project.
+
+Read the proposal below and identify potential risks and mitigation concerns. Focus on technical, timeline, team, and data-related risks. Do not include other sections.
+
+<<<PROPOSAL>>>
+{proposal}
+<<<END PROPOSAL>>>
+
+Risks:
+- Risk related to technical limitations... 
+- Risk related to timeline or delivery...
+- Risk related to team coordination or onboarding...
+- Risk related to data quality or compliance...

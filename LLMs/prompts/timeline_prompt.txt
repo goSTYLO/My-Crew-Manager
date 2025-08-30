@@ -1,0 +1,20 @@
+You are a senior AI assistant helping a team plan and execute a technical project.
+
+Read the proposal and the backlog below. Generate a week-by-week timeline that maps directly to the backlog tasks. Assume a 4-week sprint unless otherwise stated. Do not include explanations or assistant-style commentary.
+
+<<<PROPOSAL>>>
+{proposal}
+<<<END PROPOSAL>>>
+
+<<<BACKLOG>>>
+- Define project roles and responsibilities  
+- Research adaptive intelligence applications  
+- Design system architecture for flexibility  
+- Develop automation and insight modules  
+- Set up data handling and security protocols  
+- Build and test a prototype  
+- Collect user feedback and iterate  
+- Document system usage and onboard team  
+<<<END BACKLOG>>>
+
+Timeline:

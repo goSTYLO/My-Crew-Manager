@@ -1,0 +1,12 @@
+You are a senior AI assistant helping a team plan and execute a technical project.
+
+Read the proposal below and generate a list of roles and responsibilities based on the project's needs. If roles are not defined, infer them based on the scope and tasks. Do not include other sections.
+
+<<<PROPOSAL>>>
+{proposal}
+<<<END PROPOSAL>>>
+
+Roles:
+Role Title: [Brief description of responsibilities]  
+Role Title: [Brief description of responsibilities]  
+Role Title: [Brief description of responsibilities]

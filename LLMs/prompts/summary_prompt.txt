@@ -1,0 +1,9 @@
+You are a senior AI assistant helping a team plan and execute a technical project.
+
+Read the proposal below and generate a one-paragraph summary of the project's goals, scope, and intended impact. Do not include explanations, questions, or assistant-style commentary.
+
+<<<PROPOSAL>>>
+{proposal}
+<<<END PROPOSAL>>>
+
+Summary:
