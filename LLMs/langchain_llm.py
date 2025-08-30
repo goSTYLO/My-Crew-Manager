@@ -1,42 +1,33 @@
 import os
-from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline, BitsAndBytesConfig
+import time
+from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
 from langchain_huggingface import HuggingFacePipeline
-import torch
 from utils.pdf_parser import extract_text_from_pdf
 
-# Model ID
-MODEL_ID = "mistralai/Mistral-7B-Instruct-v0.2"
+# Pre-quantized model ID
+MODEL_ID = "unsloth/mistral-7b-instruct-v0.3-bnb-4bit"
 
 # Token limits per section
 TOKEN_LIMITS = {
     "summary": 128,
     "tasks": 192,
-    "roles": 224,
+    "roles": 192,
     "timeline": 192,
     "risks": 224
 }
 
-# Load quantized Mistral model once
+# Load pre-quantized Mistral model
 def load_llm(model_id: str) -> HuggingFacePipeline:
-    print(f"🔧 Loading model: {model_id}")
+    print(f"🔧 Loading pre-quantized model: {model_id}")
     tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True)
-
-    quant_config = BitsAndBytesConfig(
-        load_in_4bit=True,
-        bnb_4bit_compute_dtype=torch.float16,
-        bnb_4bit_use_double_quant=True,
-        bnb_4bit_quant_type="nf4"
-    )
-
     model = AutoModelForCausalLM.from_pretrained(
         model_id,
-        quantization_config=quant_config,
         device_map="auto",
-        torch_dtype=torch.float16,
+        torch_dtype="auto",
         trust_remote_code=True
     )
 
-    print("✅ Mistral loaded and ready.")
+    print("✅ Pre-quantized Mistral loaded and ready.")
     return HuggingFacePipeline(pipeline=pipeline(
         "text-generation",
         model=model,
@@ -63,7 +54,7 @@ def build_prompt(section: str, proposal: str) -> str:
     return prompt
 
 # Run all sections sequentially
-def run_all_sections(proposal_path: str = "datasets/project_proposal3.pdf"):
+def run_all_sections(proposal_path: str = "datasets/project_proposal.pdf"):
     proposal = extract_text_from_pdf(proposal_path)
 
     if not proposal.strip():
@@ -82,7 +73,11 @@ def run_all_sections(proposal_path: str = "datasets/project_proposal3.pdf"):
             continue
 
         llm.pipeline.max_new_tokens = TOKEN_LIMITS[section]
+
+        start_time = time.time()
         response = llm.invoke(prompt)
+        duration = time.time() - start_time
+        print(f"⏱️ Generation time for {section.upper()}: {duration:.2f} seconds")
 
         # Guardrails for broken or placeholder output
         if not response.strip():

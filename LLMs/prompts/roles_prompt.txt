@@ -7,6 +7,6 @@ Read the proposal below and generate a list of roles and responsibilities based 
 <<<END PROPOSAL>>>
 
 Roles:
-Role Title: [Brief description of responsibilities]  
-Role Title: [Brief description of responsibilities]  
-Role Title: [Brief description of responsibilities]
+Project Manager: Oversees execution, sets milestones, manages resources  
+AI Architect: Designs system architecture and ensures adaptability  
+...
