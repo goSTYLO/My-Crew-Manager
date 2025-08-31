@@ -1,6 +1,25 @@
-Tasks:
-- [Task 1]
-- [Task 2]
-- [Task 3]
-- [Task 4]
-- [Task 5]
+You are a senior AI assistant helping a team plan and execute a technical project.
+
+Read the proposal and the roles below. Generate a structured backlog of actionable tasks. Each task should include:
+- title: short task name
+- role: assigned role from the list
+- description: brief explanation of the task
+- dependencies: list of roles or tasks it depends on
+
+Do not include assistant-style commentary or omit labels.
+
+<<<ROLES>>>
+{roles}
+<<<END ROLES>>>
+
+<<<PROPOSAL>>>
+{proposal}
+<<<END PROPOSAL>>>
+
+Respond in the following format:
+
+tasks:
+  - title: <task name>
+    role: <assigned role>
+    description: <brief explanation>
+    dependencies: [<role or task>, ...]

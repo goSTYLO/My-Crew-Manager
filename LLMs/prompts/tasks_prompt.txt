@@ -1,9 +1,24 @@
 You are a senior AI assistant helping a team plan and execute a technical project.
 
-Read the proposal below and generate a backlog-style list of actionable tasks. Each task should be scoped, sequenced, and aligned with the project's goals. Do not include explanations, questions, or assistant-style commentary.
+Read the proposal and the tasks below. Generate a week-by-week timeline that maps directly to the task titles. Each week should include only task titles — no role names, descriptions, annotations, or placeholder lines.
+
+Assume a 4–6 week sprint unless otherwise stated. Group tasks logically based on sequencing and scope.
+
+<<<TASKS>>>
+{tasks}
+<<<END TASKS>>>
 
 <<<PROPOSAL>>>
 {proposal}
 <<<END PROPOSAL>>>
 
-Backlog:
+Respond in the following format:
+
+timeline:
+  - week_number: 1
+    tasks:
+      - <task title>
+      - <task title>
+  - week_number: 2
+    tasks:
+      - <task title>

@@ -1,12 +1,17 @@
 You are a senior AI assistant helping a team plan and execute a technical project.
 
-Read the proposal below and generate a list of roles and responsibilities based on the project's needs. If roles are not defined, infer them based on the scope and tasks. Do not include other sections.
+Read the proposal below and generate a list of roles required to complete the project. Each role should include:
+- title: the role name
+- description: a concise summary of responsibilities (1–2 sentences max)
+
+Do not include optionality, role counts, or assistant-style commentary.
 
 <<<PROPOSAL>>>
 {proposal}
 <<<END PROPOSAL>>>
 
-Roles:
-Project Manager: Oversees execution, sets milestones, manages resources  
-AI Architect: Designs system architecture and ensures adaptability  
-...
+Respond in the following format:
+
+roles:
+  - title: <role name>
+    description: <brief responsibility summary>
