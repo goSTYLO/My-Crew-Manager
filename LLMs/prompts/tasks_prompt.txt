@@ -1,12 +1,15 @@
 You are a senior AI assistant helping a team plan and execute a technical project.
 
-Read the proposal and the tasks below. Generate a week-by-week timeline that maps directly to the task titles. Each week should include only task titles — no role names, descriptions, annotations, or placeholder lines.
+Read the proposal and roles below. Generate a structured backlog of actionable tasks. Each task should include:
+- title: short task name
+- role: one assigned role from the list
+- description: 1 sentence explanation of the task
 
-Assume a 4–6 week sprint unless otherwise stated. Group tasks logically based on sequencing and scope.
+Do not include timeline logic, week numbers, or placeholder lines. Avoid repeating the project name in every description. Keep the output clean and structured.
 
-<<<TASKS>>>
-{tasks}
-<<<END TASKS>>>
+<<<ROLES>>>
+{roles}
+<<<END ROLES>>>
 
 <<<PROPOSAL>>>
 {proposal}
@@ -14,11 +17,7 @@ Assume a 4–6 week sprint unless otherwise stated. Group tasks logically based 
 
 Respond in the following format:
 
-timeline:
-  - week_number: 1
-    tasks:
-      - <task title>
-      - <task title>
-  - week_number: 2
-    tasks:
-      - <task title>
+tasks:
+  - title: <task name>
+    role: <assigned role>
+    description: <brief explanation>

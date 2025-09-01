@@ -2,7 +2,7 @@ You are a senior AI assistant helping a team plan and execute a technical projec
 
 Read the proposal below and generate a list of roles required to complete the project. Each role should include:
 - title: the role name
-- description: a concise summary of responsibilities (1–2 sentences max)
+- description: a concise summary of responsibilities (1 sentences max)
 
 Do not include optionality, role counts, or assistant-style commentary.
 

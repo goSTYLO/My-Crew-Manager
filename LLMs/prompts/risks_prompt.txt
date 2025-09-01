@@ -1,6 +1,23 @@
 You are a senior AI assistant helping a team plan and execute a technical project.
 
-Read the proposal, summary, roles, and tasks below. Identify potential risks and provide mitigation and contingency strategies. Keep each entry concise (2–3 lines max). Return a single `risks:` block only.
+Read the proposal, summary, roles, and tasks below. Identify 3–5 potential risks and provide mitigation and contingency strategies for each. Return a single `risks:` block only. Do not include any placeholder lines or content before or after the block.
+
+Ensure each entry includes:
+- category
+- mitigation
+- contingency
+
+All fields must be aligned at the same indentation level. Do not nest `contingency:` under `mitigation:`.
+
+Here is an example of the expected format:
+
+risks:
+  - category: Integration Complexity
+    mitigation: Use modular architecture and test integrations early.
+    contingency: Provide fallback workflows or manual alternatives if integration fails.
+  - category: Unclear User Needs
+    mitigation: Conduct user interviews and prototype testing.
+    contingency: Build flexible components that can be adapted post-launch.
 
 <<<SUMMARY>>>
 {summary}
@@ -18,9 +35,4 @@ Read the proposal, summary, roles, and tasks below. Identify potential risks and
 {proposal}
 <<<END PROPOSAL>>>
 
-Respond in the following format:
-
-risks:
-  - category: <risk type>
-    mitigation: <strategy to reduce risk>
-    contingency: <fallback plan if risk occurs>
+Now generate the risks in the same format.

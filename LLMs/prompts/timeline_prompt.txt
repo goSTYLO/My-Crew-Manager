@@ -2,7 +2,30 @@ You are a senior AI assistant helping a team plan and execute a technical projec
 
 Read the proposal and the tasks below. Generate a structured week-by-week timeline that maps directly to the task titles. Each week should include only task titles — no role names, descriptions, annotations, or placeholder lines.
 
-Assume a 4-week sprint unless otherwise stated in the proposal. Group tasks logically based on sequencing and dependencies. Do not include any content before or after the timeline block.
+Return a single `timeline:` block only. Do not include any content before or after the timeline block. Assume a 4–6 week sprint unless the proposal specifies otherwise. Group tasks logically based on sequencing and scope.
+
+Here is an example of the expected format:
+
+timeline:
+  - week_number: 1
+    tasks:
+      - Define project scope and milestones
+      - Identify and document user needs
+  - week_number: 2
+    tasks:
+      - Design platform user interface
+      - Develop platform architecture and functionality
+  - week_number: 3
+    tasks:
+      - Implement AI models for insights generation
+      - Test platform for usability and performance
+  - week_number: 4
+    tasks:
+      - Document the platform's functionalities and usage
+      - Integrate the platform with existing tools
+  - week_number: 5
+    tasks:
+      - Iteratively improve the platform based on feedback
 
 <<<TASKS>>>
 {tasks}
@@ -12,13 +35,4 @@ Assume a 4-week sprint unless otherwise stated in the proposal. Group tasks logi
 {proposal}
 <<<END PROPOSAL>>>
 
-Respond in the following format:
-
-timeline:
-  - week_number: 1
-    tasks:
-      - <task title>
-      - <task title>
-  - week_number: 2
-    tasks:
-      - <task title>
+Now generate the timeline in the same format.
