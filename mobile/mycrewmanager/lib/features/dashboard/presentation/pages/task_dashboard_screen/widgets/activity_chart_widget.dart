@@ -163,7 +163,7 @@ class ActivityChartWidget extends StatelessWidget {
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: const Text(
-                          '2 Task',
+                          '3 Task',
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: 13,

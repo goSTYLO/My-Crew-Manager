@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-class TaskCardWidget extends StatelessWidget {
-  const TaskCardWidget({super.key});
+class TaskTodayWidget extends StatelessWidget {
+  const TaskTodayWidget({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -14,13 +14,27 @@ class TaskCardWidget extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Removed header row (Upcoming Task and navigation buttons)
+          // Header row
+          Row(
+            children: [
+              const Text(
+                'Task Today',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 16,
+                  color: Color(0xFF181929),
+                ),
+              ),
+              const Spacer(),
+              Icon(Icons.more_horiz, color: Color(0xFF181929), size: 24),
+            ],
+          ),
           const SizedBox(height: 16),
           // Task image
           ClipRRect(
             borderRadius: BorderRadius.circular(16),
             child: Image.network(
-              'https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=400&q=80',
+              'https://images.unsplash.com/photo-1519125323398-675f0ddb6308?auto=format&fit=crop&w=400&q=80',
               height: 120,
               width: double.infinity,
               fit: BoxFit.cover,
@@ -29,7 +43,7 @@ class TaskCardWidget extends StatelessWidget {
           const SizedBox(height: 16),
           // Title
           const Text(
-            'Creating Mobile App Design',
+            'Creating Awesome Mobile Apps',
             style: TextStyle(
               fontWeight: FontWeight.w600,
               fontSize: 17,
@@ -39,7 +53,7 @@ class TaskCardWidget extends StatelessWidget {
           const SizedBox(height: 4),
           // Subtitle
           const Text(
-            'UI UX Design',
+            'UI/UX Designer',
             style: TextStyle(
               fontSize: 13,
               color: Color(0xFF7B7F9E),
@@ -91,7 +105,7 @@ class TaskCardWidget extends StatelessWidget {
               ),
               const SizedBox(width: 6),
               const Text(
-                '3 Days Left',
+                '1 Hour',
                 style: TextStyle(
                   color: Color(0xFF181929),
                   fontSize: 14,

@@ -12,6 +12,7 @@ import 'widgets/mentor_card_widget.dart';
 import 'widgets/running_task_widget.dart';
 import 'widgets/task_card_widget.dart';
 import 'widgets/task_detail_widget.dart';
+import 'widgets/task_today_widget.dart'; // <-- Import TaskTodayWidget
 // import '../../core/extensions/size_extension.dart'; // For .h extension
 import '/core/theme/app_theme.dart'; // For AppTheme
 
@@ -69,6 +70,8 @@ class TaskDashboardScreen extends ConsumerWidget {
                 children: [
                   SizedBox(height: 24), // Remove .h if not using ScreenUtil
                   CalendarWidget(),
+                  SizedBox(height: 24),
+                  TaskTodayWidget(), // <-- Add TaskTodayWidget here
                   SizedBox(height: 24),
                   TaskDetailWidget(),
                   SizedBox(height: 24),

@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:sizer/sizer.dart';
 
-import '/core/app_export.dart';
+import '../../core/app_export.dart';
 import './widgets/app_logo_widget.dart';
 import './widgets/bottom_links_widget.dart';
 import './widgets/login_form_widget.dart';
@@ -103,7 +103,6 @@ class _LoginScreenState extends State<LoginScreen> {
       if (mounted) {
         // In a real app, this would navigate to the dashboard
         _showSuccessDialog();
-        Navigator.pushReplacementNamed(context, '/task-dashboard-screen');
       }
     } else {
       setState(() {
@@ -230,7 +229,18 @@ class _LoginScreenState extends State<LoginScreen> {
 
                       SizedBox(height: 1.h),
 
-            
+                      // Subtitle
+                      Text(
+                        'Professional Crew Management',
+                        style: TextStyle(
+                          fontSize: 14.sp,
+                          color:
+                              AppTheme.lightTheme.colorScheme.onSurfaceVariant,
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
+
+                      SizedBox(height: 6.h),
 
                       // Account Lockout Warning
                       if (_isAccountLocked) ...[
