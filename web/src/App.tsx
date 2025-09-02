@@ -8,7 +8,8 @@ import Projects from './view_pages/manager/monitorProjects';
 import CreateProject from './view_pages/manager/createProjects'; 
 import CreateTask from './view_pages/manager/createTask'; 
 import Performance from './view_pages/manager/performance'; 
-import Settings from './view_pages/manager/settings'; 
+import Settings from './view_pages/manager/settings';
+import WorkLogs from './view_pages/manager/workLogs';
 
 const App: React.FC = () => {
   return (
@@ -26,6 +27,7 @@ const App: React.FC = () => {
         <Route path="/main-projects" element={<MainProjects />} />
         <Route path="/projects" element={<Projects />} />
         <Route path="/create-project" element={<CreateProject />} />
+        <Route path="/work-logs" element={<WorkLogs/>}/>
         <Route path="/performance" element={<Performance />} />
         <Route path="/settings" element={<Settings />} />
         

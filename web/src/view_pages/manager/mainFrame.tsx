@@ -69,7 +69,7 @@ const Dashboard = () => {
           <div className="grid grid-cols-2 lg:grid-cols-2 gap-6">
             
             {/* Projects Card */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-lg font-semibold text-gray-800">Projects</h2>
                 <div className="flex items-center space-x-2 text-sm text-gray-500">
@@ -95,7 +95,7 @@ const Dashboard = () => {
             </div>
 
             {/* Tasks Card */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
             <div className="flex items-center justify-between mb-7">
               <h2 className="text-lg font-semibold text-gray-800">Tasks</h2>
               <label htmlFor="timeframe-select" className="sr-only">Select Timeframe</label>
@@ -167,7 +167,7 @@ const Dashboard = () => {
           <div className="grid grid-cols-2 lg:grid-cols-2 gap-6">
 
             {/* Work Log Card */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-lg font-semibold text-gray-800">Work Log</h2>
                 <label htmlFor="performance-timeframe" className="sr-only">Select Timeframe</label>
@@ -221,7 +221,7 @@ const Dashboard = () => {
             </div>
 
             {/* Performance Card */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-lg font-semibold text-gray-800">Performance</h2>
                 <label htmlFor="performance-select" className="sr-only">Performance Timeframe</label>

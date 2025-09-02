@@ -106,16 +106,24 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
 
           {/* Navigation */}
           <nav className="mt-6">
-            {navigationItems.map((item) => (
-              <button
-                key={item.name}
-                onClick={() => handleClick(item)}
-                className="flex items-center px-6 py-3 text-left w-full transition-colors text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-              >
-                <item.icon className="w-5 h-5 mr-3" />
-                {item.name}
-              </button>
-            ))}
+            {navigationItems.map((item) => {
+              const isActive = item.path && location.pathname === item.path;
+              return (
+                <button
+                  key={item.name}
+                  onClick={() => handleClick(item)}
+                  className={`flex items-center px-6 py-3 w-full text-left transition-colors 
+                    ${
+                      isActive
+                        ? "bg-gray-200 text-gray-900 font-semibold" // ✅ Active styles
+                        : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                    }`}
+                >
+                  <item.icon className="w-5 h-5 mr-3" />
+                  {item.name}
+                </button>
+              );
+            })}
           </nav>
         </div>
       </div>
