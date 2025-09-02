@@ -88,7 +88,7 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'my_crew_manager_db',
+        'NAME': 'mycrewmanager_db',
         'USER': 'postgres',
         'PASSWORD': '140804',  # the one you set during install
         'HOST': 'localhost',

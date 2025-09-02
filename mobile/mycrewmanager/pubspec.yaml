@@ -16,6 +16,7 @@ dependencies:
   google_fonts: ^6.1.0       # Required for typography (replaces local fonts)
   shared_preferences: ^2.2.2 # Required for local data storage
   web: ^1.1.1
+  flutter_bloc: ^9.1.1
   
   # Feature dependencies - safe to modify
   cached_network_image: ^3.3.1
@@ -29,6 +30,12 @@ dependencies:
 
   universal_html: ^2.2.4
   flutter_riverpod: ^2.6.1
+  fpdart: ^1.1.1
+  dotted_border: ^3.1.0
+  supabase_flutter: ^2.10.0
+  intl: ^0.20.2
+  internet_connection_checker_plus: ^2.7.2
+  logger: ^2.6.1
 dev_dependencies:
   flutter_test:    # CRITICAL: Required for Flutter project testing - DO NOT REMOVE
     sdk: flutter   # CRITICAL: Required for Flutter project testing - DO NOT REMOVE
@@ -37,8 +44,7 @@ dev_dependencies:
 flutter:
   uses-material-design: true # CRITICAL: Required for Material icon font - DO NOT REMOVE
   assets:
-    - assets/
-    - assets/images/
+    - lib/core/assets/images/
   # CRITICAL ASSET MANAGEMENT RULES:
   # - DO NOT ADD NEW ASSET DIRECTORIES (assets/svg/, assets/icons/, etc.)
   # - ONLY USE EXISTING AND ITEMS AVAILABLE IN THE DIRECTORIES LISTED ABOVE (assets/, assets/images/)
