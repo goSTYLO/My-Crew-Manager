@@ -1,9 +1,11 @@
+from pickle import GET
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.authtoken.models import Token
 from rest_framework.permissions import IsAuthenticated
 from django.contrib.auth import authenticate
+from django.db import IntegrityError
 from .models import User
 from .serializers import UserSignupSerializer
 from .serializers import UserSerializer
@@ -13,8 +15,17 @@ class SignupView(APIView):
     def post(self, request):
         serializer = UserSignupSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save() 
-            return Response({"message": "User created successfully"}, status=status.HTTP_201_CREATED)
+            try:
+                serializer.save()
+                return Response(
+                    {"message": "User created successfully"},
+                    status=status.HTTP_201_CREATED
+                )
+            except IntegrityError:
+                return Response(
+                    {"error": "A user with this email already exists."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class LoginView(APIView):
@@ -52,15 +63,22 @@ class UserListView(APIView):
         return Response(serializer.data)
 
 
-#   http://127.0.0.1:8000/api/users/(login,signup,logout) <- endpoints
-#   GET http://127.0.0.1:8000/api/users/ for fetching user
+#   http://127.0.0.1:8000/api/users/(login,signup,logout)/ <- endpoints
+#   GET http://127.0.0.1:8000/api/users/all/ for fetching all users
+#   GET http://127.0.0.1:8000/api/users/me/ for fetching user details   
 #   JSON parameters
+#   LOGIN
+#   {
+#       "email": "user@example.com",
+#       "password": "yourpassword"
+#   }
+#   Signup
 #   {
 #       "name": "Your Name",
 #       "email": "user@example.com",
 #       "password": "yourpassword"
 #   }
-#  Logout {
+#   LOGOUT {
 #      Headers
 #      Authorization: Token <your_token>
 #  }
