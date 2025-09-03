@@ -36,7 +36,7 @@ const WorkLogsPage: React.FC = () => {
         {/* Content */}
         <main className="flex-1 flex gap-6 p-6">
           {/* Left side: Work logs */}
-          <div className="flex-1 bg-white rounded-xl shadow p-6">
+          <div className="flex-1 bg-white rounded-xl shadow-lg p-6">
             {workLogs.map((log, idx) => (
               <div key={idx} className="flex items-start py-4 border-b border-gray-200 last:border-0">
                 <span className="w-32 text-sm text-gray-500">{log.date}</span>
@@ -48,7 +48,7 @@ const WorkLogsPage: React.FC = () => {
           {/* Right side */}
           <div className="w-80 flex flex-col gap-6">
             {/* WorkLog Stats */}
-            <div className="bg-white rounded-xl shadow p-6">
+            <div className="bg-white rounded-xl shadow-lg p-6">
               <h3 className="text-sm font-semibold text-gray-600 mb-4">Total WorkLog</h3>
               <div className="flex items-center justify-center">
                 {/* Placeholder circle */}
@@ -62,7 +62,7 @@ const WorkLogsPage: React.FC = () => {
             </div>
 
             {/* Notifications */}
-            <div className="bg-white rounded-xl shadow p-6 flex-1">
+            <div className="bg-white rounded-xl shadow-lg p-6 flex-1">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-sm font-semibold text-gray-600">Notifications</h3>
                 <button className="text-blue-600 text-xs hover:underline">View All</button>
