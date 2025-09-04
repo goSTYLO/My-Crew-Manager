@@ -43,6 +43,7 @@ class SignupView(APIView):
 
 class LoginView(APIView):
     def post(self, request):
+        name = request.data.get("name")
         email = request.data.get("email")
         password = request.data.get("password")
 
@@ -59,6 +60,7 @@ class LoginView(APIView):
         if user:
             refresh = RefreshToken.for_user(user)
             return Response({
+                "name": user.name,
                 "email": user.email,
                 "refresh": str(refresh),
                 "access": str(refresh.access_token),
