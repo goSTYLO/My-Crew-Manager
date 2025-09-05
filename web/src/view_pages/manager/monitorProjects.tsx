@@ -1,12 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from "../../components/sidebarLayout"; // <-- import Sidebar
-import { 
-  Search, 
-  Bell, 
-  Menu,
-  X,
-} from 'lucide-react';
 import TopNavbar from '../../components/topbarLayouot';
 
    

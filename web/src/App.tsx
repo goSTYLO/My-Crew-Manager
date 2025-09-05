@@ -10,6 +10,15 @@ import CreateTask from './view_pages/manager/createTask';
 import Performance from './view_pages/manager/performance'; 
 import Settings from './view_pages/manager/settings';
 import WorkLogs from './view_pages/manager/workLogs';
+import AccountSettings from './view_pages/manager/accountSettings'; 
+import Notifications from './view_pages/manager/notifications'; 
+
+{/* User Web Connections */}
+import UserFrame from './view_pages/user/userFrame';
+import ProjectUser from './view_pages/user/monitorProjects_user';
+import PerformanceUser from './view_pages/user/performance_user';
+import TaskUser from './view_pages/user/viewTask_user';
+import KanbanUser from './view_pages/user/taskkanban_user';
 
 const App: React.FC = () => {
   return (
@@ -30,6 +39,15 @@ const App: React.FC = () => {
         <Route path="/work-logs" element={<WorkLogs/>}/>
         <Route path="/performance" element={<Performance />} />
         <Route path="/settings" element={<Settings />} />
+        <Route path="/account-settings" element={<AccountSettings />} />
+        <Route path="/notifications" element={<Notifications />} />
+
+         {/* User routes */}
+         <Route path="/user" element={<UserFrame />} />
+        <Route path="/projects-user" element={<ProjectUser />} />
+        <Route path="/performance-user" element={<PerformanceUser />} />
+        <Route path="/task-user" element={<TaskUser />} />
+        <Route path="/kanban-user" element={<KanbanUser />} />
         
         <Route path="*" element={<Navigate to="/signIn" replace />} />
       </Routes>

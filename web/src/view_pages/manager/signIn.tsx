@@ -37,7 +37,7 @@ class UserModel {
 
 // CONTROLLER
 class LoginController {
-  static async login(user: User): Promise<{ success: boolean; message: string }> {
+  static async login(user: User): Promise<{ success: boolean; message: string; redirect: string }> {
     const validation = UserModel.validateUser(user);
     if (!validation.isValid) {
       throw new Error(validation.errors.join(', '));
@@ -45,10 +45,12 @@ class LoginController {
 
     return new Promise((resolve, reject) => {
       setTimeout(() => {
-        if (user.email === 'demo@example.com' && user.password === 'password123') {
-          resolve({ success: true, message: 'Login successful! Welcome back.' });
+        if (user.email === 'admin@gmail.com' && user.password === 'password123') {
+          resolve({ success: true, message: 'Login successful! Welcome back Admin.', redirect: '/main' });
+        } else if (user.email === 'user@gmail.com' && user.password === 'password123') {
+          resolve({ success: true, message: 'Login successful! Welcome back User.', redirect: '/user' });
         } else {
-          reject(new Error('Invalid email or password. Try demo@example.com with password123'));
+          reject(new Error('Invalid email or password. Try admin@gmail.com or user@gmail.com with password123'));
         }
       }, 1500);
     });
@@ -90,7 +92,7 @@ export default function LoginPage() {
 
       // ✅ Redirect after short delay
       setTimeout(() => {
-        navigate('/main',{replace: true});
+        navigate(result.redirect, { replace: true });
       }, 1000);
     } catch (error) {
       setMessage({
@@ -257,8 +259,12 @@ export default function LoginPage() {
           </form>
 
           <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-            <p className="text-sm text-blue-800 font-medium mb-2">Demo Credentials:</p>
-            <p className="text-sm text-blue-700">Email: demo@example.com</p>
+            <p className="text-sm text-blue-800 font-medium mb-2">Demo Credentials (ADMIN):</p>
+            <p className="text-sm text-blue-700">Email: admin@gmail.com</p>
+            <p className="text-sm text-blue-700">Password: password123</p>
+
+            <p className="mt-6 text-sm text-blue-800 font-medium mb-2">Demo Credentials: (USER):</p>
+            <p className="text-sm text-blue-700">Email: user@gmail.com</p>
             <p className="text-sm text-blue-700">Password: password123</p>
           </div>
         </div>

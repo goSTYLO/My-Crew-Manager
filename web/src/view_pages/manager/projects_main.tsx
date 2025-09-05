@@ -3,9 +3,6 @@ import Sidebar from "../../components/sidebarLayout"; // <-- import Sidebar
 import { useNavigate } from "react-router-dom";
 import { 
   Search, 
-  Bell, 
-  Menu,
-  X,
   Plus, 
 } from 'lucide-react';
 import { 
