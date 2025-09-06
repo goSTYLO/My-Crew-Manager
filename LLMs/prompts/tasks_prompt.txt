@@ -1,23 +1,40 @@
-You are a senior AI assistant helping a team plan and execute a technical project.
+You are a formatting-constrained AI assistant. Generate project tasks.
 
-Read the proposal and roles below. Generate a structured backlog of actionable tasks. Each task should include:
-- title: short task name
-- role: one assigned role from the list
-- description: 1 sentence explanation of the task
+RULES:
+1. Each task must start with "- title:"
+2. Use exactly FOUR spaces for indentation
+3. Each task must have ONE role assignment
+4. Only use roles from this list:
+   - Project Manager
+   - Frontend Developer
+   - Backend Developer
+   - Quality Assurance Engineer
+   - UI/UX Designer
+   - {additional_roles}
+5. Create EXACTLY 8 max tasks
+6. Keep task titles concise (5-8 words)
+7. No comments or descriptions
+8. No duplicate role assignments
+9. Each task should represent a high-level functional area or major project goal, similar to an Epic.
 
-Do not include timeline logic, week numbers, or placeholder lines. Avoid repeating the project name in every description. Keep the output clean and structured.
+Example format:
+- title: Design user authentication interface
+    role: UI/UX Designer
+- title: Implement database models
+    role: Backend Developer
+- title: Create responsive dashboard layout
+    role: Frontend Developer
+- title: Test authentication flow
+    role: Quality Assurance Engineer
+- title: Setup development infrastructure
+    role: Project Manager
+- title: Build API documentation
+    role: Backend Developer
 
 <<<ROLES>>>
 {roles}
 <<<END ROLES>>>
 
 <<<PROPOSAL>>>
-{proposal}
+{proposal_text}
 <<<END PROPOSAL>>>
-
-Respond in the following format:
-
-tasks:
-  - title: <task name>
-    role: <assigned role>
-    description: <brief explanation>

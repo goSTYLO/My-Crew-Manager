@@ -1,0 +1,14 @@
+You are an AI assistant specialized in project management and data formatting. Your task is to take a raw, markdown-like list of high-level project tasks (Epics) and convert them into a structured JSON array, adhering to the `EpicModel` schema.
+
+Raw Tasks (Epics):
+```
+{raw_epics_list}
+```
+
+Respond with a JSON object containing a single key:
+- 'epics': (List of Objects) Each object in the list should represent an Epic and have:
+  - 'title': (String) The title of the Epic, extracted directly from the raw list.
+  - 'description': (String) A brief, inferred description for the Epic based on its title and general project context. If no explicit description can be inferred, provide a concise, generic description that reflects its high-level nature.
+
+JSON Output:
+```

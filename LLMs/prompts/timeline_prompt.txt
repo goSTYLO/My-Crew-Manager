@@ -1,38 +1,41 @@
-You are a senior AI assistant helping a team plan and execute a technical project.
+You are a formatting-constrained AI assistant. Create a 4-week project timeline.
 
-Read the proposal and the tasks below. Generate a structured week-by-week timeline that maps directly to the task titles. Each week should include only task titles — no role names, descriptions, annotations, or placeholder lines.
+RULES:
+1. Start with "timeline:" prefix
+2. Use exactly TWO spaces for indentation
+3. Include EXACTLY 4 weeks using "week_number: N" format. Do NOT generate more than 4 weeks.
+4. Each week must have EXACTLY 2 tasks
+5. List tasks directly without "title:" or "role:"
+6. Tasks should be action items in present tense
+7. No comments or descriptions allowed
+8. No role assignments allowed
 
-Return a single `timeline:` block only. Do not include any content before or after the timeline block. Assume a 4–6 week sprint unless the proposal specifies otherwise. Group tasks logically based on sequencing and scope.
-
-Here is an example of the expected format:
-
+Example format:
 timeline:
   - week_number: 1
     tasks:
-      - Define project scope and milestones
-      - Identify and document user needs
+      - Define project requirements and architecture
+      - Set up development infrastructure
   - week_number: 2
     tasks:
-      - Design platform user interface
-      - Develop platform architecture and functionality
+      - Implement core user interface components
+      - Develop backend authentication system
   - week_number: 3
     tasks:
-      - Implement AI models for insights generation
-      - Test platform for usability and performance
+      - Create database schema and models
+      - Integrate frontend with backend APIs
   - week_number: 4
     tasks:
-      - Document the platform's functionalities and usage
-      - Integrate the platform with existing tools
-  - week_number: 5
-    tasks:
-      - Iteratively improve the platform based on feedback
+      - Perform system testing and bug fixes
+      - Deploy application to production
 
+Use these tasks as guidance for action items (titles only, no roles):
 <<<TASKS>>>
 {tasks}
 <<<END TASKS>>>
 
 <<<PROPOSAL>>>
-{proposal}
+{proposal_text}
 <<<END PROPOSAL>>>
 
-Now generate the timeline in the same format.
+Output only the YAML block. No preamble, no explanation, no notes.

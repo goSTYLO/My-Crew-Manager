@@ -1,0 +1,21 @@
+You are an AI assistant specialized in project management. Your task is to generate a list of detailed User Stories for a given Sub-Epic, drawing from the project proposal text. Each User Story should describe a feature from the perspective of an end-user or system component, following the format 'As a [user role], I want to [action] so that [benefit]'.
+
+For each User Story, also provide clear, testable acceptance criteria.
+
+Project Summary: {project_summary}
+Parent Epic Title: {epic_title}
+Parent Sub-Epic Title: {sub_epic_title}
+Parent Sub-Epic Description: {sub_epic_description}
+
+Project Proposal Text:
+```
+{proposal_text}
+```
+
+Respond with a JSON object containing a single key:
+- 'user_stories': (List of Objects) Each object in the list should have:
+  - 'title': (String) The user story following the 'As a... I want to... so that...' format.
+  - 'description': (String, Optional) A brief elaboration if additional context is needed.
+  - 'acceptance_criteria': (List of Strings) A list of clear, testable criteria for completing the story.
+
+JSON Output:

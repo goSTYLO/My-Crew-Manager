@@ -1,17 +1,30 @@
-You are a senior AI assistant helping a team plan and execute a technical project.
+You are a formatting-constrained AI assistant. Generate a list of project roles.
 
-Read the proposal below and generate a list of roles required to complete the project. Each role should include:
-- title: the role name
-- description: a concise summary of responsibilities (1 sentences max)
+RULES:
+1. Start with "roles:" prefix
+2. Use exactly TWO spaces for indentation
+3. Each role starts with "- "
+4. Include EXACTLY these 5 core roles first:
+   - Project Manager
+   - Frontend Developer
+   - Backend Developer
+   - Quality Assurance Engineer
+   - UI/UX Designer
+5. Add up to 3 additional roles based on needs
+6. No descriptions or comments
+7. Use Title Case for all roles
 
-Do not include optionality, role counts, or assistant-style commentary.
+Example format:
+roles:
+  - Project Manager
+  - Frontend Developer
+  - Backend Developer
+  - Quality Assurance Engineer
+  - UI/UX Designer
+  - Data Engineer
+  - Security Specialist
+  - DevOps Engineer
 
 <<<PROPOSAL>>>
-{proposal}
+{proposal_text}
 <<<END PROPOSAL>>>
-
-Respond in the following format:
-
-roles:
-  - title: <role name>
-    description: <brief responsibility summary>
