@@ -13,7 +13,7 @@ def validate_and_parse_json(section_name: str, raw_response: str, pydantic_model
             json_str = raw_response.strip()
             
         json_data = json.loads(json_str)
-        validated_obj = pydantic_model.parse_obj(json_data)
+        validated_obj = pydantic_model.model_validate(json_data) # Updated to model_validate
         print(f"✅ JSON & Pydantic validation successful for {section_name}.")
         return validated_obj
     except json.JSONDecodeError as e:

@@ -120,14 +120,14 @@ def generate_section(llm, section: str, prompt: str, max_retries: int = 3) -> st
                 print(f"⚠️ Empty response for {section} (attempt {attempt + 1})")
                 continue
                 
-            # Simple check for JSON-like start to quickly fail if clearly not JSON
-            if not (response.strip().startswith('{') and response.strip().endswith('}')) and \
-               not (response.strip().startswith('```json') and response.strip().endswith('```')):
-                print(f"⚠️ Response for {section} does not look like JSON (attempt {attempt + 1})")
-                # print(f"  Response: {response[:200]}...")
-                continue
+            # Removed the quick check for JSON-like start
+            # if not (response.strip().startswith('{') and response.strip().endswith('}')) and \
+            #    not (response.strip().startswith('```json') and response.strip().endswith('```')):
+            #     print(f"⚠️ Response for {section} does not look like JSON (attempt {attempt + 1})")
+            #     # print(f"  Response: {response[:200]}...")
+            #     continue
 
-            # print(f"\n--- RAW {section.upper()} (Attempt {attempt + 1}) ---\n{response}\n")
+            print(f"\n--- RAW {section.upper()} (Attempt {attempt + 1}) ---\n{response}\n")
             return response
             
         except Exception as e:
@@ -162,79 +162,108 @@ def run_backlog_pipeline(
         print("⚠️ No initial high-level tasks found in the provided ProjectModel. Skipping further backlog generation.")
         return project_model
 
-    # Now, use project_model.tasks to generate the hierarchical backlog
+    # Strictly process only the first high-level task as the Epic
+    high_level_task_title = project_model.tasks[0]
+    
+    # Now, use high_level_task_title to generate the hierarchical backlog
     print("✨ Generating full hierarchical backlog from high-level tasks...")
     
     generated_epics: List[EpicModel] = []
-    for i, high_level_task_title in enumerate(project_model.tasks):
-        print(f"\nGenerating Epic for high-level task {i+1}/{len(project_model.tasks)}: {high_level_task_title}")
-        # Generate Epic from high_level_task_title
-        epic_context = {
-            "raw_epics_list": f"- title: {high_level_task_title}", # Provide as a list for the prompt
-            "project_title": project_model.title,
-            "project_summary": project_model.summary,
-            "overarching_goals": ", ".join(project_model.features)
-        }
-        epic_prompt = build_prompt("epics", proposal_text, epic_context)
-        raw_epic_response = generate_section(llm, "epics", epic_prompt)
-        if raw_epic_response:
-            parsed_epic_list = validate_and_parse_json("epics", raw_epic_response, EpicListOutputModel)
-            if parsed_epic_list and parsed_epic_list.epics:
-                current_epic = parsed_epic_list.epics[0] # Assume one epic generated per high-level task
+    
+    print(f"\nProcessing High-Level Task as Epic: {high_level_task_title}")
+    
+    # Create the EpicModel directly from the high_level_task_title
+    current_epic = EpicModel(title=high_level_task_title, description="")
+
+    # Generate description for the Epic
+    epic_description_context = {
+        "project_title": project_model.title,
+        "project_summary": project_model.summary,
+        "epic_title": current_epic.title
+    }
+    epic_description_prompt = build_prompt("epic_description", proposal_text, epic_description_context)
+    raw_epic_description = generate_section(llm, "epic_description", epic_description_prompt)
+    current_epic.description = raw_epic_description.strip() # Assign the raw description
                 
-                # Generate Sub-Epics for the current Epic
-                print(f"\n✨ Generating Sub-Epics for Epic: {current_epic.title}")
-                sub_epic_context = {
-                    "epic_title": current_epic.title,
-                    "epic_description": current_epic.description if current_epic.description else "",
-                    "project_summary": project_model.summary
-                }
-                sub_epic_prompt = build_prompt("sub_epics", proposal_text, sub_epic_context)
-                raw_sub_epics_response = generate_section(llm, "sub_epics", sub_epic_prompt)
-                if raw_sub_epics_response:
-                    parsed_sub_epics_list = validate_and_parse_json("sub_epics", raw_sub_epics_response, SubEpicListOutputModel)
-                    if parsed_sub_epics_list:
-                        current_epic.sub_epics = parsed_sub_epics_list.sub_epics
-                        
-                        # Generate User Stories for each Sub-Epic
-                        for j, sub_epic in enumerate(current_epic.sub_epics):
-                            print(f"\n📝 Generating User Stories for Sub-Epic {j+1}/{len(current_epic.sub_epics)}: {sub_epic.title}")
-                            user_story_context = {
-                                "sub_epic_title": sub_epic.title,
-                                "sub_epic_description": sub_epic.description if sub_epic.description else "",
-                                "epic_title": current_epic.title,
-                                "project_summary": project_model.summary
-                            }
-                            user_story_prompt = build_prompt("user_stories", proposal_text, user_story_context)
-                            raw_user_stories_response = generate_section(llm, "user_stories", user_story_prompt)
-                            if raw_user_stories_response:
-                                parsed_user_stories_list = validate_and_parse_json("user_stories", raw_user_stories_response, UserStoryListOutputModel)
-                                if parsed_user_stories_list:
-                                    sub_epic.user_stories = parsed_user_stories_list.user_stories
-                                    
-                                    # Generate Tasks for each User Story
-                                    for k, user_story in enumerate(sub_epic.user_stories):
-                                        print(f"\n🎯 Generating Tasks for User Story {k+1}/{len(sub_epic.user_stories)}: {user_story.title}")
-                                        task_context = {
-                                            "user_story_title": user_story.title,
-                                            "user_story_description": user_story.description if user_story.description else "",
-                                            "acceptance_criteria_list": ", ".join(user_story.acceptance_criteria),
-                                            "sub_epic_title": sub_epic.title,
-                                            "epic_title": current_epic.title,
-                                            "project_summary": project_model.summary
-                                        }
-                                        task_prompt = build_prompt("user_tasks", proposal_text, task_context)
-                                        raw_tasks_response = generate_section(llm, "user_tasks", task_prompt)
-                                        if raw_tasks_response:
-                                            parsed_tasks_list = validate_and_parse_json("user_tasks", raw_tasks_response, TaskListOutputModel)
-                                            if parsed_tasks_list:
-                                                user_story.tasks = parsed_tasks_list.tasks
-                                
-                generated_epics.append(current_epic)
+    # Generate ONE Sub-Epic for the current Epic
+    print(f"\n✨ Generating Sub-Epics for Epic: {current_epic.title}")
+    sub_epic_context = {
+        "epic_title": current_epic.title,
+        "epic_description": current_epic.description if current_epic.description else "",
+        "project_summary": project_model.summary
+    }
+    sub_epic_prompt = build_prompt("sub_epics", proposal_text, sub_epic_context)
+    raw_sub_epics_response = generate_section(llm, "sub_epics", sub_epic_prompt)
+    
+    if raw_sub_epics_response:
+        # Use regex to strictly get only the first sub-epic title.
+        # It looks for a line that does NOT start with common problematic prefixes or numbers.
+        sub_epic_title_match = re.search(
+            r"^(?!\s*(?:Parent Epic Title:|Sub-Epic Titles:|\d+\.|\*\s|Breakdown Note:))\s*(.*?)(?=\n|$)",
+            raw_sub_epics_response,
+            re.MULTILINE | re.IGNORECASE
+        )
+        if sub_epic_title_match:
+            sub_epic_title = sub_epic_title_match.group(1).strip()
+            sub_epic = SubEpicModel(title=sub_epic_title, description="") # No description for Sub-Epic
+            
+            # Generate ONE User Story for the single Sub-Epic
+            print(f"\n📝 Generating User Stories for Sub-Epic: {sub_epic.title}")
+            user_story_context = {
+                "sub_epic_title": sub_epic.title,
+                "sub_epic_description": sub_epic.description if sub_epic.description else "",
+                "epic_title": current_epic.title,
+                "project_summary": project_model.summary
+            }
+            user_story_prompt = build_prompt("user_stories", proposal_text, user_story_context)
+            raw_user_stories_response = generate_section(llm, "user_stories", user_story_prompt)
+   
+            if raw_user_stories_response:
+                # Use regex to strictly get only the first user story block (title + acceptance criteria)
+                # Ignores "User Story:" and "Acceptance Criteria:" prefixes if present
+                user_story_block_match = re.search(
+                    r"^(?:User Story:\s*)?(As a .*?)(?:\n(?:Acceptance Criteria:\s*)?((?:- .*?\n)*))?",
+                    raw_user_stories_response,
+                    re.MULTILINE | re.IGNORECASE
+                )
+                
+                if user_story_block_match:
+                    user_story_title = user_story_block_match.group(1).strip()
+                    acceptance_criteria_raw = user_story_block_match.group(2)
+                    
+                    current_user_story = UserStoryModel(title=user_story_title, description="") # No description for User Story
+                    if acceptance_criteria_raw:
+                        current_user_story.acceptance_criteria = [line.strip()[2:] for line in acceptance_criteria_raw.splitlines() if line.strip().startswith('- ')]
+                    
+                    sub_epic.user_stories = [current_user_story] # Assign only the first parsed user story
+                    
+                    # Generate Tasks for the single User Story
+                    for k, user_story in enumerate(sub_epic.user_stories): # This loop will run only once
+                        print(f"\n🎯 Generating Tasks for User Story {k+1}/{len(sub_epic.user_stories)}: {user_story.title}")
+                        task_context = {
+                            "user_story_title": user_story.title,
+                            "user_story_description": user_story.description if user_story.description else "",
+                            "acceptance_criteria_list": ", ".join(user_story.acceptance_criteria),
+                            "sub_epic_title": sub_epic.title,
+                            "epic_title": current_epic.title,
+                            "project_summary": project_model.summary
+                        }
+                        task_prompt = build_prompt("user_tasks", proposal_text, task_context)
+                        raw_tasks_response = generate_section(llm, "user_tasks", task_prompt)
+   
+                        if raw_tasks_response:
+                            # No slicing here, the prompt is responsible for the limit (e.g., 3 tasks)
+                            task_titles = [line.strip() for line in raw_tasks_response.splitlines() if line.strip()]
+                            for task_title in task_titles:
+                                user_story.tasks.append(TaskModel(title=task_title, description="")) # No description for Task
+            
+                    current_epic.sub_epics.append(sub_epic) # Add the single sub_epic to the current_epic
+            
+    generated_epics.append(current_epic) # Add the single fully formed epic to the list
     
     project_model.epics = generated_epics # Assign the generated epics to the project model
-
-    print(f"\n--- Backlog Generation Completed ---")
+    
+    print(f"\n--- Backlog Generation Completed ---\n")
     return project_model
 
 if __name__ == "__main__":

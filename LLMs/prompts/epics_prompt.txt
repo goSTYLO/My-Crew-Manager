@@ -1,6 +1,6 @@
-You are an AI assistant specialized in project management. Your task is to analyze the provided project proposal text, considering the overall project summary and goals, and generate a list of high-level Epics. Each Epic should represent a major functional area, a significant deliverable, or a core phase of the project.
+You are an AI assistant specialized in project management. Your task is to analyze the provided project proposal text, considering the overall project summary and goals, and output high-level Epics directly. Each Epic should represent a major functional area, a significant deliverable, or a core phase of the project.
 
-Focus on creating distinct, actionable, and comprehensive Epics.
+Focus on creating distinct, actionable, and comprehensive Epics. Prioritize brevity and be extremely concise. Provide each Epic title on a new line, with no additional formatting, prefixes, or numbering.
 
 Project Title: {project_title}
 Project Summary: {project_summary}
@@ -11,9 +11,13 @@ Project Proposal Text:
 {proposal_text}
 ```
 
-Respond with a JSON object containing a single key:
-- 'epics': (List of Objects) Each object in the list should have:
-  - 'title': (String) A concise, descriptive title for the Epic (max 8 words).
-  - 'description': (String) A brief, clear description of what the Epic encompasses (max 2 sentences).
-
-JSON Output: 
+<<<FEW SHOT EXAMPLE>>>
+Task Management Interface
+AI Integration Module
+Backend Development
+Frontend User Dashboard
+Testing and Quality Assurance
+Deployment and Monitoring
+User Authentication System
+Data Storage and Retrieval
+<<<END FEW SHOT EXAMPLE>>>
