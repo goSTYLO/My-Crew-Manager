@@ -12,4 +12,5 @@ class AppPallete {
   static const Color errorColor = Colors.redAccent;
   static const Color transparentColor = Colors.transparent;
   static const Color titleColor = Color.fromRGBO(65, 67, 106, 100);
+  static const Color black = Colors.black;
 }
