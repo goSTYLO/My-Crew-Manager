@@ -3,6 +3,7 @@ import 'package:mycrewmanager/features/authentication/presentation/pages/login_p
 import 'package:mycrewmanager/features/dashboard/presentation/pages/settings_page.dart';
 import 'package:mycrewmanager/features/dashboard/presentation/pages/messages_screen.dart';
 import 'package:mycrewmanager/features/dashboard/widgets/task_widget.dart';
+import 'package:mycrewmanager/features/dashboard/presentation/pages/task_page.dart';
 
 class DashboardPage extends StatefulWidget {
   static route() =>
@@ -113,7 +114,7 @@ class _DashboardPageState extends State<DashboardPage> {
                   context,
                   MaterialPageRoute(
                     builder: (_) => const _PlaceholderPage(title: 'Profile'),
-                  ),
+                  ),    
                 );
               },
             ),
@@ -122,12 +123,7 @@ class _DashboardPageState extends State<DashboardPage> {
               label: 'Explore Task',
               onTap: () {
                 Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) =>
-                        const _PlaceholderPage(title: 'Explore Task'),
-                  ),
+                Navigator.push(context, TaskPage.route()
                 );
               },
             ),
