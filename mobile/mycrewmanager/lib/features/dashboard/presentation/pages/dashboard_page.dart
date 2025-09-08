@@ -3,6 +3,7 @@ import 'package:mycrewmanager/features/authentication/presentation/pages/login_p
 import 'package:mycrewmanager/features/dashboard/presentation/pages/settings_page.dart';
 import 'package:mycrewmanager/features/dashboard/presentation/pages/messages_screen.dart';
 import 'package:mycrewmanager/features/dashboard/widgets/task_widget.dart';
+import 'package:mycrewmanager/features/dashboard/widgets/activetask_widget.dart'; // <-- Add this import
 import 'package:mycrewmanager/features/dashboard/presentation/pages/task_page.dart';
 
 class DashboardPage extends StatefulWidget {
@@ -41,6 +42,21 @@ class _DashboardPageState extends State<DashboardPage> {
               SizedBox(
                 width: 450, // Set your desired width
                 child: TaskWidget(),
+              ),
+              // --- Add ActiveTaskWidget below TaskWidget ---
+              SizedBox(
+                width: 450,
+                child: ActiveTaskWidget(
+                  onBack: () {
+                    // Implement your back logic here
+                  },
+                  onForward: () {
+                    // Implement your forward logic here
+                  },
+                  onTaskTap: () {
+                    // Implement your task tap logic here
+                  },
+                ),
               ),
               // Add more widgets below if needed
             ],
