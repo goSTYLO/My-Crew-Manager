@@ -4,7 +4,12 @@ import 'package:mycrewmanager/features/dashboard/presentation/pages/settings_pag
 import 'package:mycrewmanager/features/dashboard/presentation/pages/messages_screen.dart';
 import 'package:mycrewmanager/features/dashboard/widgets/task_widget.dart';
 import 'package:mycrewmanager/features/dashboard/widgets/activetask_widget.dart'; // <-- Add this import
-import 'package:mycrewmanager/features/dashboard/presentation/pages/task_page.dart';
+import 'package:mycrewmanager/features/dashboard/widgets/incomingtask_widget.dart';
+import 'package:mycrewmanager/features/dashboard/widgets/recentactivity_widget.dart';
+import 'package:mycrewmanager/features/dashboard/presentation/pages/tasks_page.dart';
+import 'package:mycrewmanager/features/dashboard/presentation/pages/notifications_page.dart';
+import 'package:mycrewmanager/features/dashboard/presentation/pages/projects_page.dart';
+
 
 class DashboardPage extends StatefulWidget {
   static route() =>
@@ -58,6 +63,18 @@ class _DashboardPageState extends State<DashboardPage> {
                   },
                 ),
               ),
+              SizedBox(
+                width: 450,
+                child: IncomingTaskWidget(
+                  onViewAll: () {
+                    // Implement your "View All" logic here
+                  },
+                ),
+              ),
+              SizedBox(
+                width: 450,
+                child: RecentActivityWidget(),
+              ),
               // Add more widgets below if needed
             ],
           ),
@@ -73,44 +90,41 @@ class _DashboardPageState extends State<DashboardPage> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // Header
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Row(
+            DrawerHeader(
+              decoration: const BoxDecoration(
+                color: Color(0xFFF7F8FA),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Profile picture
                   const CircleAvatar(
                     radius: 28,
                     backgroundImage: AssetImage(
                       'lib/core/assets/images/app_logo.png',
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
-                        Text(
-                          'Sophia Rose',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        SizedBox(height: 4),
-                        Text(
-                          'UX/UI Designer',
-                          style: TextStyle(fontSize: 12, color: Colors.black54),
-                        ),
-                      ],
+                  const SizedBox(height: 10),
+                  // Name
+                  const Text(
+                    'Sophia Rose',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                      color: Colors.black,
                     ),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.tune_rounded),
-                    onPressed: () {},
+                  // Title
+                  const Text(
+                    'Project Manager',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.black54,
+                    ),
                   ),
                 ],
               ),
             ),
-            const Divider(height: 1),
 
             // Menu Items
             _DrawerItem(
@@ -121,26 +135,20 @@ class _DashboardPageState extends State<DashboardPage> {
                 // Already on Home/Dashboard
               },
             ),
-            _DrawerItem(
-              icon: Icons.person_outline,
-              label: 'Profile',
+             _DrawerItem(
+              icon: Icons.folder_open,
+              label: 'Projects',
               onTap: () {
                 Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const _PlaceholderPage(title: 'Profile'),
-                  ),    
-                );
+                Navigator.push(context, ProjectsPage.route());
               },
             ),
             _DrawerItem(
               icon: Icons.description_outlined,
-              label: 'Explore Task',
+              label: 'Tasks',
               onTap: () {
                 Navigator.pop(context);
-                Navigator.push(context, TaskPage.route()
-                );
+                Navigator.push(context, TasksPage.route());
               },
             ),
             _DrawerItem(
@@ -156,26 +164,7 @@ class _DashboardPageState extends State<DashboardPage> {
               label: 'Notifications',
               onTap: () {
                 Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) =>
-                        const _PlaceholderPage(title: 'Notifications'),
-                  ),
-                );
-              },
-            ),
-            _DrawerItem(
-              icon: Icons.bookmark_border,
-              label: 'Bookmarks',
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const _PlaceholderPage(title: 'Bookmarks'),
-                  ),
-                );
+                Navigator.push(context, NotificationsPage.route());
               },
             ),
             _DrawerItem(

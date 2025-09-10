@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:mycrewmanager/features/authentication/presentation/pages/login_page.dart';
 import 'package:mycrewmanager/features/dashboard/presentation/pages/dashboard_page.dart';
 import 'package:mycrewmanager/features/dashboard/presentation/pages/settings_page.dart';
+import 'package:mycrewmanager/features/dashboard/presentation/pages/tasks_page.dart';
+import 'package:mycrewmanager/features/dashboard/presentation/pages/projects_page.dart';
+import 'package:mycrewmanager/features/dashboard/presentation/pages/notifications_page.dart';
 
 class MessagesScreen extends StatefulWidget {
   const MessagesScreen({super.key});
@@ -91,45 +94,41 @@ class _MessagesScreenState extends State<MessagesScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // Header
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Row(
+            DrawerHeader(
+              decoration: const BoxDecoration(
+                color: Color(0xFFF7F8FA),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Profile picture
                   const CircleAvatar(
                     radius: 28,
                     backgroundImage: AssetImage(
                       'lib/core/assets/images/app_logo.png',
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
-                        Text(
-                          'Sophia Rose',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        SizedBox(height: 4),
-                        Text(
-                          'UX/UI Designer',
-                          style: TextStyle(fontSize: 12, color: Colors.black54),
-                        ),
-                      ],
+                  const SizedBox(height: 10),
+                  // Name
+                  const Text(
+                    'Sophia Rose',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                      color: Colors.black,
                     ),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.tune_rounded),
-                    onPressed: () {},
+                  // Title
+                  const Text(
+                    'Project Manager',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.black54,
+                    ),
                   ),
                 ],
               ),
             ),
-            const Divider(height: 1),
-
             // Menu Items
             _DrawerItem(
               icon: Icons.home_outlined,
@@ -140,30 +139,19 @@ class _MessagesScreenState extends State<MessagesScreen> {
               },
             ),
             _DrawerItem(
-              icon: Icons.person_outline,
-              label: 'Profile',
+              icon: Icons.folder_open,
+              label: 'Projects',
               onTap: () {
                 Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const _PlaceholderPage(title: 'Profile'),
-                  ),
-                );
+                Navigator.push(context, ProjectsPage.route());
               },
             ),
             _DrawerItem(
               icon: Icons.description_outlined,
-              label: 'Explore Task',
+              label: 'Tasks',
               onTap: () {
                 Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) =>
-                        const _PlaceholderPage(title: 'Explore Task'),
-                  ),
-                );
+                Navigator.push(context, TasksPage.route());
               },
             ),
             _DrawerItem(
@@ -171,7 +159,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
               label: 'Messages',
               onTap: () {
                 Navigator.pop(context);
-                // Already on Home/Dashboard
+                Navigator.push(context, MessagesScreen.route());
               },
             ),
             _DrawerItem(
@@ -179,26 +167,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
               label: 'Notifications',
               onTap: () {
                 Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) =>
-                        const _PlaceholderPage(title: 'Notifications'),
-                  ),
-                );
-              },
-            ),
-            _DrawerItem(
-              icon: Icons.bookmark_border,
-              label: 'Bookmarks',
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const _PlaceholderPage(title: 'Bookmarks'),
-                  ),
-                );
+                Navigator.push(context, NotificationsPage.route());
               },
             ),
             _DrawerItem(
@@ -243,7 +212,6 @@ class _MessagesScreenState extends State<MessagesScreen> {
                 );
               },
             ),
-
             const Spacer(),
           ],
         ),

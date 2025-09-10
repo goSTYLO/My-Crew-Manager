@@ -45,13 +45,15 @@ class ActiveTaskWidget extends StatelessWidget {
               ),
               const Spacer(),
               IconButton(
-                icon: const Icon(Icons.arrow_back_ios_new, size: 18, color: Color(0xFFB3B6C7)),
+                icon: const Icon(Icons.arrow_back_ios_new,
+                    size: 18, color: Color(0xFFB3B6C7)),
                 onPressed: onBack,
                 tooltip: "Previous",
                 splashRadius: 20,
               ),
               IconButton(
-                icon: const Icon(Icons.arrow_forward_ios, size: 18, color: Color(0xFFB3B6C7)),
+                icon: const Icon(Icons.arrow_forward_ios,
+                    size: 18, color: Color(0xFFB3B6C7)),
                 onPressed: onForward,
                 tooltip: "Next",
                 splashRadius: 20,
@@ -59,6 +61,7 @@ class ActiveTaskWidget extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 8),
+
           // Task Card
           GestureDetector(
             onTap: onTaskTap,
@@ -70,6 +73,7 @@ class ActiveTaskWidget extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Top Image (remote demo image)
                   ClipRRect(
                     borderRadius: BorderRadius.circular(12),
                     child: Image.network(
@@ -80,28 +84,33 @@ class ActiveTaskWidget extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 12),
+                  
                   Row(
-                    children: [
-                      SvgPicture.asset(
-                        'assets/images/highest_prio.svg',
-                        width: 20,
-                        height: 20,
-                      ),
-                      const SizedBox(width: 6),
-                      const Text(
-                        "Creating Mobile App Design",
-                        style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 15,
-                          color: Color(0xFF181929),
+                      children: [
+                        const Icon(Icons.trending_up, size: 20, color: Color.fromARGB(255, 255, 0, 0)),  
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            "Creating Mobile App Design",
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 15,
+                              color: Color(0xFF181929),
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
+                      ],
+                    ),
+
                   const SizedBox(height: 10),
+
+                  // Deadline Row
                   Row(
                     children: const [
-                      Icon(Icons.access_time, color: Color(0xFF7B7F9E), size: 18),
+                      Icon(Icons.access_time,
+                          color: Color(0xFF7B7F9E), size: 18),
                       SizedBox(width: 6),
                       Text(
                         "3 Days Left",
