@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:mycrewmanager/features/dashboard/presentation/pages/manage_members_page.dart';
+import 'package:mycrewmanager/features/dashboard/presentation/pages/tasks_page.dart'; // Add this import
 
 class ProjectOverviewPage extends StatelessWidget {
   const ProjectOverviewPage({super.key});
@@ -11,15 +13,16 @@ class ProjectOverviewPage extends StatelessWidget {
     // Set status bar to white and icons to dark
     SystemChrome.setSystemUIOverlayStyle(
       const SystemUiOverlayStyle(
-        statusBarColor: Colors.white,
+        statusBarColor: Colors.white, 
         statusBarIconBrightness: Brightness.dark,
         statusBarBrightness: Brightness.light,
       ),
     );
 
     return Scaffold(
-      backgroundColor: Colors.white, // Remove green background
+      backgroundColor: Colors.white, 
       body: SafeArea(
+        top: true,
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
           child: Padding(
@@ -251,7 +254,7 @@ class ProjectOverviewPage extends StatelessWidget {
                       style: TextStyle(color: Colors.black, fontWeight: FontWeight.w600, fontSize: 16),
                     ),
                     onPressed: () {
-                      // TODO: Navigate to tasks
+                      Navigator.of(context).push(TasksPage.route());
                     },
                   ),
                 ),
@@ -270,7 +273,7 @@ class ProjectOverviewPage extends StatelessWidget {
                       style: TextStyle(color: Colors.black, fontWeight: FontWeight.w600, fontSize: 16),
                     ),
                     onPressed: () {
-                      // TODO: Navigate to manage members
+                      Navigator.of(context).push(ManageMembersPage.route());
                     },
                   ),
                 ),

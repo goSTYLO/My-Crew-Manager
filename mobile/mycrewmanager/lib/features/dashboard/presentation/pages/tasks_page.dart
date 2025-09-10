@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mycrewmanager/features/dashboard/presentation/pages/task_overview_page.dart'; // Add this import
 
 class TasksPage extends StatefulWidget {
   const TasksPage({super.key});
@@ -161,9 +162,7 @@ class _TasksPageState extends State<TasksPage> with SingleTickerProviderStateMix
                   members: t["members"],
                   progress: t["progress"],
                   onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Tapped: ${t["title"]}')),
-                    );
+                    Navigator.of(context).push(TaskOverviewPage.route());
                   },
                 );
               },

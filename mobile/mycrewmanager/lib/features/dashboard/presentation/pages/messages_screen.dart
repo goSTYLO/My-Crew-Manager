@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // <-- Add this import
 import 'package:mycrewmanager/features/authentication/presentation/pages/login_page.dart';
 import 'package:mycrewmanager/features/dashboard/presentation/pages/dashboard_page.dart';
 import 'package:mycrewmanager/features/dashboard/presentation/pages/settings_page.dart';
 import 'package:mycrewmanager/features/dashboard/presentation/pages/tasks_page.dart';
 import 'package:mycrewmanager/features/dashboard/presentation/pages/projects_page.dart';
 import 'package:mycrewmanager/features/dashboard/presentation/pages/notifications_page.dart';
+import 'package:mycrewmanager/features/dashboard/presentation/pages/chats_page.dart'; 
 
 class MessagesScreen extends StatefulWidget {
   const MessagesScreen({super.key});
@@ -221,6 +223,15 @@ class _MessagesScreenState extends State<MessagesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Set status bar color to white and icons to dark
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(
+        statusBarColor: Colors.white, // Remove green, set to white
+        statusBarIconBrightness: Brightness.dark,
+        statusBarBrightness: Brightness.light,
+      ),
+    );
+
     final filtered = messages
         .where((msg) =>
             msg['name'].toLowerCase().contains(search.toLowerCase()))
@@ -228,7 +239,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
 
     return Scaffold(
       drawer: _buildAppDrawer(context),
-      backgroundColor: const Color(0xFF17603A),
+      backgroundColor: Colors.white, // Set scaffold background to white
       body: Container(
         color: Colors.white,
         padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
@@ -379,8 +390,11 @@ class _MessagesScreenState extends State<MessagesScreen> {
                     ),
                     onTap: () {
                       // Implement navigation to chat detail here
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Open chat with ${msg['name']}')),
+                      Navigator.of(context).push(
+                        ChatsPage.route(
+                          name: msg['name'],
+                          avatarUrl: msg['avatar'],
+                        ),
                       );
                     },
                   );
