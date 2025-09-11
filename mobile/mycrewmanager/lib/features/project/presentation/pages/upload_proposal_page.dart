@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:mycrewmanager/features/project/presentation/widgets/upload_button.dart';
 
 class ProposalPage extends StatefulWidget {
+  static route() => MaterialPageRoute(builder: (context) => const ProposalPage());
   const ProposalPage({super.key});
 
   @override

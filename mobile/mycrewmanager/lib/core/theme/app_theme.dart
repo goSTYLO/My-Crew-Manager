@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:mycrewmanager/core/theme/pallete.dart';
 
 /// A class that contains all theme configurations for the application.
 /// Implements Contemporary Professional Minimalism design system for crew management applications.
@@ -879,6 +880,60 @@ class AppTheme {
         color: textDisabled,
         letterSpacing: 1.5,
       ),
+    );
+  }
+
+    static _border([Color color = AppPallete.borderColor]) => OutlineInputBorder(
+      borderSide: BorderSide(color: color, width: 3),
+      borderRadius: BorderRadius.circular(10));
+
+  static final darkThemeMode = ThemeData.dark().copyWith(
+    scaffoldBackgroundColor: AppPallete.backgroundColor,
+    appBarTheme: const AppBarTheme(backgroundColor: AppPallete.backgroundColor),
+    chipTheme: const ChipThemeData(
+        color: WidgetStatePropertyAll(AppPallete.backgroundColor),
+        side: BorderSide.none),
+    inputDecorationTheme: InputDecorationTheme(
+      contentPadding: const EdgeInsets.all(27),
+      border: _border(),
+      enabledBorder: _border(),
+      focusedBorder: _border(AppPallete.gradient2),
+      errorBorder: _border(AppPallete.errorColor),
+    ),
+  );
+
+  static final lightThemeMode = ThemeData.light().copyWith(
+    scaffoldBackgroundColor: const Color.fromARGB(255, 255, 255, 255),
+    appBarTheme:
+        const AppBarTheme(backgroundColor: AppPallete.backgroundColorLight),
+    chipTheme: const ChipThemeData(
+        color: WidgetStatePropertyAll(AppPallete.backgroundColor),
+        side: BorderSide.none),
+    inputDecorationTheme: InputDecorationTheme(
+      contentPadding: const EdgeInsets.all(27),
+      border: _border(),
+      enabledBorder: _border(),
+      focusedBorder: _border(const Color.fromARGB(255, 20, 32, 118)),
+      errorBorder: _border(AppPallete.errorColor),
+    ),
+  );
+
+  static InputDecoration inputDecoration(String hint) {
+    return InputDecoration(
+      hintText: hint,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: BorderSide(color: Colors.grey[300]!),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: BorderSide(color: Colors.grey[300]!),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: Colors.blue),
+      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
     );
   }
 }

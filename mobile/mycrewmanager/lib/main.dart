@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:mycrewmanager/core/theme/theme.dart';
+import 'package:mycrewmanager/core/theme/app_theme.dart';
 import 'package:mycrewmanager/features/authentication/presentation/pages/splash_screen.dart';
 
 void main() {

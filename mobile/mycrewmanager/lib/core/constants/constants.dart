@@ -8,8 +8,7 @@ class Constants {
     'Entertainment',
   ];
 
-  
-
   static const noConnectionErrorMessage = 'No internet connection';
 }
+
 final logger = Logger();

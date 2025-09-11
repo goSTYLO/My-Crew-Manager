@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:mycrewmanager/core/theme/app_theme.dart';
 import 'package:mycrewmanager/features/authentication/presentation/widgets/photo_picker.dart';
 
 class SettingsPage extends StatefulWidget {
@@ -111,7 +112,7 @@ class _ProfileTabState extends State<_ProfileTab> {
                   label: 'Full Name',
                   child: TextFormField(
                     controller: _nameController,
-                    decoration: _inputDecoration('Full Name'),
+                    decoration: AppTheme.inputDecoration('Full Name'),
                     textCapitalization: TextCapitalization.words,
                   ),
                 ),
@@ -120,7 +121,7 @@ class _ProfileTabState extends State<_ProfileTab> {
                   label: 'Email Address',
                   child: TextFormField(
                     controller: _emailController,
-                    decoration: _inputDecoration('Email Address'),
+                    decoration: AppTheme.inputDecoration('Email Address'),
                     keyboardType: TextInputType.emailAddress,
                   ),
                 ),
@@ -294,7 +295,7 @@ class _Card extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(),
             blurRadius: 24,
             offset: const Offset(0, 8),
           ),
@@ -323,25 +324,6 @@ class _LabeledField extends StatelessWidget {
   }
 }
 
-InputDecoration _inputDecoration(String hint) {
-  return InputDecoration(
-    hintText: hint,
-    border: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(10),
-      borderSide: BorderSide(color: Colors.grey[300]!),
-    ),
-    enabledBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(10),
-      borderSide: BorderSide(color: Colors.grey[300]!),
-    ),
-    focusedBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(10),
-      borderSide: const BorderSide(color: Colors.blue),
-    ),
-    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-  );
-}
-
 class _Dropdown extends StatelessWidget {
   final String value;
   final List<String> items;
@@ -359,7 +341,7 @@ class _Dropdown extends StatelessWidget {
       items:
           items.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
       onChanged: onChanged,
-      decoration: _inputDecoration(value),
+      decoration: AppTheme.inputDecoration(value),
       icon: const Icon(Icons.keyboard_arrow_down_rounded),
     );
   }
@@ -389,7 +371,7 @@ class _Choice extends StatelessWidget {
             border: Border.all(
               color: selected ? Colors.blue : Colors.grey[300]!,
             ),
-            color: selected ? Colors.blue.withOpacity(0.05) : Colors.white,
+            color: selected ? Colors.blue.withValues(alpha: 0.11) : Colors.white,
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,

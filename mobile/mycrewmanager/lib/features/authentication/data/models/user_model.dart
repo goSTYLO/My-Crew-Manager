@@ -18,4 +18,6 @@ class UserModel extends User {
       name: name ?? this.name,
     );
   }
+
 }
+

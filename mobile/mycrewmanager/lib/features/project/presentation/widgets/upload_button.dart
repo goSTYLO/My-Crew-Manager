@@ -4,7 +4,7 @@ import 'package:mycrewmanager/core/theme/pallete.dart';
 class UploadButton extends StatelessWidget {
   final String buttonText;
   final VoidCallback onPressed;
-  final Color color = Colors.grey;
+  final Color color = const Color.fromARGB(255, 255, 255, 255);
 
   const UploadButton({
     super.key,
@@ -22,11 +22,12 @@ class UploadButton extends StatelessWidget {
           //   end: Alignment.topRight,
           // ),
           // borderRadius: BorderRadius.circular(7),
-          color: Colors.black),
+          borderRadius: BorderRadius.circular(7),
+          color: const Color(0x9C036EFF)),
       child: ElevatedButton(
         onPressed: onPressed,
         style: ElevatedButton.styleFrom(
-          fixedSize: Size(195, 45),
+          fixedSize: Size(135, 45),
           backgroundColor: AppPallete.transparentColor,
           shadowColor: AppPallete.transparentColor,
         ),

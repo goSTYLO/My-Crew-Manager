@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:mycrewmanager/core/theme/pallete.dart';
 import 'package:mycrewmanager/features/authentication/presentation/pages/signup_page.dart';
 import 'package:mycrewmanager/features/dashboard/presentation/pages/dashboard_page.dart';
+import 'package:mycrewmanager/features/project/presentation/pages/project_page.dart';
 
 class LoginPage extends StatefulWidget {
   static route() => MaterialPageRoute(builder: (context) => const LoginPage());
@@ -65,6 +66,7 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
@@ -74,42 +76,44 @@ class _LoginPageState extends State<LoginPage> {
           ),
         ),
         child: SafeArea(
-          child: Column(
-            children: [
-              const SizedBox(height: 80),
-              // Logo and App Name
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // Logo icon
-                  Container(
-                    width: 63,
-                    height: 67,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Image.asset(
-                      "lib/core/assets/images/app_logo.png",
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 80),
+                // Logo and App Name
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // Logo icon
+                    Container(
                       width: 63,
                       height: 67,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Image.asset(
+                        "lib/core/assets/images/app_logo.png",
+                        width: 63,
+                        height: 67,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    "MyCrewManager",
-                    style: TextStyle(
-                      color: AppPallete.titleColor,
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      decoration: TextDecoration.none,
+                    const SizedBox(width: 12),
+                    Text(
+                      "MyCrewManager",
+                      style: TextStyle(
+                        color: AppPallete.titleColor,
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        decoration: TextDecoration.none,
+                      ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 60),
-              // Login Form Container - Expanded to fill remaining space
-              Expanded(
-                child: Container(
+                  ],
+                ),
+                const SizedBox(height: 60),
+                // Login Form Container
+                Container(
                   width: double.infinity,
                   decoration: BoxDecoration(
                     color: Colors.white,
@@ -130,6 +134,7 @@ class _LoginPageState extends State<LoginPage> {
                     child: Form(
                       key: formKey,
                       child: Column(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           // Welcome Text
                           const Text(
@@ -151,7 +156,6 @@ class _LoginPageState extends State<LoginPage> {
                             ),
                           ),
                           const SizedBox(height: 30),
-
                           // Email Field
                           TextFormField(
                             controller: emailController,
@@ -198,7 +202,6 @@ class _LoginPageState extends State<LoginPage> {
                             },
                           ),
                           const SizedBox(height: 16),
-
                           // Password Field
                           TextFormField(
                             controller: passwordController,
@@ -257,7 +260,6 @@ class _LoginPageState extends State<LoginPage> {
                             },
                           ),
                           const SizedBox(height: 20),
-
                           // Terms and Forgot Password Row
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -271,7 +273,8 @@ class _LoginPageState extends State<LoginPage> {
                                         _acceptedTerms = value ?? false;
                                       });
                                     },
-                                    activeColor: AppPallete.titleColor,
+                                    activeColor:
+                                        const Color.fromARGB(100, 43, 1, 255),
                                   ),
                                   const Text(
                                     "Terms & Conditions",
@@ -284,7 +287,8 @@ class _LoginPageState extends State<LoginPage> {
                               ),
                               TextButton(
                                 onPressed: () {
-                                  // TODO: Navigate to forgot password
+                                  Navigator.push(
+                                      context, ProjectPage.route());
                                 },
                                 child: const Text(
                                   "Forgot Password?",
@@ -297,9 +301,6 @@ class _LoginPageState extends State<LoginPage> {
                               ),
                             ],
                           ),
-
-                          // const Spacer(),
-
                           // Login Button
                           SizedBox(
                             width: double.infinity,
@@ -324,7 +325,6 @@ class _LoginPageState extends State<LoginPage> {
                             ),
                           ),
                           const SizedBox(height: 20),
-
                           // Demo credentials info
                           Container(
                             padding: const EdgeInsets.all(16),
@@ -366,7 +366,6 @@ class _LoginPageState extends State<LoginPage> {
                             ),
                           ),
                           const SizedBox(height: 20),
-
                           // Sign Up Link
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -398,8 +397,8 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
