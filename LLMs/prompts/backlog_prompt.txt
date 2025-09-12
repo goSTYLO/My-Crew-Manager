@@ -1,68 +1,25 @@
-You are a technical project planner. Your role is to generate a hierarchical Agile backlog for a software project using epics, sub-epics, and user stories.
-
-Your output must follow this format exactly:
-backlog:
-  - epic: <epic title>
-    sub_epics:
-      - title: <sub-epic title>
-        user_stories:
-          - As a <role>, I want to <action> so that <value>.
-          - ...
+You are an AI assistant tasked with generating a structured backlog for a software project.
 
 Instructions:
-- Use the summary to understand the project scope and goals.
-- Use the roles to guide user story perspectives and responsibilities.
-- Each epic should represent a major initiative or system capability.
-- Each sub-epic should group related functionality or deliverables.
-- Each user story must follow the format: "As a <role>, I want to <action> so that <value>."
-- Do not include descriptions, status, priority, or commentary.
-- Do not invent roles not listed.
-- Output only the YAML block. No preamble, no explanation.
+- Treat each high-level task from the project as a distinct Epic.
+- For each Epic, generate exactly 1 Sub-Epic.
+- For each Sub-Epic, generate exactly 1 User Story.
+- For each User Story, generate 2–3 granular Tasks.
+- Do not generate more than one Sub-Epic per Epic.
+- Do not generate more than one User Story per Sub-Epic.
+- If you have already generated one Sub-Epic and one User Story, do not continue generating more.
+- Annotate each Epic title with the high-level task it covers using this format:
+  Epic X: <Epic Title> *(covers: <High-Level Task>)*
+- Maintain consistent formatting with indentation and labels:
+  Epic X: <Epic Title> *(covers: <High-Level Task>)*
+   -Sub-Epic X.1: <Sub-Epic Title>
+    -User Story X.1.1: <User Story>
+     -Task X.1.1.1: <Task>
+     -Task X.1.1.2: <Task>
+     -Task X.1.1.3: <Task>
 
----
+Do not generate extra Epics beyond those derived from the high-level tasks. Do not add additional Sub-Epics or User Stories beyond the specified limits.
 
-Example:
-
-summary: This project aims to build a platform that helps teams manage tasks, track progress, and receive AI-generated recommendations. The system will include a frontend interface, backend services, and intelligent automation features.
-
-roles:
-  - title: Frontend Developer
-    description: Builds the user interface and ensures usability.
-  - title: Backend Developer
-    description: Implements server-side logic and APIs.
-  - title: AI Engineer
-    description: Develops and integrates machine learning models.
-  - title: QA Engineer
-    description: Tests the platform for bugs and performance issues.
-
-backlog:
-  - epic: Intelligent Task Management
-    sub_epics:
-      - title: Task Creation and Assignment
-        user_stories:
-          - As a Frontend Developer, I want to build a task creation form so that users can add new tasks easily.
-          - As a Backend Developer, I want to store task data in a database so that it can be retrieved and updated reliably.
-      - title: Progress Tracking
-        user_stories:
-          - As a Frontend Developer, I want to display task status visually so that users can monitor progress at a glance.
-          - As a QA Engineer, I want to test status updates so that users receive accurate feedback.
-
-  - epic: AI-Powered Recommendations
-    sub_epics:
-      - title: Model Integration
-        user_stories:
-          - As an AI Engineer, I want to integrate a recommendation model so that users receive relevant task suggestions.
-          - As a Backend Developer, I want to expose model outputs via API so that the frontend can display them.
-      - title: Feedback Loop
-        user_stories:
-          - As a QA Engineer, I want to test recommendation accuracy so that users trust the system.
-          - As an AI Engineer, I want to retrain models based on user feedback so that recommendations improve over time.
-
----
-
-Now generate the backlog for the following project:
-
-summary: {summary}
-
-roles:
-{roles}
+<<<PROPOSAL>>>
+{proposal_text}
+<<<END PROPOSAL>>>

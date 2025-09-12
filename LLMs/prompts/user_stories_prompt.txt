@@ -1,14 +1,6 @@
-Your ENTIRE response MUST be *only* the single, complete User Story block (title and its acceptance criteria). Do NOT include any prefixes (e.g., "User Story:", "Acceptance Criteria:", "1.", "-"), numbering, bullet points, explanations, notes, or additional commentary.
+Your ENTIRE response MUST be *only* ONE single, complete User Story block. Do NOT include any prefixes, numbering, bullet points, explanations, notes, or additional commentary. No exceptions. No preamble, no explanation, no notes. Your ENTIRE response should ONLY be the user story block.
 
-<<<FEW SHOT EXAMPLE>>>
-As a user, I want to register an account so that I can access personalized features.
-- Account creation successful.
-- User data saved securely.
-<<<END FEW SHOT EXAMPLE>>>
-
-You are an AI assistant specialized in project management. Your task is to generate a list of detailed User Stories for a given Sub-Epic, drawing from the project proposal text. Each User Story should describe a feature from the perspective of an end-user or system component, following the format 'As a [user role], I want to [action] so that [benefit]'.
-
-For each User Story, also provide clear, testable acceptance criteria. Prioritize brevity and be extremely concise.
+Generate ONLY ONE user story for the provided Sub-Epic from the perspective of an **app user** (e.g., "As a student", "As a Project Manager"). Be extremely concise. No preambles, no conversational filler. DO NOT generate any acceptance criteria.
 
 Project Summary: {project_summary}
 Parent Epic Title: {epic_title}
@@ -18,3 +10,7 @@ Project Proposal Text:
 ```
 {proposal_text}
 ```
+
+<<<FEW SHOT EXAMPLE>>>
+As a Project Manager, I want to upload a proposal so the system can analyze it.
+<<<END FEW SHOT EXAMPLE>>>

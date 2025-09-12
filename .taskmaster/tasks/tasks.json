@@ -9,7 +9,7 @@
         "testStrategy": "Unit tests for LLM API client connectivity. Integration tests for a simple prompt-response cycle.",
         "priority": "high",
         "dependencies": [],
-        "status": "todo",
+        "status": "done",
         "subtasks": []
       },
       {
@@ -22,7 +22,7 @@
         "dependencies": [
           16
         ],
-        "status": "todo",
+        "status": "done",
         "subtasks": []
       },
       {
@@ -36,7 +36,7 @@
           16,
           17
         ],
-        "status": "todo",
+        "status": "done",
         "subtasks": []
       },
       {
@@ -51,7 +51,7 @@
           17,
           18
         ],
-        "status": "todo",
+        "status": "done",
         "subtasks": []
       },
       {
@@ -64,7 +64,7 @@
         "dependencies": [
           19
         ],
-        "status": "todo",
+        "status": "done",
         "subtasks": []
       },
       {
@@ -140,7 +140,7 @@
     ],
     "metadata": {
       "created": "2025-09-05T14:21:57.525Z",
-      "updated": "2025-09-05T14:39:34.937Z",
+      "updated": "2025-09-10T02:25:31.303Z",
       "description": "Tasks for master context"
     }
   }
