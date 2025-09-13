@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:mycrewmanager/core/theme/pallete.dart';
+import 'package:mycrewmanager/features/authentication/presentation/pages/forgot_password.dart';
 import 'package:mycrewmanager/features/authentication/presentation/pages/signup_page.dart';
 import 'package:mycrewmanager/features/dashboard/presentation/pages/dashboard_page.dart';
-import 'package:mycrewmanager/features/project/presentation/pages/project_page.dart';
 
 class LoginPage extends StatefulWidget {
   static route() => MaterialPageRoute(builder: (context) => const LoginPage());
@@ -288,7 +288,7 @@ class _LoginPageState extends State<LoginPage> {
                               TextButton(
                                 onPressed: () {
                                   Navigator.push(
-                                      context, ProjectPage.route());
+                                      context, ForgotPasswordPage.route());
                                 },
                                 child: const Text(
                                   "Forgot Password?",

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
 class ForgotPasswordPage extends StatefulWidget {
-  const ForgotPasswordPage({super.key});
   static route() =>
       MaterialPageRoute(builder: (context) => const ForgotPasswordPage());
+  const ForgotPasswordPage({super.key});
   @override
   State<ForgotPasswordPage> createState() => _ForgotPasswordPageState();
 }

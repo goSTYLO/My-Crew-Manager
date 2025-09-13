@@ -1,6 +1,7 @@
 import 'package:dotted_border/dotted_border.dart';
 import 'package:flutter/material.dart';
 import 'package:mycrewmanager/features/project/presentation/widgets/upload_button.dart';
+import 'package:mycrewmanager/features/project/presentation/pages/ai_project_summary_page.dart';
 
 class UploadProposalTab extends StatefulWidget {
   const UploadProposalTab({super.key});
@@ -168,7 +169,15 @@ class _UploadProposalTabState extends State<UploadProposalTab> {
               width: double.infinity,
               height: 50,
               child: ElevatedButton(
-                onPressed: uploadedFiles.isNotEmpty ? () {} : null,
+                onPressed: uploadedFiles.isNotEmpty
+                    ? () {
+                        Navigator.push(
+                          context,
+                          // ignore: prefer_const_constructors
+                          AIProjectSummaryPage.route(),
+                        );
+                      }
+                    : null,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.blue,
                   foregroundColor: Colors.white,
