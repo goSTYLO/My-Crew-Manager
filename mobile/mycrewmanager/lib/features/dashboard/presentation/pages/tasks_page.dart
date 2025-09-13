@@ -1,5 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:mycrewmanager/features/dashboard/presentation/pages/task_overview_page.dart'; // Add this import
+import 'package:mycrewmanager/features/dashboard/presentation/pages/dashboard_page.dart';
+import 'package:mycrewmanager/features/dashboard/presentation/pages/task_overview_page.dart';
+import 'package:mycrewmanager/features/dashboard/presentation/pages/projects_page.dart';
+import 'package:mycrewmanager/features/dashboard/presentation/pages/messages_screen.dart';
+import 'package:mycrewmanager/features/dashboard/presentation/pages/notifications_page.dart';
+import 'package:mycrewmanager/features/dashboard/presentation/pages/settings_page.dart';
+import 'package:mycrewmanager/features/authentication/presentation/pages/login_page.dart';
 
 class TasksPage extends StatefulWidget {
   const TasksPage({super.key});
@@ -95,17 +101,148 @@ class _TasksPageState extends State<TasksPage> with SingleTickerProviderStateMix
     return tasks.where((t) => t["status"] == status).toList();
   }
 
+  Drawer _buildAppDrawer(BuildContext context) {
+    return Drawer(
+      child: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            DrawerHeader(
+              decoration: const BoxDecoration(
+                color: Color(0xFFF7F8FA),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const CircleAvatar(
+                    radius: 28,
+                    backgroundImage: AssetImage(
+                      'lib/core/assets/images/app_logo.png',
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  const Text(
+                    'Sophia Rose',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                      color: Colors.black,
+                    ),
+                  ),
+                  const Text(
+                    'Project Manager',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.black54,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Menu Items
+            _DrawerItem(
+              icon: Icons.home_outlined,
+              label: 'Home',
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(context, DashboardPage.route());
+              },
+            ),
+            _DrawerItem(
+              icon: Icons.folder_open,
+              label: 'Projects',
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(context, ProjectsPage.route());
+              },
+            ),
+            _DrawerItem(
+              icon: Icons.description_outlined,
+              label: 'Tasks',
+              onTap: () {
+                Navigator.pop(context);
+                //Already on Tasks Page
+              },
+            ),
+            _DrawerItem(
+              icon: Icons.chat_bubble_outline,
+              label: 'Messages',
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(context, MessagesScreen.route());
+              },
+            ),
+            _DrawerItem(
+              icon: Icons.notifications_none,
+              label: 'Notifications',
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(context, NotificationsPage.route());
+              },
+            ),
+            _DrawerItem(
+              icon: Icons.settings_outlined,
+              label: 'Settings',
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(context, SettingsPage.route());
+              },
+            ),
+            _DrawerItem(
+              icon: Icons.logout,
+              label: 'Logout',
+              onTap: () {
+                showDialog(
+                  context: context,
+                  builder: (BuildContext context) {
+                    return AlertDialog(
+                      title: const Text('Logout'),
+                      content: const Text('Are you sure you want to logout?'),
+                      actions: [
+                        TextButton(
+                          style: TextButton.styleFrom(
+                            foregroundColor: Colors.black,
+                          ),
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('Cancel'),
+                        ),
+                        TextButton(
+                          style: TextButton.styleFrom(
+                            foregroundColor: Colors.black,
+                          ),
+                          onPressed: () {
+                            Navigator.pop(context); 
+                            Navigator.pushReplacement(context, LoginPage.route());
+                          },
+                          child: const Text('Logout'),
+                        ),
+                      ],
+                    );
+                  },
+                );
+              },
+            ),
+            const Spacer(),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final tabLabels = ["All", "To Do", "In Progress", "Completed"];
     return Scaffold(
-      backgroundColor: const Color(0xFF17603A),
+      drawer: _buildAppDrawer(context),
+      backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.black87),
-          onPressed: () => Navigator.pop(context),
+        leading: Builder(
+          builder: (context) => IconButton(
+            icon: const Icon(Icons.menu, color: Colors.black87),
+            onPressed: () => Scaffold.of(context).openDrawer(),
+          ),
         ),
         title: const Text(
           "Tasks",
@@ -120,7 +257,6 @@ class _TasksPageState extends State<TasksPage> with SingleTickerProviderStateMix
           IconButton(
             icon: const Icon(Icons.search, color: Colors.black87),
             onPressed: () {
-              // Implement search functionality here
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Search tapped')),
               );
@@ -173,16 +309,42 @@ class _TasksPageState extends State<TasksPage> with SingleTickerProviderStateMix
       floatingActionButton: FloatingActionButton(
         backgroundColor: Colors.black,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20), // for a rounded square look
+          borderRadius: BorderRadius.circular(20),
         ),
         child: const Icon(Icons.add, color: Colors.white, size: 32),
         onPressed: () {
-          // Implement add task functionality here
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Add Task tapped')),
           );
         },
       ),
+    );
+  }
+}
+
+class _DrawerItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  const _DrawerItem({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      leading: Icon(icon, color: Colors.black87),
+      title: Text(
+        label,
+        style: const TextStyle(
+          color: Colors.black87,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+      onTap: onTap,
     );
   }
 }
@@ -223,20 +385,12 @@ class _TaskCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 18), // Space between boxes
+      margin: const EdgeInsets.only(bottom: 18),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: Colors.black12, width: 1),
-        // Optional: add a subtle shadow
-        // boxShadow: [
-        //   BoxShadow(
-        //     color: Colors.black.withOpacity(0.03),
-        //     blurRadius: 8,
-        //     offset: const Offset(0, 2),
-        //   ),
-        // ],
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
@@ -244,7 +398,6 @@ class _TaskCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Top row: title and status
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -276,7 +429,6 @@ class _TaskCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 12),
-            // Icon and subtitle
             Row(
               children: [
                 Icon(icon, color: iconColor, size: 22),
@@ -290,7 +442,6 @@ class _TaskCard extends StatelessWidget {
                   ),
                 ),
                 const Spacer(),
-                // Avatars
                 SizedBox(
                   width: 50,
                   height: 28,
@@ -331,7 +482,6 @@ class _TaskCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 8),
-            // Progress bar
             LinearProgressIndicator(
               value: progress,
               minHeight: 6,

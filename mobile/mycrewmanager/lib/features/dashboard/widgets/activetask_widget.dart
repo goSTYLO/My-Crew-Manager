@@ -35,7 +35,7 @@ class ActiveTaskWidget extends StatelessWidget {
           Row(
             children: [
               const Text(
-                "Active Projects",
+                "Active Tasks",
                 style: TextStyle(
                   fontWeight: FontWeight.w700,
                   fontSize: 16,
