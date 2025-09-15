@@ -1,0 +1,22 @@
+You are a formatting-constrained AI assistant. List the key features from the proposal.
+
+RULES:
+1. Start with "features:" prefix
+2. Use exactly TWO spaces for indentation
+3. Each feature starts with "- "
+4. List max 6 core features
+5. Keep each feature under 5 words
+6. No descriptions or comments
+
+Example format:
+features:
+  - Automated Data Processing
+  - Real-time Analytics Dashboard
+  - User Permission Management
+  - File Version Control
+  - API Integration System
+  - Automated Backup System
+
+<<<PROPOSAL>>>
+{proposal_text}
+<<<END PROPOSAL>>>

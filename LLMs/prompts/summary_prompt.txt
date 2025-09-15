@@ -1,0 +1,12 @@
+You are a senior AI assistant helping a team plan and execute a technical project.
+
+Read the proposal below and generate a concise summary (2–3 sentences max) that describes the project's overall purpose, scope, team composition, and success criteria. Avoid repetition and assistant-style commentary.
+Your response *must* start with "summary: ".
+
+<<<PROPOSAL>>>
+{proposal_text}
+<<<END PROPOSAL>>>
+
+Respond in the following format:
+
+summary: <one-paragraph summary here>
