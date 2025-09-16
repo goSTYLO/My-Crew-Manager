@@ -70,13 +70,71 @@
       {
         "id": 21,
         "title": "Implement Core Database Schema",
-        "description": "Design and implement the database schema for the core entities: User, Members, Proposal, Project, Backlog, Epic, SubEpic, UserStory, Task, Sprint.",
-        "details": "Use an ORM (e.g., SQLAlchemy, Django ORM, TypeORM) to define models corresponding to the data model. Ensure proper relationships (one-to-many, many-to-many) and indexing for performance.",
-        "testStrategy": "Database migration tests. Unit tests for ORM model definitions and basic CRUD operations.",
+        "description": "Design and implement the database schema for the core domain apps: users, projects, backlog, sprints. Ensure proper relationships, modular separation, and support for LLM-generated data.",
+        "details": "Use Django ORM to define models within their respective domain apps. Ensure one-to-many and many-to-one relationships are properly declared using ForeignKey and related_name. Index foreign keys for performance. Include a ProjectInsights model to store LLM-generated summaries and metadata.",
+        "testStrategy": "Run Django migration tests. Write unit tests for model instantiation, relationships, and basic CRUD operations using Django's TestCase and test database.",
         "priority": "high",
         "dependencies": [],
         "status": "todo",
-        "subtasks": []
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Validate Django ORM Setup",
+            "description": "Ensure all domain apps are listed in INSTALLED_APPS. Confirm migrations folders exist and __init__.py is present. Run initial migrations to verify setup.",
+            "dependencies": [],
+            "details": "Check apps: users, projects, backlog, sprints, voice, gamification. Run `python manage.py makemigrations` and `migrate`. Confirm database connectivity and migration success.",
+            "status": "done",
+            "testStrategy": "Run `manage.py check` and `migrate` without errors. Validate model discovery and migration generation."
+          },
+          {
+            "id": 2,
+            "title": "Finalize User and Member Models",
+            "description": "Refactor users/models.py to include custom User model with proper manager and admin compatibility. Move Member model to projects/models.py and link to User and Project.",
+            "dependencies": [
+              1
+            ],
+            "details": "Fix manager assignment, add is_staff and is_superuser fields. Ensure AUTH_USER_MODEL is set. Member should include role, user FK, project FK, timestamps.",
+            "status": "done",
+            "testStrategy": "Test user creation, superuser creation, and Member associations. Validate admin registration and model relationships."
+          },
+          {
+            "id": 3,
+            "title": "Implement Project, Proposal, and ProjectInsights Models",
+            "description": "Define Project and Proposal models in projects/models.py. Add ProjectInsights model to store LLM-generated summaries, risks, and goals.",
+            "dependencies": [
+              1,
+              2
+            ],
+            "details": "Project includes title, summary, risks, timestamps. Proposal includes file, parsedText, methodology, FK to Project. ProjectInsights includes FK to Project or Proposal, summary, risks, goals, llm_version, created_at.",
+            "status": "pending",
+            "testStrategy": "Test creation and linking of Project, Proposal, and ProjectInsights. Validate LLM output storage and retrieval."
+          },
+          {
+            "id": 4,
+            "title": "Implement Backlog Models: Backlog, Epic, SubEpic, UserStory",
+            "description": "Define backlog hierarchy in backlog/models.py. Ensure proper FK relationships and support for LLM-generated backlog ingestion.",
+            "dependencies": [
+              1,
+              3
+            ],
+            "details": "Backlog links to Project. Epic links to Backlog. SubEpic links to Epic. UserStory links to SubEpic or Epic. Include acceptance_criteria, priority, status, timestamps.",
+            "status": "pending",
+            "testStrategy": "Test hierarchy creation and traversal. Validate FK integrity and LLM mapping to backlog structure."
+          },
+          {
+            "id": 5,
+            "title": "Implement Sprint, Task, and UserTask Models",
+            "description": "Define sprint planning models in sprints/models.py. Link tasks to UserStories and optionally to Sprints. Include UserTask for member-task assignments.",
+            "dependencies": [
+              1,
+              3,
+              4
+            ],
+            "details": "Sprint includes duration, start/end dates, status. Task links to UserStory and Project. UserTask links Task to Member. Include timestamps and status fields.",
+            "status": "pending",
+            "testStrategy": "Test sprint creation, task assignment, and UserTask linking. Validate backlog-to-sprint transitions."
+          }
+        ]
       },
       {
         "id": 22,
@@ -140,7 +198,7 @@
     ],
     "metadata": {
       "created": "2025-09-05T14:21:57.525Z",
-      "updated": "2025-09-10T02:25:31.303Z",
+      "updated": "2025-09-16T13:51:10.143Z",
       "description": "Tasks for master context"
     }
   }
