@@ -42,8 +42,12 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'rest_framework_simplejwt.token_blacklist',
+
+    # Domain apps
     'api',
-    'project_management',
+    'projects',
+    'backlog',
+    'sprints',
     'users',
 ]
 
@@ -99,7 +103,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'my_crew_manager_db',
         'USER': 'postgres',
-        'PASSWORD': '140804',  # the one you set during install
+        'PASSWORD': '1401',  # the one you set during install
         'HOST': 'localhost',
         'PORT': '5432',
     }

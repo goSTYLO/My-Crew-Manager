@@ -1,7 +1,9 @@
 # DJANGO
-Django
-djangorestframework
-psycopg2-binary
+Django>=5.2.4
+djangorestframework>=3.14.0
+psycopg2-binary>=2.9.9
+django-cors-headers>=4.3.1
+djangorestframework-simplejwt>=5.3.1
 
 # HuggingFace + LangChain
 transformers
@@ -29,5 +31,6 @@ pillow
 
 # PDF Parser
 pdfplumber
+
 # Optional (Not yet supported in Python 3.13)
 # onnxruntime
