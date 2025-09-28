@@ -36,10 +36,18 @@ dependencies:
   intl: ^0.20.2
   internet_connection_checker_plus: ^2.7.2
   logger: ^2.6.1
+  flutter_secure_storage: ^9.2.4
+  retrofit: ^4.7.2
+  json_annotation: ^4.9.0
+  get_it: ^8.2.0
+
 dev_dependencies:
   flutter_test:    # CRITICAL: Required for Flutter project testing - DO NOT REMOVE
     sdk: flutter   # CRITICAL: Required for Flutter project testing - DO NOT REMOVE
   flutter_lints: ^5.0.0 # CRITICAL: Required for code quality - DO NOT REMOVE
+  retrofit_generator: ^10.0.5
+  build_runner: ^2.8.0
+  json_serializable: ^6.11.1
 
 flutter:
   uses-material-design: true # CRITICAL: Required for Material icon font - DO NOT REMOVE
