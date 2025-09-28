@@ -1,16 +1,14 @@
 import os
 import re
-import json
 from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
 from langchain_huggingface import HuggingFacePipeline
-from .utils.pdf_parser import extract_text_from_pdf
 from .models import (
     ProjectModel,
     TeamMemberModel,
     TimelineWeekModel,
     TimelineTaskModel
 )
-from typing import List
+from typing import Dict
 
 MODEL_ID = "unsloth/mistral-7b-instruct-v0.3-bnb-4bit"
 
@@ -35,7 +33,7 @@ def load_llm() -> HuggingFacePipeline:
     print("✅ Model loaded and ready")
     return HuggingFacePipeline(pipeline=pipe)
 
-def build_prompt(section: str, proposal_text: str, context: dict = None) -> str:
+def build_prompt(section: str, proposal_text: str, context: Dict = None) -> str:
     root_dir = os.path.dirname(__file__)
     prompt_path = os.path.join(root_dir, "prompts", f"{section}_prompt.txt")
 
@@ -65,8 +63,6 @@ def validate_section_format(section: str, response: str) -> bool:
         return response_lower.startswith("features:") and "- " in response_lower
     if section == "roles":
         return response_lower.startswith("roles:") and "- " in response_lower
-    if section == "tasks":
-        return "- title:" in response_lower
     if section == "timeline":
         return "timeline:" in response_lower and "week_number:" in response_lower
     return True
@@ -89,8 +85,7 @@ def generate_section(llm, section: str, prompt: str, max_retries: int = 5) -> st
     print(f"❌ Failed to generate {section} after {max_retries} attempts.")
     return ""
 
-def run_pipeline(proposal_path: str = "datasets/project_proposal3.pdf") -> ProjectModel:
-    proposal_text = extract_text_from_pdf(proposal_path)
+def run_pipeline_from_text(proposal_text: str) -> ProjectModel:
     if not proposal_text:
         print("⚠️ Empty proposal text")
         return ProjectModel()
@@ -98,8 +93,7 @@ def run_pipeline(proposal_path: str = "datasets/project_proposal3.pdf") -> Proje
     llm = load_llm()
     project_model = ProjectModel()
     raw_outputs = {}
-
-    sections = ["summary", "features", "roles", "tasks", "timeline"]
+    sections = ["summary", "features", "roles", "timeline"]
 
     for section in sections:
         print(f"\n🚀 Generating: {section.upper()}")
@@ -109,21 +103,9 @@ def run_pipeline(proposal_path: str = "datasets/project_proposal3.pdf") -> Proje
             "project_title": project_model.title or "",
             "project_summary": project_model.summary or "",
             "overarching_goals": ", ".join(project_model.features),
-            "additional_roles": "",
+            "additional_roles": "\n".join([r.role for r in project_model.roles]) if project_model.roles else "",
             "tasks": ""
         }
-
-        if section == "tasks" and "roles" in raw_outputs:
-            role_lines = [line.strip()[2:] for line in raw_outputs["roles"].splitlines() if line.strip().startswith("- ")]
-            context["additional_roles"] = "\n".join(role_lines)
-
-        if section == "timeline" and "tasks" in raw_outputs:
-            task_titles = []
-            for line in raw_outputs["tasks"].splitlines():
-                match = re.match(r"^-\s*title:\s*(.*)", line.strip(), re.IGNORECASE)
-                if match:
-                    task_titles.append(match.group(1).strip())
-            context["tasks"] = "\n".join(task_titles)
 
         prompt = build_prompt(section, proposal_text, context)
         if prompt:
@@ -131,7 +113,6 @@ def run_pipeline(proposal_path: str = "datasets/project_proposal3.pdf") -> Proje
             if raw_response:
                 raw_outputs[section] = raw_response
 
-    # --- Post-processing ---
     if "summary" in raw_outputs:
         match = re.search(r"summary:\s*(.*)", raw_outputs["summary"], re.DOTALL | re.IGNORECASE)
         if match:
@@ -149,14 +130,6 @@ def run_pipeline(proposal_path: str = "datasets/project_proposal3.pdf") -> Proje
     if "roles" in raw_outputs:
         roles = [TeamMemberModel(role=line.strip()[2:].strip()) for line in raw_outputs["roles"].splitlines() if line.strip().startswith("- ")]
         project_model.roles = roles
-
-    if "tasks" in raw_outputs:
-        titles = []
-        for line in raw_outputs["tasks"].splitlines():
-            match = re.match(r"^-\s*title:\s*(.*)", line.strip(), re.IGNORECASE)
-            if match:
-                titles.append(match.group(1).strip())
-        project_model.tasks = titles
 
     if "timeline" in raw_outputs:
         try:
@@ -183,17 +156,20 @@ def run_pipeline(proposal_path: str = "datasets/project_proposal3.pdf") -> Proje
         except Exception as e:
             print(f"❌ Error parsing timeline: {e}")
 
-    project_model.epics = []
-    print("\n--- Initial Project Data Structuring Completed ---")
+    print("\n--- Project Overview + Timeline Completed ---")
     return project_model
 
-if __name__ == "__main__":
-    final_project_plan = run_pipeline()
-    print("\n--- Final Project Model (JSON) ---")
-    json_output = final_project_plan.model_dump_json(indent=2, exclude_defaults=True)
-    print(json_output)
-
-    output_file = "datasets/project_management.jsonl"
-    with open(output_file, "w", encoding="utf-8") as f:
-        f.write(json_output + "\n")
-    print(f"\n✅ Project data saved to {output_file}")
+def model_to_dict(project_model: ProjectModel) -> dict:
+    return {
+        "title": project_model.title,
+        "summary": project_model.summary,
+        "features": project_model.features,
+        "roles": [r.role for r in project_model.roles],
+        "timeline": [
+            {
+                "week_number": week.week_number,
+                "tasks": [task.title for task in week.tasks]
+            }
+            for week in project_model.timeline
+        ]
+    }
