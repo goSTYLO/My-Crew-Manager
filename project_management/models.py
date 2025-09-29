@@ -32,6 +32,18 @@ class Project(models.Model):
     class Meta:
         db_table = 'project'
 
+class Backlog(models.Model):
+    backlog_id = models.AutoField(primary_key=True)
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='backlogs')
+    createdDate = models.DateTimeField(auto_now_add=True)
+    lastUpdated = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Backlog {self.backlog_id} - {self.project.name}"
+
+    class Meta:
+        db_table = 'backlog'
+
 class Sprint(models.Model):
     METHODOLOGY_CHOICES = [
         ('scrum', 'Scrum'),

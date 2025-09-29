@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
-from .models import Team, Project, Sprint, Task, MoodCheckIn, Commit, Report, TeamMember
+from .models import Team, Project, Sprint, Task, MoodCheckIn, Commit, Report, TeamMember, Backlog
 
 User = get_user_model()
 
@@ -78,6 +78,14 @@ class ReportSerializer(serializers.ModelSerializer):
         model = Report
         fields = ['report_id', 'sprint', 'sprint_title', 'type', 'generated_at', 'data']
         read_only_fields = ['report_id', 'generated_at']
+
+class BacklogSerializer(serializers.ModelSerializer):
+    project_name = serializers.CharField(source='project.name', read_only=True)
+
+    class Meta:
+        model = Backlog
+        fields = ['backlog_id', 'project', 'project_name', 'createdDate', 'lastUpdated']
+        read_only_fields = ['backlog_id', 'createdDate', 'lastUpdated']
 
 class TeamMemberSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)

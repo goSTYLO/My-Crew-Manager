@@ -6,11 +6,12 @@ from django.db.models import Q, Count, Avg
 from django.utils import timezone
 from datetime import datetime, timedelta
 
-from .models import Team, Project, Sprint, Task, MoodCheckIn, Commit, Report, TeamMember
+from .models import Team, Project, Sprint, Task, MoodCheckIn, Commit, Report, TeamMember, Backlog
 from .serializers import (
     TeamSerializer, ProjectSerializer, SprintSerializer, TaskSerializer,
     MoodCheckInSerializer, CommitSerializer, ReportSerializer, TeamMemberSerializer,
-    DetailedTaskSerializer, DetailedSprintSerializer, DetailedProjectSerializer
+    DetailedTaskSerializer, DetailedSprintSerializer, DetailedProjectSerializer,
+    BacklogSerializer
 )
 
 class TeamViewSet(viewsets.ModelViewSet):
@@ -51,6 +52,26 @@ class TeamViewSet(viewsets.ModelViewSet):
             team_member = TeamMember.objects.get(team=team, user_id=user_id)
             team_member.delete()
             return Response({'message': 'Member removed successfully'}, status=status.HTTP_200_OK)
+        except TeamMember.DoesNotExist:
+            return Response({'error': 'Member not found in team'}, status=status.HTTP_404_NOT_FOUND)
+
+    @action(detail=True, methods=['patch', 'post'])
+    def set_member_role(self, request, pk=None):
+        team = self.get_object()
+        user_id = request.data.get('user_id')
+        role_in_team = request.data.get('role_in_team')
+
+        if not user_id:
+            return Response({'error': 'user_id is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if role_in_team is None:
+            return Response({'error': 'role_in_team is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            team_member = TeamMember.objects.get(team=team, user_id=user_id)
+            team_member.role_in_team = role_in_team
+            team_member.save()
+            return Response({'message': 'Role updated successfully', 'role_in_team': team_member.role_in_team}, status=status.HTTP_200_OK)
         except TeamMember.DoesNotExist:
             return Response({'error': 'Member not found in team'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -300,3 +321,14 @@ class ReportViewSet(viewsets.ModelViewSet):
             'ideal_burndown': ideal_burndown,
             'actual_burndown': []  # This would be calculated from actual task completion dates
         }
+
+class BacklogViewSet(viewsets.ModelViewSet):
+    queryset = Backlog.objects.all()
+    serializer_class = BacklogSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        project_id = self.request.query_params.get('project_id')
+        if project_id:
+            return Backlog.objects.filter(project_id=project_id)
+        return super().get_queryset()
