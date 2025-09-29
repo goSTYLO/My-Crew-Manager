@@ -10,7 +10,7 @@ class AuthField extends StatelessWidget {
     super.key,
     required this.hintText,
     required this.controller,
-    this.isObscureText =  false,
+    this.isObscureText =  false,  
     });
 
   @override

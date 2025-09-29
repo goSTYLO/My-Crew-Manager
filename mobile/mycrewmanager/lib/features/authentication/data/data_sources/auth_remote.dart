@@ -1,93 +1,19 @@
-import 'package:mycrewmanager/core/error/exceptions.dart';
+import 'package:dio/dio.dart';
 import 'package:mycrewmanager/features/authentication/data/models/user_model.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:retrofit/retrofit.dart';
 
-abstract interface class AuthRemoteDataSource {
-  Session? get currentUserSession;
+part 'auth_remote.g.dart';
 
-  Future<UserModel> signUpWithEmailPassword({
-    required String name,
-    required String email,
-    required String password,
-  });
-  Future<UserModel> loginWithEmailPassword({
-    required String email,
-    required String password,
-  });
+@RestApi(baseUrl: "user/")
+abstract class AuthRemoteDataSource {
+  factory AuthRemoteDataSource(Dio dio, {String baseUrl}) = _AuthRemoteDataSource;
 
-  Future<UserModel?> getCurrentUserData();
-}
+  @POST("login/")
+  Future<UserModel> login(@Body() Map<String, dynamic> body);
 
-class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
-  final SupabaseClient supabaseClient;
-  AuthRemoteDataSourceImpl(this.supabaseClient);
+  @POST("signup/")
+  Future<UserModel> signup(@Body() Map<String, dynamic> body);
 
-  @override
-  Session? get currentUserSession => supabaseClient.auth.currentSession;
-
-  @override
-  Future<UserModel> loginWithEmailPassword({
-    required String email,
-    required String password,
-  }) async {
-    try {
-      final response = await supabaseClient.auth.signInWithPassword(
-        password: password,
-        email: email,
-      );
-
-      if (response.user == null) {
-        throw const ServerException('User is null');
-      }
-      return UserModel.fromJson(response.user!.toJson());
-    } on AuthException catch (e) {
-      throw ServerException(e.message);
-    } catch (e) {
-      throw ServerException(e.toString());
-    }
-  }
-
-  @override
-  Future<UserModel> signUpWithEmailPassword({
-    required String name,
-    required String email,
-    required String password,
-  }) async {
-    try {
-      final response = await supabaseClient.auth.signUp(
-        password: password,
-        email: email,
-        data: {'name': name},
-      );
-
-      if (response.user == null) {
-        throw const ServerException('User is not logged in!');
-      }
-      return UserModel.fromJson(response.user!.toJson());
-    } on AuthException catch (e) {
-      throw ServerException(e.message);
-    } catch (e) {
-      throw ServerException(e.toString());
-    }
-  }
-
-  @override
-  Future<UserModel?> getCurrentUserData() async {
-    try {
-      if (currentUserSession != null) {
-        final userData = await supabaseClient
-            .from('profiles')
-            .select()
-            .eq('id', currentUserSession!.user.id);
-
-        return UserModel.fromJson(
-          userData.first,
-        ).copyWith(email: currentUserSession!.user.email);
-      }
-
-      return null;
-    } catch (e) {
-      throw ServerException(e.toString());
-    }
-  }
+  // @GET("me/")
+  // Future<UserModel> getCredentials();
 }

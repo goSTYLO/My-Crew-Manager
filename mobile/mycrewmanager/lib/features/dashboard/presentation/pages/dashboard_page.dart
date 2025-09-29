@@ -12,7 +12,7 @@ import 'package:mycrewmanager/features/dashboard/presentation/pages/projects_pag
 
 
 class DashboardPage extends StatefulWidget {
-  static route() =>
+  static Route route() =>
       MaterialPageRoute(builder: (context) => const DashboardPage());
 
   const DashboardPage({super.key});

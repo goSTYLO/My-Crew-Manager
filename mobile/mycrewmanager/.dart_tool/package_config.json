@@ -2,6 +2,18 @@
   "configVersion": 2,
   "packages": [
     {
+      "name": "_fe_analyzer_shared",
+      "rootUri": "file:///C:/Users/AMD/AppData/Local/Pub/Cache/hosted/pub.dev/_fe_analyzer_shared-88.0.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.7"
+    },
+    {
+      "name": "analyzer",
+      "rootUri": "file:///C:/Users/AMD/AppData/Local/Pub/Cache/hosted/pub.dev/analyzer-8.1.1",
+      "packageUri": "lib/",
+      "languageVersion": "3.7"
+    },
+    {
       "name": "app_links",
       "rootUri": "file:///C:/Users/AMD/AppData/Local/Pub/Cache/hosted/pub.dev/app_links-6.4.1",
       "packageUri": "lib/",
@@ -39,7 +51,7 @@
     },
     {
       "name": "bloc",
-      "rootUri": "file:///C:/Users/AMD/AppData/Local/Pub/Cache/hosted/pub.dev/bloc-9.0.0",
+      "rootUri": "file:///C:/Users/AMD/AppData/Local/Pub/Cache/hosted/pub.dev/bloc-9.0.1",
       "packageUri": "lib/",
       "languageVersion": "2.14"
     },
@@ -48,6 +60,42 @@
       "rootUri": "file:///C:/Users/AMD/AppData/Local/Pub/Cache/hosted/pub.dev/boolean_selector-2.1.2",
       "packageUri": "lib/",
       "languageVersion": "3.1"
+    },
+    {
+      "name": "build",
+      "rootUri": "file:///C:/Users/AMD/AppData/Local/Pub/Cache/hosted/pub.dev/build-4.0.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.7"
+    },
+    {
+      "name": "build_config",
+      "rootUri": "file:///C:/Users/AMD/AppData/Local/Pub/Cache/hosted/pub.dev/build_config-1.2.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.7"
+    },
+    {
+      "name": "build_daemon",
+      "rootUri": "file:///C:/Users/AMD/AppData/Local/Pub/Cache/hosted/pub.dev/build_daemon-4.0.4",
+      "packageUri": "lib/",
+      "languageVersion": "3.6"
+    },
+    {
+      "name": "build_runner",
+      "rootUri": "file:///C:/Users/AMD/AppData/Local/Pub/Cache/hosted/pub.dev/build_runner-2.8.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.7"
+    },
+    {
+      "name": "built_collection",
+      "rootUri": "file:///C:/Users/AMD/AppData/Local/Pub/Cache/hosted/pub.dev/built_collection-5.1.1",
+      "packageUri": "lib/",
+      "languageVersion": "2.12"
+    },
+    {
+      "name": "built_value",
+      "rootUri": "file:///C:/Users/AMD/AppData/Local/Pub/Cache/hosted/pub.dev/built_value-8.12.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.0"
     },
     {
       "name": "cached_network_image",
@@ -87,9 +135,9 @@
     },
     {
       "name": "camera_platform_interface",
-      "rootUri": "file:///C:/Users/AMD/AppData/Local/Pub/Cache/hosted/pub.dev/camera_platform_interface-2.10.0",
+      "rootUri": "file:///C:/Users/AMD/AppData/Local/Pub/Cache/hosted/pub.dev/camera_platform_interface-2.11.0",
       "packageUri": "lib/",
-      "languageVersion": "3.4"
+      "languageVersion": "3.7"
     },
     {
       "name": "camera_web",
@@ -110,10 +158,22 @@
       "languageVersion": "3.0"
     },
     {
+      "name": "checked_yaml",
+      "rootUri": "file:///C:/Users/AMD/AppData/Local/Pub/Cache/hosted/pub.dev/checked_yaml-2.0.4",
+      "packageUri": "lib/",
+      "languageVersion": "3.8"
+    },
+    {
       "name": "clock",
       "rootUri": "file:///C:/Users/AMD/AppData/Local/Pub/Cache/hosted/pub.dev/clock-1.1.2",
       "packageUri": "lib/",
       "languageVersion": "3.4"
+    },
+    {
+      "name": "code_builder",
+      "rootUri": "file:///C:/Users/AMD/AppData/Local/Pub/Cache/hosted/pub.dev/code_builder-4.11.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.7"
     },
     {
       "name": "collection",
@@ -134,6 +194,12 @@
       "languageVersion": "2.18"
     },
     {
+      "name": "convert",
+      "rootUri": "file:///C:/Users/AMD/AppData/Local/Pub/Cache/hosted/pub.dev/convert-3.1.2",
+      "packageUri": "lib/",
+      "languageVersion": "3.4"
+    },
+    {
       "name": "cross_file",
       "rootUri": "file:///C:/Users/AMD/AppData/Local/Pub/Cache/hosted/pub.dev/cross_file-0.3.4+2",
       "packageUri": "lib/",
@@ -150,6 +216,12 @@
       "rootUri": "file:///C:/Users/AMD/AppData/Local/Pub/Cache/hosted/pub.dev/csslib-1.0.2",
       "packageUri": "lib/",
       "languageVersion": "3.1"
+    },
+    {
+      "name": "dart_style",
+      "rootUri": "file:///C:/Users/AMD/AppData/Local/Pub/Cache/hosted/pub.dev/dart_style-3.1.2",
+      "packageUri": "lib/",
+      "languageVersion": "3.7"
     },
     {
       "name": "dbus",
@@ -272,10 +344,46 @@
       "languageVersion": "2.17"
     },
     {
-      "name": "flutter_svg",
-      "rootUri": "file:///C:/Users/AMD/AppData/Local/Pub/Cache/hosted/pub.dev/flutter_svg-2.2.0",
+      "name": "flutter_secure_storage",
+      "rootUri": "file:///C:/Users/AMD/AppData/Local/Pub/Cache/hosted/pub.dev/flutter_secure_storage-9.2.4",
       "packageUri": "lib/",
-      "languageVersion": "3.6"
+      "languageVersion": "2.12"
+    },
+    {
+      "name": "flutter_secure_storage_linux",
+      "rootUri": "file:///C:/Users/AMD/AppData/Local/Pub/Cache/hosted/pub.dev/flutter_secure_storage_linux-1.2.3",
+      "packageUri": "lib/",
+      "languageVersion": "2.12"
+    },
+    {
+      "name": "flutter_secure_storage_macos",
+      "rootUri": "file:///C:/Users/AMD/AppData/Local/Pub/Cache/hosted/pub.dev/flutter_secure_storage_macos-3.1.3",
+      "packageUri": "lib/",
+      "languageVersion": "2.12"
+    },
+    {
+      "name": "flutter_secure_storage_platform_interface",
+      "rootUri": "file:///C:/Users/AMD/AppData/Local/Pub/Cache/hosted/pub.dev/flutter_secure_storage_platform_interface-1.1.2",
+      "packageUri": "lib/",
+      "languageVersion": "2.12"
+    },
+    {
+      "name": "flutter_secure_storage_web",
+      "rootUri": "file:///C:/Users/AMD/AppData/Local/Pub/Cache/hosted/pub.dev/flutter_secure_storage_web-1.2.1",
+      "packageUri": "lib/",
+      "languageVersion": "2.12"
+    },
+    {
+      "name": "flutter_secure_storage_windows",
+      "rootUri": "file:///C:/Users/AMD/AppData/Local/Pub/Cache/hosted/pub.dev/flutter_secure_storage_windows-3.1.2",
+      "packageUri": "lib/",
+      "languageVersion": "2.12"
+    },
+    {
+      "name": "flutter_svg",
+      "rootUri": "file:///C:/Users/AMD/AppData/Local/Pub/Cache/hosted/pub.dev/flutter_svg-2.2.1",
+      "packageUri": "lib/",
+      "languageVersion": "3.7"
     },
     {
       "name": "flutter_test",
@@ -291,7 +399,7 @@
     },
     {
       "name": "fluttertoast",
-      "rootUri": "file:///C:/Users/AMD/AppData/Local/Pub/Cache/hosted/pub.dev/fluttertoast-8.2.12",
+      "rootUri": "file:///C:/Users/AMD/AppData/Local/Pub/Cache/hosted/pub.dev/fluttertoast-8.2.14",
       "packageUri": "lib/",
       "languageVersion": "2.12"
     },
@@ -302,22 +410,46 @@
       "languageVersion": "3.0"
     },
     {
+      "name": "frontend_server_client",
+      "rootUri": "file:///C:/Users/AMD/AppData/Local/Pub/Cache/hosted/pub.dev/frontend_server_client-4.0.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.0"
+    },
+    {
       "name": "functions_client",
       "rootUri": "file:///C:/Users/AMD/AppData/Local/Pub/Cache/hosted/pub.dev/functions_client-2.4.4",
       "packageUri": "lib/",
       "languageVersion": "3.0"
     },
     {
+      "name": "get_it",
+      "rootUri": "file:///C:/Users/AMD/AppData/Local/Pub/Cache/hosted/pub.dev/get_it-8.2.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.0"
+    },
+    {
+      "name": "glob",
+      "rootUri": "file:///C:/Users/AMD/AppData/Local/Pub/Cache/hosted/pub.dev/glob-2.1.3",
+      "packageUri": "lib/",
+      "languageVersion": "3.3"
+    },
+    {
       "name": "google_fonts",
-      "rootUri": "file:///C:/Users/AMD/AppData/Local/Pub/Cache/hosted/pub.dev/google_fonts-6.3.1",
+      "rootUri": "file:///C:/Users/AMD/AppData/Local/Pub/Cache/hosted/pub.dev/google_fonts-6.3.2",
       "packageUri": "lib/",
       "languageVersion": "3.7"
     },
     {
       "name": "gotrue",
-      "rootUri": "file:///C:/Users/AMD/AppData/Local/Pub/Cache/hosted/pub.dev/gotrue-2.14.0",
+      "rootUri": "file:///C:/Users/AMD/AppData/Local/Pub/Cache/hosted/pub.dev/gotrue-2.15.0",
       "packageUri": "lib/",
       "languageVersion": "3.3"
+    },
+    {
+      "name": "graphs",
+      "rootUri": "file:///C:/Users/AMD/AppData/Local/Pub/Cache/hosted/pub.dev/graphs-2.3.2",
+      "packageUri": "lib/",
+      "languageVersion": "3.4"
     },
     {
       "name": "gtk",
@@ -336,6 +468,12 @@
       "rootUri": "file:///C:/Users/AMD/AppData/Local/Pub/Cache/hosted/pub.dev/http-1.5.0",
       "packageUri": "lib/",
       "languageVersion": "3.4"
+    },
+    {
+      "name": "http_multi_server",
+      "rootUri": "file:///C:/Users/AMD/AppData/Local/Pub/Cache/hosted/pub.dev/http_multi_server-3.2.2",
+      "packageUri": "lib/",
+      "languageVersion": "3.2"
     },
     {
       "name": "http_parser",
@@ -402,6 +540,30 @@
       "rootUri": "file:///C:/Users/AMD/AppData/Local/Pub/Cache/hosted/pub.dev/intl-0.20.2",
       "packageUri": "lib/",
       "languageVersion": "3.3"
+    },
+    {
+      "name": "io",
+      "rootUri": "file:///C:/Users/AMD/AppData/Local/Pub/Cache/hosted/pub.dev/io-1.0.5",
+      "packageUri": "lib/",
+      "languageVersion": "3.4"
+    },
+    {
+      "name": "js",
+      "rootUri": "file:///C:/Users/AMD/AppData/Local/Pub/Cache/hosted/pub.dev/js-0.6.7",
+      "packageUri": "lib/",
+      "languageVersion": "2.19"
+    },
+    {
+      "name": "json_annotation",
+      "rootUri": "file:///C:/Users/AMD/AppData/Local/Pub/Cache/hosted/pub.dev/json_annotation-4.9.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.0"
+    },
+    {
+      "name": "json_serializable",
+      "rootUri": "file:///C:/Users/AMD/AppData/Local/Pub/Cache/hosted/pub.dev/json_serializable-6.11.1",
+      "packageUri": "lib/",
+      "languageVersion": "3.8"
     },
     {
       "name": "jwt_decode",
@@ -486,6 +648,12 @@
       "rootUri": "file:///C:/Users/AMD/AppData/Local/Pub/Cache/hosted/pub.dev/octo_image-2.1.0",
       "packageUri": "lib/",
       "languageVersion": "3.0"
+    },
+    {
+      "name": "package_config",
+      "rootUri": "file:///C:/Users/AMD/AppData/Local/Pub/Cache/hosted/pub.dev/package_config-2.2.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.4"
     },
     {
       "name": "path",
@@ -590,10 +758,22 @@
       "languageVersion": "3.0"
     },
     {
+      "name": "pool",
+      "rootUri": "file:///C:/Users/AMD/AppData/Local/Pub/Cache/hosted/pub.dev/pool-1.5.2",
+      "packageUri": "lib/",
+      "languageVersion": "3.4"
+    },
+    {
       "name": "postgrest",
       "rootUri": "file:///C:/Users/AMD/AppData/Local/Pub/Cache/hosted/pub.dev/postgrest-2.4.2",
       "packageUri": "lib/",
       "languageVersion": "3.0"
+    },
+    {
+      "name": "protobuf",
+      "rootUri": "file:///C:/Users/AMD/AppData/Local/Pub/Cache/hosted/pub.dev/protobuf-4.2.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.7"
     },
     {
       "name": "provider",
@@ -602,10 +782,34 @@
       "languageVersion": "2.12"
     },
     {
+      "name": "pub_semver",
+      "rootUri": "file:///C:/Users/AMD/AppData/Local/Pub/Cache/hosted/pub.dev/pub_semver-2.2.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.4"
+    },
+    {
+      "name": "pubspec_parse",
+      "rootUri": "file:///C:/Users/AMD/AppData/Local/Pub/Cache/hosted/pub.dev/pubspec_parse-1.5.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.6"
+    },
+    {
       "name": "realtime_client",
       "rootUri": "file:///C:/Users/AMD/AppData/Local/Pub/Cache/hosted/pub.dev/realtime_client-2.5.2",
       "packageUri": "lib/",
       "languageVersion": "3.0"
+    },
+    {
+      "name": "retrofit",
+      "rootUri": "file:///C:/Users/AMD/AppData/Local/Pub/Cache/hosted/pub.dev/retrofit-4.7.2",
+      "packageUri": "lib/",
+      "languageVersion": "3.8"
+    },
+    {
+      "name": "retrofit_generator",
+      "rootUri": "file:///C:/Users/AMD/AppData/Local/Pub/Cache/hosted/pub.dev/retrofit_generator-10.0.5",
+      "packageUri": "lib/",
+      "languageVersion": "3.8"
     },
     {
       "name": "retry",
@@ -633,7 +837,7 @@
     },
     {
       "name": "shared_preferences_android",
-      "rootUri": "file:///C:/Users/AMD/AppData/Local/Pub/Cache/hosted/pub.dev/shared_preferences_android-2.4.12",
+      "rootUri": "file:///C:/Users/AMD/AppData/Local/Pub/Cache/hosted/pub.dev/shared_preferences_android-2.4.13",
       "packageUri": "lib/",
       "languageVersion": "3.7"
     },
@@ -668,6 +872,18 @@
       "languageVersion": "3.3"
     },
     {
+      "name": "shelf",
+      "rootUri": "file:///C:/Users/AMD/AppData/Local/Pub/Cache/hosted/pub.dev/shelf-1.4.2",
+      "packageUri": "lib/",
+      "languageVersion": "3.4"
+    },
+    {
+      "name": "shelf_web_socket",
+      "rootUri": "file:///C:/Users/AMD/AppData/Local/Pub/Cache/hosted/pub.dev/shelf_web_socket-3.0.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.5"
+    },
+    {
       "name": "sizer",
       "rootUri": "file:///C:/Users/AMD/AppData/Local/Pub/Cache/hosted/pub.dev/sizer-2.0.15",
       "packageUri": "lib/",
@@ -676,6 +892,18 @@
     {
       "name": "sky_engine",
       "rootUri": "file:///C:/dev/flutter/bin/cache/pkg/sky_engine",
+      "packageUri": "lib/",
+      "languageVersion": "3.7"
+    },
+    {
+      "name": "source_gen",
+      "rootUri": "file:///C:/Users/AMD/AppData/Local/Pub/Cache/hosted/pub.dev/source_gen-4.0.1",
+      "packageUri": "lib/",
+      "languageVersion": "3.7"
+    },
+    {
+      "name": "source_helper",
+      "rootUri": "file:///C:/Users/AMD/AppData/Local/Pub/Cache/hosted/pub.dev/source_helper-1.3.8",
       "packageUri": "lib/",
       "languageVersion": "3.7"
     },
@@ -759,13 +987,13 @@
     },
     {
       "name": "supabase",
-      "rootUri": "file:///C:/Users/AMD/AppData/Local/Pub/Cache/hosted/pub.dev/supabase-2.9.0",
+      "rootUri": "file:///C:/Users/AMD/AppData/Local/Pub/Cache/hosted/pub.dev/supabase-2.9.1",
       "packageUri": "lib/",
       "languageVersion": "3.3"
     },
     {
       "name": "supabase_flutter",
-      "rootUri": "file:///C:/Users/AMD/AppData/Local/Pub/Cache/hosted/pub.dev/supabase_flutter-2.10.0",
+      "rootUri": "file:///C:/Users/AMD/AppData/Local/Pub/Cache/hosted/pub.dev/supabase_flutter-2.10.1",
       "packageUri": "lib/",
       "languageVersion": "3.3"
     },
@@ -813,7 +1041,7 @@
     },
     {
       "name": "url_launcher_android",
-      "rootUri": "file:///C:/Users/AMD/AppData/Local/Pub/Cache/hosted/pub.dev/url_launcher_android-6.3.18",
+      "rootUri": "file:///C:/Users/AMD/AppData/Local/Pub/Cache/hosted/pub.dev/url_launcher_android-6.3.20",
       "packageUri": "lib/",
       "languageVersion": "3.7"
     },
@@ -890,6 +1118,12 @@
       "languageVersion": "3.3"
     },
     {
+      "name": "watcher",
+      "rootUri": "file:///C:/Users/AMD/AppData/Local/Pub/Cache/hosted/pub.dev/watcher-1.1.3",
+      "packageUri": "lib/",
+      "languageVersion": "3.1"
+    },
+    {
       "name": "web",
       "rootUri": "file:///C:/Users/AMD/AppData/Local/Pub/Cache/hosted/pub.dev/web-1.1.1",
       "packageUri": "lib/",
@@ -908,6 +1142,12 @@
       "languageVersion": "3.3"
     },
     {
+      "name": "win32",
+      "rootUri": "file:///C:/Users/AMD/AppData/Local/Pub/Cache/hosted/pub.dev/win32-5.14.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.8"
+    },
+    {
       "name": "xdg_directories",
       "rootUri": "file:///C:/Users/AMD/AppData/Local/Pub/Cache/hosted/pub.dev/xdg_directories-1.1.0",
       "packageUri": "lib/",
@@ -918,6 +1158,12 @@
       "rootUri": "file:///C:/Users/AMD/AppData/Local/Pub/Cache/hosted/pub.dev/xml-6.6.1",
       "packageUri": "lib/",
       "languageVersion": "3.8"
+    },
+    {
+      "name": "yaml",
+      "rootUri": "file:///C:/Users/AMD/AppData/Local/Pub/Cache/hosted/pub.dev/yaml-3.1.3",
+      "packageUri": "lib/",
+      "languageVersion": "3.4"
     },
     {
       "name": "yet_another_json_isolate",

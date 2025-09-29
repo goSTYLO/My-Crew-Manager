@@ -1,76 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:mycrewmanager/core/common/cubits/app_user/app_user_cubit.dart';
 import 'package:mycrewmanager/core/constants/constants.dart';
-import 'package:mycrewmanager/core/usecase/usercase.dart';
-import 'package:mycrewmanager/core/common/entities/user.dart';
-import 'package:mycrewmanager/features/authentication/domain/usecases/current_user.dart';
+import 'package:mycrewmanager/core/tokenhandlers/token_storage.dart';
+import 'package:mycrewmanager/features/authentication/domain/entities/user.dart';
 import 'package:mycrewmanager/features/authentication/domain/usecases/user_login.dart';
-import 'package:mycrewmanager/features/authentication/domain/usecases/user_sign_up.dart';
+import 'package:mycrewmanager/features/authentication/domain/usecases/user_signup.dart';
 
 part 'auth_event.dart';
 part 'auth_state.dart';
 
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
-  final UserSignUp _userSignUp;
   final UserLogin _userLogin;
-  final CurrentUser _currentUser;
-  final AppUserCubit _appUserCubit;
+  final UserSignup _userSignup;
+  final TokenStorage _tokenStorage;
 
-  AuthBloc({
-    required UserSignUp userSignUp,
-    required UserLogin userLogin,
-    required CurrentUser currentUser,
-    required AppUserCubit appUserCubit,
-  })  : _userSignUp = userSignUp,
-        _userLogin = userLogin,
-        _currentUser = currentUser,
-        _appUserCubit = appUserCubit,
+  AuthBloc({required UserLogin userLogin, required UserSignup userSignup, required TokenStorage tokenStorage})
+      : _userLogin = userLogin,
+        _userSignup = userSignup,
+        _tokenStorage = tokenStorage,
         super(AuthInitial()) {
     on<AuthEvent>((_, emit) => emit(AuthLoading()));
-    on<AuthSignUp>(_onAuthSignUp);
     on<AuthLogin>(_onAuthLogin);
-    on<AuthIsUserLoggedIn>(_isUserLoggedIn);
-  }
-
-  void _isUserLoggedIn(
-    AuthIsUserLoggedIn event,
-    Emitter<AuthState> emit,
-  ) async {
-    final res = await _currentUser(NoParams());
-
-    res.fold(
-      (l) => emit(AuthFailure(l.message)),
-      (r) {
-        logger.d('ID: ${r.id}');
-        logger.d('Name: ${r.name}');
-        logger.d('Email: ${r.email}');
-        // emit(AuthSuccess(r));
-        _emitAuthSuccess(r, emit);
-      },
-    );
-  }
-
-  void _onAuthSignUp(AuthSignUp event, Emitter<AuthState> emit) async {
-    final res = await _userSignUp(
-      UserSignUpParams(
-        email: event.email,
-        name: event.name,
-        password: event.password,
-      ),
-    );
-
-    res.fold(
-      (failure) {
-        logger.d('Failure: ${failure.runtimeType} - ${failure.message}');
-        emit(AuthFailure(failure.message));
-      },
-      (user) {
-        logger.d('Success: $user');
-        // emit(AuthSuccess(user));
-        _emitAuthSuccess(user, emit);
-      },
-    );
+    on<AuthSignUp>(_onAuthSignup);
   }
 
   void _onAuthLogin(AuthLogin event, Emitter<AuthState> emit) async {
@@ -78,24 +29,47 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       UserLoginParams(email: event.email, password: event.password),
     );
 
-    res.fold(
-      (failure) {
-        logger.d('Failure: ${failure.runtimeType} - ${failure.message}');
-        emit(AuthFailure(failure.message));
-      },
-      (user) {
-        logger.d('Success: $user');
-        // emit(AuthSuccess(user));
-        _emitAuthSuccess(user, emit);
-      },
+    // res.fold(
+    //   (failure) {
+    //     logger.d('Failure: ${failure.runtimeType} - ${failure.message}');
+    //     emit(AuthFailure(failure.message));
+    //   },
+    //   (user) async {
+    //     logger.d('TOKEN: ${user.token}');
+    //     // ✅ Store the token securely
+    //     await _tokenStorage.saveToken(user.token);
+    //     _emitAuthSuccess(user, emit);
+    //   },
+    // );
+      await res.fold(
+    (failure) async {
+      logger.d("FAILED");
+      emit(AuthFailure(failure.message));
+    },
+    (user) async {
+      await _tokenStorage.saveToken(user.token);
+      emit(AuthSuccess(user)); // no need to wrap in a helper
+    },
     );
   }
 
-  void _emitAuthSuccess(
-    User user,
-    Emitter<AuthState> emit,
-  ) {
-    _appUserCubit.updateUser(user);
+  void _onAuthSignup(AuthSignUp event, Emitter<AuthState> emit) async {
+    final res = await _userSignup(
+      UserSignupParams(name: event.name, email: event.email, password: event.password)
+    );
+
+    await res.fold(
+    (failure) async {
+      logger.d("SIGN UP FAILED");
+      emit(AuthFailure(failure.message));
+    },
+    (message) async {
+      emit(AuthSuccess(message));
+    }
+    );
+  }
+
+  void _emitAuthSuccess(User user, Emitter<AuthState> emit)  {
     emit(AuthSuccess(user));
   }
 }
