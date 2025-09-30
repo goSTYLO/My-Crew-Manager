@@ -70,6 +70,6 @@ class ProjectModel(BaseModel):
     summary: Optional[str] = None
     features: List[str] = Field(default_factory=list)
     roles: List[TeamMemberModel] = Field(default_factory=list)
-    tasks: List[str] = Field(default_factory=list)  # High-level tasks
+    goals: List[str] = Field(default_factory=list)  # Renamed from tasks
     timeline: List[TimelineWeekModel] = Field(default_factory=list)
-    epics: List[EpicModel] = Field(default_factory=list)  # Hierarchical backlog
+    epics: List[EpicModel] = Field(default_factory=list)

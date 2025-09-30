@@ -1,13 +1,18 @@
-from django.shortcuts import render
+from django.shortcuts import get_object_or_404
 from rest_framework.views import APIView
 from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 from rest_framework import status
+
 from .models import Proposal, Project
 from .serializers import ProjectSerializer
-from LLMs.project_llm import run_pipeline_from_text
+from sprints.serializers import SprintSerializer
+
+from projects.services.llm_ingestion import ingest_proposal
+
 import pdfplumber
 
+# 🔹 CREATE
 class ProjectCreateView(APIView):
     def post(self, request):
         serializer = ProjectSerializer(data=request.data)
@@ -20,6 +25,35 @@ class ProjectCreateView(APIView):
             }, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+# 🔹 READ
+class ProjectDetailView(APIView):
+    def get(self, request, project_id):
+        project = get_object_or_404(Project, id=project_id)
+        serializer = ProjectSerializer(project)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+# 🔹 UPDATE
+class ProjectUpdateView(APIView):
+    def put(self, request, project_id):
+        project = get_object_or_404(Project, id=project_id)
+        serializer = ProjectSerializer(project, data=request.data, partial=True)
+        if serializer.is_valid():
+            updated_project = serializer.save()
+            return Response({
+                "message": "Project updated successfully",
+                "project_id": str(updated_project.id),
+                "title": updated_project.title
+            }, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+# 🔹 DELETE
+class ProjectDeleteView(APIView):
+    def delete(self, request, project_id):
+        project = get_object_or_404(Project, id=project_id)
+        project.delete()
+        return Response({"message": "Project deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
+
+# 🔹 PROPOSAL UPLOAD
 class ProposalUploadView(APIView):
     parser_classes = [MultiPartParser]
 
@@ -30,10 +64,7 @@ class ProposalUploadView(APIView):
         if not file or not project_id:
             return Response({"error": "Missing file or project_id"}, status=status.HTTP_400_BAD_REQUEST)
 
-        try:
-            project = Project.objects.get(id=project_id)
-        except Project.DoesNotExist:
-            return Response({"error": "Invalid project_id"}, status=status.HTTP_404_NOT_FOUND)
+        project = get_object_or_404(Project, id=project_id)
 
         if not file.name.lower().endswith(".pdf"):
             return Response({"error": "Only PDF files are supported"}, status=status.HTTP_400_BAD_REQUEST)
@@ -57,21 +88,31 @@ class ProposalUploadView(APIView):
             "project_id": str(project.id),
             "parsed_text_preview": text[:300] + "..." if len(text) > 300 else text
         }, status=status.HTTP_201_CREATED)
-    
 
-class ProposalLLMTriggerView(APIView):
-    def post(self, request, proposal_id):
+# 🔹 LLM INGESTION (UPDATE PROJECT)
+class ProjectLLMIngestView(APIView):
+    def put(self, request, project_id, proposal_id):
+        project = get_object_or_404(Project, id=project_id)
+        proposal = get_object_or_404(Proposal, id=proposal_id, project=project)
+
+        if not proposal.parsed_text:
+            return Response({"error": "Proposal has no parsed text"}, status=status.HTTP_400_BAD_REQUEST)
+
+        title_override = request.data.get("title", project.title)
+
         try:
-            proposal = Proposal.objects.get(id=proposal_id)
-        except Proposal.DoesNotExist:
-            return Response({"error": "Proposal not found"}, status=status.HTTP_404_NOT_FOUND)
+            enriched_project = ingest_proposal(
+                text=proposal.parsed_text,
+                user=request.user,
+                title=title_override,
+                existing_project=project
+            )
+        except Exception as e:
+            return Response({"error": f"LLM ingestion failed: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        proposal_text = proposal.parsed_text
-        if not proposal_text:
-            return Response({"error": "No parsed text available"}, status=status.HTTP_400_BAD_REQUEST)
-
-        project_model = run_pipeline_from_text(proposal_text)
-
-        print(f"\n✅ LLM Output for Proposal {proposal_id}:\nTitle: {project_model.title}\nSummary: {project_model.summary}\nRoles: {[r.role for r in project_model.roles]}\nTimeline: {len(project_model.timeline)} weeks")
-
-        return Response({"message": "LLM triggered successfully"}, status=status.HTTP_200_OK)
+        return Response({
+            "message": "Project enriched with LLM output",
+            "project_id": str(enriched_project.id),
+            "title": enriched_project.title,
+            "sprints_created": enriched_project.sprints.count()  
+        }, status=status.HTTP_200_OK)

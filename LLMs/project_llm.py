@@ -2,7 +2,7 @@ import os
 import re
 from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
 from langchain_huggingface import HuggingFacePipeline
-from .models import (
+from LLMs.models import (
     ProjectModel,
     TeamMemberModel,
     TimelineWeekModel,
@@ -51,6 +51,7 @@ def build_prompt(section: str, proposal_text: str, context: Dict = None) -> str:
 
     prompt = re.sub(r"{\w+}", "", prompt)
     print(f"🧠 Built prompt for: {section}")
+    print(f"\n📤 Prompt for {section}:\n{prompt}\n")
     return prompt
 
 def validate_section_format(section: str, response: str) -> bool:
@@ -63,6 +64,8 @@ def validate_section_format(section: str, response: str) -> bool:
         return response_lower.startswith("features:") and "- " in response_lower
     if section == "roles":
         return response_lower.startswith("roles:") and "- " in response_lower
+    if section == "goals":
+        return "- title:" in response_lower and "role:" in response_lower
     if section == "timeline":
         return "timeline:" in response_lower and "week_number:" in response_lower
     return True
@@ -93,19 +96,33 @@ def run_pipeline_from_text(proposal_text: str) -> ProjectModel:
     llm = load_llm()
     project_model = ProjectModel()
     raw_outputs = {}
-    sections = ["summary", "features", "roles", "timeline"]
+    sections = ["summary", "features", "roles", "goals", "timeline"]
+
+    context = {
+        "proposal_text": proposal_text,
+        "project_title": "",
+        "project_summary": "",
+        "overarching_goals": "",
+        "additional_roles": "",
+        "goals": ""
+    }
 
     for section in sections:
         print(f"\n🚀 Generating: {section.upper()}")
 
-        context = {
-            "proposal_text": proposal_text,
-            "project_title": project_model.title or "",
-            "project_summary": project_model.summary or "",
-            "overarching_goals": ", ".join(project_model.features),
-            "additional_roles": "\n".join([r.role for r in project_model.roles]) if project_model.roles else "",
-            "tasks": ""
-        }
+        context["project_title"] = project_model.title or ""
+        context["project_summary"] = project_model.summary or ""
+        context["overarching_goals"] = ", ".join(project_model.features)
+        context["additional_roles"] = "\n".join([r.role for r in project_model.roles]) if project_model.roles else ""
+
+        # Inject goals before timeline
+        if section == "timeline" and "goals" in raw_outputs:
+            goal_titles = []
+            for line in raw_outputs["goals"].splitlines():
+                if line.strip().startswith("- title:"):
+                    title = line.strip()[len("- title:"):].strip()
+                    goal_titles.append(title)
+            context["goals"] = "\n".join(goal_titles)
 
         prompt = build_prompt(section, proposal_text, context)
         if prompt:
@@ -130,6 +147,10 @@ def run_pipeline_from_text(proposal_text: str) -> ProjectModel:
     if "roles" in raw_outputs:
         roles = [TeamMemberModel(role=line.strip()[2:].strip()) for line in raw_outputs["roles"].splitlines() if line.strip().startswith("- ")]
         project_model.roles = roles
+
+    if "goals" in raw_outputs:
+        goal_titles = [line.strip()[len("- title:"):].strip() for line in raw_outputs["goals"].splitlines() if line.strip().startswith("- title:")]
+        project_model.goals = goal_titles
 
     if "timeline" in raw_outputs:
         try:
@@ -156,6 +177,16 @@ def run_pipeline_from_text(proposal_text: str) -> ProjectModel:
         except Exception as e:
             print(f"❌ Error parsing timeline: {e}")
 
+    print("\n--- Parsed ProjectModel ---")
+    print(f"📌 Title: {project_model.title}")
+    print(f"📝 Summary: {project_model.summary}")
+    print(f"✨ Features: {project_model.features}")
+    print(f"👥 Roles: {[r.role for r in project_model.roles]}")
+    print(f"🎯 Goals: {project_model.goals}")
+    print(f"🗓️ Timeline Weeks: {len(project_model.timeline)}")
+    for week in project_model.timeline:
+        print(f"  Week {week.week_number}: {[task.title for task in week.tasks]}")
+
     print("\n--- Project Overview + Timeline Completed ---")
     return project_model
 
@@ -165,6 +196,7 @@ def model_to_dict(project_model: ProjectModel) -> dict:
         "summary": project_model.summary,
         "features": project_model.features,
         "roles": [r.role for r in project_model.roles],
+        "goals": project_model.goals,
         "timeline": [
             {
                 "week_number": week.week_number,

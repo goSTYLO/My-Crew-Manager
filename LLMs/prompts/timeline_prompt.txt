@@ -29,10 +29,10 @@ timeline:
       - Perform system testing and bug fixes
       - Deploy application to production
 
-Use these tasks as guidance for action items (titles only, no roles):
-<<<TASKS>>>
-{tasks}
-<<<END TASKS>>>
+Use these goals as guidance for action items (titles only, no roles):
+<<<GOALS>>>
+{goals}
+<<<END GOALS>>>
 
 <<<PROPOSAL>>>
 {proposal_text}
