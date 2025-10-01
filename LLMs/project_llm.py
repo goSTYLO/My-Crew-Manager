@@ -6,14 +6,13 @@ from LLMs.models import (
     ProjectModel,
     TeamMemberModel,
     TimelineWeekModel,
-    TimelineTaskModel
+    TimelineGoalModel
 )
 from typing import Dict
 
 MODEL_ID = "unsloth/mistral-7b-instruct-v0.3-bnb-4bit"
 
 def load_llm() -> HuggingFacePipeline:
-    print(f"🔧 Loading model: {MODEL_ID}")
     tokenizer = AutoTokenizer.from_pretrained(MODEL_ID, trust_remote_code=True)
     model = AutoModelForCausalLM.from_pretrained(
         MODEL_ID,
@@ -30,7 +29,6 @@ def load_llm() -> HuggingFacePipeline:
         do_sample=True,
         return_full_text=False
     )
-    print("✅ Model loaded and ready")
     return HuggingFacePipeline(pipeline=pipe)
 
 def build_prompt(section: str, proposal_text: str, context: Dict = None) -> str:
@@ -40,8 +38,7 @@ def build_prompt(section: str, proposal_text: str, context: Dict = None) -> str:
     try:
         with open(prompt_path, "r", encoding="utf-8") as f:
             template = f.read().strip()
-    except Exception as e:
-        print(f"⚠️ Failed to load prompt: {e}")
+    except Exception:
         return ""
 
     prompt = template.replace("{proposal_text}", proposal_text)
@@ -50,8 +47,6 @@ def build_prompt(section: str, proposal_text: str, context: Dict = None) -> str:
             prompt = prompt.replace(f"{{{key}}}", str(value).strip())
 
     prompt = re.sub(r"{\w+}", "", prompt)
-    print(f"🧠 Built prompt for: {section}")
-    print(f"\n📤 Prompt for {section}:\n{prompt}\n")
     return prompt
 
 def validate_section_format(section: str, response: str) -> bool:
@@ -71,26 +66,20 @@ def validate_section_format(section: str, response: str) -> bool:
     return True
 
 def generate_section(llm, section: str, prompt: str, max_retries: int = 5) -> str:
-    for attempt in range(max_retries):
-        print(f"  Attempt {attempt + 1} for {section}...")
+    for _ in range(max_retries):
         try:
             response = llm.invoke(prompt).strip()
             if not response:
-                print(f"⚠️ Empty response for {section}")
                 continue
             if not validate_section_format(section, response):
-                print(f"⚠️ Invalid format for {section}")
                 continue
-            print(f"\n--- RAW {section.upper()} ---\n{response}\n")
             return response
-        except Exception as e:
-            print(f"❌ Error generating {section}: {e}")
-    print(f"❌ Failed to generate {section} after {max_retries} attempts.")
+        except Exception:
+            continue
     return ""
 
 def run_pipeline_from_text(proposal_text: str) -> ProjectModel:
     if not proposal_text:
-        print("⚠️ Empty proposal text")
         return ProjectModel()
 
     llm = load_llm()
@@ -108,14 +97,11 @@ def run_pipeline_from_text(proposal_text: str) -> ProjectModel:
     }
 
     for section in sections:
-        print(f"\n🚀 Generating: {section.upper()}")
-
         context["project_title"] = project_model.title or ""
         context["project_summary"] = project_model.summary or ""
         context["overarching_goals"] = ", ".join(project_model.features)
         context["additional_roles"] = "\n".join([r.role for r in project_model.roles]) if project_model.roles else ""
 
-        # Inject goals before timeline
         if section == "timeline" and "goals" in raw_outputs:
             goal_titles = []
             for line in raw_outputs["goals"].splitlines():
@@ -128,6 +114,7 @@ def run_pipeline_from_text(proposal_text: str) -> ProjectModel:
         if prompt:
             raw_response = generate_section(llm, section, prompt)
             if raw_response:
+                print(f"\n--- RAW {section.upper()} ---\n{raw_response}\n")
                 raw_outputs[section] = raw_response
 
     if "summary" in raw_outputs:
@@ -149,8 +136,23 @@ def run_pipeline_from_text(proposal_text: str) -> ProjectModel:
         project_model.roles = roles
 
     if "goals" in raw_outputs:
-        goal_titles = [line.strip()[len("- title:"):].strip() for line in raw_outputs["goals"].splitlines() if line.strip().startswith("- title:")]
-        project_model.goals = goal_titles
+        goal_lines = raw_outputs["goals"].splitlines()
+        parsed_goals = []
+        current_goal = {}
+
+        for line in goal_lines:
+            line = line.strip()
+            if line.startswith("- title:"):
+                if current_goal:
+                    parsed_goals.append(current_goal)
+                current_goal = {"title": line[len("- title:"):].strip(), "role": ""}
+            elif line.startswith("role:") and current_goal:
+                current_goal["role"] = line[len("role:"):].strip()
+
+        if current_goal:
+            parsed_goals.append(current_goal)
+
+        project_model.goals = parsed_goals
 
     if "timeline" in raw_outputs:
         try:
@@ -159,35 +161,24 @@ def run_pipeline_from_text(proposal_text: str) -> ProjectModel:
                 timeline_str = match.group(1).strip()
                 weeks = []
                 current_week = None
-                current_tasks = []
+                current_goals = []
                 for line in timeline_str.splitlines():
                     line = line.strip()
                     week_match = re.match(r"^-?\s*week_number:\s*(\d+)", line, re.IGNORECASE)
-                    task_match = re.match(r"^-\s*(.*)", line)
+                    goal_match = re.match(r"^-\s*(.*)", line)
                     if week_match:
                         if current_week is not None:
-                            weeks.append(TimelineWeekModel(week_number=current_week, tasks=current_tasks))
+                            weeks.append(TimelineWeekModel(week_number=current_week, goals=current_goals))
                         current_week = int(week_match.group(1))
-                        current_tasks = []
-                    elif task_match and current_week is not None:
-                        current_tasks.append(TimelineTaskModel(title=task_match.group(1).strip()))
+                        current_goals = []
+                    elif goal_match and current_week is not None:
+                        current_goals.append(TimelineGoalModel(title=goal_match.group(1).strip()))
                 if current_week is not None:
-                    weeks.append(TimelineWeekModel(week_number=current_week, tasks=current_tasks))
+                    weeks.append(TimelineWeekModel(week_number=current_week, goals=current_goals))
                 project_model.timeline = weeks
-        except Exception as e:
-            print(f"❌ Error parsing timeline: {e}")
+        except Exception:
+            pass
 
-    print("\n--- Parsed ProjectModel ---")
-    print(f"📌 Title: {project_model.title}")
-    print(f"📝 Summary: {project_model.summary}")
-    print(f"✨ Features: {project_model.features}")
-    print(f"👥 Roles: {[r.role for r in project_model.roles]}")
-    print(f"🎯 Goals: {project_model.goals}")
-    print(f"🗓️ Timeline Weeks: {len(project_model.timeline)}")
-    for week in project_model.timeline:
-        print(f"  Week {week.week_number}: {[task.title for task in week.tasks]}")
-
-    print("\n--- Project Overview + Timeline Completed ---")
     return project_model
 
 def model_to_dict(project_model: ProjectModel) -> dict:
@@ -200,7 +191,7 @@ def model_to_dict(project_model: ProjectModel) -> dict:
         "timeline": [
             {
                 "week_number": week.week_number,
-                "tasks": [task.title for task in week.tasks]
+                "goals": [goal.title for goal in week.goals]
             }
             for week in project_model.timeline
         ]

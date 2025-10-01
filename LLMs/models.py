@@ -57,12 +57,12 @@ class TaskListOutputModel(BaseModel):
     tasks: List[TaskModel] = Field(default_factory=list)
 
 # 🧩 Timeline Models
-class TimelineTaskModel(BaseModel):
+class TimelineGoalModel(BaseModel):
     title: str
 
 class TimelineWeekModel(BaseModel):
     week_number: int
-    tasks: List[TimelineTaskModel] = Field(default_factory=list)
+    goals: List[TimelineGoalModel] = Field(default_factory=list)
 
 # 🧩 Top-Level Project Model
 class ProjectModel(BaseModel):

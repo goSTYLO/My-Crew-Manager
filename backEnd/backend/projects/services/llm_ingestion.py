@@ -7,12 +7,6 @@ def ingest_proposal(text: str, user=None, title: str = "", existing_project: Pro
     project_model = run_pipeline_from_text(text)
     project_data = model_to_dict(project_model)
 
-    # 🧠 Debug parsed output
-    print(f"🔍 Parsed roles: {project_model.roles}")
-    print(f"🎯 Parsed goals: {project_model.goals}")
-    print(f"✨ Parsed features: {project_model.features}")
-    print(f"🗓️ Parsed timeline: {project_model.timeline}")
-
     # 🧠 Use existing project or create new one
     project = existing_project or Project.objects.create(
         title=title or project_model.title or "",
@@ -56,26 +50,26 @@ def ingest_proposal(text: str, user=None, title: str = "", existing_project: Pro
         except Exception as e:
             print(f"❌ Feature creation failed: {e}")
 
-    # 🎯 Create Goals
+    # 🎯 Create Goals (with role enrichment)
     for goal in project_model.goals:
         try:
             Goal.objects.create(
                 project=project,
-                title=goal,
+                title=goal["title"],
                 description="",
-                role="",  # Optional: enrich later
+                role=goal.get("role", ""),
                 ai=True
             )
         except Exception as e:
             print(f"❌ Goal creation failed: {e}")
 
-    # 🗓️ Create Sprints
+    # 🗓️ Create Sprints (now using goals instead of tasks)
     for week in project_model.timeline:
         sprint_data = {
             "project": project.id,
             "week_number": week.week_number,
             "ai": True,
-            "tasks": [{"title": task.title} for task in week.tasks]
+            "goals": [{"title": goal.title, "ai": True} for goal in week.goals]
         }
         sprint_serializer = SprintSerializer(data=sprint_data)
         if sprint_serializer.is_valid():
