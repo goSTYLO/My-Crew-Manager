@@ -1,63 +1,55 @@
-from django.shortcuts import get_object_or_404
-from rest_framework.views import APIView
-from rest_framework.parsers import MultiPartParser
+from rest_framework.viewsets import ModelViewSet
+from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.parsers import MultiPartParser
 from rest_framework import status
+from django.shortcuts import get_object_or_404
 
-from .models import Proposal, Project
-from .serializers import ProjectSerializer
-from sprints.serializers import SprintSerializer
-
+from .models import Project, Member, Feature, Goal, Proposal
+from .serializers import ProjectSerializer, MemberSerializer, FeatureSerializer, GoalSerializer, ProposalSerializer
 from projects.services.llm_ingestion import ingest_proposal
 
 import pdfplumber
 
-# 🔹 CREATE
-class ProjectCreateView(APIView):
-    def post(self, request):
-        serializer = ProjectSerializer(data=request.data)
-        if serializer.is_valid():
-            project = serializer.save()
-            return Response({
-                "message": "Project created successfully",
-                "project_id": str(project.id),
-                "title": project.title
-            }, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+# 🔹 PROJECT
+class ProjectViewSet(ModelViewSet):
+    queryset = Project.objects.all()
+    serializer_class = ProjectSerializer
 
-# 🔹 READ
-class ProjectDetailView(APIView):
-    def get(self, request, project_id):
-        project = get_object_or_404(Project, id=project_id)
-        serializer = ProjectSerializer(project)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+    @action(detail=True, methods=["put"], url_path="ingest-proposal/(?P<proposal_id>[^/.]+)")
+    def ingest_proposal(self, request, pk=None, proposal_id=None):
+        project = self.get_object()
+        proposal = get_object_or_404(Proposal, id=proposal_id, project=project)
 
-# 🔹 UPDATE
-class ProjectUpdateView(APIView):
-    def put(self, request, project_id):
-        project = get_object_or_404(Project, id=project_id)
-        serializer = ProjectSerializer(project, data=request.data, partial=True)
-        if serializer.is_valid():
-            updated_project = serializer.save()
-            return Response({
-                "message": "Project updated successfully",
-                "project_id": str(updated_project.id),
-                "title": updated_project.title
-            }, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        if not proposal.parsed_text:
+            return Response({"error": "Proposal has no parsed text"}, status=status.HTTP_400_BAD_REQUEST)
 
-# 🔹 DELETE
-class ProjectDeleteView(APIView):
-    def delete(self, request, project_id):
-        project = get_object_or_404(Project, id=project_id)
-        project.delete()
-        return Response({"message": "Project deleted successfully"}, status=status.HTTP_204_NO_CONTENT)
+        title_override = request.data.get("title", project.title)
 
-# 🔹 PROPOSAL UPLOAD
-class ProposalUploadView(APIView):
+        try:
+            enriched_project = ingest_proposal(
+                text=proposal.parsed_text,
+                user=request.user,
+                title=title_override,
+                existing_project=project
+            )
+        except Exception as e:
+            return Response({"error": f"LLM ingestion failed: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        return Response({
+            "message": "Project enriched with LLM output",
+            "project_id": str(enriched_project.id),
+            "title": enriched_project.title,
+            "sprints_created": enriched_project.sprints.count()
+        }, status=status.HTTP_200_OK)
+
+# 🔹 PROPOSAL
+class ProposalViewSet(ModelViewSet):
+    queryset = Proposal.objects.all()
+    serializer_class = ProposalSerializer
     parser_classes = [MultiPartParser]
 
-    def post(self, request):
+    def create(self, request, *args, **kwargs):
         file = request.FILES.get("file")
         project_id = request.data.get("project_id")
 
@@ -89,30 +81,35 @@ class ProposalUploadView(APIView):
             "parsed_text_preview": text[:300] + "..." if len(text) > 300 else text
         }, status=status.HTTP_201_CREATED)
 
-# 🔹 LLM INGESTION (UPDATE PROJECT)
-class ProjectLLMIngestView(APIView):
-    def put(self, request, project_id, proposal_id):
-        project = get_object_or_404(Project, id=project_id)
-        proposal = get_object_or_404(Proposal, id=proposal_id, project=project)
+# 🔹 MEMBER
+class MemberViewSet(ModelViewSet):
+    queryset = Member.objects.all()
+    serializer_class = MemberSerializer
 
-        if not proposal.parsed_text:
-            return Response({"error": "Proposal has no parsed text"}, status=status.HTTP_400_BAD_REQUEST)
+    def get_queryset(self):
+        project_id = self.request.query_params.get("project_id")
+        if project_id:
+            return self.queryset.filter(project_id=project_id)
+        return self.queryset
 
-        title_override = request.data.get("title", project.title)
+# 🔹 FEATURE
+class FeatureViewSet(ModelViewSet):
+    queryset = Feature.objects.all()
+    serializer_class = FeatureSerializer
 
-        try:
-            enriched_project = ingest_proposal(
-                text=proposal.parsed_text,
-                user=request.user,
-                title=title_override,
-                existing_project=project
-            )
-        except Exception as e:
-            return Response({"error": f"LLM ingestion failed: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    def get_queryset(self):
+        project_id = self.request.query_params.get("project_id")
+        if project_id:
+            return self.queryset.filter(project_id=project_id)
+        return self.queryset
 
-        return Response({
-            "message": "Project enriched with LLM output",
-            "project_id": str(enriched_project.id),
-            "title": enriched_project.title,
-            "sprints_created": enriched_project.sprints.count()  
-        }, status=status.HTTP_200_OK)
+# 🔹 GOAL
+class GoalViewSet(ModelViewSet):
+    queryset = Goal.objects.all()
+    serializer_class = GoalSerializer
+
+    def get_queryset(self):
+        project_id = self.request.query_params.get("project_id")
+        if project_id:
+            return self.queryset.filter(project_id=project_id)
+        return self.queryset

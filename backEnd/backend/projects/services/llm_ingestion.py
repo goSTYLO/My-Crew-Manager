@@ -56,7 +56,6 @@ def ingest_proposal(text: str, user=None, title: str = "", existing_project: Pro
             Goal.objects.create(
                 project=project,
                 title=goal["title"],
-                description="",
                 role=goal.get("role", ""),
                 ai=True
             )

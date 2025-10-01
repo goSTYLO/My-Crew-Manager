@@ -1,23 +1,20 @@
-from django.urls import path
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
 from .views import (
-    ProjectCreateView,
-    ProjectDetailView,
-    ProjectUpdateView,
-    ProjectDeleteView,
-    ProposalUploadView,
-    ProjectLLMIngestView
+    ProjectViewSet,
+    ProposalViewSet,
+    MemberViewSet,
+    FeatureViewSet,
+    GoalViewSet
 )
 
+router = DefaultRouter()
+router.register(r'projects', ProjectViewSet, basename='projects')
+router.register(r'proposals', ProposalViewSet, basename='proposals')
+router.register(r'members', MemberViewSet, basename='members')
+router.register(r'features', FeatureViewSet, basename='features')
+router.register(r'goals', GoalViewSet, basename='goals')
+
 urlpatterns = [
-    # 🔹 Project CRUD
-    path("create-project/", ProjectCreateView.as_view(), name="create-project"),
-    path("project/<uuid:project_id>/", ProjectDetailView.as_view(), name="project-detail"),
-    path("project/<uuid:project_id>/update/", ProjectUpdateView.as_view(), name="project-update"),
-    path("project/<uuid:project_id>/delete/", ProjectDeleteView.as_view(), name="project-delete"),
-
-    # 🔹 Proposal Upload
-    path("upload-proposal/", ProposalUploadView.as_view(), name="upload-proposal"),
-
-    # 🔹 LLM Enrichment
-    path("project/<uuid:project_id>/ingest-proposal/<uuid:proposal_id>/", ProjectLLMIngestView.as_view(), name="project-llm-ingest"),
+    path("", include(router.urls)),
 ]
