@@ -8,6 +8,7 @@ import 'package:mycrewmanager/features/dashboard/presentation/pages/settings_pag
 import 'package:mycrewmanager/features/authentication/presentation/pages/login_page.dart';
 import 'package:mycrewmanager/features/dashboard/presentation/pages/project_overview_page.dart';
 import 'package:mycrewmanager/features/project/presentation/pages/project_page.dart';
+import 'package:mycrewmanager/features/dashboard/widgets/filter_widget.dart';
 
 class ProjectsPage extends StatelessWidget {
   const ProjectsPage({super.key});
@@ -99,10 +100,19 @@ class ProjectsPage extends StatelessWidget {
                       ),
                       child: IconButton(
                         icon: const Icon(Icons.tune, color: Colors.black54),
-                        onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Filter tapped')),
+                        onPressed: () async {
+                          final result = await showModalBottomSheet<Map<String, String>>(
+                            context: context,
+                            isScrollControlled: true,
+                            shape: const RoundedRectangleBorder(
+                              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                            ),
+                            builder: (_) => FilterBottomSheet(),
                           );
+
+                          if (result != null) {
+                            print("Selected filters: $result");
+                          }
                         },
                       ),
                     ),

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mycrewmanager/features/dashboard/presentation/pages/project_overview_page.dart';
+import 'package:mycrewmanager/features/dashboard/widgets/addmember_widget.dart';
+import 'package:mycrewmanager/features/dashboard/widgets/modifymember_widget.dart';
 
 class ManageMembersPage extends StatefulWidget {
   const ManageMembersPage({super.key});
@@ -18,7 +20,7 @@ class _ManageMembersPageState extends State<ManageMembersPage> {
       'name': 'You',
       'role': 'Project Lead',
       'avatar': 'https://randomuser.me/api/portraits/men/1.jpg',
-    },
+    }, 
     {
       'name': 'Angel Kimberly',
       'role': 'Front-end Developer',
@@ -161,8 +163,17 @@ class _ManageMembersPageState extends State<ManageMembersPage> {
                       trailing: IconButton(
                         icon: const Icon(Icons.more_horiz, color: Colors.black87),
                         onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('More options for ${m['name']}')),
+                          showModalBottomSheet(
+                            context: context,
+                            isScrollControlled: true,
+                            shape: const RoundedRectangleBorder(
+                              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                            ),
+                            builder: (_) => ModifyMemberBottomSheet(
+                              name: m['name']!,
+                              role: m['role']!,
+                              avatarUrl: m['avatar']!,
+                            ),
                           );
                         },
                       ),
@@ -191,10 +202,29 @@ class _ManageMembersPageState extends State<ManageMembersPage> {
                     ),
                     icon: const Icon(Icons.add),
                     label: const Text('Add Member', style: TextStyle(fontWeight: FontWeight.w600)),
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Add Member tapped')),
+                    onPressed: () async {
+                      final result = await showModalBottomSheet<Map<String, dynamic>>(
+                        context: context,
+                        isScrollControlled: true,
+                        shape: const RoundedRectangleBorder(
+                          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                        ),
+                        builder: (_) => const AddMemberBottomSheet(),
                       );
+
+                      if (result != null) {
+                        setState(() {
+                          members.add({
+                            "name": result["name"] ?? result["email"].split("@")[0],
+                            "role": result["role"] ?? "Member",
+                            "avatar": result["avatar"] ?? "https://randomuser.me/api/portraits/lego/1.jpg",
+                          });
+                        });
+
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text("Added ${result["name"]} as ${result["role"]}")),
+                        );
+                      }
                     },
                   ),
                 ),

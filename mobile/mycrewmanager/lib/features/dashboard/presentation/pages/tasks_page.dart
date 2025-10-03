@@ -6,6 +6,7 @@ import 'package:mycrewmanager/features/dashboard/presentation/pages/messages_scr
 import 'package:mycrewmanager/features/dashboard/presentation/pages/notifications_page.dart';
 import 'package:mycrewmanager/features/dashboard/presentation/pages/settings_page.dart';
 import 'package:mycrewmanager/features/authentication/presentation/pages/login_page.dart';
+import 'package:mycrewmanager/features/dashboard/widgets/addtask_widget.dart';
 
 class TasksPage extends StatefulWidget {
   const TasksPage({super.key});
@@ -306,15 +307,20 @@ class _TasksPageState extends State<TasksPage> with SingleTickerProviderStateMix
           }).toList(),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: Colors.black,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: const Icon(Icons.add, color: Colors.white, size: 32),
-        onPressed: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Add Task tapped')),
+        floatingActionButton: FloatingActionButton(
+          backgroundColor: Colors.black,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: const Icon(Icons.add, color: Colors.white, size: 32),
+          onPressed: () {
+          showModalBottomSheet(
+              context: context,
+              isScrollControlled: true,
+              shape: const RoundedRectangleBorder(
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              builder: (_) => TaskBottomSheet(), // ✅ now recognized
           );
         },
       ),
