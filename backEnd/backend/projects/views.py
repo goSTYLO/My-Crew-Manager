@@ -8,6 +8,7 @@ from django.shortcuts import get_object_or_404
 from .models import Project, Member, Feature, Goal, Proposal
 from .serializers import ProjectSerializer, MemberSerializer, FeatureSerializer, GoalSerializer, ProposalSerializer
 from projects.services.llm_ingestion import ingest_proposal
+from backlog.services.backlog_ingestion import ingest_backlog
 
 import pdfplumber
 
@@ -42,6 +43,22 @@ class ProjectViewSet(ModelViewSet):
             "title": enriched_project.title,
             "sprints_created": enriched_project.sprints.count()
         }, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=["put"], url_path="generate-backlog")  # ✅ NEW
+    def generate_backlog(self, request, pk=None):
+        project = self.get_object()
+
+        try:
+            backlog = ingest_backlog(project)
+        except Exception as e:
+            return Response({"error": f"Backlog generation failed: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        return Response({
+            "message": "Backlog generated successfully",
+            "backlog_id": str(backlog.id),
+            "epics_created": backlog.epics.filter(ai=True).count()
+        }, status=status.HTTP_200_OK)
+
 
 # 🔹 PROPOSAL
 class ProposalViewSet(ModelViewSet):

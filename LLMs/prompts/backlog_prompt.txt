@@ -1,7 +1,7 @@
 You are an AI assistant tasked with generating a structured backlog for a software project.
 
 Instructions:
-- Treat each high-level task from the project as a distinct Epic.
+- Treat each high-level goal from the project as a distinct Epic.
 - For each Epic, generate exactly 1 Sub-Epic.
 - For each Sub-Epic, generate exactly 1 User Story.
 - For each User Story, generate 2–3 granular Tasks.
@@ -18,7 +18,7 @@ Instructions:
      -Task X.1.1.2: <Task>
      -Task X.1.1.3: <Task>
 
-Do not generate extra Epics beyond those derived from the high-level tasks. Do not add additional Sub-Epics or User Stories beyond the specified limits.
+Do not generate extra Epics beyond those derived from the high-level goals. Do not add additional Sub-Epics or User Stories beyond the specified limits.
 
 <<<PROPOSAL>>>
 {proposal_text}

@@ -9,7 +9,7 @@ from .views import (
 )
 
 router = DefaultRouter()
-router.register(r'projects', ProjectViewSet, basename='projects')
+router.register(r'projects', ProjectViewSet, basename='projects')  # includes /<id>/generate-backlog/
 router.register(r'proposals', ProposalViewSet, basename='proposals')
 router.register(r'members', MemberViewSet, basename='members')
 router.register(r'features', FeatureViewSet, basename='features')

@@ -34,7 +34,7 @@
       "role": "Adaptive Intelligence Researcher"
     }
   ],
-  "tasks": [
+  "goals": [
     "Define initial workflow scenarios",
     "Develop adaptive intelligence algorithms",
     "Design intuitive user interface for AI interactions",
