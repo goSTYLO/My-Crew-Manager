@@ -1,21 +1,13 @@
 import os
 import re
-import json
+from typing import Dict
 from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
 from langchain_huggingface import HuggingFacePipeline
-from LLMs.models import (
-    ProjectModel,
-    BacklogModel,
-    EpicModel,
-    SubEpicModel,
-    UserStoryModel,
-    TaskModel
-)
+from LLMs.models import BacklogModel, EpicModel, SubEpicModel, UserStoryModel, TaskModel
 
 MODEL_ID = "unsloth/mistral-7b-instruct-v0.3-bnb-4bit"
 
 def load_llm() -> HuggingFacePipeline:
-    print(f"🔧 Loading model: {MODEL_ID}")
     tokenizer = AutoTokenizer.from_pretrained(MODEL_ID, trust_remote_code=True)
     model = AutoModelForCausalLM.from_pretrained(
         MODEL_ID,
@@ -32,18 +24,16 @@ def load_llm() -> HuggingFacePipeline:
         do_sample=True,
         return_full_text=False
     )
-    print("✅ Model loaded and ready")
     return HuggingFacePipeline(pipeline=pipe)
 
-def build_prompt(section: str, proposal_text: str, context: dict = None) -> str:
+def build_prompt(section: str, proposal_text: str, context: Dict = None) -> str:
     root_dir = os.path.dirname(__file__)
     prompt_path = os.path.join(root_dir, "prompts", f"{section}_prompt.txt")
 
     try:
         with open(prompt_path, "r", encoding="utf-8") as f:
             template = f.read().strip()
-    except Exception as e:
-        print(f"⚠️ Failed to load prompt: {e}")
+    except Exception:
         return ""
 
     prompt = template.replace("{proposal_text}", proposal_text)
@@ -52,20 +42,19 @@ def build_prompt(section: str, proposal_text: str, context: dict = None) -> str:
             prompt = prompt.replace(f"{{{key}}}", str(value).strip())
 
     prompt = re.sub(r"{\w+}", "", prompt)
-    print(f"🧠 Built prompt for: {section}")
     return prompt
 
-def generate_section(llm, section: str, prompt: str) -> str:
-    print(f"🚀 Generating: {section.upper()}")
-    try:
-        response = llm.invoke(prompt).strip()
-        print(f"\n--- RAW {section.upper()} ---\n{response}\n")
-        return response
-    except Exception as e:
-        print(f"❌ Error generating {section}: {e}")
-        return ""
+def generate_section(llm, section: str, prompt: str, max_retries: int = 3) -> str:
+    for _ in range(max_retries):
+        try:
+            response = llm.invoke(prompt).strip()
+            if response:
+                return response
+        except Exception:
+            continue
+    return ""
 
-def parse_structured_backlog(raw_text: str) -> BacklogModel:
+def parse_backlog(raw_text: str) -> BacklogModel:
     backlog = BacklogModel()
     current_epic = None
     current_sub_epic = None
@@ -89,15 +78,12 @@ def parse_structured_backlog(raw_text: str) -> BacklogModel:
                 ai=True
             )
             backlog.epics.append(current_epic)
-            current_sub_epic = None
-            current_user_story = None
 
         elif line.startswith("-Sub-Epic") and current_epic:
             label, content = line.split(":", 1)
             title = f"{label.strip()}: {content.strip()}"
             current_sub_epic = SubEpicModel(title=title, ai=True)
             current_epic.sub_epics.append(current_sub_epic)
-            current_user_story = None
 
         elif line.startswith("-User Story") and current_sub_epic:
             label, content = line.split(":", 1)
@@ -111,52 +97,25 @@ def parse_structured_backlog(raw_text: str) -> BacklogModel:
             task = TaskModel(
                 title=title,
                 description="",
-                status="Todo",
+                status="pending",
                 ai=True
             )
             current_user_story.tasks.append(task)
 
     return backlog
 
-def serialize_backlog_to_json(backlog: BacklogModel) -> str:
-    return json.dumps(
-        [epic.model_dump(exclude_defaults=True) for epic in backlog.epics],
-        indent=2,
-        ensure_ascii=False
-    )
-
-def run_backlog_pipeline(proposal_text: str, project_model: ProjectModel) -> BacklogModel:
-    print("\n--- Starting Backlog Generation ---")
-    llm = load_llm()
-
-    if not project_model.title or not project_model.summary or not project_model.goals:
-        print("⚠️ Missing required fields in ProjectModel. Skipping backlog generation.")
+def run_backlog_pipeline(proposal_text: str, context: Dict) -> BacklogModel:
+    if not proposal_text:
         return BacklogModel()
 
-    context = {
-        "project_title": project_model.title,
-        "features": ", ".join(project_model.features),
-        "tasks": "\n".join(project_model.goals)
-    }
-
-
+    llm = load_llm()
     prompt = build_prompt("backlog", proposal_text, context)
+    if not prompt:
+        return BacklogModel()
+
     raw_backlog = generate_section(llm, "backlog", prompt)
+    if not raw_backlog:
+        return BacklogModel()
 
-    if raw_backlog:
-        backlog = parse_structured_backlog(raw_backlog)
-        json_backlog = serialize_backlog_to_json(backlog)
-        print("\n📦 Parsed Backlog JSON:\n", json_backlog)
-
-        try:
-            os.makedirs("outputs", exist_ok=True)
-            with open("outputs/backlog.json", "w", encoding="utf-8") as f:
-                f.write(json_backlog)
-        except Exception as e:
-            print(f"⚠️ Failed to save JSON file: {e}")
-
-        print("\n✅ Backlog generation complete.")
-        return backlog
-
-    print("❌ No backlog generated.")
-    return BacklogModel()
+    print(f"\n--- RAW BACKLOG ---\n{raw_backlog}\n")
+    return parse_backlog(raw_backlog)

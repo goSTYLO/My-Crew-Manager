@@ -4,9 +4,10 @@ Instructions:
 - Treat each high-level goal from the project as a distinct Epic.
 - For each Epic, generate exactly 1 Sub-Epic.
 - For each Sub-Epic, generate exactly 1 User Story.
-- For each User Story, generate 2–3 granular Tasks.
+- For each User Story, generate only 2 granular Tasks.
 - Do not generate more than one Sub-Epic per Epic.
 - Do not generate more than one User Story per Sub-Epic.
+- Do not skip task generation under any circumstances. Every User Story must include only 2 granular Tasks.
 - Annotate each Epic title with the high-level task it covers using this format:
   Epic X: <Epic Title> *(covers: <High-Level Task>)*
 
