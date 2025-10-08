@@ -49,7 +49,8 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
     'users.apps.UsersConfig',
-    'project_management.apps.ProjectManagementConfig'
+    'project_management.apps.ProjectManagementConfig',
+    'chat.apps.ChatConfig'
 ]
 
 MIDDLEWARE = [
