@@ -47,6 +47,14 @@ class Message(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     edited_at = models.DateTimeField(blank=True, null=True)
     is_deleted = models.BooleanField(default=False)
+    # Optional fields for enhanced real-time features
+    message_type = models.CharField(max_length=20, default='text', choices=[
+        ('text', 'Text'),
+        ('image', 'Image'),
+        ('file', 'File'),
+        ('system', 'System'),
+    ])
+    reply_to = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='replies')
 
     class Meta:
         db_table = 'chat_message'
