@@ -1,0 +1,19 @@
+Project Title​
+Horizon — Intelligent Systems for Evolving Workflows
+Project Description​
+Horizon is an exploratory initiative aimed at understanding how adaptive intelligence can
+enhance team workflows in dynamic, fast-changing environments. The system is expected to
+evolve alongside user needs, offering contextual support, automation, and insight generation
+without relying on rigid structures or predefined roles.
+Objective​
+To explore how intelligent systems can support evolving team workflows in dynamic
+environments.
+Scope​
+The system should adapt to changing user needs and provide meaningful support across
+multiple phases of work. It may involve automation, data handling, and some form of insight
+generation.
+Team Composition​
+A small team will be formed. Specific roles and responsibilities will be defined as the project
+evolves.
+
+

@@ -1,0 +1,34 @@
+Summary:
+[One-paragraph summary of the project’s goals, scope, and intended impact.]
+
+Roles:
+Role Title: [Brief description of responsibilities]  
+Role Title: [Brief description of responsibilities]  
+Role Title: [Brief description of responsibilities]
+
+Tasks:
+- [Task 1]
+- [Task 2]
+- [Task 3]
+- [Task 4]
+- [Task 5]
+
+Timeline:
+Week 1:
+- [Task A]
+- [Task B]  
+Week 2:
+- [Task C]
+- [Task D]  
+Week 3:
+- [Task E]
+- [Task F]  
+Week 4:
+- [Task G]
+- [Task H]
+
+Risks:
+- [Risk related to technical limitations]  
+- [Risk related to timeline or delivery]  
+- [Risk related to team coordination or onboarding]  
+- [Risk related to data quality or compliance]

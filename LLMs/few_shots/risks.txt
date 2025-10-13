@@ -1,0 +1,5 @@
+Risks:
+- [Risk related to technical limitations]  
+- [Risk related to timeline or delivery]  
+- [Risk related to team coordination or onboarding]  
+- [Risk related to data quality or compliance]
