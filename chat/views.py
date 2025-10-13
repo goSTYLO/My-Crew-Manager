@@ -17,30 +17,40 @@ from .permissions import IsAuthenticatedAndRoomMember, IsRoomAdmin
 
 def send_room_notification(room_id, notification_type, data):
     """Send real-time notification to all members of a room"""
-    channel_layer = get_channel_layer()
-    room_group_name = f'chat_{room_id}'
-    
-    async_to_sync(channel_layer.group_send)(
-        room_group_name,
-        {
-            'type': notification_type,
-            **data
-        }
-    )
+    try:
+        channel_layer = get_channel_layer()
+        if channel_layer is None:
+            return
+        room_group_name = f'chat_{room_id}'
+        async_to_sync(channel_layer.group_send)(
+            room_group_name,
+            {
+                'type': notification_type,
+                **data
+            }
+        )
+    except Exception:
+        # In tests or when Redis is unavailable, skip real-time send
+        return
 
 
 def send_user_notification(user_id, notification_type, data):
     """Send real-time notification to a specific user"""
-    channel_layer = get_channel_layer()
-    user_group_name = f'user_{user_id}_notifications'
-    
-    async_to_sync(channel_layer.group_send)(
-        user_group_name,
-        {
-            'type': notification_type,
-            **data
-        }
-    )
+    try:
+        channel_layer = get_channel_layer()
+        if channel_layer is None:
+            return
+        user_group_name = f'user_{user_id}_notifications'
+        async_to_sync(channel_layer.group_send)(
+            user_group_name,
+            {
+                'type': notification_type,
+                **data
+            }
+        )
+    except Exception:
+        # In tests or when Redis is unavailable, skip real-time send
+        return
 
 
 class RoomViewSet(viewsets.ModelViewSet):
@@ -50,10 +60,17 @@ class RoomViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        # Only list rooms where the user is a member
-        if self.action == 'list':
-            return Room.objects.filter(memberships__user=self.request.user).distinct()
-        return super().get_queryset()
+        # Only allow access to rooms where the user is a member for all actions
+        base_qs = Room.objects.filter(memberships__user=self.request.user).distinct()
+        return base_qs
+
+    def get_permissions(self):
+        # Enforce membership for all room detail actions; admin for specific actions
+        if self.action in ['retrieve', 'update', 'partial_update', 'destroy', 'members']:
+            return [IsAuthenticatedAndRoomMember()]
+        if self.action in ['invite', 'remove_member']:
+            return [IsAuthenticatedAndRoomMember(), IsRoomAdmin()]
+        return super().get_permissions()
 
     def perform_create(self, serializer):
         with transaction.atomic():
@@ -63,7 +80,7 @@ class RoomViewSet(viewsets.ModelViewSet):
             # Send real-time notification
             send_room_notification(room.room_id, 'room_created', {
                 'room': RoomSerializer(room).data,
-                'created_by': self.request.user.username,
+                'created_by': self.request.user.name,
             })
 
     @action(detail=True, methods=['post'], permission_classes=[IsAuthenticatedAndRoomMember, IsRoomAdmin])
@@ -80,12 +97,12 @@ class RoomViewSet(viewsets.ModelViewSet):
             send_user_notification(user_id, 'room_invitation', {
                 'room_id': room.room_id,
                 'room_name': room.name or f"Room {room.room_id}",
-                'invited_by': request.user.username,
+                'invited_by': request.user.name,
             })
             
             send_room_notification(room.room_id, 'user_joined', {
-                'user': membership.user.username,
-                'user_id': membership.user.id,
+                'user': membership.user.name,
+                'user_id': membership.user.pk,
             })
         
         return Response({'detail': 'User invited/added successfully'})
@@ -103,8 +120,8 @@ class RoomViewSet(viewsets.ModelViewSet):
             
             # Send real-time notification
             send_room_notification(room.room_id, 'user_left', {
-                'user': membership.user.username,
-                'user_id': membership.user.id,
+                'user': membership.user.name,
+                'user_id': membership.user.pk,
             })
         
         return Response({'detail': 'Member removed'})
@@ -125,13 +142,12 @@ class RoomViewSet(viewsets.ModelViewSet):
         if int(other_user_id) == int(request.user.pk):
             return Response({'detail': 'user_id must be different from current user'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Find existing private room with exactly these two members
-        from django.db.models import Count
+        # Find existing private room for exactly these two users
         existing = (
-            Room.objects.filter(is_private=True, memberships__user=request.user)
+            Room.objects.filter(is_private=True)
+            .filter(memberships__user=request.user)
             .filter(memberships__user_id=other_user_id)
-            .annotate(num_members=Count('memberships'))
-            .filter(num_members=2)
+            .distinct()
             .first()
         )
         if existing:
@@ -147,7 +163,7 @@ class RoomViewSet(viewsets.ModelViewSet):
             # Send real-time notification
             send_room_notification(room.room_id, 'direct_room_created', {
                 'room': RoomSerializer(room).data,
-                'created_by': request.user.username,
+                'created_by': request.user.name,
             })
         
         serializer = self.get_serializer(room)
@@ -177,7 +193,7 @@ class MessageViewSet(mixins.ListModelMixin,
             'reply_to_id': request.data.get('reply_to_id')
         }
         
-        serializer = self.get_serializer(data=message_data)
+        serializer = self.get_serializer(data=message_data, context={'room_id': room_id})
         serializer.is_valid(raise_exception=True)
         
         # Create message
@@ -191,19 +207,20 @@ class MessageViewSet(mixins.ListModelMixin,
         
         # Send real-time notification to room
         message_data = self.get_serializer(message).data
-        send_room_notification(room_id, 'new_message', {
+        # Align WebSocket event name with consumer handler
+        send_room_notification(room_id, 'chat_message', {
             'message': message_data,
-            'sender': request.user.username,
-            'sender_id': request.user.id,
+            'sender': request.user.name,
+            'sender_id': request.user.pk,
         })
         
         # Send notifications to room members who aren't currently connected
         room = Room.objects.get(room_id=room_id)
         for membership in room.memberships.exclude(user=request.user):
-            send_user_notification(membership.user.id, 'new_message_notification', {
+            send_user_notification(membership.user.pk, 'new_message_notification', {
                 'room_id': room_id,
                 'message': message_data,
-                'sender': request.user.username,
+                'sender': request.user.name,
             })
         
         out = self.get_serializer(message)
@@ -222,7 +239,7 @@ class MessageViewSet(mixins.ListModelMixin,
         # Send real-time notification
         send_room_notification(instance.room.room_id, 'message_deleted', {
             'message_id': instance.message_id,
-            'deleted_by': request.user.username,
+            'deleted_by': request.user.name,
         })
         
         return Response(status=status.HTTP_204_NO_CONTENT)

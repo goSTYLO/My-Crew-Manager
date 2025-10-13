@@ -8,6 +8,13 @@ class IsAuthenticatedAndRoomMember(BasePermission):
     def has_permission(self, request, view):
         if not request.user or not request.user.is_authenticated:
             return False
+        # If the view is scoped to a specific room via URL kwarg, enforce membership here
+        room_id = None
+        # Nested message routes use 'room_pk'; room detail uses 'pk'
+        if hasattr(view, 'kwargs'):
+            room_id = view.kwargs.get('room_pk') or view.kwargs.get('pk')
+        if room_id is not None:
+            return RoomMembership.objects.filter(room_id=room_id, user=request.user).exists()
         return True
 
     def has_object_permission(self, request, view, obj):

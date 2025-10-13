@@ -18,6 +18,9 @@ class TeamViewSet(viewsets.ModelViewSet):
     queryset = Team.objects.all()
     serializer_class = TeamSerializer
     permission_classes = [IsAuthenticated]
+    def get_queryset(self):
+        # Only teams the current user belongs to
+        return Team.objects.filter(members__user=self.request.user).distinct()
 
     @action(detail=True, methods=['post'])
     def add_member(self, request, pk=None):
@@ -79,6 +82,9 @@ class ProjectViewSet(viewsets.ModelViewSet):
     queryset = Project.objects.all()
     serializer_class = ProjectSerializer
     permission_classes = [IsAuthenticated]
+    def get_queryset(self):
+        # Projects where user is a member of the team
+        return Project.objects.filter(team__members__user=self.request.user).distinct()
 
     def get_serializer_class(self):
         if self.action == 'retrieve':
@@ -110,6 +116,9 @@ class SprintViewSet(viewsets.ModelViewSet):
     queryset = Sprint.objects.all()
     serializer_class = SprintSerializer
     permission_classes = [IsAuthenticated]
+    def get_queryset(self):
+        # Sprints of projects where user is a member of the team
+        return Sprint.objects.filter(project__team__members__user=self.request.user).distinct()
 
     def get_serializer_class(self):
         if self.action == 'retrieve':
@@ -144,6 +153,9 @@ class TaskViewSet(viewsets.ModelViewSet):
     queryset = Task.objects.all()
     serializer_class = TaskSerializer
     permission_classes = [IsAuthenticated]
+    def get_queryset(self):
+        # Tasks under sprints/projects where user is a team member
+        return Task.objects.filter(sprint__project__team__members__user=self.request.user).distinct()
 
     def get_serializer_class(self):
         if self.action == 'retrieve':
@@ -237,10 +249,15 @@ class CommitViewSet(viewsets.ModelViewSet):
         thirty_days_ago = timezone.now() - timedelta(days=30)
         recent_commits = self.get_queryset().filter(timestamp__gte=thirty_days_ago).count()
         
-        # Commits by day of week
-        commits_by_day = self.get_queryset().extra(
-            select={'day': 'EXTRACT(dow FROM timestamp)'}
-        ).values('day').annotate(count=Count('id'))
+        # Commits by day of week (portable)
+        from django.db.models.functions import ExtractWeekDay
+        commits_by_day = (
+            self.get_queryset()
+            .annotate(day=ExtractWeekDay('timestamp'))
+            .values('day')
+            .annotate(count=Count('commit_id'))
+            .order_by('day')
+        )
         
         return Response({
             'total_commits': total_commits,
@@ -329,6 +346,7 @@ class BacklogViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         project_id = self.request.query_params.get('project_id')
+        base = Backlog.objects.filter(project__team__members__user=self.request.user).distinct()
         if project_id:
-            return Backlog.objects.filter(project_id=project_id)
-        return super().get_queryset()
+            return base.filter(project_id=project_id)
+        return base

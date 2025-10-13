@@ -10,8 +10,17 @@ class UserSerializer(serializers.ModelSerializer):
         fields = ['user_id', 'name', 'email', 'role', 'created_at']
         read_only_fields = ['user_id', 'created_at']
 
+class TeamMemberSerializer(serializers.ModelSerializer):
+    user = UserSerializer(read_only=True)
+    team_name = serializers.CharField(source='team.name', read_only=True)
+
+    class Meta:
+        model = TeamMember
+        fields = ['id', 'team', 'team_name', 'user', 'joined_at', 'role_in_team']
+        read_only_fields = ['id', 'joined_at']
+
 class TeamSerializer(serializers.ModelSerializer):
-    members = UserSerializer(many=True, read_only=True)
+    members = TeamMemberSerializer(many=True, read_only=True)
     member_count = serializers.SerializerMethodField()
 
     class Meta:
@@ -34,6 +43,13 @@ class ProjectSerializer(serializers.ModelSerializer):
     def get_sprint_count(self, obj):
         return obj.sprints.count()
 
+    def validate(self, attrs):
+        start = attrs.get('start_date')
+        end = attrs.get('end_date')
+        if start and end and start > end:
+            raise serializers.ValidationError({'end_date': 'end_date must be on/after start_date'})
+        return attrs
+
 class SprintSerializer(serializers.ModelSerializer):
     project_name = serializers.CharField(source='project.name', read_only=True)
     task_count = serializers.SerializerMethodField()
@@ -45,6 +61,13 @@ class SprintSerializer(serializers.ModelSerializer):
 
     def get_task_count(self, obj):
         return obj.tasks.count()
+
+    def validate(self, attrs):
+        start = attrs.get('start_date')
+        end = attrs.get('end_date')
+        if start and end and start > end:
+            raise serializers.ValidationError({'end_date': 'end_date must be on/after start_date'})
+        return attrs
 
 class TaskSerializer(serializers.ModelSerializer):
     assigned_to_name = serializers.CharField(source='assigned_to.name', read_only=True)
@@ -86,15 +109,6 @@ class BacklogSerializer(serializers.ModelSerializer):
         model = Backlog
         fields = ['backlog_id', 'project', 'project_name', 'createdDate', 'lastUpdated']
         read_only_fields = ['backlog_id', 'createdDate', 'lastUpdated']
-
-class TeamMemberSerializer(serializers.ModelSerializer):
-    user = UserSerializer(read_only=True)
-    team_name = serializers.CharField(source='team.name', read_only=True)
-
-    class Meta:
-        model = TeamMember
-        fields = ['id', 'team', 'team_name', 'user', 'joined_at', 'role_in_team']
-        read_only_fields = ['id', 'joined_at']
 
 # Nested serializers for detailed views
 class DetailedTaskSerializer(serializers.ModelSerializer):

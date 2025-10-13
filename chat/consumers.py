@@ -33,8 +33,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
             self.room_group_name,
             {
                 'type': 'user_joined',
-                'user': self.scope['user'].username,
-                'user_id': self.scope['user'].id,
+                'user': self.scope['user'].name,
+                'user_id': self.scope['user'].pk,
             }
         )
 
@@ -50,8 +50,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
             self.room_group_name,
             {
                 'type': 'user_left',
-                'user': self.scope['user'].username,
-                'user_id': self.scope['user'].id,
+                'user': self.scope['user'].name,
+                'user_id': self.scope['user'].pk,
             }
         )
 
