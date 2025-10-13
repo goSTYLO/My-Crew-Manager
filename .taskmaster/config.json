@@ -41,6 +41,6 @@
     "defaultModel": "grok-4-latest"
   },
   "taskStorage": {
-    "path": "tasks/tasks.json"
+  "path": ".taskmaster/tasks/tasks.json"
   }
 }
