@@ -181,7 +181,7 @@ Widget build(BuildContext context) {
                           width: double.infinity,
                           height: 50,
                           child: ElevatedButton(
-                            onPressed: _acceptedTerms ? _handleLogin : null,
+                            onPressed:() => Navigator.push(context, DashboardPage.route()),   //_acceptedTerms ? _handleLogin : null,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.black,
                               foregroundColor: Colors.white,

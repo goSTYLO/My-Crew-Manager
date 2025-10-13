@@ -9,6 +9,7 @@ import 'package:mycrewmanager/features/authentication/presentation/pages/login_p
 import 'package:mycrewmanager/features/dashboard/presentation/pages/project_overview_page.dart';
 import 'package:mycrewmanager/features/project/presentation/pages/project_page.dart';
 import 'package:mycrewmanager/features/dashboard/widgets/filter_widget.dart';
+import 'package:mycrewmanager/features/dashboard/widgets/modifyproject_widget.dart';
 
 class ProjectsPage extends StatelessWidget {
   const ProjectsPage({super.key});
@@ -141,8 +142,25 @@ class ProjectsPage extends StatelessWidget {
                       image: 'assets/images/profile.png',
                       title: 'My Crew Assigner',
                       onMore: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('More options for My Crew Assigner')),
+                        showModalBottomSheet(
+                          context: context,
+                          shape: const RoundedRectangleBorder(
+                            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                          ),
+                          builder: (_) => ModifyProjectBottomSheet(
+                            onEdit: () {
+                              Navigator.pop(context);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Edit Project tapped')),
+                              );
+                            },
+                            onDelete: () {
+                              Navigator.pop(context);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Delete Project tapped')),
+                              );
+                            },
+                          ),
                         );
                       },
                       onTap: () {
