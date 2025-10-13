@@ -21,6 +21,8 @@ node_modules/
 *.sln
 *.sw?
 .venv/
-
+__pycache__/
+*.py[cod]
+*$py.class
 # OS specific
 .DS_Store
