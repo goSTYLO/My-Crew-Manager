@@ -22,16 +22,16 @@ This document describes the hybrid chat system that combines REST APIs for data 
     ┌────▼────┐              ┌───▼───┐              ┌────▼────┐
     │ Data    │              │ WebSocket│           │ Real-time│
     │ Persistence│           │ Consumers│           │ Events   │
-    └─────────┘              └─────────┘              └─────────┘
+    └─────────┘              └─────────┘            └─────────┘
 ```
 
 ### 📋 **Responsibilities**
 
-| Component | Purpose | Technology |
-|-----------|---------|------------|
-| **REST API** | Data operations, persistence, history | Django REST Framework |
-| **WebSocket** | Real-time events, typing indicators | Django Channels |
-| **Channel Layers** | Message broadcasting | Redis |
+| Component          | Purpose                               | Technology            |
+| ------------------ | ------------------------------------- | --------------------- |
+| **REST API**       | Data operations, persistence, history | Django REST Framework |
+| **WebSocket**      | Real-time events, typing indicators   | Django Channels       |
+| **Channel Layers** | Message broadcasting                  | Redis                 |
 
 ## API Endpoints
 
@@ -40,42 +40,44 @@ This document describes the hybrid chat system that combines REST APIs for data 
 #### **Base URL**: `/api/chat/`
 
 #### **Authentication**: Token-based
+
 ```http
 Authorization: Token <your_token>
 ```
 
 ### **Rooms**
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/api/chat/rooms/` | List user's rooms |
-| `POST` | `/api/chat/rooms/` | Create new room |
-| `GET` | `/api/chat/rooms/{id}/` | Get room details |
-| `PATCH` | `/api/chat/rooms/{id}/` | Update room |
-| `DELETE` | `/api/chat/rooms/{id}/` | Delete room |
-| `POST` | `/api/chat/rooms/{id}/invite/` | Invite user to room |
-| `POST` | `/api/chat/rooms/{id}/remove_member/` | Remove user from room |
-| `GET` | `/api/chat/rooms/{id}/members/` | List room members |
-| `POST` | `/api/chat/rooms/direct/` | Create/get direct message room |
+| Method   | Endpoint                              | Description                    |
+| -------- | ------------------------------------- | ------------------------------ |
+| `GET`    | `/api/chat/rooms/`                    | List user's rooms              |
+| `POST`   | `/api/chat/rooms/`                    | Create new room                |
+| `GET`    | `/api/chat/rooms/{id}/`               | Get room details               |
+| `PATCH`  | `/api/chat/rooms/{id}/`               | Update room                    |
+| `DELETE` | `/api/chat/rooms/{id}/`               | Delete room                    |
+| `POST`   | `/api/chat/rooms/{id}/invite/`        | Invite user to room            |
+| `POST`   | `/api/chat/rooms/{id}/remove_member/` | Remove user from room          |
+| `GET`    | `/api/chat/rooms/{id}/members/`       | List room members              |
+| `POST`   | `/api/chat/rooms/direct/`             | Create/get direct message room |
 
 ### **Messages**
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/api/chat/rooms/{id}/messages/` | Get room messages |
-| `POST` | `/api/chat/rooms/{id}/messages/` | Send message |
-| `DELETE` | `/api/chat/rooms/{id}/messages/{id}/` | Delete message |
+| Method   | Endpoint                              | Description       |
+| -------- | ------------------------------------- | ----------------- |
+| `GET`    | `/api/chat/rooms/{id}/messages/`      | Get room messages |
+| `POST`   | `/api/chat/rooms/{id}/messages/`      | Send message      |
+| `DELETE` | `/api/chat/rooms/{id}/messages/{id}/` | Delete message    |
 
 ### **WebSocket Endpoints**
 
-| Endpoint | Purpose |
-|----------|---------|
-| `ws://localhost:8000/ws/chat/{room_id}/` | Real-time room events |
-| `ws://localhost:8000/ws/chat/notifications/` | Global notifications |
+| Endpoint                                     | Purpose               |
+| -------------------------------------------- | --------------------- |
+| `ws://localhost:8000/ws/chat/{room_id}/`     | Real-time room events |
+| `ws://localhost:8000/ws/chat/notifications/` | Global notifications  |
 
 ## Data Models
 
 ### **Room Model**
+
 ```json
 {
   "room_id": 1,
@@ -88,6 +90,7 @@ Authorization: Token <your_token>
 ```
 
 ### **Message Model**
+
 ```json
 {
   "message_id": 123,
@@ -104,6 +107,7 @@ Authorization: Token <your_token>
 ```
 
 ### **Membership Model**
+
 ```json
 {
   "membership_id": 1,
@@ -119,6 +123,7 @@ Authorization: Token <your_token>
 ### **WebSocket Message Types**
 
 #### **Client → Server (Room Events)**
+
 ```json
 {
   "type": "typing"
@@ -132,6 +137,7 @@ Authorization: Token <your_token>
 #### **Server → Client (Real-time Events)**
 
 **New Message**
+
 ```json
 {
   "type": "new_message",
@@ -153,6 +159,7 @@ Authorization: Token <your_token>
 ```
 
 **Typing Indicators**
+
 ```json
 {
   "type": "typing",
@@ -168,6 +175,7 @@ Authorization: Token <your_token>
 ```
 
 **User Presence**
+
 ```json
 {
   "type": "user_joined",
@@ -183,6 +191,7 @@ Authorization: Token <your_token>
 ```
 
 **Room Events**
+
 ```json
 {
   "type": "room_created",
@@ -210,6 +219,7 @@ Authorization: Token <your_token>
 ```
 
 **Notifications**
+
 ```json
 {
   "type": "new_message_notification",
@@ -231,23 +241,27 @@ Authorization: Token <your_token>
 ### **1. Complete Chat Flow**
 
 #### **Step 1: Get User's Rooms**
+
 ```http
 GET /api/chat/rooms/
 Authorization: Token <token>
 ```
 
 #### **Step 2: Connect to Room WebSocket**
+
 ```javascript
-const socket = new WebSocket('ws://localhost:8000/ws/chat/1/');
+const socket = new WebSocket("ws://localhost:8000/ws/chat/1/");
 ```
 
 #### **Step 3: Load Room Messages**
+
 ```http
 GET /api/chat/rooms/1/messages/
 Authorization: Token <token>
 ```
 
 #### **Step 4: Send Message via REST API**
+
 ```http
 POST /api/chat/rooms/1/messages/
 Authorization: Token <token>
@@ -261,18 +275,19 @@ Content-Type: application/json
 ```
 
 #### **Step 5: Receive Real-time Updates via WebSocket**
+
 ```javascript
-socket.onmessage = function(event) {
+socket.onmessage = function (event) {
   const data = JSON.parse(event.data);
-  
-  switch(data.type) {
-    case 'new_message':
+
+  switch (data.type) {
+    case "new_message":
       displayMessage(data.message);
       break;
-    case 'typing':
+    case "typing":
       showTypingIndicator(data.user);
       break;
-    case 'stop_typing':
+    case "stop_typing":
       hideTypingIndicator(data.user);
       break;
   }
@@ -282,6 +297,7 @@ socket.onmessage = function(event) {
 ### **2. Room Management**
 
 #### **Create Room**
+
 ```http
 POST /api/chat/rooms/
 Authorization: Token <token>
@@ -294,6 +310,7 @@ Content-Type: application/json
 ```
 
 #### **Invite User**
+
 ```http
 POST /api/chat/rooms/1/invite/
 Authorization: Token <token>
@@ -305,6 +322,7 @@ Content-Type: application/json
 ```
 
 #### **Get Room Members**
+
 ```http
 GET /api/chat/rooms/1/members/
 Authorization: Token <token>
@@ -313,6 +331,7 @@ Authorization: Token <token>
 ### **3. Direct Messages**
 
 #### **Create/Get Direct Message Room**
+
 ```http
 POST /api/chat/rooms/direct/
 Authorization: Token <token>
@@ -333,56 +352,65 @@ class ChatManager {
     this.roomId = roomId;
     this.token = token;
     this.socket = null;
-    this.baseUrl = 'http://localhost:8000/api/chat';
+    this.baseUrl = "http://localhost:8000/api/chat";
   }
 
   // REST API Methods
   async getRooms() {
     const response = await fetch(`${this.baseUrl}/rooms/`, {
-      headers: { 'Authorization': `Token ${this.token}` }
+      headers: { Authorization: `Token ${this.token}` },
     });
     return response.json();
   }
 
   async getMessages(limit = 50, offset = 0) {
-    const response = await fetch(`${this.baseUrl}/rooms/${this.roomId}/messages/?limit=${limit}&offset=${offset}`, {
-      headers: { 'Authorization': `Token ${this.token}` }
-    });
+    const response = await fetch(
+      `${this.baseUrl}/rooms/${this.roomId}/messages/?limit=${limit}&offset=${offset}`,
+      {
+        headers: { Authorization: `Token ${this.token}` },
+      }
+    );
     return response.json();
   }
 
-  async sendMessage(content, messageType = 'text', replyToId = null) {
-    const response = await fetch(`${this.baseUrl}/rooms/${this.roomId}/messages/`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Token ${this.token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        content,
-        message_type: messageType,
-        reply_to_id: replyToId
-      })
-    });
+  async sendMessage(content, messageType = "text", replyToId = null) {
+    const response = await fetch(
+      `${this.baseUrl}/rooms/${this.roomId}/messages/`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Token ${this.token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          content,
+          message_type: messageType,
+          reply_to_id: replyToId,
+        }),
+      }
+    );
     return response.json();
   }
 
   async deleteMessage(messageId) {
-    const response = await fetch(`${this.baseUrl}/rooms/${this.roomId}/messages/${messageId}/`, {
-      method: 'DELETE',
-      headers: { 'Authorization': `Token ${this.token}` }
-    });
+    const response = await fetch(
+      `${this.baseUrl}/rooms/${this.roomId}/messages/${messageId}/`,
+      {
+        method: "DELETE",
+        headers: { Authorization: `Token ${this.token}` },
+      }
+    );
     return response.status === 204;
   }
 
   // WebSocket Methods
   connectWebSocket() {
     this.socket = new WebSocket(`ws://localhost:8000/ws/chat/${this.roomId}/`);
-    
+
     this.socket.onopen = () => {
-      console.log('Connected to chat room');
+      console.log("Connected to chat room");
     };
-    
+
     this.socket.onmessage = (event) => {
       const data = JSON.parse(event.data);
       this.handleRealtimeEvent(data);
@@ -390,20 +418,20 @@ class ChatManager {
   }
 
   handleRealtimeEvent(data) {
-    switch(data.type) {
-      case 'new_message':
+    switch (data.type) {
+      case "new_message":
         this.displayMessage(data.message);
         break;
-      case 'typing':
+      case "typing":
         this.showTypingIndicator(data.user);
         break;
-      case 'stop_typing':
+      case "stop_typing":
         this.hideTypingIndicator(data.user);
         break;
-      case 'user_joined':
+      case "user_joined":
         this.showUserJoined(data.user);
         break;
-      case 'user_left':
+      case "user_left":
         this.showUserLeft(data.user);
         break;
     }
@@ -412,13 +440,13 @@ class ChatManager {
   // Typing indicators
   startTyping() {
     if (this.socket) {
-      this.socket.send(JSON.stringify({ type: 'typing' }));
+      this.socket.send(JSON.stringify({ type: "typing" }));
     }
   }
 
   stopTyping() {
     if (this.socket) {
-      this.socket.send(JSON.stringify({ type: 'stop_typing' }));
+      this.socket.send(JSON.stringify({ type: "stop_typing" }));
     }
   }
 }
@@ -429,22 +457,27 @@ class ChatManager {
 ### ✅ **Advantages**
 
 1. **Separation of Concerns**
+
    - REST API handles data persistence and business logic
    - WebSocket handles real-time events only
 
 2. **Better Performance**
+
    - REST API for heavy data operations
    - WebSocket for lightweight real-time events
 
 3. **Easier Debugging**
+
    - Clear separation between data operations and real-time events
    - Standard HTTP status codes for API responses
 
 4. **Scalability**
+
    - REST API can be cached and load-balanced
    - WebSocket connections can be distributed
 
 5. **Offline Support**
+
    - REST API responses can be cached
    - WebSocket reconnection handles network issues
 
@@ -455,6 +488,7 @@ class ChatManager {
 ### 🔧 **Best Practices**
 
 1. **Use REST API for**:
+
    - Initial data loading
    - Message history
    - Room management
@@ -462,12 +496,14 @@ class ChatManager {
    - Data persistence
 
 2. **Use WebSocket for**:
+
    - Real-time message delivery
    - Typing indicators
    - User presence
    - Live notifications
 
 3. **Error Handling**:
+
    - REST API errors return HTTP status codes
    - WebSocket errors are sent as JSON messages
 
@@ -478,11 +514,13 @@ class ChatManager {
 ## Setup Requirements
 
 ### **Backend Dependencies**
+
 ```bash
 pip install django djangorestframework channels channels-redis
 ```
 
 ### **Redis Server**
+
 ```bash
 # Install Redis
 sudo apt-get install redis-server
@@ -492,6 +530,7 @@ redis-server
 ```
 
 ### **Django Settings**
+
 ```python
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -519,6 +558,7 @@ CHANNEL_LAYERS = {
 ```
 
 ### **Run Server**
+
 ```bash
 # Development
 python manage.py runserver
