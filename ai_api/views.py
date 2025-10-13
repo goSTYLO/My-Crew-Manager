@@ -12,7 +12,12 @@ from .models import (
     TimelineWeek, TimelineItem,
     Epic, SubEpic, UserStory, StoryTask,
 )
-from .serializers import ProjectSerializer, ProposalSerializer
+from .serializers import (
+    ProjectSerializer, ProposalSerializer,
+    ProjectFeatureSerializer, ProjectRoleSerializer, ProjectGoalSerializer,
+    TimelineWeekSerializer, TimelineItemSerializer,
+    EpicSerializer, SubEpicSerializer, UserStorySerializer, StoryTaskSerializer,
+)
 
 # Real LLM pipelines
 from LLMs.project_llm import run_pipeline_from_text, model_to_dict
@@ -138,6 +143,41 @@ class ProjectViewSet(ModelViewSet):
             "backlog": backlog_dict,
         }, status=status.HTTP_200_OK)
 
+    @action(detail=True, methods=["get"], url_path="backlog")
+    def backlog(self, request, pk=None):
+        """Return the project's backlog as a nested structure: epics -> sub_epics -> user_stories -> tasks"""
+        project = self.get_object()
+
+        epics = Epic.objects.filter(project=project).order_by('id')
+        result = []
+        for e in epics:
+            sub_epics = []
+            for se in e.sub_epics.all().order_by('id'):
+                user_stories = []
+                for us in se.user_stories.all().order_by('id'):
+                    tasks = list(us.tasks.all().order_by('id').values('id', 'title', 'status', 'ai'))
+                    user_stories.append({
+                        'id': us.id,
+                        'title': us.title,
+                        'ai': us.ai,
+                        'tasks': tasks,
+                    })
+                sub_epics.append({
+                    'id': se.id,
+                    'title': se.title,
+                    'ai': se.ai,
+                    'user_stories': user_stories,
+                })
+            result.append({
+                'id': e.id,
+                'title': e.title,
+                'description': e.description,
+                'ai': e.ai,
+                'sub_epics': sub_epics,
+            })
+
+        return Response({'project_id': project.id, 'epics': result}, status=status.HTTP_200_OK)
+
 
 class ProposalViewSet(ModelViewSet):
     queryset = Proposal.objects.all()
@@ -176,5 +216,114 @@ class ProposalViewSet(ModelViewSet):
             "project_id": project.id,
             "parsed_text_preview": text[:300] + "..." if len(text) > 300 else text
         }, status=status.HTTP_201_CREATED)
+
+
+
+class ProjectFeatureViewSet(ModelViewSet):
+    queryset = ProjectFeature.objects.all()
+    serializer_class = ProjectFeatureSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        project_id = self.request.query_params.get('project_id')
+        if project_id:
+            return self.queryset.filter(project_id=project_id)
+        return self.queryset
+
+
+class ProjectRoleViewSet(ModelViewSet):
+    queryset = ProjectRole.objects.all()
+    serializer_class = ProjectRoleSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        project_id = self.request.query_params.get('project_id')
+        if project_id:
+            return self.queryset.filter(project_id=project_id)
+        return self.queryset
+
+
+class ProjectGoalViewSet(ModelViewSet):
+    queryset = ProjectGoal.objects.all()
+    serializer_class = ProjectGoalSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        project_id = self.request.query_params.get('project_id')
+        if project_id:
+            return self.queryset.filter(project_id=project_id)
+        return self.queryset
+
+
+class TimelineWeekViewSet(ModelViewSet):
+    queryset = TimelineWeek.objects.all()
+    serializer_class = TimelineWeekSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        project_id = self.request.query_params.get('project_id')
+        if project_id:
+            return self.queryset.filter(project_id=project_id)
+        return self.queryset
+
+
+class TimelineItemViewSet(ModelViewSet):
+    queryset = TimelineItem.objects.all()
+    serializer_class = TimelineItemSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        week_id = self.request.query_params.get('week_id')
+        if week_id:
+            return self.queryset.filter(week_id=week_id)
+        return self.queryset
+
+
+class EpicViewSet(ModelViewSet):
+    queryset = Epic.objects.all()
+    serializer_class = EpicSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        project_id = self.request.query_params.get('project_id')
+        if project_id:
+            return self.queryset.filter(project_id=project_id)
+        return self.queryset
+
+
+class SubEpicViewSet(ModelViewSet):
+    queryset = SubEpic.objects.all()
+    serializer_class = SubEpicSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        epic_id = self.request.query_params.get('epic_id')
+        if epic_id:
+            return self.queryset.filter(epic_id=epic_id)
+        return self.queryset
+
+
+class UserStoryViewSet(ModelViewSet):
+    queryset = UserStory.objects.all()
+    serializer_class = UserStorySerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        sub_epic_id = self.request.query_params.get('sub_epic_id')
+        if sub_epic_id:
+            return self.queryset.filter(sub_epic_id=sub_epic_id)
+        return self.queryset
+
+
+class StoryTaskViewSet(ModelViewSet):
+    queryset = StoryTask.objects.all()
+    serializer_class = StoryTaskSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        user_story_id = self.request.query_params.get('user_story_id')
+        if user_story_id:
+            return self.queryset.filter(user_story_id=user_story_id)
+        return self.queryset
 
 

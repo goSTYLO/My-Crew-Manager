@@ -347,3 +347,58 @@ For each request, verify:
    - Verify room_id is correct
    - Check message permissions
    - Validate message format
+
+## AI Project Backlog Endpoint
+
+This endpoint returns the project's backlog as a nested structure (epics -> sub_epics -> user_stories -> tasks).
+
+Endpoint:
+
+```http
+GET {{base_url}}/api/ai/projects/{project_id}/backlog/
+Authorization: Token {{auth_token}}
+```
+
+Example Response (200 OK):
+
+```json
+{
+  "project_id": 1,
+  "epics": [
+    {
+      "id": 10,
+      "title": "Epic A",
+      "description": "High-level description",
+      "ai": true,
+      "sub_epics": [
+        {
+          "id": 20,
+          "title": "SubEpic A.1",
+          "ai": true,
+          "user_stories": [
+            {
+              "id": 30,
+              "title": "User Story 1",
+              "ai": true,
+              "tasks": [
+                {
+                  "id": 40,
+                  "title": "Task 1",
+                  "status": "pending",
+                  "ai": true
+                },
+                { "id": 41, "title": "Task 2", "status": "done", "ai": false }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
+
+Notes:
+
+- The endpoint is implemented as a read-only action on `ProjectViewSet` and returns only persisted backlog items. If you call `generate-backlog` first, the generated items will be persisted and then returned here.
+- If you need a paginated or filtered view (e.g. only epics with `ai=true`), I can add query params to support that.
