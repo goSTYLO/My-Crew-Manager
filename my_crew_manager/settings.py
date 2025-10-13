@@ -51,7 +51,8 @@ INSTALLED_APPS = [
     'channels',
     'users.apps.UsersConfig',
     'project_management.apps.ProjectManagementConfig',
-    'chat.apps.ChatConfig'
+    'chat.apps.ChatConfig',
+    'ai_api.apps.AiApiConfig'
 ]
 
 MIDDLEWARE = [

@@ -37,3 +37,7 @@ pdfplumber
 
 # Optional (Not yet supported in Python 3.13)
 # onnxruntime
+
+# Tokenizer/protobuf deps for Transformers
+protobuf>=4.25.0
+google>=3.0.0
