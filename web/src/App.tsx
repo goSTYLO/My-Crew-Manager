@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import SignIn from './view_pages/manager/signIn';
 import SignUp from './view_pages/manager/signUp'; 
+
 import MainFrame from './view_pages/manager/mainFrame'; 
 import MainProjects from './view_pages/manager/projects_main'; 
 import Projects from './view_pages/manager/monitorProjects'; 
@@ -23,6 +24,9 @@ import SecuritySettings from './view_pages/manager/settings_security';
 import AppearanceSettings from './view_pages/manager/settings_appearance';
 import TeamSettings from './view_pages/manager/settings_team';
 import GeneralSettings from './view_pages/manager/settings';
+import ProjectDetails from './view_pages/user/projectsDetails'; 
+import SubTask from './view_pages/user/subTaskUser';
+import WorklogsUser from './view_pages/user/worklogsUser';
 
 const App: React.FC = () => {
   return (
@@ -53,9 +57,12 @@ const App: React.FC = () => {
          {/* User routes */}
          <Route path="/user" element={<UserFrame />} />
         <Route path="/projects-user" element={<ProjectUser />} />
+        <Route path="/project-details" element={<ProjectDetails />} />
         <Route path="/performance-user" element={<PerformanceUser />} />
         <Route path="/task-user" element={<TaskUser />} />
+        <Route path="/subtask-user" element={<SubTask/>}/>
         <Route path="/kanban-user" element={<KanbanUser />} />
+        <Route path="/worklogs-user" element={<WorklogsUser/>}/>
         
         <Route path="*" element={<Navigate to="/signIn" replace />} />
       </Routes>

@@ -1,12 +1,9 @@
 import React, { useState, useRef } from "react";
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from "react-router-dom";
 import Sidebar from "../../components/sidebarUser"; // <-- import Sidebar
+import TopNavbar from "../../components/topbarLayout_user";
 
 import { 
-  Search, 
-  Bell,
-  Menu,
-  X,
   MessageSquareText
 } from 'lucide-react';
 
@@ -15,7 +12,6 @@ import {
 // Main Performance Component
 const TaskUser = () => {
     const [sidebarOpen, setSidebarOpen] = useState(false);
-    const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
     const [showEditModal, setShowEditModal] = useState(false);
     const [files, setFiles] = useState<File[]>([]);
     const navigate = useNavigate();
@@ -33,35 +29,14 @@ const TaskUser = () => {
     };
   
   
-  return (
-        <div className="flex h-screen bg-gray-50">
-        {/* Logout Confirmation Modal */}
-        {showLogoutConfirm && (
-            <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-[999]">
-            <div className="bg-white rounded-xl shadow-lg p-6 w-96">
-                <h2 className="text-lg font-semibold text-gray-800 mb-4">
-                Are you sure you want to logout?
-                </h2>
-                <div className="flex justify-end space-x-3">
-                <button
-                    onClick={() => setShowLogoutConfirm(false)}
-                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
-                >
-                    Cancel
-                </button>
-                <button
-                    onClick={() => navigate('/signIn')}
-                    className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
-                >
-                    Logout
-                </button>
-                </div>
-            </div>
-            </div>
-        )}
+    return (
+    <div className="flex h-screen bg-gray-50">
+        
+        
 
         {/* ✨ Edit Project/Task Modal */}
         {showEditModal && (
+
             <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-[999]">
                 <div className="bg-white rounded-xl shadow-lg w-[800px] max-w-2xl p-8">
                 
@@ -235,7 +210,7 @@ const TaskUser = () => {
 
                     {/* Divider Line */}
                     <hr className="border-t-1.7 border-gray-300 my-4" />
-
+            
                     {/* Header with title + X button */}
                     <div className="flex justify-between items-center">
                         <h2 className="text-s font-semibold text-gray-800">
@@ -297,15 +272,15 @@ const TaskUser = () => {
                                 </svg>
 
                                 {files.length > 0 && (
-                                <button
-                                    className="text-xs text-red-500 hover:text-red-700"
-                                    onClick={() => {
-                                    setFiles([]);
-                                    if (fileInputRef.current) fileInputRef.current.value = "";
-                                    }}
-                                >
-                                    Clear
-                                </button>
+                                    <button
+                                        className="text-xs text-red-500 hover:text-red-700"
+                                        onClick={() => {
+                                        setFiles([]);
+                                        if (fileInputRef.current) fileInputRef.current.value = "";
+                                        }}
+                                    >
+                                        Clear
+                                    </button>
                                 )}
                             </div>
 
@@ -377,283 +352,211 @@ const TaskUser = () => {
             </div>
         )}
 
+        {/* ✅ Reusable Sidebar */}
+        <Sidebar
+        sidebarOpen={sidebarOpen}
+        setSidebarOpen={setSidebarOpen}
+        />
 
-            
-            {/* Sidebar Overlay */}
-            <div
-                className={`fixed inset-0 z-50 flex transition-opacity duration-300 ${
-                    sidebarOpen ? "opacity-100 visible" : "opacity-0 invisible"
-                }`}
-            >
-                {/* Background overlay */}
-                <div
-                    className="fixed inset-0 bg-black opacity-50"
-                    onClick={() => setSidebarOpen(false)}
-                />
+        {/* Main Content */}
+        <div className="flex-1 flex flex-col min-w-0">        
+        {/* ✅ Shared Navbar */}
+        <TopNavbar onMenuClick={() => setSidebarOpen(true)} />
 
-                {/* Sidebar panel */}
-                <div
-                    className={`relative flex flex-col w-64 bg-white transform transition-transform duration-300 ${
-                        sidebarOpen ? "translate-x-0" : "-translate-x-full"
-                    }`}
-                >
-                    <div className="absolute top-4 right-4">
-                        <button
-                            onClick={() => setSidebarOpen(false)}
-                            className="p-2 text-gray-500"
-                            aria-label="Close sidebar"
-                        >
-                            <X className="w-6 h-6" />
+            {/* Main Content Area */}
+            <main className="flex-1 p-6 overflow-auto">
+                
+                {/* Task Section */}
+                {/* Additional Section: Automatic Payment System */}
+                <div className="grid grid-cols-1 gap-6 mt-8">
+
+                    {/* Task 1 */}
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex items-center justify-between">
+                        <div>
+                            <h4 className="text-sm font-medium text-gray-800">
+                            Make an Automatic Payment System that enable the design
+                            </h4>
+                            <div className="flex items-center justify-between">
+                                <p className="text-xs text-gray-500">
+                                    #A32236 • Opened 10 days ago by Yash Ghel
+                                </p>
+                                <div className="flex items-center space-x-2">
+                                    <span className="px-3 py-1 ml-5 text-xs font-medium bg-green-100 text-green-600 rounded-full">
+                                    Completed
+                                    </span>
+                                    <span className="px-3 py-1 text-xs font-medium bg-red-100 text-red-600 rounded-full">
+                                    High
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center space-x-4">
+                            <span
+                            className="flex items-center gap-2 px-7 py-2 text-sm font-semibold bg-red-100 text-red-600 rounded-lg" >
+                                <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="20"
+                                height="20"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                className="lucide lucide-clock3-icon lucide-clock-3"
+                                >
+                                <path d="M12 6v6h4" />
+                                <circle cx="12" cy="12" r="10" />
+                                </svg>
+                            00 : 15 : 00
+                            </span>
+
+                            
+                            <div className="flex items-center space-x-3">
+
+                                <div className="w-8 h-8 rounded-full overflow-hidden">
+                                    <img
+                                    src="https://i.pravatar.cc/40?img=2"
+                                    alt="user"
+                                    className="w-full h-full object-cover"
+                                    />
+                                </div>
+
+                                {/* Edit Project/Task */}
+                                <button onClick={() => navigate("/subtask-user")} className="bg-transparent flex items-center space-x-1">
+                                    <span className="text-s font-bold text-gray-600">2</span>
+                                    <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        width="25"
+                                        height="25"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="2"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        className="lucide text-gray-500 lucide-list-todo cursor-pointer hover:text-black transition-colors"
+                                    >
+                                        <path d="M13 5h8" />
+                                        <path d="M13 12h8" />
+                                        <path d="M13 19h8" />
+                                        <path d="m3 17 2 2 4-4" />
+                                        <rect x="3" y="4" width="6" height="6" rx="1" />
+                                    </svg>
+                                </button>
+                            
+                                <button onClick={() => setShowEditModal(true)} className="bg-transparent flex items-center space-x-1">
+                                    <MessageSquareText className="w-5.5 h-5.5 text-gray-500 cursor-pointer hover:text-gray-700" />
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+
+                    {/* Task 2 */}
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex items-center justify-between">
+                        <div>
+                            <h4 className="text-sm font-medium text-gray-800">
+                            Make an Automatic Payment System that enable the design
+                            </h4>
+                            <div className="flex items-center justify-between">
+                                <p className="text-xs text-gray-500">
+                                    #A32236 • Opened 10 days ago by Yash Ghel
+                                </p>
+                                <div className="flex items-center space-x-2">
+                                    <span className="px-3 py-1 ml-5 text-xs font-medium bg-green-100 text-green-600 rounded-full">
+                                    Completed
+                                    </span>
+                                    <span className="px-3 py-1 text-xs font-medium bg-green-100 text-green-600 rounded-full">
+                                    Low
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center space-x-4">
+
+                            <span
+                            className="flex items-center gap-2 px-7 py-2 text-sm font-semibold bg-green-100 text-green-600 rounded-lg" >
+                                <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="20"
+                                height="20"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                className="lucide lucide-clock3-icon lucide-clock-3"
+                                >
+                                <path d="M12 6v6h4" />
+                                <circle cx="12" cy="12" r="10" />
+                                </svg>
+                            00 : 15 : 00
+                            </span>
+
+                            <div className="flex items-center space-x-3">
+
+                                <div className="w-8 h-8 rounded-full overflow-hidden">
+                                    <img
+                                    src="https://i.pravatar.cc/150?img=3"
+                                    alt="user"
+                                    className="w-full h-full object-cover"
+                                    />
+                                </div>
+
+                                <button className="bg-transparent flex items-center space-x-1">
+                                    <span className="text-s font-bold text-gray-600">2</span>
+                                    <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        width="25"
+                                        height="25"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="2"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        className="lucide text-gray-500 lucide-list-todo cursor-pointer hover:text-black transition-colors"
+                                    >
+                                        <path d="M13 5h8" />
+                                        <path d="M13 12h8" />
+                                        <path d="M13 19h8" />
+                                        <path d="m3 17 2 2 4-4" />
+                                        <rect x="3" y="4" width="6" height="6" rx="1" />
+                                    </svg>
+                                </button>
+                            
+                            <MessageSquareText className="w-5.5 h-5.5 text-gray-500 cursor-pointer hover:text-gray-700" />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Pagination */}
+                    <div className="flex items-center justify-center space-x-1 mt-6">
+                        <button className="px-3 py-1 text-sm text-gray-500 hover:text-gray-700 hover:bg-blue-200 hover:rounded-md">
+                        Previous
+                        </button>
+                        <button className="px-3 py-1 text-sm bg-blue-600 text-white rounded-md">
+                        1
+                        </button>
+                        <button className="px-3 py-1 text-sm text-gray-500 hover:text-gray-700 hover:bg-blue-200 hover:rounded-md">
+                        2
+                        </button>
+                        <button className="px-3 py-1 text-sm text-gray-500 hover:text-gray-700 hover:bg-blue-200 hover:rounded-md">
+                        3
+                        </button>
+                        <button className="px-3 py-1 text-sm text-gray-500 hover:text-gray-700 hover:bg-blue-200 hover:rounded-md">
+                        Next
                         </button>
                     </div>
-                    <Sidebar onLogout={()=> setShowLogoutConfirm(true)}/>
+
                 </div>
-            </div>
-
-            {/* Main Content */}
-            <div className="flex-1 flex flex-col min-w-0">
-                {/* Top Navbar */}
-                <header className="bg-white shadow-sm border-b border-gray-200 px-4 lg:px-6 py-4">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-4">
-                            <button
-                                className="p-2 text-gray-500 hover:text-gray-700"
-                                onClick={() => setSidebarOpen(true)}
-                                aria-label="Open sidebar"
-                            >
-                                <Menu className="w-6 h-6" />
-                            </button>
-                            <h1 className="text-2xl font-semibold text-gray-800">
-                                MyCrewManager
-                            </h1>
-                        </div>
-
-                        <div className="flex items-center space-x-4">
-                            {/* Search Bar */}
-                            <div className="block relative">
-                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                                <input
-                                    type="text"
-                                    placeholder="Search for anything..."
-                                    className="pl-10 pr-4 py-2 w-[300px] md:w-[500px] border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                />
-                            </div>
-
-                            {/* Notifications */}
-                            <button
-                                className="p-2 text-gray-500 hover:text-gray-700 relative -ml-2"
-                                aria-label="Notifications"
-                            >
-                                <Bell className="w-6 h-6" />
-                                <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full"></span>
-                            </button>
-
-                            {/* User Profile */}
-                            <div className="flex items-center space-x-3">
-                                <div className="sm:block">
-                                    <p className="text-sm font-medium text-gray-800">Kitkat</p>
-                                    <p className="text-xs text-gray-500">Philippines</p>
-                                </div>
-                                <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white font-medium">
-                                    KK
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </header>
-
-                {/* Main Content Area */}
-                <main className="flex-1 p-6 overflow-auto">
-                    
-                    {/* Task Section */}
-                    {/* Additional Section: Automatic Payment System */}
-                    <div className="grid grid-cols-1 gap-6 mt-8">
-
-                        {/* Task 1 */}
-                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex items-center justify-between">
-                            <div>
-                                <h4 className="text-sm font-medium text-gray-800">
-                                Make an Automatic Payment System that enable the design
-                                </h4>
-                                <div className="flex items-center justify-between">
-                                    <p className="text-xs text-gray-500">
-                                        #A32236 • Opened 10 days ago by Yash Ghel
-                                    </p>
-                                    <div className="flex items-center space-x-2">
-                                        <span className="px-3 py-1 ml-5 text-xs font-medium bg-green-100 text-green-600 rounded-full">
-                                        Completed
-                                        </span>
-                                        <span className="px-3 py-1 text-xs font-medium bg-red-100 text-red-600 rounded-full">
-                                        High
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="flex items-center space-x-4">
-                                <span
-                                className="flex items-center gap-2 px-7 py-2 text-sm font-semibold bg-red-100 text-red-600 rounded-lg" >
-                                    <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    width="20"
-                                    height="20"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    className="lucide lucide-clock3-icon lucide-clock-3"
-                                    >
-                                    <path d="M12 6v6h4" />
-                                    <circle cx="12" cy="12" r="10" />
-                                    </svg>
-                                00 : 15 : 00
-                                </span>
-
-                                
-                                <div className="flex items-center space-x-3">
-
-                                    <div className="w-8 h-8 rounded-full overflow-hidden">
-                                        <img
-                                        src="https://i.pravatar.cc/40?img=2"
-                                        alt="user"
-                                        className="w-full h-full object-cover"
-                                        />
-                                    </div>
-
-                                    {/* Edit Project/Task */}
-                                    <button onClick={() => setShowEditModal(true)} className="bg-transparent flex items-center space-x-1">
-                                        <span className="text-s font-bold text-gray-600">2</span>
-                                        <svg
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            width="25"
-                                            height="25"
-                                            viewBox="0 0 24 24"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            strokeWidth="2"
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            className="lucide text-gray-500 lucide-list-todo cursor-pointer hover:text-black transition-colors"
-                                        >
-                                            <path d="M13 5h8" />
-                                            <path d="M13 12h8" />
-                                            <path d="M13 19h8" />
-                                            <path d="m3 17 2 2 4-4" />
-                                            <rect x="3" y="4" width="6" height="6" rx="1" />
-                                        </svg>
-                                    </button>
-                                
-                                <MessageSquareText className="w-5.5 h-5.5 text-gray-500 cursor-pointer hover:text-gray-700" />
-                                </div>
-                            </div>
-                        </div>
-
-
-                        {/* Task 2 */}
-                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex items-center justify-between">
-                            <div>
-                                <h4 className="text-sm font-medium text-gray-800">
-                                Make an Automatic Payment System that enable the design
-                                </h4>
-                                <div className="flex items-center justify-between">
-                                    <p className="text-xs text-gray-500">
-                                        #A32236 • Opened 10 days ago by Yash Ghel
-                                    </p>
-                                    <div className="flex items-center space-x-2">
-                                        <span className="px-3 py-1 ml-5 text-xs font-medium bg-green-100 text-green-600 rounded-full">
-                                        Completed
-                                        </span>
-                                        <span className="px-3 py-1 text-xs font-medium bg-green-100 text-green-600 rounded-full">
-                                        Low
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="flex items-center space-x-4">
-
-                                <span
-                                className="flex items-center gap-2 px-7 py-2 text-sm font-semibold bg-green-100 text-green-600 rounded-lg" >
-                                    <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    width="20"
-                                    height="20"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    className="lucide lucide-clock3-icon lucide-clock-3"
-                                    >
-                                    <path d="M12 6v6h4" />
-                                    <circle cx="12" cy="12" r="10" />
-                                    </svg>
-                                00 : 15 : 00
-                                </span>
-
-                                <div className="flex items-center space-x-3">
-
-                                    <div className="w-8 h-8 rounded-full overflow-hidden">
-                                        <img
-                                        src="https://i.pravatar.cc/150?img=3"
-                                        alt="user"
-                                        className="w-full h-full object-cover"
-                                        />
-                                    </div>
-
-                                    <button className="bg-transparent flex items-center space-x-1">
-                                        <span className="text-s font-bold text-gray-600">2</span>
-                                        <svg
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            width="25"
-                                            height="25"
-                                            viewBox="0 0 24 24"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            strokeWidth="2"
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            className="lucide text-gray-500 lucide-list-todo cursor-pointer hover:text-black transition-colors"
-                                        >
-                                            <path d="M13 5h8" />
-                                            <path d="M13 12h8" />
-                                            <path d="M13 19h8" />
-                                            <path d="m3 17 2 2 4-4" />
-                                            <rect x="3" y="4" width="6" height="6" rx="1" />
-                                        </svg>
-                                    </button>
-                                
-                                <MessageSquareText className="w-5.5 h-5.5 text-gray-500 cursor-pointer hover:text-gray-700" />
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Pagination */}
-                        <div className="flex items-center justify-center space-x-1 mt-6">
-                            <button className="px-3 py-1 text-sm text-gray-500 hover:text-gray-700 hover:bg-blue-200 hover:rounded-md">
-                            Previous
-                            </button>
-                            <button className="px-3 py-1 text-sm bg-blue-600 text-white rounded-md">
-                            1
-                            </button>
-                            <button className="px-3 py-1 text-sm text-gray-500 hover:text-gray-700 hover:bg-blue-200 hover:rounded-md">
-                            2
-                            </button>
-                            <button className="px-3 py-1 text-sm text-gray-500 hover:text-gray-700 hover:bg-blue-200 hover:rounded-md">
-                            3
-                            </button>
-                            <button className="px-3 py-1 text-sm text-gray-500 hover:text-gray-700 hover:bg-blue-200 hover:rounded-md">
-                            Next
-                            </button>
-                        </div>
-
-                    </div>
-                </main>
-            </div>
+            </main>
         </div>
+    </div>
     );
 };
 
