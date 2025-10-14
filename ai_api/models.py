@@ -73,3 +73,26 @@ class StoryTask(models.Model):
     ai = models.BooleanField(default=True)
 
 
+class ProjectMember(models.Model):
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='members')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='project_memberships')
+    user_name = models.CharField(max_length=255, default='Unknown User')  # Store user name directly
+    user_email = models.EmailField(default='unknown@example.com')  # Store user email directly
+    role = models.CharField(max_length=255, default='Member')
+    joined_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        unique_together = ['project', 'user']  # Prevent duplicate memberships
+        db_table = 'ai_api_projectmember'  # Explicit table name
+    
+    def save(self, *args, **kwargs):
+        # Automatically populate user_name and user_email from the user
+        if self.user:
+            self.user_name = self.user.name
+            self.user_email = self.user.email
+        super().save(*args, **kwargs)
+    
+    def __str__(self):
+        return f"{self.user_name} - {self.role}"
+
+

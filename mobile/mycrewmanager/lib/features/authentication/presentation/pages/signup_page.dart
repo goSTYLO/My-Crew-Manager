@@ -100,7 +100,7 @@ class _SignUpPageState extends State<SignUpPage> {
             showSnackBar(context, "Something went wrong. Try Again!", Colors.red);
           } else if (state is AuthSuccess) {
             if (ModalRoute.of(context)?.isCurrent ?? false) {
-              showSnackBar(context, "Signed in Successfully", Colors.green);
+              showSnackBar(context, "Account created successfully!", Colors.green);
               Navigator.pushReplacement(context, LoginPage.route());
             }
           }

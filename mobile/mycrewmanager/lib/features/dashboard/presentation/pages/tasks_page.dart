@@ -7,20 +7,75 @@ import 'package:mycrewmanager/features/dashboard/presentation/pages/notification
 import 'package:mycrewmanager/features/dashboard/presentation/pages/settings_page.dart';
 import 'package:mycrewmanager/features/authentication/presentation/pages/login_page.dart';
 import 'package:mycrewmanager/features/dashboard/widgets/addtask_widget.dart';
+import 'package:mycrewmanager/features/project/domain/entities/project.dart';
+import 'package:mycrewmanager/features/project/domain/entities/task.dart';
+import 'package:mycrewmanager/features/project/domain/usecases/get_project_tasks.dart';
+import 'package:mycrewmanager/init_dependencies.dart';
 
 class TasksPage extends StatefulWidget {
-  const TasksPage({super.key});
+  final Project? project;
+  
+  const TasksPage({super.key, this.project});
 
   @override
   State<TasksPage> createState() => _TasksPageState();
 
-  static Route<Object?> route() => MaterialPageRoute(builder: (_) => const TasksPage());
+  static Route<Object?> route([Project? project]) => MaterialPageRoute(
+    builder: (_) => TasksPage(project: project)
+  );
 }
 
 class _TasksPageState extends State<TasksPage> with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  List<ProjectTask> tasks = [];
+  bool isLoading = true;
+  String? error;
 
-  final List<Map<String, dynamic>> tasks = [
+  final GetProjectTasks _getProjectTasks = serviceLocator<GetProjectTasks>();
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 4, vsync: this);
+    _loadTasks();
+  }
+
+  Future<void> _loadTasks() async {
+    if (widget.project == null) {
+      setState(() {
+        isLoading = false;
+        error = 'No project selected';
+      });
+      return;
+    }
+
+    setState(() {
+      isLoading = true;
+      error = null;
+    });
+
+    final result = await _getProjectTasks(GetProjectTasksParams(
+      projectId: widget.project!.id,
+    ));
+
+    result.fold(
+      (failure) {
+        setState(() {
+          isLoading = false;
+          error = failure.message;
+        });
+      },
+      (tasksList) {
+        setState(() {
+          isLoading = false;
+          tasks = tasksList;
+        });
+      },
+    );
+  }
+
+  // Mock data for when no project is selected or as fallback
+  final List<Map<String, dynamic>> mockTasks = [
     {
       "title": "API Integration for Project A",
       "subtitle": "Sprint 1 • Backend",
@@ -85,11 +140,6 @@ class _TasksPageState extends State<TasksPage> with SingleTickerProviderStateMix
     },
   ];
 
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 4, vsync: this);
-  }
 
   @override
   void dispose() {
@@ -97,9 +147,9 @@ class _TasksPageState extends State<TasksPage> with SingleTickerProviderStateMix
     super.dispose();
   }
 
-  List<Map<String, dynamic>> getFilteredTasks(String status) {
+  List<ProjectTask> getFilteredTasks(String status) {
     if (status == "All") return tasks;
-    return tasks.where((t) => t["status"] == status).toList();
+    return tasks.where((t) => t.status == status).toList();
   }
 
   Drawer _buildAppDrawer(BuildContext context) {
@@ -245,9 +295,9 @@ class _TasksPageState extends State<TasksPage> with SingleTickerProviderStateMix
             onPressed: () => Scaffold.of(context).openDrawer(),
           ),
         ),
-        title: const Text(
-          "Tasks",
-          style: TextStyle(
+        title: Text(
+          widget.project != null ? '${widget.project!.title} Tasks' : 'Tasks',
+          style: const TextStyle(
             color: Colors.black,
             fontWeight: FontWeight.w700,
             fontSize: 20,
@@ -281,31 +331,57 @@ class _TasksPageState extends State<TasksPage> with SingleTickerProviderStateMix
       ),
       body: Container(
         color: const Color(0xFFF7F8FA),
-        child: TabBarView(
-          controller: _tabController,
-          children: tabLabels.map((tab) {
-            final filtered = getFilteredTasks(tab);
-            return ListView.builder(
+        child: isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : error != null
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          error!,
+                          style: const TextStyle(color: Colors.red),
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: _loadTasks,
+                          child: const Text('Retry'),
+                        ),
+                      ],
+                    ),
+                  )
+                : TabBarView(
+                    controller: _tabController,
+                    children: tabLabels.map((tab) {
+                      final filtered = getFilteredTasks(tab);
+                      return filtered.isEmpty
+                          ? const Center(
+                              child: Text(
+                                'No tasks found',
+                                style: TextStyle(color: Colors.grey),
+                              ),
+                            )
+                          : ListView.builder(
               padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
               itemCount: filtered.length,
               itemBuilder: (context, i) {
                 final t = filtered[i];
                 return _TaskCard(
-                  title: t["title"],
-                  subtitle: t["subtitle"],
-                  status: t["status"],
-                  icon: t["icon"],
-                  iconColor: t["iconColor"],
-                  members: t["members"],
-                  progress: t["progress"],
+                  title: t.title,
+                  subtitle: "Task ID: ${t.id}",
+                  status: t.status,
+                  icon: Icons.task_alt,
+                  iconColor: t.status == 'completed' ? Colors.green : Colors.blue,
+                  members: [], // No members data in current Task model
+                  progress: t.status == 'completed' ? 1.0 : 0.0,
                   onTap: () {
                     Navigator.of(context).push(TaskOverviewPage.route());
                   },
                 );
               },
             );
-          }).toList(),
-        ),
+                    }).toList(),
+                  ),
       ),
         floatingActionButton: FloatingActionButton(
           backgroundColor: Colors.black,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mycrewmanager/features/dashboard/presentation/pages/dashboard_page.dart';
 import 'package:mycrewmanager/features/dashboard/presentation/pages/tasks_page.dart';
 import 'package:mycrewmanager/features/dashboard/presentation/pages/messages_screen.dart';
@@ -10,11 +11,53 @@ import 'package:mycrewmanager/features/dashboard/presentation/pages/project_over
 import 'package:mycrewmanager/features/project/presentation/pages/project_page.dart';
 import 'package:mycrewmanager/features/dashboard/widgets/filter_widget.dart';
 import 'package:mycrewmanager/features/dashboard/widgets/modifyproject_widget.dart';
+import 'package:mycrewmanager/features/project/presentation/bloc/project_bloc.dart';
+import 'package:mycrewmanager/features/project/domain/entities/project.dart';
+import 'package:mycrewmanager/core/utils/show_snackbar.dart';
+import 'package:mycrewmanager/features/project/presentation/pages/edit_project_page.dart';
 
-class ProjectsPage extends StatelessWidget {
+class ProjectsPage extends StatefulWidget {
   const ProjectsPage({super.key});
 
   static Route<Object?> route() => MaterialPageRoute(builder: (_) => const ProjectsPage());
+
+  @override
+  State<ProjectsPage> createState() => _ProjectsPageState();
+}
+
+class _ProjectsPageState extends State<ProjectsPage> {
+  @override
+  void initState() {
+    super.initState();
+    // Load projects when the page initializes
+    context.read<ProjectBloc>().add(ProjectGetProjects());
+  }
+
+  void _showDeleteConfirmation(BuildContext context, Project project) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Delete Project'),
+          content: Text('Are you sure you want to delete "${project.title}"? This action cannot be undone.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                context.read<ProjectBloc>().add(ProjectDeleteProject(id: project.id));
+              },
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -122,53 +165,113 @@ class ProjectsPage extends StatelessWidget {
               ),
               // Project list
               Expanded(
-                child: ListView(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  children: [
-                    _ProjectListTile(
-                      image: 'assets/images/profile.png',
-                      title: 'My Crew Tasker',
-                      onMore: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('More options for My Crew Tasker')),
-                        );
-                      },
-                      onTap: () {
-                        Navigator.of(context).push(ProjectOverviewPage.route());
-                      },
-                    ),
-                    const Divider(height: 1, thickness: 1, indent: 70, endIndent: 8),
-                    _ProjectListTile(
-                      image: 'assets/images/profile.png',
-                      title: 'My Crew Assigner',
-                      onMore: () {
-                        showModalBottomSheet(
-                          context: context,
-                          shape: const RoundedRectangleBorder(
-                            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-                          ),
-                          builder: (_) => ModifyProjectBottomSheet(
-                            onEdit: () {
-                              Navigator.pop(context);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Edit Project tapped')),
-                              );
-                            },
-                            onDelete: () {
-                              Navigator.pop(context);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Delete Project tapped')),
-                              );
-                            },
+                child: BlocConsumer<ProjectBloc, ProjectState>(
+                  listener: (context, state) {
+                    if (state is ProjectFailure) {
+                      showSnackBar(context, state.message, Colors.red);
+                    } else if (state is ProjectCreated) {
+                      showSnackBar(context, "Project created successfully!", Colors.green);
+                      // Refresh the project list
+                      context.read<ProjectBloc>().add(ProjectGetProjects());
+                    } else if (state is ProjectUpdated) {
+                      showSnackBar(context, "Project updated successfully!", Colors.green);
+                      context.read<ProjectBloc>().add(ProjectGetProjects()); // Refresh
+                    } else if (state is ProjectDeleted) {
+                      showSnackBar(context, "Project deleted successfully!", Colors.green);
+                      context.read<ProjectBloc>().add(ProjectGetProjects()); // Refresh
+                    }
+                  },
+                  builder: (context, state) {
+                    if (state is ProjectLoading) {
+                      return const Center(child: CircularProgressIndicator());
+                    } else if (state is ProjectSuccess) {
+                      final projects = state.projects;
+                      if (projects.isEmpty) {
+                        return const Center(
+                          child: Text(
+                            'No projects found.\nCreate your first project!',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.grey,
+                            ),
                           ),
                         );
-                      },
-                      onTap: () {
-                        Navigator.of(context).push(ProjectOverviewPage.route());
-                      },
-                    ),
-                    const Divider(height: 1, thickness: 1, indent: 70, endIndent: 8),
-                  ],
+                      }
+                      return ListView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        itemCount: projects.length,
+                        itemBuilder: (context, index) {
+                          final project = projects[index];
+                          return Column(
+                            children: [
+                              _ProjectListTile(
+                                image: 'assets/images/profile.png',
+                                title: project.title,
+                                subtitle: project.summary,
+                                onMore: () {
+                                  showModalBottomSheet(
+                                    context: context,
+                                    shape: const RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                                    ),
+                                    builder: (_) => ModifyProjectBottomSheet(
+                                      onEdit: () {
+                                        Navigator.pop(context);
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => EditProjectPage(project: project),
+                                          ),
+                                        );
+                                      },
+                                      onDelete: () {
+                                        Navigator.pop(context);
+                                        _showDeleteConfirmation(context, project);
+                                      },
+                                    ),
+                                  );
+                                },
+                                onTap: () {
+                                  Navigator.of(context).push(ProjectOverviewPage.route(project));
+                                },
+                              ),
+                              if (index < projects.length - 1)
+                                const Divider(height: 1, thickness: 1, indent: 70, endIndent: 8),
+                            ],
+                          );
+                        },
+                      );
+                    } else if (state is ProjectFailure) {
+                      return Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.error_outline, size: 64, color: Colors.red),
+                            const SizedBox(height: 16),
+                            Text(
+                              'Failed to load projects',
+                              style: Theme.of(context).textTheme.headlineSmall,
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              state.message,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(color: Colors.grey),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () {
+                                context.read<ProjectBloc>().add(ProjectGetProjects());
+                              },
+                              child: const Text('Retry'),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+                    return const Center(child: CircularProgressIndicator());
+                  },
                 ),
               ),
               // Add project button
@@ -196,12 +299,14 @@ class ProjectsPage extends StatelessWidget {
 class _ProjectListTile extends StatelessWidget {
   final String image;
   final String title;
+  final String? subtitle;
   final VoidCallback? onMore;
   final VoidCallback? onTap;
 
   const _ProjectListTile({
     required this.image,
     required this.title,
+    this.subtitle,
     this.onMore,
     this.onTap,
   });
@@ -221,6 +326,17 @@ class _ProjectListTile extends StatelessWidget {
           color: Colors.black,
         ),
       ),
+      subtitle: subtitle != null && subtitle!.isNotEmpty
+          ? Text(
+              subtitle!,
+              style: const TextStyle(
+                fontSize: 14,
+                color: Colors.grey,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            )
+          : null,
       trailing: IconButton(
         icon: const Icon(Icons.more_horiz, color: Colors.black87),
         onPressed: onMore,

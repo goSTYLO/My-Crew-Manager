@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:mycrewmanager/features/dashboard/presentation/pages/manage_members_page.dart';
-import 'package:mycrewmanager/features/dashboard/presentation/pages/tasks_page.dart'; // Add this import
+import 'package:mycrewmanager/features/dashboard/presentation/pages/tasks_page.dart';
+import 'package:mycrewmanager/features/project/domain/entities/project.dart';
 
 class ProjectOverviewPage extends StatelessWidget {
-  const ProjectOverviewPage({super.key});
+  final Project? project;
+  
+  const ProjectOverviewPage({super.key, this.project});
 
-  static Route<Object?> route() => MaterialPageRoute(builder: (_) => const ProjectOverviewPage());
+  static Route<Object?> route([Project? project]) => MaterialPageRoute(
+    builder: (_) => ProjectOverviewPage(project: project)
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -18,6 +23,12 @@ class ProjectOverviewPage extends StatelessWidget {
         statusBarBrightness: Brightness.light,
       ),
     );
+
+    // Use default values if no project is provided
+    final projectTitle = project?.title ?? "My Crew Tasker";
+    final projectSummary = project?.summary ?? "MyCrewManager is an AI-driven project management system that automates task tracking, sprint progress monitoring, and developer well-being analysis.";
+    final projectId = project?.id ?? 0;
+    final projectCreatedAt = project?.createdAt ?? DateTime.now();
 
     return Scaffold(
       backgroundColor: Colors.white, 
@@ -64,9 +75,9 @@ class ProjectOverviewPage extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
-                              "My Crew Tasker",
-                              style: TextStyle(
+                            Text(
+                              projectTitle,
+                              style: const TextStyle(
                                 fontWeight: FontWeight.w700,
                                 fontSize: 22,
                                 color: Color(0xFF181929),
@@ -83,13 +94,13 @@ class ProjectOverviewPage extends StatelessWidget {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                               decoration: BoxDecoration(
-                                color: Colors.black12,
+                                color: Colors.green.shade100,
                                 borderRadius: BorderRadius.circular(8),
                               ),
-                              child: const Text(
+                              child: Text(
                                 "Active",
                                 style: TextStyle(
-                                  color: Colors.black87,
+                                  color: Colors.green.shade700,
                                   fontWeight: FontWeight.w600,
                                   fontSize: 13,
                                 ),
@@ -103,11 +114,11 @@ class ProjectOverviewPage extends StatelessWidget {
                 ),
                 const SizedBox(height: 18),
                 // Description
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 24),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
                   child: Text(
-                    "MyCrewManager is an AI-driven project management system that automates task tracking, sprint progress monitoring, and developer well-being analysis.",
-                    style: TextStyle(
+                    projectSummary,
+                    style: const TextStyle(
                       fontSize: 14,
                       color: Colors.black87,
                     ),
@@ -119,18 +130,18 @@ class ProjectOverviewPage extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 24),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: const [
+                    children: [
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            "Start Date",
+                          const Text(
+                            "Created Date",
                             style: TextStyle(fontSize: 13, color: Colors.black54),
                           ),
-                          SizedBox(height: 2),
+                          const SizedBox(height: 2),
                           Text(
-                            "September 8, 2025",
-                            style: TextStyle(
+                            _formatDate(projectCreatedAt),
+                            style: const TextStyle(
                               fontWeight: FontWeight.w600,
                               fontSize: 14,
                               color: Colors.black,
@@ -141,14 +152,14 @@ class ProjectOverviewPage extends StatelessWidget {
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            "End Date",
+                          const Text(
+                            "Project ID",
                             style: TextStyle(fontSize: 13, color: Colors.black54),
                           ),
-                          SizedBox(height: 2),
+                          const SizedBox(height: 2),
                           Text(
-                            "December 8, 2025",
-                            style: TextStyle(
+                            "#${projectId}",
+                            style: const TextStyle(
                               fontWeight: FontWeight.w600,
                               fontSize: 14,
                               color: Colors.black,
@@ -205,7 +216,7 @@ class ProjectOverviewPage extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        "45% Completed",
+                        "0% Completed",
                         style: TextStyle(
                           fontWeight: FontWeight.w600,
                           fontSize: 14,
@@ -219,7 +230,7 @@ class ProjectOverviewPage extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 24),
                   child: LinearProgressIndicator(
-                    value: 0.45,
+                    value: 0.0,
                     minHeight: 7,
                     backgroundColor: Color(0xFFE8ECF4),
                     valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
@@ -232,9 +243,9 @@ class ProjectOverviewPage extends StatelessWidget {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      _StatBox(label: "12/20", sublabel: "Tasks"),
-                      _StatBox(label: "2/5", sublabel: "Sprints"),
-                      _StatBox(label: "4", sublabel: "Members"),
+                      _StatBox(label: "0", sublabel: "Tasks"),
+                      _StatBox(label: "0", sublabel: "Sprints"),
+                      _StatBox(label: "1", sublabel: "Members"),
                     ],
                   ),
                 ),
@@ -254,7 +265,7 @@ class ProjectOverviewPage extends StatelessWidget {
                       style: TextStyle(color: Colors.black, fontWeight: FontWeight.w600, fontSize: 16),
                     ),
                     onPressed: () {
-                      Navigator.of(context).push(TasksPage.route());
+                      Navigator.of(context).push(TasksPage.route(project));
                     },
                   ),
                 ),
@@ -273,7 +284,7 @@ class ProjectOverviewPage extends StatelessWidget {
                       style: TextStyle(color: Colors.black, fontWeight: FontWeight.w600, fontSize: 16),
                     ),
                     onPressed: () {
-                      Navigator.of(context).push(ManageMembersPage.route());
+                      Navigator.of(context).push(ManageMembersPage.route(project));
                     },
                   ),
                 ),
@@ -284,6 +295,14 @@ class ProjectOverviewPage extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  String _formatDate(DateTime date) {
+    const months = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    return '${months[date.month - 1]} ${date.day}, ${date.year}';
   }
 }
 

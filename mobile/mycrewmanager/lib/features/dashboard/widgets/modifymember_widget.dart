@@ -20,8 +20,8 @@ class _ModifyMemberBottomSheetState extends State<ModifyMemberBottomSheet> {
   String? _selectedRole;
 
   final List<String> roles = [
-    "Front-end Developer",
-    "Back-end Developer",
+    "Frontend Developer",
+    "Backend Developer",
     "Designer",
     "AI Engineer",
     "Project Lead",
@@ -30,7 +30,13 @@ class _ModifyMemberBottomSheetState extends State<ModifyMemberBottomSheet> {
   @override
   void initState() {
     super.initState();
-    _selectedRole = widget.role;
+    // Set the selected role, but only if it exists in the roles list
+    if (roles.contains(widget.role)) {
+      _selectedRole = widget.role;
+    } else {
+      // If the role doesn't exist in the list, set it to null (no selection)
+      _selectedRole = null;
+    }
   }
 
   @override

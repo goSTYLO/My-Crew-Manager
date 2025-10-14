@@ -8,12 +8,13 @@ class AddMemberBottomSheet extends StatefulWidget {
 }
 
 class _AddMemberBottomSheetState extends State<AddMemberBottomSheet> {
+  final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   String? selectedRole;
 
   final List<String> roles = [
-    "Front-end Developer",
-    "Back-end Developer",
+    "Frontend Developer",
+    "Backend Developer", 
     "Designer",
     "Project Manager",
     "QA Tester",
@@ -43,6 +44,20 @@ class _AddMemberBottomSheetState extends State<AddMemberBottomSheet> {
             const Text(
               "Add Team Member",
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+
+            // Name Input
+            TextField(
+              controller: _nameController,
+              decoration: InputDecoration(
+                labelText: "Full Name",
+                prefixIcon: const Icon(Icons.person_outlined),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                hintText: "John Doe",
+              ),
             ),
             const SizedBox(height: 16),
 
@@ -77,7 +92,7 @@ class _AddMemberBottomSheetState extends State<AddMemberBottomSheet> {
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),
-                hintText: "e.g., Front-end Developer",
+                hintText: "e.g., Frontend Developer",
               ),
             ),
             const SizedBox(height: 20),
@@ -87,8 +102,11 @@ class _AddMemberBottomSheetState extends State<AddMemberBottomSheet> {
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: () {
-                  if (_emailController.text.isNotEmpty && selectedRole != null) {
+                  if (_nameController.text.isNotEmpty && 
+                      _emailController.text.isNotEmpty && 
+                      selectedRole != null) {
                     Navigator.pop(context, {
+                      "name": _nameController.text,
                       "email": _emailController.text,
                       "role": selectedRole,
                     });

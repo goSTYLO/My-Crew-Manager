@@ -1,34 +1,43 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:mycrewmanager/features/authentication/presentation/bloc/auth_bloc.dart';
 
 class TaskWidget extends StatelessWidget {
   const TaskWidget({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 24.0, left: 24.0, right: 24.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Hi, Sophia Rose',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w700,
-              color: Color(0xFF181929),
-            ),
-          ),
-          const SizedBox(height: 4),
-          const Text(
-            "Let's finish your task today!",
-            style: TextStyle(
-              fontSize: 14,
-              color: Color(0xFF7B7F9E),
-              fontWeight: FontWeight.w400,
-            ),
-          ),
-          const SizedBox(height: 20),
-          Container(
+    return BlocBuilder<AuthBloc, AuthState>(
+      builder: (context, state) {
+        String userName = 'User';
+        if (state is AuthSuccess) {
+          userName = state.user.name;
+        }
+        
+        return Padding(
+          padding: const EdgeInsets.only(top: 24.0, left: 24.0, right: 24.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Hi, $userName',
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF181929),
+                ),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                "Let's finish your task today!",
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Color(0xFF7B7F9E),
+                  fontWeight: FontWeight.w400,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Container(
             width: double.infinity,
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
@@ -119,8 +128,10 @@ class TaskWidget extends StatelessWidget {
               ],
             ),
           ),
-        ],
-      ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

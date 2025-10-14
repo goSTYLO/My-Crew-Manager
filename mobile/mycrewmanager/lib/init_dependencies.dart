@@ -11,6 +11,19 @@ import 'package:mycrewmanager/features/authentication/domain/repository/auth_rep
 import 'package:mycrewmanager/features/authentication/domain/usecases/user_login.dart';
 import 'package:mycrewmanager/features/authentication/domain/usecases/user_signup.dart';
 import 'package:mycrewmanager/features/authentication/presentation/bloc/auth_bloc.dart';
+import 'package:mycrewmanager/features/project/data/data_sources/project_remote.dart';
+import 'package:mycrewmanager/features/project/data/repositories/project_repository_impl.dart';
+import 'package:mycrewmanager/features/project/domain/repository/project_repository.dart';
+import 'package:mycrewmanager/features/project/domain/usecases/get_projects.dart';
+import 'package:mycrewmanager/features/project/domain/usecases/create_project.dart';
+import 'package:mycrewmanager/features/project/domain/usecases/get_project_backlog.dart';
+import 'package:mycrewmanager/features/project/domain/usecases/update_project.dart';
+import 'package:mycrewmanager/features/project/domain/usecases/delete_project.dart';
+import 'package:mycrewmanager/features/project/domain/usecases/get_project_members.dart';
+import 'package:mycrewmanager/features/project/domain/usecases/get_project_tasks.dart';
+import 'package:mycrewmanager/features/project/domain/usecases/create_member.dart';
+import 'package:mycrewmanager/features/project/domain/usecases/delete_member.dart';
+import 'package:mycrewmanager/features/project/presentation/bloc/project_bloc.dart';
 
 final serviceLocator = GetIt.asNewInstance();
 final logger = Logger();
@@ -18,6 +31,7 @@ final logger = Logger();
 Future<void> initDependencies() async {
 
   _initAuth();
+  _initProject();
 
   final dio = Dio();
   
@@ -50,6 +64,39 @@ void _initAuth() {
         userLogin: serviceLocator(),
         userSignup: serviceLocator(),
         tokenStorage: serviceLocator<TokenStorage>()
+      ),
+    );
+}
+
+void _initProject() {
+  serviceLocator
+      //Data source
+      ..registerFactory<ProjectRemoteDataSource>(
+      () => ProjectRemoteDataSource(serviceLocator<Dio>()),
+    )
+          //Use cases
+          ..registerFactory(() => GetProjects(serviceLocator()))
+          ..registerFactory(() => CreateProject(serviceLocator()))
+          ..registerFactory(() => GetProjectBacklog(serviceLocator()))
+          ..registerFactory(() => UpdateProject(serviceLocator()))
+          ..registerFactory(() => DeleteProject(serviceLocator()))
+          ..registerFactory(() => GetProjectMembers(serviceLocator()))
+          ..registerFactory(() => GetProjectTasks(serviceLocator()))
+          ..registerFactory(() => CreateMember(serviceLocator()))
+          ..registerFactory(() => DeleteMember(serviceLocator()))
+
+      //Repository
+      ..registerFactory<ProjectRepository>(
+        () => ProjectRepositoryImpl(serviceLocator(), serviceLocator()),
+      )
+      // BLoC
+      ..registerLazySingleton(
+        () => ProjectBloc(
+        getProjects: serviceLocator(),
+        createProject: serviceLocator(),
+        getProjectBacklog: serviceLocator(),
+        updateProject: serviceLocator(),
+        deleteProject: serviceLocator(),
       ),
     );
 }

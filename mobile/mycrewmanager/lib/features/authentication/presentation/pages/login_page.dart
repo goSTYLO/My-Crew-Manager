@@ -8,6 +8,8 @@ import 'package:mycrewmanager/features/authentication/presentation/bloc/auth_blo
 import 'package:mycrewmanager/features/authentication/presentation/pages/forgot_password.dart';
 import 'package:mycrewmanager/features/authentication/presentation/pages/signup_page.dart';
 import 'package:mycrewmanager/features/dashboard/presentation/pages/dashboard_page.dart';
+import 'package:mycrewmanager/core/tokenhandlers/token_storage.dart';
+import 'package:mycrewmanager/init_dependencies.dart';
 
 class LoginPage extends StatefulWidget {
   static route() => MaterialPageRoute(builder: (context) => const LoginPage());
@@ -25,10 +27,24 @@ class _LoginPageState extends State<LoginPage> {
   bool _acceptedTerms = false;
 
   @override
+  void initState() {
+    super.initState();
+    // Clear any existing tokens for testing
+    _clearExistingTokens();
+  }
+
+  @override
   void dispose() {
     emailController.dispose();
     passwordController.dispose();
     super.dispose();
+  }
+
+  void _clearExistingTokens() async {
+    // This will help us test the actual login flow
+    final tokenStorage = serviceLocator<TokenStorage>();
+    await tokenStorage.clearToken();
+    print("🧹 Cleared existing tokens for testing");
   }
 
   void _handleLogin() {
@@ -181,7 +197,7 @@ Widget build(BuildContext context) {
                           width: double.infinity,
                           height: 50,
                           child: ElevatedButton(
-                            onPressed:() => Navigator.push(context, DashboardPage.route()),   //_acceptedTerms ? _handleLogin : null,
+                            onPressed: _acceptedTerms ? _handleLogin : null,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.black,
                               foregroundColor: Colors.white,

@@ -25,51 +25,43 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   }
 
   void _onAuthLogin(AuthLogin event, Emitter<AuthState> emit) async {
+    logger.d("🔐 Starting login process for: ${event.email}");
+    
     final res = await _userLogin(
       UserLoginParams(email: event.email, password: event.password),
     );
 
-    // res.fold(
-    //   (failure) {
-    //     logger.d('Failure: ${failure.runtimeType} - ${failure.message}');
-    //     emit(AuthFailure(failure.message));
-    //   },
-    //   (user) async {
-    //     logger.d('TOKEN: ${user.token}');
-    //     // ✅ Store the token securely
-    //     await _tokenStorage.saveToken(user.token);
-    //     _emitAuthSuccess(user, emit);
-    //   },
-    // );
-      await res.fold(
-    (failure) async {
-      logger.d("FAILED");
-      emit(AuthFailure(failure.message));
-    },
-    (user) async {
-      await _tokenStorage.saveToken(user.token);
-      emit(AuthSuccess(user)); // no need to wrap in a helper
-    },
+    await res.fold(
+      (failure) async {
+        logger.d("❌ LOGIN FAILED: ${failure.message}");
+        emit(AuthFailure(failure.message));
+      },
+      (user) async {
+        logger.d("✅ LOGIN SUCCESS: ${user.name} - Token: ${user.token}");
+        await _tokenStorage.saveToken(user.token);
+        emit(AuthSuccess(user));
+      },
     );
   }
 
   void _onAuthSignup(AuthSignUp event, Emitter<AuthState> emit) async {
+    logger.d("🔐 Starting signup process for: ${event.email}");
+    
     final res = await _userSignup(
       UserSignupParams(name: event.name, email: event.email, password: event.password)
     );
 
     await res.fold(
-    (failure) async {
-      logger.d("SIGN UP FAILED");
-      emit(AuthFailure(failure.message));
-    },
-    (message) async {
-      emit(AuthSuccess(message));
-    }
+      (failure) async {
+        logger.d("❌ SIGNUP FAILED: ${failure.message}");
+        emit(AuthFailure(failure.message));
+      },
+      (user) async {
+        logger.d("✅ SIGNUP SUCCESS: ${user.name} - Token: ${user.token}");
+        await _tokenStorage.saveToken(user.token);
+        emit(AuthSuccess(user));
+      }
     );
   }
 
-  void _emitAuthSuccess(User user, Emitter<AuthState> emit)  {
-    emit(AuthSuccess(user));
-  }
 }

@@ -3,15 +3,17 @@ from .models import (
     Project, Proposal,
     ProjectFeature, ProjectRole, ProjectGoal,
     TimelineWeek, TimelineItem,
-    Epic, SubEpic, UserStory, StoryTask,
+    Epic, SubEpic, UserStory, StoryTask, ProjectMember,
 )
 
 
 class ProjectSerializer(serializers.ModelSerializer):
+    created_by_name = serializers.CharField(source='created_by.name', read_only=True)
+    
     class Meta:
         model = Project
-        fields = ['id', 'title', 'summary', 'created_by', 'created_at']
-        read_only_fields = ['id', 'created_at', 'created_by']
+        fields = ['id', 'title', 'summary', 'created_by', 'created_by_name', 'created_at']
+        read_only_fields = ['id', 'created_at', 'created_by', 'created_by_name']
 
 
 class ProposalSerializer(serializers.ModelSerializer):
@@ -91,5 +93,12 @@ class StoryTaskSerializer(serializers.ModelSerializer):
     class Meta:
         model = StoryTask
         fields = ['id', 'user_story', 'title', 'status', 'ai']
+
+
+class ProjectMemberSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProjectMember
+        fields = ['id', 'project', 'user', 'user_name', 'user_email', 'role', 'joined_at']
+        read_only_fields = ['id', 'joined_at']
 
 

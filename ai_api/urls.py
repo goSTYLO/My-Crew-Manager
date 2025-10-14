@@ -5,6 +5,7 @@ from .views import (
     ProjectFeatureViewSet, ProjectRoleViewSet, ProjectGoalViewSet,
     TimelineWeekViewSet, TimelineItemViewSet,
     EpicViewSet, SubEpicViewSet, UserStoryViewSet, StoryTaskViewSet,
+    ProjectMemberViewSet,
 )
 
 router = DefaultRouter()
@@ -19,6 +20,7 @@ router.register(r'epics', EpicViewSet, basename='epics')
 router.register(r'sub-epics', SubEpicViewSet, basename='sub-epics')
 router.register(r'user-stories', UserStoryViewSet, basename='user-stories')
 router.register(r'story-tasks', StoryTaskViewSet, basename='story-tasks')
+router.register(r'project-members', ProjectMemberViewSet, basename='project-members')
 
 urlpatterns = [
     path('', include(router.urls)),

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:mycrewmanager/features/project/presentation/pages/create_project_tab.dart';
+import 'package:mycrewmanager/features/project/presentation/pages/create_project_page.dart';
 import 'package:mycrewmanager/features/project/presentation/pages/upload_proposal_tab.dart';
 
 class ProjectPage extends StatefulWidget {
@@ -41,7 +41,7 @@ class _ProjectPageState extends State<ProjectPage> {
           ),
         ),
         backgroundColor: const Color(0xFFF7F8FA),
-        body: const TabBarView(children: [CreateProjectTab(), UploadProposalTab()]),
+        body: const TabBarView(children: [CreateProjectPage(), UploadProposalTab()]),
       ),
     );
   }

@@ -10,13 +10,14 @@ from .models import (
     Project, Proposal,
     ProjectFeature, ProjectRole, ProjectGoal,
     TimelineWeek, TimelineItem,
-    Epic, SubEpic, UserStory, StoryTask,
+    Epic, SubEpic, UserStory, StoryTask, ProjectMember,
 )
 from .serializers import (
     ProjectSerializer, ProposalSerializer,
     ProjectFeatureSerializer, ProjectRoleSerializer, ProjectGoalSerializer,
     TimelineWeekSerializer, TimelineItemSerializer,
     EpicSerializer, SubEpicSerializer, UserStorySerializer, StoryTaskSerializer,
+    ProjectMemberSerializer,
 )
 
 # Real LLM pipelines
@@ -325,5 +326,159 @@ class StoryTaskViewSet(ModelViewSet):
         if user_story_id:
             return self.queryset.filter(user_story_id=user_story_id)
         return self.queryset
+
+    def create(self, request, *args, **kwargs):
+        try:
+            # Get the user story and check if the current user is the project creator
+            user_story_id = request.data.get('user_story')
+            if not user_story_id:
+                return Response(
+                    {"error": "User story ID is required"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            try:
+                user_story = UserStory.objects.get(id=user_story_id)
+                project = user_story.sub_epic.epic.project
+            except (UserStory.DoesNotExist, AttributeError):
+                return Response(
+                    {"error": "User story not found"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            # Check if the current user is the project creator
+            if project.created_by != request.user:
+                return Response(
+                    {"error": "Only the project creator can add tasks"},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            
+            return super().create(request, *args, **kwargs)
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+    def destroy(self, request, *args, **kwargs):
+        try:
+            # Get the task and check if the current user is the project creator
+            task = self.get_object()
+            project = task.user_story.sub_epic.epic.project
+            
+            # Check if the current user is the project creator
+            if project.created_by != request.user:
+                return Response(
+                    {"error": "Only the project creator can remove tasks"},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            
+            return super().destroy(request, *args, **kwargs)
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+
+class ProjectMemberViewSet(ModelViewSet):
+    queryset = ProjectMember.objects.all()
+    serializer_class = ProjectMemberSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        project_id = self.request.query_params.get('project_id')
+        if project_id:
+            return self.queryset.filter(project_id=project_id)
+        return self.queryset
+
+    def create(self, request, *args, **kwargs):
+        try:
+            # Get the project and check if the current user is the creator
+            project_id = request.data.get('project')
+            if not project_id:
+                return Response(
+                    {"error": "Project ID is required"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            try:
+                project = Project.objects.get(id=project_id)
+            except Project.DoesNotExist:
+                return Response(
+                    {"error": "Project not found"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            # Check if the current user is the project creator
+            if project.created_by != request.user:
+                return Response(
+                    {"error": "Only the project creator can add members"},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            
+            # Check if the user exists in the database
+            user_email = request.data.get('user_email')
+            if user_email:
+                from django.contrib.auth import get_user_model
+                User = get_user_model()
+                try:
+                    existing_user = User.objects.get(email=user_email)
+                    # Update the user field to use the existing user
+                    request.data['user'] = existing_user.user_id
+                    request.data['user_name'] = existing_user.name
+                    request.data['user_email'] = existing_user.email
+                except User.DoesNotExist:
+                    # User doesn't exist, we need to create a new User first
+                    # Generate a unique user ID that doesn't conflict with existing ones
+                    import hashlib
+                    base_id = int(hashlib.md5(user_email.encode()).hexdigest()[:8], 16) % 10000 + 1000
+                    
+                    # Find a unique user_id that doesn't exist
+                    user_id = base_id
+                    while User.objects.filter(user_id=user_id).exists():
+                        user_id += 1
+                    
+                    # Create the new user
+                    new_user = User.objects.create(
+                        user_id=user_id,
+                        email=user_email,
+                        name=request.data.get('user_name', 'Unknown User'),
+                        password='dummy_password'  # This won't be used for authentication
+                    )
+                    
+                    # Update the request data to use the new user
+                    request.data['user'] = new_user.user_id
+                    request.data['user_name'] = new_user.name
+                    request.data['user_email'] = new_user.email
+            
+            return super().create(request, *args, **kwargs)
+        except Exception as e:
+            if 'unique' in str(e).lower():
+                return Response(
+                    {"error": "This user is already a member of this project"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            raise e
+
+    def destroy(self, request, *args, **kwargs):
+        try:
+            # Get the project member and check if the current user is the project creator
+            member = self.get_object()
+            project = member.project
+            
+            # Check if the current user is the project creator
+            if project.created_by != request.user:
+                return Response(
+                    {"error": "Only the project creator can remove members"},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            
+            return super().destroy(request, *args, **kwargs)
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
 
