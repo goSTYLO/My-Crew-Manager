@@ -227,3 +227,20 @@ class ChatNotificationConsumer(AsyncWebsocketConsumer):
             'message': event['message'],
             'sender': event['sender'],
         }))
+
+    async def room_invitation(self, event):
+        """Notify the user that they were invited to a room"""
+        await self.send(text_data=json.dumps({
+            'type': 'room_invitation',
+            'room_id': event.get('room_id'),
+            'room_name': event.get('room_name'),
+            'invited_by': event.get('invited_by'),
+        }))
+
+    async def direct_room_created(self, event):
+        """Notify the user that a direct room was created with them"""
+        await self.send(text_data=json.dumps({
+            'type': 'direct_room_created',
+            'room': event.get('room'),
+            'created_by': event.get('created_by'),
+        }))

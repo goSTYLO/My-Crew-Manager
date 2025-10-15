@@ -52,7 +52,7 @@ POST {{base_url}}/api/chat/rooms/{room_id}/invite/
 Content-Type: application/json
 
 {
-  "user_id": 2
+  "email": "other.user@example.com"
 }
 ```
 
@@ -94,3 +94,14 @@ DELETE {{base_url}}/api/chat/rooms/{room_id}/messages/{message_id}/
 - Notifications: `ws://localhost:8000/ws/chat/notifications/`
 
 See the main Postman guide for real-time event payloads and usage.
+
+### Direct 1:1 Room by Email
+
+```http
+POST {{base_url}}/api/chat/rooms/direct/
+Content-Type: application/json
+
+{
+  "email": "other.user@example.com"
+}
+```

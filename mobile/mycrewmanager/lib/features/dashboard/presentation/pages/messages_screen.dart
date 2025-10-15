@@ -7,6 +7,10 @@ import 'package:mycrewmanager/features/dashboard/presentation/pages/tasks_page.d
 import 'package:mycrewmanager/features/dashboard/presentation/pages/projects_page.dart';
 import 'package:mycrewmanager/features/dashboard/presentation/pages/notifications_page.dart';
 import 'package:mycrewmanager/features/dashboard/presentation/pages/chats_page.dart'; 
+import 'package:get_it/get_it.dart';
+import 'package:mycrewmanager/features/chat/data/repositories/chat_repository_impl.dart';
+import 'package:mycrewmanager/features/chat/data/models/room_model.dart';
+import 'package:mycrewmanager/features/chat/data/services/chat_ws_service.dart';
 
 class MessagesScreen extends StatefulWidget {
   const MessagesScreen({super.key});
@@ -20,74 +24,112 @@ class MessagesScreen extends StatefulWidget {
 }
 
 class _MessagesScreenState extends State<MessagesScreen> {
-  final List<Map<String, dynamic>> messages = [
-    {
-      'name': 'Angelie Crison',
-      'avatar': 'https://randomuser.me/api/portraits/women/44.jpg',
-      'message': "Thank you very much. I'm glad ...",
-      'time': '1 m ago',
-      'unread': true,
-      'sent': false,
-    },
-    {
-      'name': 'Jakob Saris',
-      'avatar': 'https://randomuser.me/api/portraits/men/32.jpg',
-      'message': "You : Sure! let me tell you about w...",
-      'time': '2 m ago',
-      'unread': false,
-      'sent': true,
-    },
-    {
-      'name': 'Emery Korsgard',
-      'avatar': 'https://randomuser.me/api/portraits/women/68.jpg',
-      'message': "Thanks. You are very helpful...",
-      'time': '3 m ago',
-      'unread': true,
-      'sent': false,
-    },
-    {
-      'name': 'Jeremy Zucker',
-      'avatar': 'https://randomuser.me/api/portraits/men/65.jpg',
-      'message': "You : Sure! let me share about ...",
-      'time': '4 m ago',
-      'unread': false,
-      'sent': true,
-    },
-    {
-      'name': 'Nadia Lauren',
-      'avatar': 'https://randomuser.me/api/portraits/women/12.jpg',
-      'message': "Is there anything I can help? Just ...",
-      'time': '5 m ago',
-      'unread': true,
-      'sent': false,
-    },
-    {
-      'name': 'Jason Statham',
-      'avatar': 'https://randomuser.me/api/portraits/men/1.jpg',
-      'message': "You : Sure! let me share about ...",
-      'time': '6 m ago',
-      'unread': false,
-      'sent': true,
-    },
-    {
-      'name': 'Angel Kimberly',
-      'avatar': 'https://randomuser.me/api/portraits/women/22.jpg',
-      'message': "Okay. I know very well about it ...",
-      'time': '7 m ago',
-      'unread': true,
-      'sent': false,
-    },
-    {
-      'name': 'Jason Momoa',
-      'avatar': 'https://randomuser.me/api/portraits/men/11.jpg',
-      'message': "You : Sure! let me share about ...",
-      'time': '7 m ago',
-      'unread': false,
-      'sent': true,
-    },
-  ];
-
+  final _repo = GetIt.I<ChatRepositoryImpl>();
+  List<RoomModel> _rooms = [];
+  bool _loading = true;
+  String _error = '';
   String search = '';
+  final _ws = GetIt.I<ChatWsService>();
+  bool _wsConnected = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRooms();
+    _connectNotifications();
+  }
+
+  Future<void> _loadRooms() async {
+    setState(() {
+      _loading = true;
+      _error = '';
+    });
+    try {
+      final rooms = await _repo.listRooms();
+      setState(() {
+        _rooms = rooms;
+      });
+    } catch (e) {
+      setState(() {
+        _error = 'Failed to load rooms';
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _connectNotifications() async {
+    if (_wsConnected) return;
+    try {
+      final stream = await _ws.connectToNotifications();
+      _wsConnected = true;
+      stream.listen((event) {
+        if (event is Map<String, dynamic>) {
+          final type = event['type'] as String?;
+          if (type == 'room_invitation' || type == 'direct_room_created') {
+            _loadRooms();
+          }
+        }
+      });
+    } catch (_) {}
+  }
+
+  Future<void> _showCreateGroupDialog() async {
+    final controller = TextEditingController();
+    final created = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Create Group'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(hintText: 'Group name'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Create')),
+        ],
+      ),
+    );
+    if (created == true) {
+      final name = controller.text.trim();
+      if (name.isEmpty) return;
+      try {
+        await _repo.createRoom(name);
+        _loadRooms();
+      } catch (_) {}
+    }
+  }
+
+  Future<void> _showCreateDirectDialog() async {
+    final controller = TextEditingController();
+    final created = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Direct Chat'),
+        content: TextField(
+          controller: controller,
+          keyboardType: TextInputType.emailAddress,
+          decoration: const InputDecoration(hintText: 'User email'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Start')),
+        ],
+      ),
+    );
+    if (created == true) {
+      final email = controller.text.trim();
+      if (email.isEmpty) return;
+      try {
+        await _repo.direct(email);
+        _loadRooms();
+      } catch (_) {}
+    }
+  }
 
   Drawer _buildAppDrawer(BuildContext context) {
     return Drawer(
@@ -232,9 +274,8 @@ class _MessagesScreenState extends State<MessagesScreen> {
       ),
     );
 
-    final filtered = messages
-        .where((msg) =>
-            msg['name'].toLowerCase().contains(search.toLowerCase()))
+    final filtered = _rooms
+        .where((r) => (r.name ?? 'Direct').toLowerCase().contains(search.toLowerCase()))
         .toList();
 
     return Scaffold(
@@ -322,78 +363,55 @@ class _MessagesScreenState extends State<MessagesScreen> {
               ),
             ),
             // Message list
-            Expanded(
+            if (_loading)
+              const Expanded(child: Center(child: CircularProgressIndicator()))
+            else if (_error.isNotEmpty)
+              Expanded(
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(_error),
+                      const SizedBox(height: 8),
+                      ElevatedButton(onPressed: _loadRooms, child: const Text('Retry')),
+                    ],
+                  ),
+                ),
+              )
+            else
+              Expanded(
               child: ListView.separated(
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 itemCount: filtered.length,
                 separatorBuilder: (_, __) => const SizedBox(height: 2),
                 itemBuilder: (context, i) {
-                  final msg = filtered[i];
+                  final room = filtered[i];
                   return ListTile(
-                    leading: CircleAvatar(
-                      backgroundImage: NetworkImage(msg['avatar']),
-                      radius: 24,
-                    ),
+                    leading: const CircleAvatar(radius: 24, child: Icon(Icons.group)),
                     title: Text(
-                      msg['name'],
+                      room.name ?? 'Direct chat #${room.roomId}',
                       style: const TextStyle(
                         fontWeight: FontWeight.w600,
                         fontSize: 15,
                       ),
                     ),
                     subtitle: Text(
-                      msg['message'],
+                      'Members: ${room.membersCount}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: msg['unread']
-                            ? const Color(0xFF181929)
-                            : Colors.black54,
-                        fontWeight: msg['unread']
-                            ? FontWeight.w600
-                            : FontWeight.w400,
+                        color: const Color(0xFF181929),
+                        fontWeight: FontWeight.w400,
                       ),
                     ),
-                    trailing: Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          msg['time'],
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: Colors.black45,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            if (msg['unread'])
-                              Container(
-                                width: 8,
-                                height: 8,
-                                decoration: const BoxDecoration(
-                                  color: Colors.red,
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                            if (msg['sent'])
-                              const Icon(
-                                Icons.done_all,
-                                color: Color(0xFF2563EB),
-                                size: 18,
-                              ),
-                          ],
-                        ),
-                      ],
-                    ),
+                    trailing: Text(room.createdAt.split('T').first, style: const TextStyle(fontSize: 11, color: Colors.black45)),
                     onTap: () {
-                      // Implement navigation to chat detail here
+                      // Navigate to chat detail with room info
                       Navigator.of(context).push(
                         ChatsPage.route(
-                          name: msg['name'],
-                          avatarUrl: msg['avatar'],
+                          name: room.name ?? 'Direct',
+                          avatarUrl: 'https://ui-avatars.com/api/?name=${Uri.encodeComponent(room.name ?? 'D')}',
+                          roomId: room.roomId,
                         ),
                       );
                     },
@@ -401,6 +419,28 @@ class _MessagesScreenState extends State<MessagesScreen> {
                 },
               ),
             ),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _showCreateGroupDialog,
+                    icon: const Icon(Icons.group_add),
+                    label: const Text('Create Group'),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _showCreateDirectDialog,
+                    icon: const Icon(Icons.person_add),
+                    label: const Text('Direct Chat'),
+                  ),
+                ),
+              ],
+            ),
+          ),
           ],
         ),
       ),

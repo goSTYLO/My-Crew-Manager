@@ -24,14 +24,18 @@ import 'package:mycrewmanager/features/project/domain/usecases/get_project_tasks
 import 'package:mycrewmanager/features/project/domain/usecases/create_member.dart';
 import 'package:mycrewmanager/features/project/domain/usecases/delete_member.dart';
 import 'package:mycrewmanager/features/project/presentation/bloc/project_bloc.dart';
+import 'package:mycrewmanager/features/chat/data/data_sources/chat_remote.dart';
+import 'package:mycrewmanager/features/chat/data/repositories/chat_repository_impl.dart';
+import 'package:mycrewmanager/features/chat/data/services/chat_ws_service.dart';
 
-final serviceLocator = GetIt.asNewInstance();
+final serviceLocator = GetIt.I;
 final logger = Logger();
 
 Future<void> initDependencies() async {
 
   _initAuth();
   _initProject();
+  _initChat();
 
   final dio = Dio();
   
@@ -66,6 +70,13 @@ void _initAuth() {
         tokenStorage: serviceLocator<TokenStorage>()
       ),
     );
+}
+
+void _initChat() {
+  serviceLocator
+      ..registerFactory<ChatRemoteDataSource>(() => ChatRemoteDataSource(serviceLocator<Dio>()))
+      ..registerLazySingleton<ChatRepositoryImpl>(() => ChatRepositoryImpl(serviceLocator<ChatRemoteDataSource>()))
+      ..registerLazySingleton<ChatWsService>(() => ChatWsService(serviceLocator<TokenStorage>()));
 }
 
 void _initProject() {

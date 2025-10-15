@@ -1,18 +1,27 @@
 import 'package:flutter/material.dart';
+import 'package:get_it/get_it.dart';
+import 'package:mycrewmanager/features/chat/data/models/message_model.dart';
+import 'package:mycrewmanager/features/chat/data/repositories/chat_repository_impl.dart';
+import 'package:mycrewmanager/features/chat/data/services/chat_ws_service.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:mycrewmanager/features/authentication/presentation/bloc/auth_bloc.dart';
 
 class ChatsPage extends StatefulWidget {
   final String name;
   final String avatarUrl;
+  final int roomId;
 
   const ChatsPage({
     super.key,
     required this.name,
     required this.avatarUrl,
+    required this.roomId,
   });
 
-  static Route<Object?> route({required String name, required String avatarUrl}) =>
+  static Route<Object?> route({required String name, required String avatarUrl, required int roomId}) =>
       MaterialPageRoute(
-        builder: (_) => ChatsPage(name: name, avatarUrl: avatarUrl),
+        builder: (_) => ChatsPage(name: name, avatarUrl: avatarUrl, roomId: roomId),
       );
 
   @override
@@ -21,52 +30,62 @@ class ChatsPage extends StatefulWidget {
 
 class _ChatsPageState extends State<ChatsPage> {
   final TextEditingController _controller = TextEditingController();
+  final _repo = GetIt.I<ChatRepositoryImpl>();
+  final _ws = GetIt.I<ChatWsService>();
+  final List<MessageModel> _messages = [];
+  // Stream is listened immediately; no need to store
+  bool _loading = true;
 
-  final List<Map<String, dynamic>> messages = [
-    {
-      'fromMe': true,
-      'text': "Morning Angelie, I have question about My Task",
-      'time': "Today 11:52",
-      'type': 'text',
-    },
-    {
-      'fromMe': false,
-      'text': "Yes sure, Any problem with your assignment?",
-      'time': "Today 11:53",
-      'type': 'text',
-    },
-    {
-      'fromMe': true,
-      'text': "How to make a responsive display from the dashboard?",
-      'time': "Today 11:53",
-      'type': 'image',
-      'image':
-          "https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=800&q=80",
-    },
-    {
-      'fromMe': true,
-      'text': "Is there a plugin to do this task?",
-      'time': "Today 11:52",
-      'type': 'text',
-    },
-    {
-      'fromMe': false,
-      'text':
-          "No plugins. You just have to make it smaller according to the size of the phone.",
-      'time': "Today 11:53",
-      'type': 'text',
-    },
-    {
-      'fromMe': false,
-      'text':
-          "Thank you very much. I'm glad you asked about the assignment",
-      'time': "Today 11:53",
-      'type': 'text',
-    },
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _loadMessages();
+    _connectWs();
+  }
+
+  Future<void> _loadMessages() async {
+    final roomId = widget.roomId;
+    try {
+      final msgs = await _repo.listMessages(roomId);
+      setState(() {
+        _messages
+          ..clear()
+          ..addAll(msgs);
+      });
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _connectWs() async {
+    final stream = await _ws.connectToRoom(widget.roomId);
+    stream.listen((event) {
+      if (event is Map<String, dynamic>) {
+        final type = event['type'] as String?;
+        if (type == 'chat_message') {
+          final msg = MessageModel.fromJson(event['message'] as Map<String, dynamic>);
+          setState(() {
+            _messages.add(msg);
+          });
+        }
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _ws.disconnect();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
+    // Determine current user id from auth state to align bubbles
+    String? currentUserId;
+    final authState = context.watch<AuthBloc>().state;
+    if (authState is AuthSuccess) {
+      currentUserId = authState.user.id;
+    }
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -124,6 +143,10 @@ class _ChatsPageState extends State<ChatsPage> {
                       icon: const Icon(Icons.call_outlined, color: Colors.black54),
                       onPressed: () {},
                     ),
+                    IconButton(
+                      icon: const Icon(Icons.person_add_alt_1, color: Colors.black87),
+                      onPressed: _showInviteDialog,
+                    ),
                   ],
                 ),
               ),
@@ -143,13 +166,15 @@ class _ChatsPageState extends State<ChatsPage> {
               ),
               // Chat messages
               Expanded(
-                child: ListView.builder(
+                child: _loading
+                    ? const Center(child: CircularProgressIndicator())
+                    : ListView.builder(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  itemCount: messages.length,
+                  itemCount: _messages.length,
                   itemBuilder: (context, i) {
-                    final msg = messages[i];
-                    final isMe = msg['fromMe'] as bool;
-                    final isImage = msg['type'] == 'image';
+                    final msg = _messages[i];
+                    final isMe = currentUserId != null && msg.senderId.toString() == currentUserId;
+                    final isImage = msg.messageType == 'image';
                     return Align(
                       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
                       child: Padding(
@@ -173,7 +198,7 @@ class _ChatsPageState extends State<ChatsPage> {
                                         topRight: Radius.circular(14),
                                       ),
                                       child: Image.network(
-                                        msg['image'],
+                                        '',
                                         width: 220,
                                         height: 120,
                                         fit: BoxFit.cover,
@@ -182,7 +207,7 @@ class _ChatsPageState extends State<ChatsPage> {
                                     Padding(
                                       padding: const EdgeInsets.all(10),
                                       child: Text(
-                                        msg['text'],
+                                        msg.content,
                                         style: const TextStyle(
                                           color: Colors.white,
                                           fontWeight: FontWeight.w500,
@@ -205,7 +230,7 @@ class _ChatsPageState extends State<ChatsPage> {
                                       : Border.all(color: Colors.black12),
                                 ),
                                 child: Text(
-                                  msg['text'],
+                                  msg.content,
                                   style: TextStyle(
                                     color: isMe ? Colors.white : Colors.black87,
                                     fontWeight: FontWeight.w500,
@@ -213,12 +238,12 @@ class _ChatsPageState extends State<ChatsPage> {
                                   ),
                                 ),
                               ),
-                            const SizedBox(height: 2),
+                            const SizedBox(height: 4),
                             Text(
-                              msg['time'],
+                              '${msg.senderUsername} • ${msg.createdAt}',
                               style: const TextStyle(
                                 fontSize: 11,
-                                color: Colors.black45,
+                                color: Colors.black54,
                               ),
                             ),
                           ],
@@ -270,17 +295,46 @@ class _ChatsPageState extends State<ChatsPage> {
     );
   }
 
-  void _sendMessage() {
+  Future<void> _sendMessage() async {
     final text = _controller.text.trim();
     if (text.isEmpty) return;
+    final sent = await _repo.sendMessage(widget.roomId, text);
     setState(() {
-      messages.add({
-        'fromMe': true,
-        'text': text,
-        'time': "Now",
-        'type': 'text',
-      });
+      _messages.add(sent);
     });
     _controller.clear();
+  }
+
+  Future<void> _showInviteDialog() async {
+    final controller = TextEditingController();
+    final created = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Invite User'),
+        content: TextField(
+          controller: controller,
+          keyboardType: TextInputType.emailAddress,
+          decoration: const InputDecoration(hintText: 'User email'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Invite')),
+        ],
+      ),
+    );
+    if (created == true) {
+      final email = controller.text.trim();
+      if (email.isEmpty) return;
+      try {
+        await _repo.invite(widget.roomId, email);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Invitation sent')));
+        }
+      } catch (_) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to invite')));
+        }
+      }
+    }
   }
 }

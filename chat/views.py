@@ -82,19 +82,26 @@ class RoomViewSet(viewsets.ModelViewSet):
                 'room': RoomSerializer(room).data,
                 'created_by': self.request.user.name,
             })
+            # Optionally notify creator's devices via user notifications
+            send_user_notification(self.request.user.pk, 'room_invitation', {
+                'room_id': room.room_id,
+                'room_name': room.name or f"Room {room.room_id}",
+                'invited_by': self.request.user.name,
+            })
 
     @action(detail=True, methods=['post'], permission_classes=[IsAuthenticatedAndRoomMember, IsRoomAdmin])
     def invite(self, request, pk=None):
         room = self.get_object()
-        user_id = request.data.get('user_id')
-        if not user_id:
-            return Response({'detail': 'user_id is required'}, status=status.HTTP_400_BAD_REQUEST)
-        
-        membership, created = RoomMembership.objects.get_or_create(room=room, user_id=user_id)
+        email = request.data.get('email')
+        if not email:
+            return Response({'detail': 'email is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        user = get_object_or_404(RoomMembership._meta.get_field('user').remote_field.model, email=email)
+        membership, created = RoomMembership.objects.get_or_create(room=room, user=user)
         
         if created:
             # Send real-time notifications
-            send_user_notification(user_id, 'room_invitation', {
+            send_user_notification(user.pk, 'room_invitation', {
                 'room_id': room.room_id,
                 'room_name': room.name or f"Room {room.room_id}",
                 'invited_by': request.user.name,
@@ -135,33 +142,45 @@ class RoomViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['post'], url_path='direct')
     def direct(self, request):
-        """Get or create a 1:1 private room with another user."""
-        other_user_id = request.data.get('user_id')
-        if not other_user_id:
-            return Response({'detail': 'user_id is required'}, status=status.HTTP_400_BAD_REQUEST)
-        if int(other_user_id) == int(request.user.pk):
-            return Response({'detail': 'user_id must be different from current user'}, status=status.HTTP_400_BAD_REQUEST)
+        """Get or create a 1:1 private room with another user by email."""
+        other_email = request.data.get('email')
+        if not other_email:
+            return Response({'detail': 'email is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        other_user = get_object_or_404(RoomMembership._meta.get_field('user').remote_field.model, email=other_email)
+        if int(other_user.pk) == int(request.user.pk):
+            return Response({'detail': 'email must be different from current user'}, status=status.HTTP_400_BAD_REQUEST)
 
         # Find existing private room for exactly these two users
         existing = (
             Room.objects.filter(is_private=True)
             .filter(memberships__user=request.user)
-            .filter(memberships__user_id=other_user_id)
+            .filter(memberships__user_id=other_user.pk)
             .distinct()
             .first()
         )
         if existing:
             serializer = self.get_serializer(existing)
+            # Notify the other user they have an active direct chat
+            send_user_notification(other_user.pk, 'direct_room_created', {
+                'room': serializer.data,
+                'created_by': request.user.name,
+            })
             return Response(serializer.data)
 
         # Create new private room and add both users
         with transaction.atomic():
             room = Room.objects.create(created_by=request.user, is_private=True, name=None)
             RoomMembership.objects.create(room=room, user=request.user, is_admin=True)
-            RoomMembership.objects.get_or_create(room=room, user_id=other_user_id)
+            RoomMembership.objects.get_or_create(room=room, user=other_user)
             
             # Send real-time notification
             send_room_notification(room.room_id, 'direct_room_created', {
+                'room': RoomSerializer(room).data,
+                'created_by': request.user.name,
+            })
+            # Notify the other user directly as well
+            send_user_notification(other_user.pk, 'direct_room_created', {
                 'room': RoomSerializer(room).data,
                 'created_by': request.user.name,
             })
@@ -210,8 +229,8 @@ class MessageViewSet(mixins.ListModelMixin,
         # Align WebSocket event name with consumer handler
         send_room_notification(room_id, 'chat_message', {
             'message': message_data,
-            'sender': request.user.name,
-            'sender_id': request.user.pk,
+            'user': request.user.name,
+            'user_id': request.user.pk,
         })
         
         # Send notifications to room members who aren't currently connected
