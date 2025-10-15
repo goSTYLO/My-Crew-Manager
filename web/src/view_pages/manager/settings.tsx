@@ -1,88 +1,172 @@
 import React, { useState } from "react";
-import Sidebar from "../../components/sidebarLayout"; // <-- import Sidebar
-import SettingsNavigation from "../../components/sidebarNavLayout"; // <-- new import
-import { Bell,Menu, Search, X } from 'lucide-react';
+import Sidebar from "../../components/sidebarLayout";
+import SettingsNavigation from "../../components/sidebarNavLayout";
 import TopNavbar from "../../components/topbarLayouot";
+import { useTheme } from "../../components/themeContext";
 
-const ProjectSettings = () => {
-    const [sidebarOpen, setSidebarOpen] = useState(false);
-    const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-    const [activeTab, setActiveTab] = useState("general");
+const GeneralSettings = () => {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { theme } = useTheme();
 
-   
-    return (
-        <div className="flex h-screen bg-gray-50">
-            {/* Logout Confirmation Modal */}
-            {showLogoutConfirm && (
-                <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-[999]">
-                    <div className="bg-white rounded-xl shadow-lg p-6 w-96">
-                        <h2 className="text-lg font-semibold text-gray-800 mb-4">
-                            Are you sure you want to logout?
-                        </h2>
-                        <div className="flex justify-end space-x-3">
-                            <button
-                                onClick={() => setShowLogoutConfirm(false)}
-                                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={() => console.log("Logging out...")}
-                                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
-                            >
-                                Logout
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-            
-            {/* Sidebar Overlay */}
-            <div
-                className={`fixed inset-0 z-50 flex transition-opacity duration-300 ${
-                    sidebarOpen ? "opacity-100 visible" : "opacity-0 invisible"
-                }`}
-            >
-                {/* Background overlay */}
-                <div
-                    className="fixed inset-0 bg-black opacity-50"
-                    onClick={() => setSidebarOpen(false)}
-                />
+  const [projectName, setProjectName] = useState("MyCrewManager");
+  const [description, setDescription] = useState("Project management and team collaboration platform");
+  const [timezone, setTimezone] = useState("Asia/Manila");
+  const [dateFormat, setDateFormat] = useState("MM/DD/YYYY");
+  const [workingHours, setWorkingHours] = useState({
+    start: "09:00",
+    end: "17:00",
+  });
 
-                {/* Sidebar panel */}
-                <div
-                    className={`relative flex flex-col w-64 bg-white transform transition-transform duration-300 ${
-                        sidebarOpen ? "translate-x-0" : "-translate-x-full"
-                    }`}
-                >
-                    <div className="absolute top-4 right-4">
-                        <button
-                            onClick={() => setSidebarOpen(false)}
-                            className="p-2 text-gray-500"
-                            aria-label="Close sidebar"
-                        >
-                            <X className="w-6 h-6" />
-                        </button>
-                    </div>
-                    <Sidebar onLogout={() => setShowLogoutConfirm(true)} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen}/>
-                </div>
+  const handleSave = () => {
+    console.log({
+      projectName,
+      description,
+      timezone,
+      dateFormat,
+      workingHours,
+    });
+    alert("General settings saved!");
+  };
+
+  return (
+    <div className={`flex min-h-screen w-screen ${theme === "dark" ? "bg-gray-900" : "bg-gray-50"}`}>
+      {/* Sidebar (reusable, same as mainFrame) */}
+      <Sidebar
+        sidebarOpen={sidebarOpen}
+        setSidebarOpen={setSidebarOpen}
+      />
+
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col min-w-0">
+        <TopNavbar onMenuClick={() => setSidebarOpen(true)} />
+
+        <main className="flex-1 p-6">
+          <div className="grid grid-cols-12 gap-6 mb-6">
+            {/* Settings Sidebar */}
+            <div className="col-span-2">
+              <SettingsNavigation />
             </div>
 
-            {/* Main Content */}
-            <div className="flex-1 flex flex-col min-w-0">
-                {/* Top Navbar */}
-                <TopNavbar onMenuClick={() => setSidebarOpen(true)} />
+            {/* Page Content */}
+            <div className="col-span-10">
+              <div className={`max-w-8xl mx-auto p-6 rounded-xl shadow ${theme === "dark" ? "bg-gray-800 text-white" : "bg-white"}`}>
+                <h1 className={`text-2xl font-semibold mb-4 ${theme === "dark" ? "text-white" : "text-gray-900"}`}>
+                  General Settings
+                </h1>
+                <p className={`mb-6 ${theme === "dark" ? "text-gray-300" : "text-gray-600"}`}>
+                  Manage your project details, timezone, and working hours.
+                </p>
 
-                {/* Main Content Area */}
-                <main className="flex p-6 overflow-auto">
-                {/* Sidebar pinned to the left */}
-                    <div className="w-64 ml-6">
-                        <SettingsNavigation activeTab={activeTab} setActiveTab={setActiveTab} />
+                <div className="space-y-6">
+                  {/* Project Name */}
+                  <div>
+                    <label className={`block text-sm font-medium mb-2 ${theme === "dark" ? "text-gray-200" : "text-gray-700"}`}>
+                      Project Name
+                    </label>
+                    <input
+                      type="text"
+                      value={projectName}
+                      onChange={(e) => setProjectName(e.target.value)}
+                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${theme === "dark" ? "bg-gray-900 border-gray-700 text-white" : "border-gray-300"}`}
+                    />
+                  </div>
+
+                  {/* Description */}
+                  <div>
+                    <label className={`block text-sm font-medium mb-2 ${theme === "dark" ? "text-gray-200" : "text-gray-700"}`}>
+                      Description
+                    </label>
+                    <textarea
+                      rows={3}
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${theme === "dark" ? "bg-gray-900 border-gray-700 text-white" : "border-gray-300"}`}
+                    />
+                  </div>
+
+                  {/* Timezone + Date Format */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className={`block text-sm font-medium mb-2 ${theme === "dark" ? "text-gray-200" : "text-gray-700"}`}>
+                        Timezone
+                      </label>
+                      <select
+                        value={timezone}
+                        onChange={(e) => setTimezone(e.target.value)}
+                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${theme === "dark" ? "bg-gray-900 border-gray-700 text-white" : "border-gray-300"}`}
+                      >
+                        <option value="Asia/Manila">Asia/Manila (GMT+8)</option>
+                        <option value="America/New_York">America/New_York (GMT-5)</option>
+                        <option value="Europe/London">Europe/London (GMT+0)</option>
+                        <option value="Asia/Tokyo">Asia/Tokyo (GMT+9)</option>
+                      </select>
                     </div>
-                </main>
+                    <div>
+                      <label className={`block text-sm font-medium mb-2 ${theme === "dark" ? "text-gray-200" : "text-gray-700"}`}>
+                        Date Format
+                      </label>
+                      <select
+                        value={dateFormat}
+                        onChange={(e) => setDateFormat(e.target.value)}
+                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${theme === "dark" ? "bg-gray-900 border-gray-700 text-white" : "border-gray-300"}`}
+                      >
+                        <option value="MM/DD/YYYY">MM/DD/YYYY</option>
+                        <option value="DD/MM/YYYY">DD/MM/YYYY</option>
+                        <option value="YYYY-MM-DD">YYYY-MM-DD</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Working Hours */}
+                  <div>
+                    <label className={`block text-sm font-medium mb-2 ${theme === "dark" ? "text-gray-200" : "text-gray-700"}`}>
+                      Working Hours
+                    </label>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className={`block text-xs mb-1 ${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}>
+                          Start Time
+                        </label>
+                        <input
+                          type="time"
+                          value={workingHours.start}
+                          onChange={(e) =>
+                            setWorkingHours({ ...workingHours, start: e.target.value })
+                          }
+                          className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${theme === "dark" ? "bg-gray-900 border-gray-700 text-white" : "border-gray-300"}`}
+                        />
+                      </div>
+                      <div>
+                        <label className={`block text-xs mb-1 ${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}>
+                          End Time
+                        </label>
+                        <input
+                          type="time"
+                          value={workingHours.end}
+                          onChange={(e) =>
+                            setWorkingHours({ ...workingHours, end: e.target.value })
+                          }
+                          className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${theme === "dark" ? "bg-gray-900 border-gray-700 text-white" : "border-gray-300"}`}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Save Button */}
+                  <button
+                    onClick={handleSave}
+                    className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  >
+                    Save General Settings
+                  </button>
+                </div>
+              </div>
             </div>
-        </div>
-    );
+          </div>
+        </main>
+      </div>
+    </div>
+  );
 };
 
-export default ProjectSettings;
+export default GeneralSettings;

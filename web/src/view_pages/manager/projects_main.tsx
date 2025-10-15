@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import Sidebar from "../../components/sidebarLayout"; // <-- import Sidebar
+import Sidebar from "../../components/sidebarLayout";
 import { useNavigate } from "react-router-dom";
 import { 
   Search, 
@@ -18,6 +18,7 @@ import {
   ResponsiveContainer 
 } from 'recharts';
 import TopNavbar from "../../components/topbarLayouot";
+import { useTheme } from "../../components/themeContext"; // <-- import ThemeContext
 
 // Sample data for charts
 const taskData = [
@@ -81,15 +82,15 @@ const ProjectTask = () => {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
     const navigate = useNavigate();
-    
+    const { theme } = useTheme(); // <-- use theme
+
     // FIXED: Replaced useNavigate with simple console.log for demo purposes
     const handleNavigation = (route: string) => {
         console.log(`Navigating to: ${route}`);
     };
 
-
     return (
-        <div className="flex h-screen bg-gray-50">
+        <div className={`flex min-h-screen w-screen ${theme === "dark" ? "bg-gray-900" : "bg-gray-50"}`}>
             {/* ✅ Reusable Sidebar */}
             <Sidebar
               sidebarOpen={sidebarOpen}
@@ -104,27 +105,26 @@ const ProjectTask = () => {
               {/* Projects Content */}
               <main className="flex-1 p-4 lg:p-6 overflow-auto space-y-6">
                 <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-2xl font-semibold text-gray-800">Projects</h2>
-                  <button onClick={() => navigate("/projects")} className="p-1 rounded hover:bg-gray-200">
-                    <Plus className="w-6 h-6 text-gray-600" />
-                    </button>
+                  <h2 className={`text-2xl font-semibold ${theme === "dark" ? "text-white" : "text-gray-800"}`}>Projects</h2>
+                  <button onClick={() => navigate("/projects")} className={`p-1 rounded ${theme === "dark" ? "hover:bg-gray-700" : "hover:bg-gray-200"}`}>
+                    <Plus className={`w-6 h-6 ${theme === "dark" ? "text-gray-300" : "text-gray-600"}`} />
+                  </button>
                 </div>
 
                 <div className="grid grid-cols-12 gap-6">
-                  {/* FIXED: Added col-span-4 to Tasks Card to properly display in grid */}
-                  <div className="col-span-12 lg:col-span-4 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                  {/* Tasks Card */}
+                  <div className={`col-span-12 lg:col-span-4 rounded-xl shadow-sm border p-6 ${theme === "dark" ? "bg-gray-800 border-gray-700 text-white" : "bg-white border-gray-200"}`}>
                     <div className="flex items-center justify-between mb-7">
-                      <h2 className="text-lg font-semibold text-gray-800">Project Status</h2>
-                      <select className="text-sm border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                      <h2 className={`text-lg font-semibold ${theme === "dark" ? "text-white" : "text-gray-800"}`}>Project Status</h2>
+                      <select className={`text-sm border rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 ${theme === "dark" ? "bg-gray-900 border-gray-700 text-white" : "border-gray-300"}`}>
                         <option>This Week</option>
                         <option>Last Week</option>
                         <option>This Month</option>
                       </select>
                     </div>
         
-                    {/* FIXED: Made pie chart centered and responsive */}
+                    {/* Pie Chart */}
                     <div className="flex flex-col lg:flex-row items-center justify-center h-auto lg:h-64 space-y-4 lg:space-y-0">
-                      {/* Pie Chart - Made responsive and centered */}
                       <div className="w-full lg:w-2/3 h-64">
                         <ResponsiveContainer width="100%" height="100%">
                           <PieChart>
@@ -163,7 +163,7 @@ const ProjectTask = () => {
                         </ResponsiveContainer>
                       </div>
           
-                      {/* Legend - Made responsive and centered */}
+                      {/* Legend */}
                       <div className="flex flex-col space-y-2 lg:ml-4">
                         {taskData.map((item, index) => (
                           <div key={index} className="flex items-center space-x-2">
@@ -171,18 +171,18 @@ const ProjectTask = () => {
                               className="w-3 h-3 rounded-full"
                               style={{ backgroundColor: item.color }}
                             ></div>
-                            <span className="text-sm text-gray-700">{item.name}</span>
+                            <span className={`text-sm ${theme === "dark" ? "text-gray-200" : "text-gray-700"}`}>{item.name}</span>
                           </div>
                         ))}
                       </div>
                     </div>
                   </div>
 
-                  {/* FIXED: Added col-span-4 to Performance Card to properly display in grid */}
-                  <div className="col-span-12 lg:col-span-4 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                  {/* Performance Card */}
+                  <div className={`col-span-12 lg:col-span-4 rounded-xl shadow-sm border p-6 ${theme === "dark" ? "bg-gray-800 border-gray-700 text-white" : "bg-white border-gray-200"}`}>
                     <div className="flex items-center justify-between mb-6">
-                      <h2 className="text-lg font-semibold text-gray-800">Performance</h2>
-                      <select className="text-sm border border-gray-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                      <h2 className={`text-lg font-semibold ${theme === "dark" ? "text-white" : "text-gray-800"}`}>Performance</h2>
+                      <select className={`text-sm border rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 ${theme === "dark" ? "bg-gray-900 border-gray-700 text-white" : "border-gray-300"}`}>
                         <option>This Week</option>
                         <option>Last Week</option>
                         <option>This Month</option>
@@ -191,15 +191,15 @@ const ProjectTask = () => {
                     <div className="h-64">
                       <ResponsiveContainer width="100%" height="100%">
                         <LineChart data={performanceData}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                          <CartesianGrid strokeDasharray="3 3" stroke={theme === "dark" ? "#333" : "#f0f0f0"} />
                           <XAxis 
                             dataKey="month" 
-                            tick={{ fontSize: 12 }}
-                            stroke="#6B7280"
+                            tick={{ fontSize: 12, fill: theme === "dark" ? "#fff" : "#6B7280" }}
+                            stroke={theme === "dark" ? "#fff" : "#6B7280"}
                           />
                           <YAxis 
-                            tick={{ fontSize: 12 }}
-                            stroke="#6B7280"
+                            tick={{ fontSize: 12, fill: theme === "dark" ? "#fff" : "#6B7280" }}
+                            stroke={theme === "dark" ? "#fff" : "#6B7280"}
                           />
                           <Tooltip />
                           <Line 
@@ -224,19 +224,19 @@ const ProjectTask = () => {
                     <div className="flex items-center justify-center space-x-6 mt-4">
                       <div className="flex items-center space-x-2">
                         <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                        <span className="text-sm text-gray-600">7 Projects Achieved</span>
+                        <span className={`text-sm ${theme === "dark" ? "text-gray-200" : "text-gray-600"}`}>7 Projects Achieved</span>
                       </div>
                       <div className="flex items-center space-x-2">
                         <div className="w-3 h-3 rounded-full bg-blue-500"></div>
-                        <span className="text-sm text-gray-600">5 Projects Target</span>
+                        <span className={`text-sm ${theme === "dark" ? "text-gray-200" : "text-gray-600"}`}>5 Projects Target</span>
                       </div>
                     </div>
                   </div>
 
-                  {/* Projects Grid Section - Takes 4 columns */}
-                  <div className="col-span-12 lg:col-span-4 bg-white p-5 rounded-lg shadow-sm">
+                  {/* Projects Grid Section */}
+                  <div className={`col-span-12 lg:col-span-4 p-5 rounded-lg shadow-sm ${theme === "dark" ? "bg-gray-800 text-white" : "bg-white"}`}>
                     <div className="flex items-center justify-between mb-5">
-                      <h3 className="text-base font-semibold text-gray-900">Projects</h3>
+                      <h3 className={`text-base font-semibold ${theme === "dark" ? "text-white" : "text-gray-900"}`}>Projects</h3>
                       <a href="#" className="text-sm text-blue-600 hover:text-blue-800">View all</a>
                     </div>
                     
@@ -250,31 +250,31 @@ const ProjectTask = () => {
                                project.name === 'Spooky Art' ? '👻' : ''}
                             </span>
                           </div>
-                          <p className="text-xs text-gray-600 truncate px-1">{project.name}</p>
+                          <p className={`text-xs truncate px-1 ${theme === "dark" ? "text-gray-300" : "text-gray-600"}`}>{project.name}</p>
                         </div>
                       ))}
                     </div>
                   </div>
                 </div>
 
-                {/* UI Developers Section - Full width below */}
-                <div className="mt-6 bg-white p-5 rounded-lg shadow-sm">
+                {/* UI Developers Section */}
+                <div className={`mt-6 p-5 rounded-lg shadow-sm ${theme === "dark" ? "bg-gray-800 text-white" : "bg-white"}`}>
                   <div className="flex items-center justify-between mb-5">
-                    <h3 className="text-base font-semibold text-gray-900">UI Developers (39)</h3>
+                    <h3 className={`text-base font-semibold ${theme === "dark" ? "text-white" : "text-gray-900"}`}>UI Developers (39)</h3>
                     <div className="flex items-center space-x-4">
                       <div className="relative">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                         <input
                           type="text"
                           placeholder="Search for anything..."
-                          className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 w-64 text-sm"
+                          className={`pl-10 pr-4 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 w-64 text-sm ${theme === "dark" ? "bg-gray-900 border-gray-700 text-white" : "border-gray-300"}`}
                         />
                       </div>
                       <a href="#" className="text-sm text-blue-600 hover:text-blue-800">View all</a>
                     </div>
                   </div>
 
-                  {/* Developers Grid - 3 rows of 7 */}
+                  {/* Developers Grid */}
                   <div className="grid grid-cols-7 gap-6 mb-6">
                     {developers.slice(0, 21).map((developer) => (
                       <div key={developer.id} className="text-center group cursor-pointer">
@@ -283,18 +283,18 @@ const ProjectTask = () => {
                             {developer.name.split(' ').map(n => n.charAt(0)).join('')}
                           </span>
                         </div>
-                        <p className="text-xs text-gray-600 truncate">{developer.name}</p>
+                        <p className={`text-xs truncate ${theme === "dark" ? "text-gray-300" : "text-gray-600"}`}>{developer.name}</p>
                       </div>
                     ))}
                   </div>
 
                   {/* Pagination */}
                   <div className="flex items-center justify-center space-x-1">
-                    <button className="px-3 py-1 text-sm text-gray-500 hover:text-gray-700">Previous</button>
+                    <button className={`px-3 py-1 text-sm ${theme === "dark" ? "text-gray-400 hover:text-gray-200" : "text-gray-500 hover:text-gray-700"}`}>Previous</button>
                     <button className="px-3 py-1 text-sm bg-blue-600 text-white rounded-md">1</button>
-                    <button className="px-3 py-1 text-sm text-gray-500 hover:text-gray-700">2</button>
-                    <button className="px-3 py-1 text-sm text-gray-500 hover:text-gray-700">3</button>
-                    <button className="px-3 py-1 text-sm text-gray-500 hover:text-gray-700">Next</button>
+                    <button className={`px-3 py-1 text-sm ${theme === "dark" ? "text-gray-400 hover:text-gray-200" : "text-gray-500 hover:text-gray-700"}`}>2</button>
+                    <button className={`px-3 py-1 text-sm ${theme === "dark" ? "text-gray-400 hover:text-gray-200" : "text-gray-500 hover:text-gray-700"}`}>3</button>
+                    <button className={`px-3 py-1 text-sm ${theme === "dark" ? "text-gray-400 hover:text-gray-200" : "text-gray-500 hover:text-gray-700"}`}>Next</button>
                   </div>
                 </div>
                   

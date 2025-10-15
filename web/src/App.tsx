@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import SignIn from './view_pages/manager/signIn';
 import SignUp from './view_pages/manager/signUp'; 
+
 import MainFrame from './view_pages/manager/mainFrame'; 
 import MainProjects from './view_pages/manager/projects_main'; 
 import Projects from './view_pages/manager/monitorProjects'; 
@@ -10,8 +11,8 @@ import CreateTask from './view_pages/manager/createTask';
 import Performance from './view_pages/manager/performance'; 
 import Settings from './view_pages/manager/settings';
 import WorkLogs from './view_pages/manager/workLogs';
-import AccountSettings from './view_pages/manager/accountSettings'; 
-import Notifications from './view_pages/manager/notifications'; 
+import AccountSettings from './view_pages/manager/settings_account'; 
+import Notifications from './view_pages/manager/settings_notification'; 
 
 {/* User Web Connections */}
 import UserFrame from './view_pages/user/userFrame';
@@ -19,6 +20,13 @@ import ProjectUser from './view_pages/user/monitorProjects_user';
 import PerformanceUser from './view_pages/user/performance_user';
 import TaskUser from './view_pages/user/viewTask_user';
 import KanbanUser from './view_pages/user/taskkanban_user';
+import SecuritySettings from './view_pages/manager/settings_security';
+import AppearanceSettings from './view_pages/manager/settings_appearance';
+import TeamSettings from './view_pages/manager/settings_team';
+import GeneralSettings from './view_pages/manager/settings';
+import ProjectDetails from './view_pages/user/projectsDetails'; 
+import SubTask from './view_pages/user/subTaskUser';
+import WorklogsUser from './view_pages/user/worklogsUser';
 
 const App: React.FC = () => {
   return (
@@ -41,13 +49,20 @@ const App: React.FC = () => {
         <Route path="/settings" element={<Settings />} />
         <Route path="/account-settings" element={<AccountSettings />} />
         <Route path="/notifications" element={<Notifications />} />
+        <Route path="/security" element={<SecuritySettings/> }/>
+        <Route path="/appearance" element={<AppearanceSettings/> }/>
+        <Route path="/team" element={<TeamSettings/> }/>
+        <Route path="/general" element={<GeneralSettings/> }/>
 
          {/* User routes */}
          <Route path="/user" element={<UserFrame />} />
         <Route path="/projects-user" element={<ProjectUser />} />
+        <Route path="/project-details" element={<ProjectDetails />} />
         <Route path="/performance-user" element={<PerformanceUser />} />
         <Route path="/task-user" element={<TaskUser />} />
+        <Route path="/subtask-user" element={<SubTask/>}/>
         <Route path="/kanban-user" element={<KanbanUser />} />
+        <Route path="/worklogs-user" element={<WorklogsUser/>}/>
         
         <Route path="*" element={<Navigate to="/signIn" replace />} />
       </Routes>

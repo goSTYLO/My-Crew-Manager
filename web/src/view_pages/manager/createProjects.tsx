@@ -1,15 +1,11 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import Sidebar from "../../components/sidebarLayout"; // <-- import Sidebar
+import { useState } from "react";
+import Sidebar from "../../components/sidebarLayout";
 import {
-    Search,
-    Bell,
-    Menu,
-    X,
     Plus,
     Minus,
 } from "lucide-react";
 import TopNavbar from "../../components/topbarLayouot";
+import { useTheme } from "../../components/themeContext"; // <-- import ThemeContext
 
 // Models (MVC Architecture)
 interface ProjectRole {
@@ -106,7 +102,8 @@ class ProjectController {
     }
 }
 
-const ProjectForm = ({ controller }: { controller: ProjectController }) => {
+const ProjectForm = ({ }: { controller: ProjectController }) => {
+    const { theme } = useTheme(); // <-- use theme
     const [formData, setFormData] = useState({
         title: 'Addodle',
         type: 'Type - I',
@@ -158,7 +155,7 @@ const ProjectForm = ({ controller }: { controller: ProjectController }) => {
         }
     };
 
-   // Split roles into columns (first column = 6, next columns = 7 each)
+    // Split roles into columns (first column = 6, next columns = 7 each)
     const rolesColumns: ProjectRole[][] = [];
     let startIndex = 0;
 
@@ -175,15 +172,15 @@ const ProjectForm = ({ controller }: { controller: ProjectController }) => {
     const renderRolesColumn = (roles: ProjectRole[], columnIndex: number) => (
         <div
             key={columnIndex}
-            className="max-w-md border border-gray-300 rounded-lg overflow-hidden"
+            className={`max-w-md border rounded-lg overflow-hidden ${theme === "dark" ? "border-gray-700 bg-gray-800" : "border-gray-300 bg-white"}`}
         >
             {/* Only show Team Lead + Add button on the FIRST column */}
             {columnIndex === 0 && (
-                <div className="bg-gray-50 px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+                <div className={`px-4 py-3 border-b flex items-center justify-between ${theme === "dark" ? "bg-gray-900 border-gray-700" : "bg-gray-50 border-gray-200"}`}>
                     <input
                         type="text"
                         placeholder="Team Lead"
-                        className="bg-transparent text-sm font-medium text-gray-700 placeholder-gray-700 border-none outline-none flex-1"
+                        className={`bg-transparent text-sm font-medium ${theme === "dark" ? "text-gray-200 placeholder-gray-400" : "text-gray-700 placeholder-gray-700"} border-none outline-none flex-1`}
                     />
                     <button
                         onClick={addTeamRole}
@@ -194,12 +191,12 @@ const ProjectForm = ({ controller }: { controller: ProjectController }) => {
                     </button>
                 </div>
             )}
-    
-            <div className="divide-y divide-gray-200">
+
+            <div className={`divide-y ${theme === "dark" ? "divide-gray-700" : "divide-gray-200"}`}>
                 {roles.map((role) => (
                     <div
                         key={role.id}
-                        className="px-4 py-3 flex items-center justify-between hover:bg-gray-50"
+                        className={`px-4 py-3 flex items-center justify-between hover:bg-gray-50 ${theme === "dark" ? "hover:bg-gray-900" : ""}`}
                     >
                         <div className="flex items-center space-x-3 flex-1">
                             <input
@@ -213,7 +210,7 @@ const ProjectForm = ({ controller }: { controller: ProjectController }) => {
                                         e.target.value
                                     )
                                 }
-                                className="text-sm text-gray-900 bg-transparent border-none outline-none min-w-0 flex-1 placeholder-gray-400"
+                                className={`text-sm bg-transparent border-none outline-none min-w-0 flex-1 ${theme === "dark" ? "text-gray-100 placeholder-gray-400" : "text-gray-900 placeholder-gray-400"}`}
                             />
                             <input
                                 type="text"
@@ -226,7 +223,7 @@ const ProjectForm = ({ controller }: { controller: ProjectController }) => {
                                         e.target.value
                                     )
                                 }
-                                className="text-sm text-gray-500 italic bg-transparent border-none outline-none min-w-0 flex-1 placeholder-gray-400"
+                                className={`text-sm italic bg-transparent border-none outline-none min-w-0 flex-1 ${theme === "dark" ? "text-gray-400 placeholder-gray-500" : "text-gray-500 placeholder-gray-400"}`}
                             />
                         </div>
                         <div className="flex items-center space-x-2 ml-3">
@@ -240,7 +237,7 @@ const ProjectForm = ({ controller }: { controller: ProjectController }) => {
                                         e.target.checked
                                     )
                                 }
-                                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 flex-shrink-0"
+                                className={`w-4 h-4 text-blue-600 rounded focus:ring-blue-500 flex-shrink-0 ${theme === "dark" ? "bg-gray-900 border-gray-700" : "border-gray-300"}`}
                             />
                             <button
                                 onClick={() => removeTeamRole(role.id)}
@@ -259,24 +256,24 @@ const ProjectForm = ({ controller }: { controller: ProjectController }) => {
 
 
     return (
-        <div className="bg-white rounded-lg border p-6 m-6">
+        <div className={`rounded-lg border p-6 m-6 ${theme === "dark" ? "bg-gray-800 border-gray-700 text-white" : "bg-white border-gray-300"}`}>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Project Title</label>
+                    <label className={`block text-sm font-medium mb-2 ${theme === "dark" ? "text-gray-200" : "text-gray-700"}`}>Project Title</label>
                     <input
                         type="text"
                         value={formData.title}
                         onChange={(e) => handleInputChange('title', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${theme === "dark" ? "bg-gray-900 border-gray-700 text-white" : "border-gray-300"}`}
                     />
                 </div>
                 
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Project Type</label>
+                    <label className={`block text-sm font-medium mb-2 ${theme === "dark" ? "text-gray-200" : "text-gray-700"}`}>Project Type</label>
                     <select
                         value={formData.type}
                         onChange={(e) => handleInputChange('type', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-100"
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${theme === "dark" ? "bg-gray-900 border-gray-700 text-white" : "bg-gray-100 border-gray-300"}`}
                     >
                         <option value="Type - I">Type - I</option>
                         <option value="Type - II">Type - II</option>
@@ -289,22 +286,22 @@ const ProjectForm = ({ controller }: { controller: ProjectController }) => {
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Start Date</label>
+                    <label className={`block text-sm font-medium mb-2 ${theme === "dark" ? "text-gray-200" : "text-gray-700"}`}>Start Date</label>
                     <input
                         type="text"
                         value={formData.startDate}
                         onChange={(e) => handleInputChange('startDate', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${theme === "dark" ? "bg-gray-900 border-gray-700 text-white" : "border-gray-300"}`}
                     />
                 </div>
                 
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">End Date</label>
+                    <label className={`block text-sm font-medium mb-2 ${theme === "dark" ? "text-gray-200" : "text-gray-700"}`}>End Date</label>
                     <input
                         type="text"
                         value={formData.endDate}
                         onChange={(e) => handleInputChange('endDate', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${theme === "dark" ? "bg-gray-900 border-gray-700 text-white" : "border-gray-300"}`}
                     />
                 </div>
 
@@ -312,17 +309,17 @@ const ProjectForm = ({ controller }: { controller: ProjectController }) => {
             </div>
 
             <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Project Description</label>
+                <label className={`block text-sm font-medium mb-2 ${theme === "dark" ? "text-gray-200" : "text-gray-700"}`}>Project Description</label>
                 <textarea
                     value={formData.description}
                     onChange={(e) => handleInputChange('description', e.target.value)}
                     rows={4}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${theme === "dark" ? "bg-gray-900 border-gray-700 text-white" : "border-gray-300"}`}
                 />
             </div>
 
             <div className="mb-6">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">Project Roles</h3>
+                <h3 className={`text-lg font-medium mb-4 ${theme === "dark" ? "text-white" : "text-gray-900"}`}>Project Roles</h3>
                 <div className="flex flex-wrap gap-6">
                     {rolesColumns.map((columnRoles, columnIndex) => 
                         renderRolesColumn(columnRoles, columnIndex)
@@ -333,7 +330,7 @@ const ProjectForm = ({ controller }: { controller: ProjectController }) => {
             <div className="flex justify-end space-x-3">
                 <button
                     onClick={handleDelete}
-                    className="px-6 py-2 text-blue-600 bg-white border border-blue-600 rounded-md hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className={`px-6 py-2 text-blue-600 border rounded-md hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 ${theme === "dark" ? "bg-gray-900 border-gray-700 text-blue-400 hover:bg-gray-700" : "bg-white border-blue-600"}`}
                 >
                     Delete
                 </button>
@@ -351,12 +348,11 @@ const ProjectForm = ({ controller }: { controller: ProjectController }) => {
 const CreateProject = () => {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [projectModel] = useState(() => new ProjectModel());
-    const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
     const [projectController] = useState(() => new ProjectController(projectModel));
-
+    const { theme } = useTheme(); // <-- use theme
 
     return (
-        <div className="flex h-screen bg-gray-50">
+        <div className={`flex min-h-screen w-screen ${theme === "dark" ? "bg-gray-900" : "bg-gray-50"}`}>
             {/* ✅ Reusable Sidebar */}
             <Sidebar
                 sidebarOpen={sidebarOpen}
@@ -371,7 +367,7 @@ const CreateProject = () => {
                 {/* Main Content Area */}
                 <main className="flex-1 p-6">
                     <div className="flex items-center justify-between mb-6">
-                        <h2 className="text-2xl font-semibold text-gray-800">Projects / Create Project</h2>
+                        <h2 className={`text-2xl font-semibold ${theme === "dark" ? "text-white" : "text-gray-800"}`}>Projects / Create Project</h2>
                     </div>    
                     <ProjectForm controller={projectController} />  
                 </main>

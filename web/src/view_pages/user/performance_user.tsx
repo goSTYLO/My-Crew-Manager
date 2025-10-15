@@ -1,15 +1,12 @@
 import React, { useState } from "react";
 import { useNavigate } from 'react-router-dom';
 import Sidebar from "../../components/sidebarUser"; // <-- import Sidebar
-import { 
-  Search, 
-  Bell, 
+import TopNavbar from "../../components/topbarLayout_user";
+import {
   FolderOpen, 
   CheckSquare, 
   Clock, 
   TrendingUp,
-  Menu,
-  X,
   MessageSquareText
 } from 'lucide-react';
 import { 
@@ -46,119 +43,25 @@ const performanceData = [
 // Main Performance Component
 const Performance = () => {
     const [sidebarOpen, setSidebarOpen] = useState(false);
-    const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-    const navigate = useNavigate();
   
   
   return (
         <div className="flex h-screen bg-gray-50">
-        {/* Logout Confirmation Modal */}
-        {showLogoutConfirm && (
-            <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-[999]">
-            <div className="bg-white rounded-xl shadow-lg p-6 w-96">
-                <h2 className="text-lg font-semibold text-gray-800 mb-4">
-                Are you sure you want to logout?
-                </h2>
-                <div className="flex justify-end space-x-3">
-                <button
-                    onClick={() => setShowLogoutConfirm(false)}
-                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
-                >
-                    Cancel
-                </button>
-                <button
-                    onClick={() => navigate('/signIn')}
-                    className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
-                >
-                    Logout
-                </button>
-                </div>
-            </div>
-            </div>
-        )}
-            
-            {/* Sidebar Overlay */}
-            <div
-                className={`fixed inset-0 z-50 flex transition-opacity duration-300 ${
-                    sidebarOpen ? "opacity-100 visible" : "opacity-0 invisible"
-                }`}
-            >
-                {/* Background overlay */}
-                <div
-                    className="fixed inset-0 bg-black opacity-50"
-                    onClick={() => setSidebarOpen(false)}
-                />
+            {/* ✅ Reusable Sidebar */}
+            <Sidebar
+                sidebarOpen={sidebarOpen}
+                setSidebarOpen={setSidebarOpen}
+            />
 
-                {/* Sidebar panel */}
-                <div
-                    className={`relative flex flex-col w-64 bg-white transform transition-transform duration-300 ${
-                        sidebarOpen ? "translate-x-0" : "-translate-x-full"
-                    }`}
-                >
-                    <div className="absolute top-4 right-4">
-                        <button
-                            onClick={() => setSidebarOpen(false)}
-                            className="p-2 text-gray-500"
-                            aria-label="Close sidebar"
-                        >
-                            <X className="w-6 h-6" />
-                        </button>
-                    </div>
-                    <Sidebar onLogout={()=> setShowLogoutConfirm(true)}/>
-                </div>
+            {/* Top Navbar */}
+            <div className="fixed top-0 left-0 right-0 z-100">
+                <TopNavbar onMenuClick={() => setSidebarOpen(true)} />
             </div>
 
             {/* Main Content */}
             <div className="flex-1 flex flex-col min-w-0">
-                {/* Top Navbar */}
-                <header className="bg-white shadow-sm border-b border-gray-200 px-4 lg:px-6 py-4">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-4">
-                            <button
-                                className="p-2 text-gray-500 hover:text-gray-700"
-                                onClick={() => setSidebarOpen(true)}
-                                aria-label="Open sidebar"
-                            >
-                                <Menu className="w-6 h-6" />
-                            </button>
-                            <h1 className="text-2xl font-semibold text-gray-800">
-                                MyCrewManager
-                            </h1>
-                        </div>
-
-                        <div className="flex items-center space-x-4">
-                            {/* Search Bar */}
-                            <div className="block relative">
-                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                                <input
-                                    type="text"
-                                    placeholder="Search for anything..."
-                                    className="pl-10 pr-4 py-2 w-[300px] md:w-[500px] border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                />
-                            </div>
-
-                            {/* Notifications */}
-                            <button
-                                className="p-2 text-gray-500 hover:text-gray-700 relative -ml-2"
-                                aria-label="Notifications"
-                            >
-                                <Bell className="w-6 h-6" />
-                                <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full"></span>
-                            </button>
-
-                            {/* User Profile */}
-                            <div className="flex items-center space-x-3">
-                                <div className="sm:block">
-                                    <p className="text-sm font-medium text-gray-800">Kitkat</p>
-                                    <p className="text-xs text-gray-500">Philippines</p>
-                                </div>
-                                <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white font-medium">
-                                    KK
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </header>
+                {/* ✅ Shared Navbar */}
+                <TopNavbar onMenuClick={() => setSidebarOpen(true)} />
 
                 {/* Main Content Area */}
                 <main className="flex-1 p-6 overflow-auto">

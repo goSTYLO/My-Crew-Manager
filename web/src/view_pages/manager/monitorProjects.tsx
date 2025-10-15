@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Sidebar from "../../components/sidebarLayout"; // <-- import Sidebar
+import Sidebar from "../../components/sidebarLayout";
 import TopNavbar from '../../components/topbarLayouot';
+import { useTheme } from "../../components/themeContext"; // <-- import ThemeContext
 
-   
 const Projects = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const navigate = useNavigate();
-  
+  const { theme } = useTheme(); // <-- use theme
 
   // Members data (example)
   const members = [
@@ -22,11 +22,9 @@ const Projects = () => {
     { name: 'Henry', avatar: 'https://i.pravatar.cc/150?img=8' },
   ];
 
-
   // Members component
   const Members = ({ members }: { members: { name: string; avatar: string }[] }) => (
     <div className="flex items-center -space-x-3 mt-2">
-      {/* Show up to 3 member avatars */}
       {members.slice(0, 4).map((member, index) => (
         <img
           key={index}
@@ -35,8 +33,6 @@ const Projects = () => {
           alt={member.name}
         />
       ))}
-
-      {/* If there are more than 3 members, show a circle with "+N" */}
       {members.length > 4 && (
         <div className="w-8 h-8 rounded-full border-2 border-white bg-red-100 flex items-center justify-center text-xs font-medium text-red-500">
           +{members.length - 4}
@@ -45,43 +41,42 @@ const Projects = () => {
     </div>
   );
 
-
   return (
-    <div className="flex h-screen bg-gray-50">
-        {/* ✅ Reusable Sidebar */}
-        <Sidebar
-          sidebarOpen={sidebarOpen}
-          setSidebarOpen={setSidebarOpen}
-        />
+    <div className={`flex h-screen ${theme === "dark" ? "bg-gray-900" : "bg-gray-50"}`}>
+      {/* Sidebar */}
+      <Sidebar
+        sidebarOpen={sidebarOpen}
+        setSidebarOpen={setSidebarOpen}
+      />
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* ✅ Shared Navbar */}
         <TopNavbar onMenuClick={() => setSidebarOpen(true)} />
 
-        {/* Projects Content */}
         <main className="flex-1 p-4 lg:p-6 overflow-auto space-y-6">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-semibold text-gray-800">Projects</h2>
-            {/* Right side: files info */}
-              <div className="flex items-center space-x-10">
-                <button onClick={() => navigate("/create-project")} className="px-14 py-3 bg-white text-black text-sm font-medium border border-gray-300 rounded-lg shadow hover:text-white hover:bg-blue-500 transition-colors">Create</button>
-              </div>
-        </div>
-          {/* Row 1: Projects + Tasks */}
+          <div className="flex items-center justify-between mb-6">
+            <h2 className={`text-2xl font-semibold ${theme === "dark" ? "text-white" : "text-gray-800"}`}>Projects</h2>
+            <div className="flex items-center space-x-10">
+              <button
+                onClick={() => navigate("/create-project")}
+                className={`px-14 py-3 ${theme === "dark" ? "bg-gray-800 text-white border-gray-700 hover:bg-blue-600 hover:text-white" : "bg-white text-black border border-gray-300 hover:bg-blue-500 hover:text-white"} text-sm font-medium border rounded-lg shadow transition-colors`}
+              >
+                Create
+              </button>
+            </div>
+          </div>
           <div className="grid grid-cols-3 lg:grid-cols-3 gap-6">
-            
-            {/* Projects Card 1 */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className={`${theme === "dark" ? "bg-gray-800 border-gray-700 text-white" : "bg-white border-gray-200"} rounded-xl shadow-sm border p-6`}>
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-2">
-                  <h2 className="text-lg font-semibold text-gray-800 cursor-pointer hover:text-blue-500"
-                      onClick={() => navigate("/project-task")}
-                    >
-                      Adoddle
-                    </h2>
+                  <h2
+                    className={`text-lg font-semibold cursor-pointer hover:text-blue-500 ${theme === "dark" ? "text-white" : "text-gray-800"}`}
+                    onClick={() => navigate("/project-task")}
+                  >
+                    Adoddle
+                  </h2>
                   <button
-                    className="text-gray-500 hover:text-blue-500 transition-colors"
+                    className={`transition-colors ${theme === "dark" ? "text-gray-400 hover:text-blue-400" : "text-gray-500 hover:text-blue-500"}`}
                     title="Edit Project"
                   >
                     <svg
@@ -107,10 +102,8 @@ const Projects = () => {
                     </svg>
                   </button>
                 </div>
-
-                {/* Right side: offtrack */}
                 <div className="flex items-center space-x-2">
-                  <button className="px-4 py-2 bg-white text-black text-sm font-medium border border-gray-300 rounded-lg shadow hover:text-red-600 hover:bg-red-200 transition-colors">
+                  <button className={`px-4 py-2 text-sm font-medium rounded-lg shadow transition-colors ${theme === "dark" ? "bg-gray-900 text-white border border-gray-700 hover:bg-red-600 hover:text-white" : "bg-white text-black border border-gray-300 hover:bg-red-200 hover:text-red-600"}`}>
                     Offtrack
                   </button>
                 </div>
@@ -121,21 +114,15 @@ const Projects = () => {
 
               {/* Projects Wrapper */}
               <div className="rounded-xl p-4 bg-transparent">
-                {/* Project Description Only */}
                 <div className="rounded-xl p-4 bg-transparent">
-                  <p className="text-black-600 text-medium leading-relaxed">
+                  <p className={`${theme === "dark" ? "text-gray-300" : "text-black-600"} text-medium leading-relaxed`}>
                     Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod
                     tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim
                     veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea
                     commodo consequat.
                   </p>
-
-                  {/* Footer: Date + Members (left) and Issues (right) */}
                   <div className="flex justify-between items-end mt-12">
-                    {/* Left side */}
                     <div className="flex flex-col gap-2">
-
-                      {/* Hourglass + Date on the same row */}
                       <div className="flex items-center gap-2">
                         {/* Hourglass End Icon with bottom filled */}
                           <svg
@@ -172,16 +159,11 @@ const Projects = () => {
                       {/* Members below the date */}
                       <Members members={members} />
                     </div>
-
-                    {/* Right side */}
-                    <div>
-                      <p className="font-medium">14 issues</p>
-                    </div>
+                    <Members members={members} />
                   </div>
                 </div>
               </div>
             </div>
-            
           </div>
         </main>
       </div>
