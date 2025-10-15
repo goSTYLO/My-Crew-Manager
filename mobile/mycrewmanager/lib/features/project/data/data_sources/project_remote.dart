@@ -70,6 +70,60 @@ class ProjectRemoteDataSource {
     return tasks;
   }
 
+  // === AI API integrations ===
+  Future<Map<String, dynamic>> uploadProposal({
+    required int projectId,
+    required String filePath,
+  }) async {
+    final formData = FormData.fromMap({
+      'project_id': projectId,
+      'file': await MultipartFile.fromFile(filePath, filename: filePath.split('/').last),
+    });
+    final response = await dio.post('ai/proposals/', data: formData);
+    return response.data as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> ingestProposal({
+    required int projectId,
+    required int proposalId,
+    String? titleOverride,
+  }) async {
+    final path = 'ai/projects/$projectId/ingest-proposal/$proposalId/';
+    final response = await dio.put(path, data: {
+      if (titleOverride != null) 'title': titleOverride,
+    });
+    return response.data as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> generateBacklog(int projectId) async {
+    final response = await dio.put('ai/projects/$projectId/generate-backlog/');
+    return response.data as Map<String, dynamic>;
+  }
+
+  Future<void> patchProject({
+    required int projectId,
+    String? title,
+    String? summary,
+  }) async {
+    await dio.patch('ai/projects/$projectId/', data: {
+      if (title != null) 'title': title,
+      if (summary != null) 'summary': summary,
+    });
+  }
+
+  Future<Map<String, dynamic>> addProjectMember({
+    required int projectId,
+    required String email,
+    required String role,
+  }) async {
+    final response = await dio.post('ai/project-members/', data: {
+      'project': projectId,
+      'user_email': email,
+      'role': role,
+    });
+    return response.data as Map<String, dynamic>;
+  }
+
   Future<MemberModel> createMember({
     required String name,
     required String role,
