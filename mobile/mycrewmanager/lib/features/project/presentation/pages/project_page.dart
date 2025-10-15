@@ -30,7 +30,7 @@ class _ProjectPageState extends State<ProjectPage> {
               tooltip: 'Notifications',
             ),
           ],
-          bottom: const TabBar(
+          bottom: const TabBar( 
             labelColor: Colors.blue,
             unselectedLabelColor: Colors.black54,
             indicatorColor: Colors.blue,
