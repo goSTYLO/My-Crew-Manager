@@ -89,10 +89,11 @@ class UserStorySerializer(serializers.ModelSerializer):
 
 class StoryTaskSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(read_only=True)
+    assignee = serializers.PrimaryKeyRelatedField(queryset=ProjectMember.objects.all(), required=False, allow_null=True)
 
     class Meta:
         model = StoryTask
-        fields = ['id', 'user_story', 'title', 'status', 'ai']
+        fields = ['id', 'user_story', 'title', 'status', 'ai', 'assignee']
 
 
 class ProjectMemberSerializer(serializers.ModelSerializer):

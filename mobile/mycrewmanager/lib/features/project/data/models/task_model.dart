@@ -7,6 +7,8 @@ class TaskModel extends ProjectTask {
     required super.status,
     required super.userStoryId,
     required super.isAi,
+    super.assigneeId,
+    super.assigneeName,
   });
 
   factory TaskModel.fromJson(Map<String, dynamic> json) {
@@ -16,6 +18,8 @@ class TaskModel extends ProjectTask {
       status: json['status'] ?? 'pending',
       userStoryId: json['user_story'] ?? 0,
       isAi: json['ai'] ?? false,
+      assigneeId: json['assignee'] is Map ? (json['assignee']['id'] as int?) : (json['assignee'] as int?),
+      assigneeName: json['assignee'] is Map ? ((json['assignee']['user_name'] ?? json['assignee']['user_email']) as String?) : null,
     );
   }
 
@@ -26,6 +30,7 @@ class TaskModel extends ProjectTask {
       'status': status,
       'user_story': userStoryId,
       'ai': isAi,
+      'assignee': assigneeId,
     };
   }
 
@@ -42,6 +47,8 @@ class TaskModel extends ProjectTask {
       status: status ?? this.status,
       userStoryId: userStoryId ?? this.userStoryId,
       isAi: isAi ?? this.isAi,
+      assigneeId: assigneeId ?? this.assigneeId,
+      assigneeName: assigneeName ?? this.assigneeName,
     );
   }
 }

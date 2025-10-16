@@ -4,6 +4,8 @@ class ProjectTask {
   final String status;
   final int userStoryId;
   final bool isAi;
+  final int? assigneeId;
+  final String? assigneeName;
 
   ProjectTask({
     required this.id,
@@ -11,6 +13,8 @@ class ProjectTask {
     required this.status,
     required this.userStoryId,
     required this.isAi,
+    this.assigneeId,
+    this.assigneeName,
   });
 }
 

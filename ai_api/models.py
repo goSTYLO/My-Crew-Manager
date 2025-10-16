@@ -71,6 +71,7 @@ class StoryTask(models.Model):
     title = models.CharField(max_length=512)
     status = models.CharField(max_length=50, default='pending')
     ai = models.BooleanField(default=True)
+    assignee = models.ForeignKey('ProjectMember', on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_tasks')
 
 
 class ProjectMember(models.Model):

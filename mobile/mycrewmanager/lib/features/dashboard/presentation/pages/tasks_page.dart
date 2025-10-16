@@ -366,13 +366,14 @@ class _TasksPageState extends State<TasksPage> with SingleTickerProviderStateMix
               itemCount: filtered.length,
               itemBuilder: (context, i) {
                 final t = filtered[i];
+                final assigneeLabel = t.assigneeName ?? 'Unassigned';
                 return _TaskCard(
                   title: t.title,
-                  subtitle: "Task ID: ${t.id}",
+                  subtitle: assigneeLabel,
                   status: t.status,
                   icon: Icons.task_alt,
                   iconColor: t.status == 'completed' ? Colors.green : Colors.blue,
-                  members: [], // No members data in current Task model
+                  members: [],
                   progress: t.status == 'completed' ? 1.0 : 0.0,
                   onTap: () {
                     Navigator.of(context).push(TaskOverviewPage.route());

@@ -100,6 +100,20 @@ class ProjectRemoteDataSource {
     return response.data as Map<String, dynamic>;
   }
 
+  Future<int> bulkAssignTasks(List<Map<String, dynamic>> assignments) async {
+    final response = await dio.post('ai/story-tasks/bulk-assign/', data: {
+      'assignments': assignments,
+    });
+    final data = response.data as Map<String, dynamic>;
+    return (data['updated'] as num?)?.toInt() ?? 0;
+  }
+
+  Future<List<String>> getProjectRoles(int projectId) async {
+    final response = await dio.get('ai/project-roles/', queryParameters: {'project_id': projectId});
+    final List<dynamic> data = response.data;
+    return data.map((e) => (e['role'] ?? '').toString()).where((s) => s.isNotEmpty).toList();
+  }
+
   Future<void> patchProject({
     required int projectId,
     String? title,

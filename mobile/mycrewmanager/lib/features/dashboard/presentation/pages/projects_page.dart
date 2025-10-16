@@ -8,7 +8,7 @@ import 'package:mycrewmanager/features/dashboard/presentation/pages/notification
 import 'package:mycrewmanager/features/dashboard/presentation/pages/settings_page.dart';
 import 'package:mycrewmanager/features/authentication/presentation/pages/login_page.dart';
 import 'package:mycrewmanager/features/dashboard/presentation/pages/project_overview_page.dart';
-import 'package:mycrewmanager/features/project/presentation/pages/project_page.dart';
+import 'package:mycrewmanager/features/project/presentation/pages/create_project_simple_page.dart';
 import 'package:mycrewmanager/features/dashboard/widgets/filter_widget.dart';
 import 'package:mycrewmanager/features/dashboard/widgets/modifyproject_widget.dart';
 import 'package:mycrewmanager/features/project/presentation/bloc/project_bloc.dart';
@@ -283,7 +283,7 @@ class _ProjectsPageState extends State<ProjectsPage> {
                     backgroundColor: Colors.blue,
                     child: const Icon(Icons.add, color: Colors.white, size: 32),
                     onPressed: () {
-                      Navigator.push(context, ProjectPage.route());
+                      Navigator.push(context, CreateProjectSimplePage.route());
                     },
                   ),
                 ),

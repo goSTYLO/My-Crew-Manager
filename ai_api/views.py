@@ -156,7 +156,23 @@ class ProjectViewSet(ModelViewSet):
             for se in e.sub_epics.all().order_by('id'):
                 user_stories = []
                 for us in se.user_stories.all().order_by('id'):
-                    tasks = list(us.tasks.all().order_by('id').values('id', 'title', 'status', 'ai'))
+                    tasks = []
+                    for t in us.tasks.all().order_by('id'):
+                        assignee = t.assignee
+                        tasks.append({
+                            'id': t.id,
+                            'title': t.title,
+                            'status': t.status,
+                            'ai': t.ai,
+                            'assignee': (
+                                {
+                                    'id': assignee.id,
+                                    'user_name': getattr(assignee, 'user_name', None),
+                                    'user_email': getattr(assignee, 'user_email', None),
+                                }
+                                if assignee is not None else None
+                            ),
+                        })
                     user_stories.append({
                         'id': us.id,
                         'title': us.title,
@@ -359,6 +375,41 @@ class StoryTaskViewSet(ModelViewSet):
                 {"error": str(e)},
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+    @action(detail=False, methods=["post"], url_path="bulk-assign")
+    def bulk_assign(self, request):
+        try:
+            assignments = request.data.get('assignments', [])
+            if not isinstance(assignments, list):
+                return Response({"error": "assignments must be a list"}, status=status.HTTP_400_BAD_REQUEST)
+
+            updated = 0
+            for item in assignments:
+                task_id = item.get('task_id')
+                assignee_id = item.get('assignee_id')
+                if not task_id:
+                    continue
+                try:
+                    task = StoryTask.objects.get(id=task_id)
+                except StoryTask.DoesNotExist:
+                    continue
+                if assignee_id is None:
+                    task.assignee = None
+                else:
+                    try:
+                        member = ProjectMember.objects.get(id=assignee_id)
+                    except ProjectMember.DoesNotExist:
+                        continue
+                    # Optional: ensure member belongs to same project
+                    if member.project_id != task.user_story.sub_epic.epic.project_id:
+                        continue
+                    task.assignee = member
+                task.save(update_fields=["assignee"])
+                updated += 1
+
+            return Response({"updated": updated}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
     def destroy(self, request, *args, **kwargs):
         try:
