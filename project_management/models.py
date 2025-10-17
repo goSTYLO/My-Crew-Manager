@@ -17,8 +17,15 @@ class Team(models.Model):
         db_table = 'team'
 
 class Project(models.Model):
+    TYPE_CHOICES = [
+        ('Type - I', 'Type - I'),
+        ('Type - II', 'Type - II'),
+        ('Type - III', 'Type - III'),
+    ]
+    
     project_id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=255)
+    project_type = models.CharField(max_length=20, choices=TYPE_CHOICES, default='Type - I')
     description = models.TextField(blank=True, null=True)
     start_date = models.DateField()
     end_date = models.DateField()

@@ -4,6 +4,62 @@ from .models import Team, Project, Sprint, Task, MoodCheckIn, Commit, Report, Te
 
 User = get_user_model()
 
+# Serializer for Project Roles (nested within ProjectCreateSerializer)
+class ProjectRoleSerializer(serializers.Serializer):
+    id = serializers.CharField(required=False)
+    name = serializers.CharField(max_length=255)
+    role = serializers.CharField(max_length=255)
+    is_selected = serializers.BooleanField(default=False)
+
+# Frontend-specific Project serializer for create/update operations
+class ProjectCreateSerializer(serializers.ModelSerializer):
+    title = serializers.CharField(source='name', max_length=255)  # Map title to name
+    type = serializers.CharField(source='project_type', max_length=20)  # Map type to project_type
+    startDate = serializers.DateField(source='start_date')  # Map startDate to start_date
+    endDate = serializers.DateField(source='end_date')  # Map endDate to end_date
+    roles = ProjectRoleSerializer(many=True, write_only=True, required=False)
+
+    class Meta:
+        model = Project
+        fields = ['project_id', 'title', 'type', 'description', 'startDate', 'endDate', 'roles']
+        read_only_fields = ['project_id']
+
+    def create(self, validated_data):
+        # Remove roles from validated_data as it's not a model field
+        roles_data = validated_data.pop('roles', [])
+        
+        # Create a default team for the project (if not provided)
+        team, _ = Team.objects.get_or_create(
+            name=f"Team {validated_data['name']}",
+            defaults={'name': f"Team {validated_data['name']}"}
+        )
+        validated_data['team'] = team
+        
+        # Create the project
+        project = Project.objects.create(**validated_data)
+        
+        # TODO: Handle roles creation if needed (create separate ProjectRole model)
+        # For now, we'll just store the basic project info
+        
+        return project
+
+    def to_representation(self, instance):
+        # Return data in frontend format
+        return {
+            'project_id': instance.project_id,
+            'title': instance.name,
+            'name': instance.name,  # Also include for compatibility
+            'type': instance.project_type,
+            'project_type': instance.project_type,  # Also include for compatibility
+            'description': instance.description,
+            'startDate': instance.start_date,
+            'start_date': instance.start_date,  # Also include for compatibility
+            'endDate': instance.end_date,
+            'end_date': instance.end_date,  # Also include for compatibility
+            'roles': [],  # TODO: Include actual roles when ProjectRole model is created
+            'project_roles': [],  # Also include for compatibility
+        }
+
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
@@ -37,7 +93,7 @@ class ProjectSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Project
-        fields = ['project_id', 'name', 'description', 'start_date', 'end_date', 'team', 'team_name', 'sprint_count', 'created_at', 'updated_at']
+        fields = ['project_id', 'name', 'project_type', 'description', 'start_date', 'end_date', 'team', 'team_name', 'sprint_count', 'created_at', 'updated_at']
         read_only_fields = ['project_id', 'created_at', 'updated_at']
 
     def get_sprint_count(self, obj):
