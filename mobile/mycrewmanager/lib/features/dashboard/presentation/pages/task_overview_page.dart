@@ -1,9 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:mycrewmanager/features/project/domain/entities/task.dart';
+import 'package:mycrewmanager/features/project/domain/usecases/update_task_status.dart';
+import 'package:mycrewmanager/init_dependencies.dart';
 
 class TaskOverviewPage extends StatefulWidget {
-  const TaskOverviewPage({super.key});
+  final ProjectTask task;
+  
+  const TaskOverviewPage({super.key, required this.task});
 
-  static Route<Object?> route() => MaterialPageRoute(builder: (_) => const TaskOverviewPage());
+  static Route<Object?> route(ProjectTask task) => MaterialPageRoute(
+    builder: (_) => TaskOverviewPage(task: task)
+  );
 
   @override
   State<TaskOverviewPage> createState() => _TaskOverviewPageState();
@@ -11,6 +18,38 @@ class TaskOverviewPage extends StatefulWidget {
 
 class _TaskOverviewPageState extends State<TaskOverviewPage> {
   String search = '';
+  late ProjectTask currentTask;
+  final UpdateTaskStatus _updateTaskStatus = serviceLocator<UpdateTaskStatus>();
+
+  @override
+  void initState() {
+    super.initState();
+    currentTask = widget.task;
+  }
+
+  Future<void> _markTaskAsComplete() async {
+    final result = await _updateTaskStatus(UpdateTaskStatusParams(
+      taskId: currentTask.id,
+      status: 'completed',
+    ));
+
+    result.fold(
+      (failure) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to update task: ${failure.message}')),
+        );
+      },
+      (updatedTask) {
+        setState(() {
+          currentTask = updatedTask;
+        });
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Task marked as complete!')),
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -134,9 +173,9 @@ class _TaskOverviewPageState extends State<TaskOverviewPage> {
                               ),
                               const SizedBox(height: 18),
                               // Task title
-                              const Text(
-                                "Implementing Mobile App Pages",
-                                style: TextStyle(
+                              Text(
+                                currentTask.title,
+                                style: const TextStyle(
                                   fontWeight: FontWeight.w700,
                                   fontSize: 20,
                                   color: Colors.black,
@@ -144,9 +183,9 @@ class _TaskOverviewPageState extends State<TaskOverviewPage> {
                               ),
                               const SizedBox(height: 8),
                               // Task description
-                              const Text(
-                                "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
-                                style: TextStyle(
+                              Text(
+                                "This task is part of the project backlog and needs to be completed according to the project requirements.",
+                                style: const TextStyle(
                                   fontSize: 14,
                                   color: Colors.black54,
                                 ),
@@ -194,15 +233,29 @@ class _TaskOverviewPageState extends State<TaskOverviewPage> {
                               ),
                               const SizedBox(height: 10),
                               Row(
-                                children: const [
-                                  Text(
+                                children: [
+                                  const Text(
                                     "Status:",
                                     style: TextStyle(fontWeight: FontWeight.w500, color: Colors.black54),
                                   ),
-                                  SizedBox(width: 8),
-                                  Text(
-                                    "TO DO",
-                                    style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black),
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: currentTask.status.toLowerCase() == 'completed' 
+                                          ? Colors.green.withOpacity(0.15)
+                                          : Colors.blue.withOpacity(0.15),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      currentTask.status.toUpperCase(),
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w600, 
+                                        color: currentTask.status.toLowerCase() == 'completed' 
+                                            ? Colors.green 
+                                            : Colors.blue,
+                                      ),
+                                    ),
                                   ),
                                 ],
                               ),
@@ -254,49 +307,87 @@ class _TaskOverviewPageState extends State<TaskOverviewPage> {
                               Row(
                                 crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
-                                  Text(
-                                    "Assignee",
+                                  const Text(
+                                    "Assignee:",
                                     style: TextStyle(fontWeight: FontWeight.w500, color: Colors.black54),
                                   ),
-                                  SizedBox(width: 8),
-                                  CircleAvatar(
-                                    radius: 16,
-                                    backgroundImage: NetworkImage('https://randomuser.me/api/portraits/women/22.jpg'),
-                                  ),
-                                  SizedBox(width: 6),
-                                  Text(
-                                    "Angel Kimberly",
-                                    style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black),
-                                  ),
+                                  const SizedBox(width: 8),
+                                  if (currentTask.assigneeName != null) ...[
+                                    CircleAvatar(
+                                      radius: 16,
+                                      backgroundColor: Colors.blue.withOpacity(0.1),
+                                      child: Text(
+                                        currentTask.assigneeName!.substring(0, 1).toUpperCase(),
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.blue,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      currentTask.assigneeName!,
+                                      style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.black),
+                                    ),
+                                  ] else ...[
+                                    const Text(
+                                      "Unassigned",
+                                      style: TextStyle(fontWeight: FontWeight.w600, color: Colors.grey),
+                                    ),
+                                  ],
                                 ],
                               ),
                               const SizedBox(height: 24),
-                              // Mark as Completed Button
-                              SizedBox(
-                                width: double.infinity,
-                                child: ElevatedButton(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.blue,
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(vertical: 16),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(10),
+                              // Mark as Completed Button (only show for pending tasks)
+                              if (currentTask.status.toLowerCase() == 'pending') ...[
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: ElevatedButton(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.green,
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(vertical: 16),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
                                     ),
-                                  ),
-                                  onPressed: () {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('Task marked as completed!')),
-                                    );
-                                  },
-                                  child: const Text(
-                                    "Mark as Completed",
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 16,
+                                    onPressed: _markTaskAsComplete,
+                                    child: const Text(
+                                      "Mark as Complete",
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 16,
+                                      ),
                                     ),
                                   ),
                                 ),
-                              ),
+                              ] else ...[
+                                // Show completion status for completed tasks
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                  decoration: BoxDecoration(
+                                    color: Colors.green.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(color: Colors.green.withOpacity(0.3)),
+                                  ),
+                                  child: const Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.check_circle, color: Colors.green, size: 20),
+                                      SizedBox(width: 8),
+                                      Text(
+                                        "Task Completed",
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 16,
+                                          color: Colors.green,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
                         ),

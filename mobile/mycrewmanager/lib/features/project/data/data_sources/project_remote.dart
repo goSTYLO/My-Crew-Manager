@@ -100,6 +100,13 @@ class ProjectRemoteDataSource {
     return response.data as Map<String, dynamic>;
   }
 
+  Future<TaskModel> updateTaskStatus(int taskId, String status) async {
+    final response = await dio.patch('ai/story-tasks/$taskId/', data: {
+      'status': status,
+    });
+    return TaskModel.fromJson(response.data);
+  }
+
   Future<int> bulkAssignTasks(List<Map<String, dynamic>> assignments) async {
     final response = await dio.post('ai/story-tasks/bulk-assign/', data: {
       'assignments': assignments,

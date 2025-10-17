@@ -90,10 +90,20 @@ class UserStorySerializer(serializers.ModelSerializer):
 class StoryTaskSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(read_only=True)
     assignee = serializers.PrimaryKeyRelatedField(queryset=ProjectMember.objects.all(), required=False, allow_null=True)
+    assignee_details = serializers.SerializerMethodField()
 
     class Meta:
         model = StoryTask
-        fields = ['id', 'user_story', 'title', 'status', 'ai', 'assignee']
+        fields = ['id', 'user_story', 'title', 'status', 'ai', 'assignee', 'assignee_details']
+
+    def get_assignee_details(self, obj):
+        if obj.assignee:
+            return {
+                'id': obj.assignee.id,
+                'user_name': obj.assignee.user_name,
+                'user_email': obj.assignee.user_email,
+            }
+        return None
 
 
 class ProjectMemberSerializer(serializers.ModelSerializer):

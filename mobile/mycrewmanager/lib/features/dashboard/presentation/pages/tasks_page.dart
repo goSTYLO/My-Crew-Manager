@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mycrewmanager/features/dashboard/presentation/pages/dashboard_page.dart';
 import 'package:mycrewmanager/features/dashboard/presentation/pages/task_overview_page.dart';
 import 'package:mycrewmanager/features/dashboard/presentation/pages/projects_page.dart';
@@ -6,6 +7,7 @@ import 'package:mycrewmanager/features/dashboard/presentation/pages/messages_scr
 import 'package:mycrewmanager/features/dashboard/presentation/pages/notifications_page.dart';
 import 'package:mycrewmanager/features/dashboard/presentation/pages/settings_page.dart';
 import 'package:mycrewmanager/features/authentication/presentation/pages/login_page.dart';
+import 'package:mycrewmanager/features/authentication/presentation/bloc/auth_bloc.dart';
 import 'package:mycrewmanager/features/dashboard/widgets/addtask_widget.dart';
 import 'package:mycrewmanager/features/project/domain/entities/project.dart';
 import 'package:mycrewmanager/features/project/domain/entities/task.dart';
@@ -36,7 +38,7 @@ class _TasksPageState extends State<TasksPage> with SingleTickerProviderStateMix
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 3, vsync: this); // Changed from 4 to 3 tabs
     _loadTasks();
   }
 
@@ -66,10 +68,42 @@ class _TasksPageState extends State<TasksPage> with SingleTickerProviderStateMix
         });
       },
       (tasksList) {
-        setState(() {
-          isLoading = false;
-          tasks = tasksList;
-        });
+        print('📥 Loaded ${tasksList.length} tasks from API');
+        for (var task in tasksList) {
+          print('   Task: ${task.title} - Status: ${task.status} - Assignee: ${task.assigneeName}');
+        }
+        
+        // If no tasks are loaded, use mock data for testing
+        if (tasksList.isEmpty) {
+          // Convert mock data to ProjectTask objects
+          final mockProjectTasks = mockTasks.asMap().entries.map((entry) {
+            final index = entry.key;
+            final mockTask = entry.value;
+            // Assign different emails to different tasks for testing
+            final assigneeEmails = ['test@example.com', 'user@example.com', 'admin@example.com'];
+            final assigneeEmail = assigneeEmails[index % assigneeEmails.length];
+            
+            return ProjectTask(
+              id: mockTask.hashCode, // Use hash as ID for mock data
+              title: mockTask['title'] as String,
+              status: (mockTask['status'] as String).toLowerCase() == 'to do' ? 'pending' : (mockTask['status'] as String).toLowerCase(),
+              userStoryId: 1,
+              isAi: false,
+              assigneeId: index + 1,
+              assigneeName: assigneeEmail,
+            );
+          }).toList();
+          
+          setState(() {
+            isLoading = false;
+            tasks = mockProjectTasks;
+          });
+        } else {
+          setState(() {
+            isLoading = false;
+            tasks = tasksList;
+          });
+        }
       },
     );
   }
@@ -147,10 +181,62 @@ class _TasksPageState extends State<TasksPage> with SingleTickerProviderStateMix
     super.dispose();
   }
 
-  List<ProjectTask> getFilteredTasks(String status) {
+  List<ProjectTask> getFilteredTasks(String status, String? currentUserEmail, String? currentUserName) {
     if (status == "All") return tasks;
-    return tasks.where((t) => t.status == status).toList();
+    
+    // For "To Do" tab, show only pending tasks assigned to the current user
+    if (status == "To Do") {
+      print('🔍 Filtering To Do tasks for user: $currentUserEmail ($currentUserName)');
+      print('📋 Total tasks: ${tasks.length}');
+      
+      final filteredTasks = tasks.where((t) {
+        print('   Task: ${t.title}');
+        print('     Status: ${t.status}');
+        print('     Assignee: ${t.assigneeName}');
+        
+        // Check if task is pending
+        if (t.status != "pending") {
+          print('     ❌ Not pending');
+          return false;
+        }
+        
+        // If no current user email, show all pending tasks (fallback)
+        if (currentUserEmail == null) {
+          print('     ✅ No user email, showing all pending');
+          return true;
+        }
+        
+        // Check if task has an assignee
+        if (t.assigneeName == null) {
+          print('     ❌ No assignee');
+          return false;
+        }
+        
+        // Check if the assignee matches the current user
+        // The assigneeName might be the user's name or email, so we need to handle both cases
+        final assigneeName = t.assigneeName;
+        
+        // Check multiple matching criteria:
+        // 1. Exact email match
+        // 2. Exact name match
+        // 3. Name contains user's first name (fallback)
+        final isAssignedToUser = assigneeName != null && 
+            (assigneeName == currentUserEmail || 
+             assigneeName == currentUserName ||
+             (currentUserName != null && assigneeName.contains(currentUserName.split(' ').first)));
+        
+        print('     Assignee match: $assigneeName == $currentUserEmail or $currentUserName = $isAssignedToUser');
+        
+        return isAssignedToUser;
+      }).toList();
+      
+      print('✅ Filtered To Do tasks: ${filteredTasks.length}');
+      return filteredTasks;
+    }
+    
+    return tasks.where((t) => t.status.toLowerCase() == status.toLowerCase()).toList();
   }
+
 
   Drawer _buildAppDrawer(BuildContext context) {
     return Drawer(
@@ -282,8 +368,23 @@ class _TasksPageState extends State<TasksPage> with SingleTickerProviderStateMix
 
   @override
   Widget build(BuildContext context) {
-    final tabLabels = ["All", "To Do", "In Progress", "Completed"];
-    return Scaffold(
+    final tabLabels = ["All", "To Do", "Completed"]; // Removed "In Progress" tab
+    return BlocBuilder<AuthBloc, AuthState>(
+      builder: (context, authState) {
+        String? currentUserEmail;
+        String? currentUserName;
+        if (authState is AuthSuccess) {
+          currentUserEmail = authState.user.email;
+          currentUserName = authState.user.name;
+          print('👤 Current user: ${authState.user.name} (${authState.user.email})');
+        } else {
+          print('❌ No authenticated user found, using test email for demo');
+          // Use a test email for demonstration purposes
+          currentUserEmail = 'test@example.com';
+          currentUserName = 'Test User';
+        }
+        
+        return Scaffold(
       drawer: _buildAppDrawer(context),
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -353,7 +454,7 @@ class _TasksPageState extends State<TasksPage> with SingleTickerProviderStateMix
                 : TabBarView(
                     controller: _tabController,
                     children: tabLabels.map((tab) {
-                      final filtered = getFilteredTasks(tab);
+                      final filtered = getFilteredTasks(tab, currentUserEmail, currentUserName);
                       return filtered.isEmpty
                           ? const Center(
                               child: Text(
@@ -372,11 +473,11 @@ class _TasksPageState extends State<TasksPage> with SingleTickerProviderStateMix
                   subtitle: assigneeLabel,
                   status: t.status,
                   icon: Icons.task_alt,
-                  iconColor: t.status == 'completed' ? Colors.green : Colors.blue,
+                  iconColor: t.status.toLowerCase() == 'completed' ? Colors.green : Colors.blue,
                   members: [],
-                  progress: t.status == 'completed' ? 1.0 : 0.0,
+                  progress: t.status.toLowerCase() == 'completed' ? 1.0 : 0.0,
                   onTap: () {
-                    Navigator.of(context).push(TaskOverviewPage.route());
+                    Navigator.of(context).push(TaskOverviewPage.route(t));
                   },
                 );
               },
@@ -401,6 +502,8 @@ class _TasksPageState extends State<TasksPage> with SingleTickerProviderStateMix
           );
         },
       ),
+    );
+      },
     );
   }
 }
@@ -454,12 +557,13 @@ class _TaskCard extends StatelessWidget {
   });
 
   Color getStatusColor() {
-    switch (status) {
-      case "Completed":
+    switch (status.toLowerCase()) {
+      case "completed":
         return Colors.green;
-      case "In Progress":
+      case "in progress":
         return Colors.amber;
-      case "To Do":
+      case "pending":
+      case "to do":
       default:
         return Colors.black38;
     }
@@ -565,14 +669,14 @@ class _TaskCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 8),
-            LinearProgressIndicator(
-              value: progress,
-              minHeight: 6,
-              backgroundColor: const Color(0xFFE8ECF4),
-              valueColor: AlwaysStoppedAnimation<Color>(
-                status == "Completed" ? Colors.green : status == "In Progress" ? Colors.amber : Colors.black26,
-              ),
-            ),
+                LinearProgressIndicator(
+                  value: progress,
+                  minHeight: 6,
+                  backgroundColor: const Color(0xFFE8ECF4),
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    status.toLowerCase() == "completed" ? Colors.green : status.toLowerCase() == "in progress" ? Colors.amber : Colors.black26,
+                  ),
+                ),
           ],
         ),
       ),

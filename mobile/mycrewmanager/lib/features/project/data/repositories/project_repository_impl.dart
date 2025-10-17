@@ -139,6 +139,13 @@ class ProjectRepositoryImpl implements ProjectRepository {
     );
   }
 
+  @override
+  Future<Either<Failure, ProjectTask>> updateTaskStatus(int taskId, String status) {
+    return _getData(
+      () async => await remoteDataSource.updateTaskStatus(taskId, status),
+    );
+  }
+
   Future<Either<Failure, T>> _getData<T>(Future<T> Function() fn) async {
     try {
       if (!await connectionChecker.isConnected) {

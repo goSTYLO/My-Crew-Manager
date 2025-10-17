@@ -43,5 +43,6 @@ abstract class ProjectRepository {
   
   // Task management
   Future<Either<Failure, List<ProjectTask>>> getProjectTasks(int projectId);
+  Future<Either<Failure, ProjectTask>> updateTaskStatus(int taskId, String status);
 }
 

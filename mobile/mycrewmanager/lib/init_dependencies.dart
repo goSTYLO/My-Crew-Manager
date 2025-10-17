@@ -21,6 +21,7 @@ import 'package:mycrewmanager/features/project/domain/usecases/update_project.da
 import 'package:mycrewmanager/features/project/domain/usecases/delete_project.dart';
 import 'package:mycrewmanager/features/project/domain/usecases/get_project_members.dart';
 import 'package:mycrewmanager/features/project/domain/usecases/get_project_tasks.dart';
+import 'package:mycrewmanager/features/project/domain/usecases/update_task_status.dart';
 import 'package:mycrewmanager/features/project/domain/usecases/create_member.dart';
 import 'package:mycrewmanager/features/project/domain/usecases/delete_member.dart';
 import 'package:mycrewmanager/features/project/presentation/bloc/project_bloc.dart';
@@ -93,6 +94,7 @@ void _initProject() {
           ..registerFactory(() => DeleteProject(serviceLocator()))
           ..registerFactory(() => GetProjectMembers(serviceLocator()))
           ..registerFactory(() => GetProjectTasks(serviceLocator()))
+          ..registerFactory(() => UpdateTaskStatus(serviceLocator()))
           ..registerFactory(() => CreateMember(serviceLocator()))
           ..registerFactory(() => DeleteMember(serviceLocator()))
 
