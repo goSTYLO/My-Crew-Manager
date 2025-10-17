@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:mycrewmanager/features/authentication/presentation/bloc/auth_bloc.dart';
 import 'package:mycrewmanager/features/project/domain/entities/task.dart';
 import 'package:mycrewmanager/features/project/domain/usecases/update_task_status.dart';
 import 'package:mycrewmanager/init_dependencies.dart';
@@ -27,6 +29,26 @@ class _TaskOverviewPageState extends State<TaskOverviewPage> {
     currentTask = widget.task;
   }
 
+  bool _isCurrentUserAssignee(String? currentUserEmail, String? currentUserName) {
+    if (currentTask.assigneeName == null) {
+      return false; // No assignee, so no one can mark it complete
+    }
+    
+    if (currentUserEmail == null && currentUserName == null) {
+      return false; // No current user info
+    }
+    
+    final assigneeName = currentTask.assigneeName!;
+    
+    // Check multiple matching criteria:
+    // 1. Exact email match
+    // 2. Exact name match
+    // 3. Name contains user's first name (fallback)
+    return assigneeName == currentUserEmail || 
+           assigneeName == currentUserName ||
+           (currentUserName != null && assigneeName.contains(currentUserName.split(' ').first));
+  }
+
   Future<void> _markTaskAsComplete() async {
     final result = await _updateTaskStatus(UpdateTaskStatusParams(
       taskId: currentTask.id,
@@ -53,9 +75,20 @@ class _TaskOverviewPageState extends State<TaskOverviewPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
+    return BlocBuilder<AuthBloc, AuthState>(
+      builder: (context, authState) {
+        String? currentUserEmail;
+        String? currentUserName;
+        if (authState is AuthSuccess) {
+          currentUserEmail = authState.user.email;
+          currentUserName = authState.user.name;
+        }
+        
+        final isAssignee = _isCurrentUserAssignee(currentUserEmail, currentUserName);
+        
+        return Scaffold(
+          backgroundColor: Colors.white,
+          body: SafeArea(
         child: Container(
           color: Colors.white,
           child: Column(
@@ -338,8 +371,8 @@ class _TaskOverviewPageState extends State<TaskOverviewPage> {
                                 ],
                               ),
                               const SizedBox(height: 24),
-                              // Mark as Completed Button (only show for pending tasks)
-                              if (currentTask.status.toLowerCase() == 'pending') ...[
+                              // Mark as Completed Button (only show for pending tasks assigned to current user)
+                              if (currentTask.status.toLowerCase() == 'pending' && isAssignee) ...[
                                 SizedBox(
                                   width: double.infinity,
                                   child: ElevatedButton(
@@ -361,7 +394,7 @@ class _TaskOverviewPageState extends State<TaskOverviewPage> {
                                     ),
                                   ),
                                 ),
-                              ] else ...[
+                              ] else if (currentTask.status.toLowerCase() == 'completed') ...[
                                 // Show completion status for completed tasks
                                 Container(
                                   width: double.infinity,
@@ -387,6 +420,32 @@ class _TaskOverviewPageState extends State<TaskOverviewPage> {
                                     ],
                                   ),
                                 ),
+                              ] else if (!isAssignee) ...[
+                                // Show message for non-assignees viewing pending tasks
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(color: Colors.grey.withOpacity(0.3)),
+                                  ),
+                                  child: const Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.person_outline, color: Colors.grey, size: 20),
+                                      SizedBox(width: 8),
+                                      Text(
+                                        "Only the assignee can mark this task as complete",
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 16,
+                                          color: Colors.grey,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                               ],
                             ],
                           ),
@@ -401,6 +460,8 @@ class _TaskOverviewPageState extends State<TaskOverviewPage> {
           ),
         ),
       ),
+        );
+      },
     );
   }
 }

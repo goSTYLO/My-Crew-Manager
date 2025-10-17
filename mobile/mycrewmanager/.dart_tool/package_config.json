@@ -3,13 +3,13 @@
   "packages": [
     {
       "name": "_fe_analyzer_shared",
-      "rootUri": "file:///C:/Users/joshu/AppData/Local/Pub/Cache/hosted/pub.dev/_fe_analyzer_shared-90.0.0",
+      "rootUri": "file:///C:/Users/joshu/AppData/Local/Pub/Cache/hosted/pub.dev/_fe_analyzer_shared-91.0.0",
       "packageUri": "lib/",
       "languageVersion": "3.9"
     },
     {
       "name": "analyzer",
-      "rootUri": "file:///C:/Users/joshu/AppData/Local/Pub/Cache/hosted/pub.dev/analyzer-8.3.0",
+      "rootUri": "file:///C:/Users/joshu/AppData/Local/Pub/Cache/hosted/pub.dev/analyzer-8.4.0",
       "packageUri": "lib/",
       "languageVersion": "3.9"
     },

@@ -19,6 +19,7 @@ class SignupView(APIView):
                 'email': user.email,
                 'name': user.name,
                 'token': token.key,
+                'role': user.role,
             }, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -34,6 +35,7 @@ class LoginView(APIView):
                 'email': user.email,
                 'name': user.name,
                 'token': token.key,
+                'role': user.role,
             })
         return Response({'message': 'Invalid email or password'}, status=status.HTTP_401_UNAUTHORIZED)
     

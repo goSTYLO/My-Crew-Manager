@@ -485,23 +485,38 @@ class _TasksPageState extends State<TasksPage> with SingleTickerProviderStateMix
                     }).toList(),
                   ),
       ),
-        floatingActionButton: FloatingActionButton(
-          backgroundColor: Colors.black,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: const Icon(Icons.add, color: Colors.white, size: 32),
-          onPressed: () {
-          showModalBottomSheet(
-              context: context,
-              isScrollControlled: true,
-              shape: const RoundedRectangleBorder(
-                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        floatingActionButton: BlocBuilder<AuthBloc, AuthState>(
+          builder: (context, authState) {
+            // Check if user has developer role (case-insensitive)
+            bool isDeveloper = false;
+            if (authState is AuthSuccess) {
+              isDeveloper = authState.user.role?.toLowerCase() == 'developer';
+            }
+            
+            // Hide FAB for developers
+            if (isDeveloper) {
+              return const SizedBox.shrink();
+            }
+            
+            return FloatingActionButton(
+              backgroundColor: Colors.black,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
               ),
-              builder: (_) => TaskBottomSheet(), // ✅ now recognized
-          );
-        },
-      ),
+              child: const Icon(Icons.add, color: Colors.white, size: 32),
+              onPressed: () {
+                showModalBottomSheet(
+                    context: context,
+                    isScrollControlled: true,
+                    shape: const RoundedRectangleBorder(
+                      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                    ),
+                    builder: (_) => TaskBottomSheet(),
+                );
+              },
+            );
+          },
+        ),
     );
       },
     );
