@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Sidebar from "../../components/sidebarLayout";
 import {
     Plus,
@@ -230,6 +231,7 @@ class ProjectController {
 
 const ProjectForm = ({ controller }: { controller: ProjectController }) => {
     const { theme } = useTheme(); // <-- use theme
+    const navigate = useNavigate(); // <-- add navigation hook
     const [formData, setFormData] = useState({
         title: 'Addodle',
         type: 'Type - I',
@@ -406,7 +408,12 @@ const ProjectForm = ({ controller }: { controller: ProjectController }) => {
                 generatePDF();
                 
                 // Show success message with project ID
-                alert(`Project saved to PostgreSQL database successfully!\nProject ID: ${savedProject.id}\nPDF downloaded to your machine!`);
+                alert(`Project saved to PostgreSQL database successfully!\nProject ID: ${savedProject.id}\nPDF downloaded to your machine!\n\nRedirecting to Projects page...`);
+                
+                // Redirect to monitor projects page after successful save
+                setTimeout(() => {
+                    navigate('/projects');
+                }, 2000); // 2 second delay to allow user to see the success message
             } else {
                 console.error('Controller returned null - project creation failed');
                 alert('Failed to save project to database. Please check the browser console for details.');
