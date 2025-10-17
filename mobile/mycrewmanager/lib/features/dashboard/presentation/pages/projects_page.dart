@@ -400,48 +400,58 @@ class _DrawerItem extends StatelessWidget {
 }
 
 // Drawer implementation (same as dashboard_page)
-Drawer _buildAppDrawer(BuildContext context) {
-  return Drawer(
-    child: SafeArea(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Header
-          DrawerHeader(
-            decoration: const BoxDecoration(
-              color: Color(0xFFF7F8FA),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Profile picture
-                const CircleAvatar(
-                  radius: 28,
-                  backgroundImage: AssetImage(
-                    'lib/core/assets/images/app_logo.png',
-                  ),
+Widget _buildAppDrawer(BuildContext context) {
+  return BlocBuilder<AuthBloc, AuthState>(
+    builder: (context, state) {
+      String userName = 'User';
+      String userRole = 'User';
+      
+      if (state is AuthSuccess) {
+        userName = state.user.name;
+        userRole = state.user.role ?? 'User';
+      }
+
+      return Drawer(
+        child: SafeArea(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Header
+              DrawerHeader(
+                decoration: const BoxDecoration(
+                  color: Color(0xFFF7F8FA),
                 ),
-                const SizedBox(height: 10),
-                // Name
-                const Text(
-                  'Sophia Rose',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                    color: Colors.black,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Profile picture
+                    const CircleAvatar(
+                      radius: 28,
+                      backgroundImage: AssetImage(
+                        'lib/core/assets/images/app_logo.png',
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    // Name
+                    Text(
+                      userName,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                        color: Colors.black,
+                      ),
+                    ),
+                    // Title/Role
+                    Text(
+                      userRole,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Colors.black54,
+                      ),
+                    ),
+                  ],
                 ),
-                // Title
-                const Text(
-                  'Project Manager',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.black54,
-                  ),
-                ),
-              ],
-            ),
-          ),
+              ),
           // Menu Items
           _DrawerItem(
             icon: Icons.home_outlined,
@@ -459,14 +469,16 @@ Drawer _buildAppDrawer(BuildContext context) {
               Navigator.push(context, ProjectsPage.route());
             },
           ),
-          _DrawerItem(
-            icon: Icons.description_outlined,
-            label: 'Tasks',
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.push(context, TasksPage.route());
-            },
-          ),
+          // Hide Tasks menu item for developers
+          if (userRole.toLowerCase() != 'developer')
+            _DrawerItem(
+              icon: Icons.description_outlined,
+              label: 'Tasks',
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(context, TasksPage.route());
+              },
+            ),
           _DrawerItem(
             icon: Icons.chat_bubble_outline,
             label: 'Messages',
@@ -525,9 +537,11 @@ Drawer _buildAppDrawer(BuildContext context) {
               );
             },
           ),
-          const Spacer(),
-        ],
-      ),
-    ),
+              const Spacer(),
+            ],
+          ),
+        ),
+      );
+    },
   );
 }

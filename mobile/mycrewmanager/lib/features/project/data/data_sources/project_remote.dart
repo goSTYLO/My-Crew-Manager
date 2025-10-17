@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:mycrewmanager/features/project/data/models/project_model.dart';
 import 'package:mycrewmanager/features/project/data/models/member_model.dart';
 import 'package:mycrewmanager/features/project/data/models/task_model.dart';
+import 'package:mycrewmanager/features/project/data/models/activity_model.dart';
 
 class ProjectRemoteDataSource {
   final Dio dio;
@@ -68,6 +69,32 @@ class ProjectRemoteDataSource {
       }
     }
     return tasks;
+  }
+
+  Future<List<TaskModel>> getUserAssignedTasks() async {
+    // Get all tasks assigned to the current user
+    final response = await dio.get('ai/story-tasks/user-assigned/');
+    final Map<String, dynamic> data = response.data;
+    
+    List<TaskModel> tasks = [];
+    if (data['tasks'] != null) {
+      for (var taskData in data['tasks']) {
+        tasks.add(TaskModel.fromJson(taskData));
+      }
+    }
+    return tasks;
+  }
+
+  Future<List<ActivityModel>> getRecentCompletedTasks() async {
+    final response = await dio.get('ai/story-tasks/recent-completed/');
+    final Map<String, dynamic> data = response.data;
+    List<ActivityModel> activities = [];
+    if (data['activities'] != null) {
+      for (var activityData in data['activities']) {
+        activities.add(ActivityModel.fromJson(activityData));
+      }
+    }
+    return activities;
   }
 
   // === AI API integrations ===

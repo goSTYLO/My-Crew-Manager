@@ -8,6 +8,7 @@ import 'package:mycrewmanager/features/project/data/data_sources/project_remote.
 import 'package:mycrewmanager/features/project/domain/entities/project.dart';
 import 'package:mycrewmanager/features/project/domain/entities/member.dart';
 import 'package:mycrewmanager/features/project/domain/entities/task.dart';
+import 'package:mycrewmanager/features/project/domain/entities/activity.dart';
 import 'package:mycrewmanager/features/project/domain/repository/project_repository.dart';
 
 class ProjectRepositoryImpl implements ProjectRepository {
@@ -136,6 +137,20 @@ class ProjectRepositoryImpl implements ProjectRepository {
   Future<Either<Failure, List<ProjectTask>>> getProjectTasks(int projectId) {
     return _getData(
       () async => await remoteDataSource.getProjectTasks(projectId),
+    );
+  }
+
+  @override
+  Future<Either<Failure, List<ProjectTask>>> getUserAssignedTasks() {
+    return _getData(
+      () async => await remoteDataSource.getUserAssignedTasks(),
+    );
+  }
+
+  @override
+  Future<Either<Failure, List<Activity>>> getRecentCompletedTasks() {
+    return _getData(
+      () async => await remoteDataSource.getRecentCompletedTasks(),
     );
   }
 

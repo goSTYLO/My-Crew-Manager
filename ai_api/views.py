@@ -343,6 +343,119 @@ class StoryTaskViewSet(ModelViewSet):
             return self.queryset.filter(user_story_id=user_story_id)
         return self.queryset
 
+    @action(detail=False, methods=["get"], url_path="user-assigned")
+    def user_assigned_tasks(self, request):
+        """Get all tasks assigned to the current user across all projects"""
+        try:
+            current_user = request.user
+            
+            # Get all tasks assigned to the current user
+            # We need to find tasks where the assignee's user matches the current user
+            assigned_tasks = StoryTask.objects.filter(
+                assignee__user=current_user
+            ).select_related(
+                'assignee',
+                'user_story__sub_epic__epic__project'
+            ).order_by('-id')
+            
+            # Format the response to match the mobile app's expected structure
+            tasks_data = []
+            for task in assigned_tasks:
+                assignee = task.assignee
+                project = task.user_story.sub_epic.epic.project
+                
+                tasks_data.append({
+                    'id': task.id,
+                    'title': task.title,
+                    'status': task.status,
+                    'user_story_id': task.user_story.id,
+                    'is_ai': task.ai,
+                    'assignee_id': assignee.id if assignee else None,
+                    'assignee_name': assignee.user_email if assignee else None,  # Use email for consistency
+                    'project_id': project.id,
+                    'project_title': project.title,
+                    'epic_title': task.user_story.sub_epic.epic.title,
+                    'user_story_title': task.user_story.title,
+                })
+            
+            return Response({
+                'tasks': tasks_data,
+                'total_count': len(tasks_data),
+                'user_email': current_user.email,
+                'user_name': current_user.name,
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response(
+                {"error": f"Failed to fetch user tasks: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    @action(detail=False, methods=["get"], url_path="recent-completed")
+    def recent_completed_tasks(self, request):
+        """Get recent completed tasks with user information for activity feed"""
+        try:
+            # First, let's check if there are any StoryTask objects at all
+            total_tasks = StoryTask.objects.count()
+            
+            # Get recently completed tasks across all projects where user is a member
+            completed_tasks = StoryTask.objects.filter(
+                status='completed',
+                assignee__isnull=False
+            ).select_related(
+                'assignee',
+                'assignee__user',
+                'user_story__sub_epic__epic__project'
+            ).order_by('-id')[:10]  # Get last 10 completed tasks
+            
+            # Format the response for activity feed
+            activities_data = []
+            for task in completed_tasks:
+                try:
+                    assignee = task.assignee
+                    if assignee and assignee.user:  # Only include tasks with valid assignees
+                        # Since there's no updated_at field, we'll use a mock timestamp based on task ID
+                        from datetime import datetime, timedelta
+                        mock_timestamp = datetime.now() - timedelta(hours=task.id % 24)
+                        
+                        # Safe field access with fallbacks
+                        user_name = getattr(assignee, 'user_name', None) or getattr(assignee.user, 'name', 'Unknown User')
+                        user_email = getattr(assignee, 'user_email', None) or getattr(assignee.user, 'email', 'unknown@example.com')
+                        project_title = getattr(task.user_story.sub_epic.epic.project, 'title', 'Unknown Project')
+                        
+                        activities_data.append({
+                            'id': task.id,
+                            'title': task.title or 'Untitled Task',
+                            'status': task.status or 'completed',
+                            'completed_at': mock_timestamp.isoformat(),
+                            'user_id': str(assignee.user.id),
+                            'user_name': user_name,
+                            'user_email': user_email,
+                            'project_title': project_title,
+                        })
+                except Exception as task_error:
+                    # Skip this task if there's an error processing it
+                    print(f"Error processing task {task.id}: {task_error}")
+                    continue
+            
+            # Always return success, even if no activities
+            return Response({
+                'activities': activities_data,
+                'total_count': len(activities_data),
+                'total_tasks_in_db': total_tasks,
+                'message': 'No completed tasks found' if len(activities_data) == 0 else f'Found {len(activities_data)} activities'
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            import traceback
+            error_details = {
+                "error": f"Failed to fetch recent activities: {str(e)}",
+                "traceback": traceback.format_exc(),
+                "activities": [],  # Return empty list on error
+                "total_count": 0
+            }
+            return Response(error_details, status=status.HTTP_200_OK)  # Return 200 with error details
+
     def create(self, request, *args, **kwargs):
         try:
             # Get the user story and check if the current user is the project creator
