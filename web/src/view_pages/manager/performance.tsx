@@ -323,7 +323,7 @@ const Performance = () => {
                 <h4 className={`text-sm font-medium ${theme === "dark" ? "text-white" : "text-gray-800"}`}>
                   Make an Automatic Payment System that enable the design
                 </h4>
-                <p className={`text-xs ${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}>#A32235 • Opened 10 days ago by Yash Ghel</p>
+                <p className={`text-xs ${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}>#A32235 • Opened 7 days ago by Yash Ghel</p>
               </div>
               <div className="flex items-center space-x-4">
                 <span className="px-3 py-1 text-xs font-medium bg-red-100 text-red-600 rounded-lg">

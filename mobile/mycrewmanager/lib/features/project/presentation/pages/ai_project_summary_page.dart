@@ -276,7 +276,7 @@ class AIProjectSummaryPage extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
-                value: roleController.text.isNotEmpty ? roleController.text : null,
+                initialValue: roleController.text.isNotEmpty ? roleController.text : null,
                 items: const [
                   DropdownMenuItem(value: 'Front-end Developer', child: Text('Front-end Developer')),
                   DropdownMenuItem(value: 'Back-end Developer', child: Text('Back-end Developer')),

@@ -23,14 +23,22 @@ def load_llm() -> HuggingFacePipeline:
 
     use_cuda = torch.cuda.is_available()
     quant_cfg = None
+    
+    # Only try quantization if CUDA is available AND bitsandbytes is properly installed
     if use_cuda and BitsAndBytesConfig is not None:
-        # Try 4-bit quantization for speed/memory on GPU
-        quant_cfg = BitsAndBytesConfig(
-            load_in_4bit=True,
-            bnb_4bit_use_double_quant=True,
-            bnb_4bit_quant_type="nf4",
-            bnb_4bit_compute_dtype=torch.float16,
-        )
+        try:
+            # Test if bitsandbytes is actually working
+            import bitsandbytes as bnb
+            # Try 4-bit quantization for speed/memory on GPU
+            quant_cfg = BitsAndBytesConfig(
+                load_in_4bit=True,
+                bnb_4bit_use_double_quant=True,
+                bnb_4bit_quant_type="nf4",
+                bnb_4bit_compute_dtype=torch.float16,
+            )
+        except (ImportError, Exception) as e:
+            print(f"Warning: bitsandbytes not available, falling back to standard loading: {e}")
+            quant_cfg = None
 
     if use_cuda:
         if quant_cfg is not None:

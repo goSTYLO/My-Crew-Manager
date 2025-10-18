@@ -219,7 +219,7 @@ class _CreateAIProjectFlowPageState extends State<CreateAIProjectFlowPage> {
             ),
             const SizedBox(height: 8),
             DropdownButtonFormField<String>(
-              value: _memberRole,
+              initialValue: _memberRole,
               items: const [
                 DropdownMenuItem(value: 'Member', child: Text('Member')),
                 DropdownMenuItem(value: 'Project Manager', child: Text('Project Manager')),

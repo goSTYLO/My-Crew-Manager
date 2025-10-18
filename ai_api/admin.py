@@ -10,10 +10,15 @@ class ProjectAdmin(admin.ModelAdmin):
 
 @admin.register(Proposal)
 class ProposalAdmin(admin.ModelAdmin):
-    list_display = ['id', 'project', 'uploaded_by', 'uploaded_at']
+    list_display = ['id', 'get_project_name', 'uploaded_by', 'uploaded_at']
     list_filter = ['uploaded_at', 'project']
     search_fields = ['project__title', 'uploaded_by__name']
     date_hierarchy = 'uploaded_at'
+    
+    def get_project_name(self, obj):
+        return obj.project.title
+    get_project_name.short_description = 'Project Name'
+    get_project_name.admin_order_field = 'project__title'
 
 @admin.register(ProjectFeature)
 class ProjectFeatureAdmin(admin.ModelAdmin):
