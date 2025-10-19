@@ -8,6 +8,8 @@ import {
   TrendingUp,
   Settings,
   LogOut,
+  FolderPlus,
+  FolderTree,
 } from "lucide-react";
 import { useTheme } from "./themeContext"; // <-- import ThemeContext
 
@@ -35,6 +37,7 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
   const navigationItems = [
     { name: "Dashboard", icon: LayoutDashboard, path: "/main" },
     { name: "Project", icon: FolderOpen, path: "/main-projects" },
+    { name: "Generate Project", icon: FolderPlus, path: "/generate-project" },
     { name: "Task", icon: CheckSquare, path: "/create" },
     { name: "Work Logs", icon: Clock, path: "/work-logs" },
     { name: "Performance", icon: TrendingUp, path: "/performance" },

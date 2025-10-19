@@ -7,7 +7,6 @@ import {
 } from "lucide-react";
 import TopNavbar from "../../components/topbarLayouot";
 import { useTheme } from "../../components/themeContext"; // <-- import ThemeContext
-import jsPDF from 'jspdf';
 import axios from 'axios';
 
 // Models (MVC Architecture)

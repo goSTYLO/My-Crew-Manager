@@ -13,6 +13,7 @@ import Settings from './view_pages/manager/settings';
 import WorkLogs from './view_pages/manager/workLogs';
 import AccountSettings from './view_pages/manager/settings_account'; 
 import Notifications from './view_pages/manager/settings_notification'; 
+import GenerateProject from './view_pages/manager/generateProject'; 
 
 {/* User Web Connections */}
 import UserFrame from './view_pages/user/userFrame';
@@ -53,6 +54,7 @@ const App: React.FC = () => {
         <Route path="/appearance" element={<AppearanceSettings/> }/>
         <Route path="/team" element={<TeamSettings/> }/>
         <Route path="/general" element={<GeneralSettings/> }/>
+        <Route path="/generate-project" element={<GenerateProject/> }/>
 
          {/* User routes */}
          <Route path="/user" element={<UserFrame />} />
@@ -62,7 +64,7 @@ const App: React.FC = () => {
         <Route path="/task-user" element={<TaskUser />} />
         <Route path="/subtask-user" element={<SubTask/>}/>
         <Route path="/kanban-user" element={<KanbanUser />} />
-        <Route path="/worklogs-user" element={<WorklogsUser/>}/>
+        <Route path="/worklogs-user" element={<WorklogsUser/>}/> 
         
         <Route path="*" element={<Navigate to="/signIn" replace />} />
       </Routes>
