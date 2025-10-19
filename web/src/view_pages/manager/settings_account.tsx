@@ -23,7 +23,7 @@ const AccountSettings = () => {
                 <TopNavbar onMenuClick={() => setSidebarOpen(true)} />
 
                 {/* Main Content Area */}
-                <main className="flex-1 p-6">
+                <main className="flex-1 p-4 lg:p-[100px] overflow-auto space-y-[40px]">
                 {/* ✅ Top Section: Settings Nav + Edit Profile + Profile Card Side by Side */}
                 <div className="grid grid-cols-12 gap-6 mb-6">
                     {/* Settings Sidebar Navigation */}

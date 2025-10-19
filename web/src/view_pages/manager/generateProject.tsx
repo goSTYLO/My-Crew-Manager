@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Upload, Users, Target, FileText, Plus, X, Sparkles, ChevronRight, Check, ArrowRight, Calendar } from 'lucide-react';
+import { Upload, Users, Target, FileText, Plus, X, Sparkles, Check, ArrowRight, Calendar } from 'lucide-react';
 import TopNavbar from "../../components/topbarLayouot";
 import Sidebar from "../../components/sidebarLayout";
 
@@ -548,7 +548,7 @@ const App: React.FC = () => {
       {/* Top Navbar */}
       <TopNavbar onMenuClick={() => setSidebarOpen(true)} />
 
-    <main className="min-h-screen bg-gray-50 p-8">
+      <main className="flex-1 p-4 lg:p-[100px] overflow-auto space-y-[40px]">
       <div className="max-w-4xl mx-auto">
         <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
           <h1 className="text-2xl font-bold text-gray-800 mb-6">Create New Project</h1>

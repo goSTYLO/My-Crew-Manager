@@ -103,7 +103,7 @@ const ProjectTask = () => {
                 <TopNavbar onMenuClick={() => setSidebarOpen(true)} />
 
               {/* Projects Content */}
-              <main className="flex-1 p-4 lg:p-6 overflow-auto space-y-6">
+              <main className="flex-1 p-4 lg:p-[100px] overflow-auto space-y-[40px]">
                 <div className="flex items-center justify-between mb-6">
                   <h2 className={`text-2xl font-semibold ${theme === "dark" ? "text-white" : "text-gray-800"}`}>Projects</h2>
                   <button onClick={() => navigate("/projects")} className={`p-1 rounded ${theme === "dark" ? "hover:bg-gray-700" : "hover:bg-gray-200"}`}>

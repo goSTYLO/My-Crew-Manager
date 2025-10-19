@@ -9,7 +9,7 @@ import {
   Settings,
   LogOut,
   FolderPlus,
-  FolderTree,
+  MessageSquare
 } from "lucide-react";
 import { useTheme } from "./themeContext"; // <-- import ThemeContext
 
@@ -36,9 +36,9 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
 
   const navigationItems = [
     { name: "Dashboard", icon: LayoutDashboard, path: "/main" },
+    { name: "Team Chat", icon: MessageSquare, path: "/chat" },
     { name: "Project", icon: FolderOpen, path: "/main-projects" },
-    { name: "Generate Project", icon: FolderPlus, path: "/generate-project" },
-    { name: "Task", icon: CheckSquare, path: "/create" },
+    { name: "Create Project", icon: FolderPlus, path: "/generate-project" },
     { name: "Work Logs", icon: Clock, path: "/work-logs" },
     { name: "Performance", icon: TrendingUp, path: "/performance" },
     { name: "Settings", icon: Settings, path: "/settings" },
@@ -65,7 +65,7 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
       {/* Sidebar overlay (click outside to close) */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-30 z-40"
+          className="fixed inset-0 bg-black bg-opacity-30 z-50"
           onClick={() => setSidebarOpen(false)}
         />
       )}

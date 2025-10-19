@@ -6,7 +6,6 @@ import SignUp from './view_pages/manager/signUp';
 import MainFrame from './view_pages/manager/mainFrame'; 
 import MainProjects from './view_pages/manager/projects_main'; 
 import Projects from './view_pages/manager/monitorProjects'; 
-import CreateProject from './view_pages/manager/createProjects'; 
 import CreateTask from './view_pages/manager/createTask'; 
 import Performance from './view_pages/manager/performance'; 
 import Settings from './view_pages/manager/settings';
@@ -14,6 +13,7 @@ import WorkLogs from './view_pages/manager/workLogs';
 import AccountSettings from './view_pages/manager/settings_account'; 
 import Notifications from './view_pages/manager/settings_notification'; 
 import GenerateProject from './view_pages/manager/generateProject'; 
+import Chat from './view_pages/manager/chat'; 
 
 {/* User Web Connections */}
 import UserFrame from './view_pages/user/userFrame';
@@ -44,7 +44,6 @@ const App: React.FC = () => {
         <Route path="/create" element={<CreateTask />} />
         <Route path="/main-projects" element={<MainProjects />} />
         <Route path="/projects" element={<Projects />} />
-        <Route path="/create-project" element={<CreateProject />} />
         <Route path="/work-logs" element={<WorkLogs/>}/>
         <Route path="/performance" element={<Performance />} />
         <Route path="/settings" element={<Settings />} />
@@ -55,6 +54,7 @@ const App: React.FC = () => {
         <Route path="/team" element={<TeamSettings/> }/>
         <Route path="/general" element={<GeneralSettings/> }/>
         <Route path="/generate-project" element={<GenerateProject/> }/>
+        <Route path="/chat" element={<Chat/> }/>
 
          {/* User routes */}
          <Route path="/user" element={<UserFrame />} />

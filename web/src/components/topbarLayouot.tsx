@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Menu, Search, Bell } from "lucide-react";
+import { Menu, Search, Bell, MessageSquare } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import logo from "../assets/logo.png";
 import { useTheme } from "./themeContext";
@@ -24,7 +24,6 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
     );
   };
 
-  // Close dropdown when clicking outside
   const dropdownRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!showNotifications) return;
@@ -43,14 +42,20 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
   const { theme } = useTheme();
 
   return (
-    <header className={`shadow-sm border-b px-4 lg:px-6 py-4 relative
+    <header
+      className={`fixed top-0 left-0 w-full shadow-sm border-b px-4 lg:px-6 py-4
       ${theme === "dark" ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"}
-    `}>
+    `}
+    >
       <div className="flex items-center justify-between h-10">
-        {/* Left Side: Menu + Title */}
+        {/* Left Side: Menu + Logo */}
         <div className="flex items-center">
           <button
-            className={`p-2 ${theme === "dark" ? "text-gray-300 hover:text-white" : "text-gray-500 hover:text-gray-700"}`}
+            className={`p-2 ${
+              theme === "dark"
+                ? "text-gray-300 hover:text-white"
+                : "text-gray-500 hover:text-gray-700"
+            }`}
             onClick={onMenuClick}
           >
             <Menu className="w-6 h-6" />
@@ -64,16 +69,25 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
               alt="Logo"
               className="h-[3.8rem] w-auto select-none pointer-events-none"
             />
-            <h1 className={`ml-2 text-2xl font-semibold ${theme === "dark" ? "text-white" : "text-gray-800"}`}>
+            <h1
+              className={`ml-2 text-2xl font-semibold ${
+                theme === "dark" ? "text-white" : "text-gray-800"
+              }`}
+            >
               MyCrewManager
             </h1>
           </div>
         </div>
+
         {/* Right Side */}
         <div className="flex items-center space-x-4">
           {/* Search Bar */}
           <div className="block relative">
-            <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 ${theme === "dark" ? "text-gray-400" : "text-gray-400"}`} />
+            <Search
+              className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 ${
+                theme === "dark" ? "text-gray-400" : "text-gray-400"
+              }`}
+            />
             <input
               type="text"
               placeholder="Search for anything..."
@@ -82,6 +96,15 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
               `}
             />
           </div>
+
+          {/* Chat Icon */}
+          <button
+            className="p-2 text-gray-500 hover:text-gray-700"
+            title="Team Chat"
+            onClick={() => navigate("/chat")}
+          >
+            <MessageSquare className="w-6 h-6" />
+          </button>
 
           {/* Notifications */}
           <div className="relative">
@@ -97,7 +120,7 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
               )}
             </button>
 
-            {/* Dropdown */}
+            {/* Notifications Dropdown */}
             {showNotifications && (
               <div
                 ref={dropdownRef}
@@ -149,8 +172,20 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
           {/* User Profile */}
           <div className="flex items-center space-x-3">
             <div className="sm:block">
-              <p className={`text-sm font-medium ${theme === "dark" ? "text-white" : "text-gray-800"}`}>John Wayne</p>
-              <p className={`text-xs ${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}>Philippines</p>
+              <p
+                className={`text-sm font-medium ${
+                  theme === "dark" ? "text-white" : "text-gray-800"
+                }`}
+              >
+                John Wayne
+              </p>
+              <p
+                className={`text-xs ${
+                  theme === "dark" ? "text-gray-400" : "text-gray-500"
+                }`}
+              >
+                Philippines
+              </p>
             </div>
             <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white font-medium">
               JW
