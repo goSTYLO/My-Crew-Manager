@@ -3,7 +3,6 @@ import 'package:get_it/get_it.dart';
 import 'package:mycrewmanager/features/chat/data/models/message_model.dart';
 import 'package:mycrewmanager/features/chat/data/repositories/chat_repository_impl.dart';
 import 'package:mycrewmanager/features/chat/data/services/chat_ws_service.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mycrewmanager/features/authentication/presentation/bloc/auth_bloc.dart';
 
@@ -134,14 +133,6 @@ class _ChatsPageState extends State<ChatsPage> {
                           ),
                         ],
                       ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.videocam_outlined, color: Colors.black54),
-                      onPressed: () {},
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.call_outlined, color: Colors.black54),
-                      onPressed: () {},
                     ),
                     IconButton(
                       icon: const Icon(Icons.person_add_alt_1, color: Colors.black87),

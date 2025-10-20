@@ -88,7 +88,7 @@ class _BacklogOverviewPageState extends State<BacklogOverviewPage> {
               const Text("Add Backlog Item", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
               const SizedBox(height: 16),
               DropdownButtonFormField<BacklogType>(
-                value: selectedType,
+                initialValue: selectedType,
                 items: const [
                   DropdownMenuItem(value: BacklogType.epic, child: Text('Epic')),
                   DropdownMenuItem(value: BacklogType.subEpic, child: Text('Sub-Epic')),

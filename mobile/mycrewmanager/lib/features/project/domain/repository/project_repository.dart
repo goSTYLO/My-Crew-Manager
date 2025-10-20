@@ -3,6 +3,7 @@ import 'package:mycrewmanager/core/error/failures/failures.dart';
 import 'package:mycrewmanager/features/project/domain/entities/project.dart';
 import 'package:mycrewmanager/features/project/domain/entities/member.dart';
 import 'package:mycrewmanager/features/project/domain/entities/task.dart';
+import 'package:mycrewmanager/features/project/domain/entities/activity.dart';
 
 abstract class ProjectRepository {
   Future<Either<Failure, List<Project>>> getProjects();
@@ -43,6 +44,8 @@ abstract class ProjectRepository {
   
   // Task management
   Future<Either<Failure, List<ProjectTask>>> getProjectTasks(int projectId);
+  Future<Either<Failure, List<ProjectTask>>> getUserAssignedTasks();
+  Future<Either<Failure, List<Activity>>> getRecentCompletedTasks();
   Future<Either<Failure, ProjectTask>> updateTaskStatus(int taskId, String status);
 }
 

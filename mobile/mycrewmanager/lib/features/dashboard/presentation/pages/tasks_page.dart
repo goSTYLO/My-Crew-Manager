@@ -238,44 +238,54 @@ class _TasksPageState extends State<TasksPage> with SingleTickerProviderStateMix
   }
 
 
-  Drawer _buildAppDrawer(BuildContext context) {
-    return Drawer(
-      child: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            DrawerHeader(
-              decoration: const BoxDecoration(
-                color: Color(0xFFF7F8FA),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const CircleAvatar(
-                    radius: 28,
-                    backgroundImage: AssetImage(
-                      'lib/core/assets/images/app_logo.png',
-                    ),
+  Widget _buildAppDrawer(BuildContext context) {
+    return BlocBuilder<AuthBloc, AuthState>(
+      builder: (context, state) {
+        String userName = 'User';
+        String userRole = 'User';
+        
+        if (state is AuthSuccess) {
+          userName = state.user.name;
+          userRole = state.user.role ?? 'User';
+        }
+
+        return Drawer(
+          child: SafeArea(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                DrawerHeader(
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFF7F8FA),
                   ),
-                  const SizedBox(height: 10),
-                  const Text(
-                    'Sophia Rose',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
-                      color: Colors.black,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const CircleAvatar(
+                        radius: 28,
+                        backgroundImage: AssetImage(
+                          'lib/core/assets/images/app_logo.png',
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        userName,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                          color: Colors.black,
+                        ),
+                      ),
+                      Text(
+                        userRole,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: Colors.black54,
+                        ),
+                      ),
+                    ],
                   ),
-                  const Text(
-                    'Project Manager',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.black54,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+                ),
             // Menu Items
             _DrawerItem(
               icon: Icons.home_outlined,
@@ -293,14 +303,16 @@ class _TasksPageState extends State<TasksPage> with SingleTickerProviderStateMix
                 Navigator.push(context, ProjectsPage.route());
               },
             ),
-            _DrawerItem(
-              icon: Icons.description_outlined,
-              label: 'Tasks',
-              onTap: () {
-                Navigator.pop(context);
-                //Already on Tasks Page
-              },
-            ),
+            // Hide Tasks menu item for developers
+            if (userRole.toLowerCase() != 'developer')
+              _DrawerItem(
+                icon: Icons.description_outlined,
+                label: 'Tasks',
+                onTap: () {
+                  Navigator.pop(context);
+                  //Already on Tasks Page
+                },
+              ),
             _DrawerItem(
               icon: Icons.chat_bubble_outline,
               label: 'Messages',
@@ -359,10 +371,12 @@ class _TasksPageState extends State<TasksPage> with SingleTickerProviderStateMix
                 );
               },
             ),
-            const Spacer(),
-          ],
-        ),
-      ),
+                const Spacer(),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -485,23 +499,38 @@ class _TasksPageState extends State<TasksPage> with SingleTickerProviderStateMix
                     }).toList(),
                   ),
       ),
-        floatingActionButton: FloatingActionButton(
-          backgroundColor: Colors.black,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: const Icon(Icons.add, color: Colors.white, size: 32),
-          onPressed: () {
-          showModalBottomSheet(
-              context: context,
-              isScrollControlled: true,
-              shape: const RoundedRectangleBorder(
-                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        floatingActionButton: BlocBuilder<AuthBloc, AuthState>(
+          builder: (context, authState) {
+            // Check if user has developer role (case-insensitive)
+            bool isDeveloper = false;
+            if (authState is AuthSuccess) {
+              isDeveloper = authState.user.role?.toLowerCase() == 'developer';
+            }
+            
+            // Hide FAB for developers
+            if (isDeveloper) {
+              return const SizedBox.shrink();
+            }
+            
+            return FloatingActionButton(
+              backgroundColor: Colors.black,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
               ),
-              builder: (_) => TaskBottomSheet(), // ✅ now recognized
-          );
-        },
-      ),
+              child: const Icon(Icons.add, color: Colors.white, size: 32),
+              onPressed: () {
+                showModalBottomSheet(
+                    context: context,
+                    isScrollControlled: true,
+                    shape: const RoundedRectangleBorder(
+                      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                    ),
+                    builder: (_) => TaskBottomSheet(),
+                );
+              },
+            );
+          },
+        ),
     );
       },
     );

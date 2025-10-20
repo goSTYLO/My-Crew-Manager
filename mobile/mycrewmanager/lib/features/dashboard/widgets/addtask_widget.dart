@@ -78,7 +78,7 @@ class _TaskBottomSheetState extends State<TaskBottomSheet> {
               children: [
                 Expanded(
                   child: DropdownButtonFormField<String>(
-                    value: priority,
+                    initialValue: priority,
                     items: ['Low', 'Medium', 'High']
                         .map((p) => DropdownMenuItem(
                               value: p,
@@ -97,7 +97,7 @@ class _TaskBottomSheetState extends State<TaskBottomSheet> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: DropdownButtonFormField<String>(
-                    value: status,
+                    initialValue: status,
                     items: ['To Do', 'In Progress', 'Completed']
                         .map((s) => DropdownMenuItem(
                               value: s,
@@ -118,7 +118,7 @@ class _TaskBottomSheetState extends State<TaskBottomSheet> {
 
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
-              value: assignee,
+              initialValue: assignee,
               items: ['Jana Doe', 'John Smith', 'Alice Lee']
                   .map((a) => DropdownMenuItem(
                         value: a,

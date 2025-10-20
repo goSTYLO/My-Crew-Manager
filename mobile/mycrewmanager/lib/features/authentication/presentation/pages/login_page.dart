@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mycrewmanager/core/common/widgets/loader.dart';
-import 'package:mycrewmanager/core/constants/constants.dart';
 import 'package:mycrewmanager/core/theme/pallete.dart';
 import 'package:mycrewmanager/core/utils/show_snackbar.dart';
 import 'package:mycrewmanager/features/authentication/presentation/bloc/auth_bloc.dart';

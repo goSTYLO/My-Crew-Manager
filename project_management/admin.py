@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Team, Project, Sprint, Task, MoodCheckIn, Commit, Report, TeamMember
+from .models import Team, Project, Sprint, Task, MoodCheckIn, Commit, Report, TeamMember, Backlog
 
 @admin.register(Team)
 class TeamAdmin(admin.ModelAdmin):
@@ -16,17 +16,27 @@ class ProjectAdmin(admin.ModelAdmin):
 
 @admin.register(Sprint)
 class SprintAdmin(admin.ModelAdmin):
-    list_display = ['sprint_id', 'title', 'project', 'methodology', 'start_date', 'end_date']
+    list_display = ['sprint_id', 'title', 'project_name', 'methodology', 'start_date', 'end_date']
     list_filter = ['methodology', 'start_date', 'end_date', 'project']
     search_fields = ['title', 'project__name']
     date_hierarchy = 'start_date'
+    
+    def project_name(self, obj):
+        return obj.project.name
+    project_name.short_description = 'Project'
+    project_name.admin_order_field = 'project__name'
 
 @admin.register(Task)
 class TaskAdmin(admin.ModelAdmin):
-    list_display = ['task_id', 'title', 'status', 'points', 'assigned_to', 'sprint']
+    list_display = ['task_id', 'title', 'status', 'points', 'assigned_to', 'sprint', 'project_name']
     list_filter = ['status', 'points', 'sprint__project', 'assigned_to']
-    search_fields = ['title', 'description', 'assigned_to__name']
+    search_fields = ['title', 'description', 'assigned_to__name', 'sprint__project__name']
     list_editable = ['status', 'points']
+    
+    def project_name(self, obj):
+        return obj.sprint.project.name
+    project_name.short_description = 'Project'
+    project_name.admin_order_field = 'sprint__project__name'
 
 @admin.register(MoodCheckIn)
 class MoodCheckInAdmin(admin.ModelAdmin):
@@ -44,10 +54,27 @@ class CommitAdmin(admin.ModelAdmin):
 
 @admin.register(Report)
 class ReportAdmin(admin.ModelAdmin):
-    list_display = ['report_id', 'sprint', 'type', 'generated_at']
+    list_display = ['report_id', 'sprint', 'type', 'project_name', 'generated_at']
     list_filter = ['type', 'generated_at', 'sprint__project']
-    search_fields = ['sprint__title', 'type']
+    search_fields = ['sprint__title', 'type', 'sprint__project__name']
     date_hierarchy = 'generated_at'
+    
+    def project_name(self, obj):
+        return obj.sprint.project.name
+    project_name.short_description = 'Project'
+    project_name.admin_order_field = 'sprint__project__name'
+
+@admin.register(Backlog)
+class BacklogAdmin(admin.ModelAdmin):
+    list_display = ['backlog_id', 'project_name', 'createdDate', 'lastUpdated']
+    list_filter = ['createdDate', 'lastUpdated', 'project']
+    search_fields = ['project__name']
+    date_hierarchy = 'createdDate'
+    
+    def project_name(self, obj):
+        return obj.project.name
+    project_name.short_description = 'Project'
+    project_name.admin_order_field = 'project__name'
 
 @admin.register(TeamMember)
 class TeamMemberAdmin(admin.ModelAdmin):

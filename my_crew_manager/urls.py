@@ -4,6 +4,10 @@ from django.http import HttpResponse
 from django.conf import settings
 from django.conf.urls.static import static
 
+# Customize the default admin site
+admin.site.site_header = "My Crew Manager Administration"
+admin.site.site_title = "My Crew Manager Admin"
+admin.site.index_title = "Welcome to My Crew Manager Administration"
 
 def home(request):
     return HttpResponse('Home Page')

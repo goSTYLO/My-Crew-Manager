@@ -11,14 +11,14 @@ from .models import (
     Project, Proposal,
     ProjectFeature, ProjectRole, ProjectGoal,
     TimelineWeek, TimelineItem,
-    Epic, SubEpic, UserStory, StoryTask, ProjectMember,
+    Epic, SubEpic, UserStory, StoryTask, ProjectMember, ProjectInvitation,
 )
 from .serializers import (
     ProjectSerializer, ProposalSerializer,
     ProjectFeatureSerializer, ProjectRoleSerializer, ProjectGoalSerializer,
     TimelineWeekSerializer, TimelineItemSerializer,
     EpicSerializer, SubEpicSerializer, UserStorySerializer, StoryTaskSerializer,
-    ProjectMemberSerializer,
+    ProjectMemberSerializer, ProjectInvitationSerializer, ProjectInvitationActionSerializer,
 )
 
 # Real LLM pipelines
@@ -344,6 +344,119 @@ class StoryTaskViewSet(ModelViewSet):
             return self.queryset.filter(user_story_id=user_story_id)
         return self.queryset
 
+    @action(detail=False, methods=["get"], url_path="user-assigned")
+    def user_assigned_tasks(self, request):
+        """Get all tasks assigned to the current user across all projects"""
+        try:
+            current_user = request.user
+            
+            # Get all tasks assigned to the current user
+            # We need to find tasks where the assignee's user matches the current user
+            assigned_tasks = StoryTask.objects.filter(
+                assignee__user=current_user
+            ).select_related(
+                'assignee',
+                'user_story__sub_epic__epic__project'
+            ).order_by('-id')
+            
+            # Format the response to match the mobile app's expected structure
+            tasks_data = []
+            for task in assigned_tasks:
+                assignee = task.assignee
+                project = task.user_story.sub_epic.epic.project
+                
+                tasks_data.append({
+                    'id': task.id,
+                    'title': task.title,
+                    'status': task.status,
+                    'user_story_id': task.user_story.id,
+                    'is_ai': task.ai,
+                    'assignee_id': assignee.id if assignee else None,
+                    'assignee_name': assignee.user_email if assignee else None,  # Use email for consistency
+                    'project_id': project.id,
+                    'project_title': project.title,
+                    'epic_title': task.user_story.sub_epic.epic.title,
+                    'user_story_title': task.user_story.title,
+                })
+            
+            return Response({
+                'tasks': tasks_data,
+                'total_count': len(tasks_data),
+                'user_email': current_user.email,
+                'user_name': current_user.name,
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response(
+                {"error": f"Failed to fetch user tasks: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    @action(detail=False, methods=["get"], url_path="recent-completed")
+    def recent_completed_tasks(self, request):
+        """Get recent completed tasks with user information for activity feed"""
+        try:
+            # First, let's check if there are any StoryTask objects at all
+            total_tasks = StoryTask.objects.count()
+            
+            # Get recently completed tasks across all projects where user is a member
+            completed_tasks = StoryTask.objects.filter(
+                status='completed',
+                assignee__isnull=False
+            ).select_related(
+                'assignee',
+                'assignee__user',
+                'user_story__sub_epic__epic__project'
+            ).order_by('-id')[:10]  # Get last 10 completed tasks
+            
+            # Format the response for activity feed
+            activities_data = []
+            for task in completed_tasks:
+                try:
+                    assignee = task.assignee
+                    if assignee and assignee.user:  # Only include tasks with valid assignees
+                        # Since there's no updated_at field, we'll use a mock timestamp based on task ID
+                        from datetime import datetime, timedelta
+                        mock_timestamp = datetime.now() - timedelta(hours=task.id % 24)
+                        
+                        # Safe field access with fallbacks
+                        user_name = getattr(assignee, 'user_name', None) or getattr(assignee.user, 'name', 'Unknown User')
+                        user_email = getattr(assignee, 'user_email', None) or getattr(assignee.user, 'email', 'unknown@example.com')
+                        project_title = getattr(task.user_story.sub_epic.epic.project, 'title', 'Unknown Project')
+                        
+                        activities_data.append({
+                            'id': task.id,
+                            'title': task.title or 'Untitled Task',
+                            'status': task.status or 'completed',
+                            'completed_at': mock_timestamp.isoformat(),
+                            'user_id': str(assignee.user.id),
+                            'user_name': user_name,
+                            'user_email': user_email,
+                            'project_title': project_title,
+                        })
+                except Exception as task_error:
+                    # Skip this task if there's an error processing it
+                    print(f"Error processing task {task.id}: {task_error}")
+                    continue
+            
+            # Always return success, even if no activities
+            return Response({
+                'activities': activities_data,
+                'total_count': len(activities_data),
+                'total_tasks_in_db': total_tasks,
+                'message': 'No completed tasks found' if len(activities_data) == 0 else f'Found {len(activities_data)} activities'
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            import traceback
+            error_details = {
+                "error": f"Failed to fetch recent activities: {str(e)}",
+                "traceback": traceback.format_exc(),
+                "activities": [],  # Return empty list on error
+                "total_count": 0
+            }
+            return Response(error_details, status=status.HTTP_200_OK)  # Return 200 with error details
+
     def create(self, request, *args, **kwargs):
         try:
             # Get the user story and check if the current user is the project creator
@@ -527,6 +640,173 @@ class ProjectMemberViewSet(ModelViewSet):
                 )
             
             return super().destroy(request, *args, **kwargs)
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+
+class ProjectInvitationViewSet(ModelViewSet):
+    queryset = ProjectInvitation.objects.all()
+    serializer_class = ProjectInvitationSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        project_id = self.request.query_params.get('project_id')
+        if project_id:
+            return self.queryset.filter(project_id=project_id)
+        return self.queryset
+
+    def create(self, request, *args, **kwargs):
+        try:
+            # Get the project and check permissions
+            project_id = request.data.get('project')
+            if not project_id:
+                return Response(
+                    {"error": "Project ID is required"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            try:
+                project = Project.objects.get(id=project_id)
+            except Project.DoesNotExist:
+                return Response(
+                    {"error": "Project not found"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            # Check if the current user can invite (project creator only for now)
+            if project.created_by != request.user:
+                return Response(
+                    {"error": "Only the project creator can send invitations"},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            
+            # Set the invited_by field
+            request.data['invited_by'] = request.user.id
+            
+            return super().create(request, *args, **kwargs)
+        except Exception as e:
+            if 'unique' in str(e).lower():
+                return Response(
+                    {"error": "A pending invitation already exists for this user"},
+                    status=status.HTTP_409_CONFLICT
+                )
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+    @action(detail=True, methods=['post'], url_path='accept')
+    def accept_invitation(self, request, pk=None):
+        """Accept a project invitation"""
+        try:
+            invitation = self.get_object()
+            
+            # Check if the current user is the invitee
+            if invitation.invitee != request.user:
+                return Response(
+                    {"error": "You can only accept invitations sent to you"},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            
+            # Check if invitation is still pending
+            if invitation.status != 'pending':
+                return Response(
+                    {"error": f"Invitation has already been {invitation.status}"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Transactionally accept invitation and create membership
+            from django.db import transaction
+            
+            with transaction.atomic():
+                # Update invitation status
+                invitation.status = 'accepted'
+                invitation.save(update_fields=['status', 'updated_at'])
+                
+                # Create project membership if it doesn't exist
+                project_member, created = ProjectMember.objects.get_or_create(
+                    project=invitation.project,
+                    user=invitation.invitee,
+                    defaults={
+                        'user_name': invitation.invitee.name,
+                        'user_email': invitation.invitee.email,
+                        'role': 'Member'
+                    }
+                )
+                
+                if not created:
+                    # Update existing membership with latest user info
+                    project_member.user_name = invitation.invitee.name
+                    project_member.user_email = invitation.invitee.email
+                    project_member.save(update_fields=['user_name', 'user_email'])
+            
+            return Response({
+                "message": "Invitation accepted successfully",
+                "membership_created": created,
+                "project_id": invitation.project.id,
+                "project_title": invitation.project.title
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+    @action(detail=True, methods=['post'], url_path='decline')
+    def decline_invitation(self, request, pk=None):
+        """Decline a project invitation"""
+        try:
+            invitation = self.get_object()
+            
+            # Check if the current user is the invitee
+            if invitation.invitee != request.user:
+                return Response(
+                    {"error": "You can only decline invitations sent to you"},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            
+            # Check if invitation is still pending
+            if invitation.status != 'pending':
+                return Response(
+                    {"error": f"Invitation has already been {invitation.status}"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Update invitation status
+            invitation.status = 'declined'
+            invitation.save(update_fields=['status', 'updated_at'])
+            
+            return Response({
+                "message": "Invitation declined successfully",
+                "project_id": invitation.project.id,
+                "project_title": invitation.project.title
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+    @action(detail=False, methods=['get'], url_path='my-invitations')
+    def my_invitations(self, request):
+        """Get all invitations for the current user"""
+        try:
+            invitations = ProjectInvitation.objects.filter(
+                invitee=request.user,
+                status='pending'
+            ).select_related('project', 'invited_by').order_by('-created_at')
+            
+            serializer = self.get_serializer(invitations, many=True)
+            return Response({
+                "invitations": serializer.data,
+                "count": len(serializer.data)
+            }, status=status.HTTP_200_OK)
+            
         except Exception as e:
             return Response(
                 {"error": str(e)},

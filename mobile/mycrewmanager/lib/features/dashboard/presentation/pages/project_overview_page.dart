@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mycrewmanager/features/dashboard/presentation/pages/manage_members_page.dart';
 import 'package:mycrewmanager/features/dashboard/presentation/pages/tasks_page.dart';
 import 'package:mycrewmanager/features/project/domain/entities/project.dart';
+import 'package:mycrewmanager/features/authentication/presentation/bloc/auth_bloc.dart';
 
 class ProjectOverviewPage extends StatelessWidget {
   final Project? project;
@@ -270,23 +272,39 @@ class ProjectOverviewPage extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 12),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      minimumSize: const Size.fromHeight(48),
-                      side: const BorderSide(color: Colors.black, width: 1.2),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    icon: const Icon(Icons.settings, color: Colors.black),
-                    label: const Text(
-                      "Manage Members",
-                      style: TextStyle(color: Colors.black, fontWeight: FontWeight.w600, fontSize: 16),
-                    ),
-                    onPressed: () {
-                      Navigator.of(context).push(ManageMembersPage.route(project));
-                    },
-                  ),
+                // Manage Members button (hidden for developers)
+                BlocBuilder<AuthBloc, AuthState>(
+                  builder: (context, authState) {
+                    // Check if user has developer role (case-insensitive)
+                    bool isDeveloper = false;
+                    if (authState is AuthSuccess) {
+                      isDeveloper = authState.user.role?.toLowerCase() == 'developer';
+                    }
+                    
+                    // Hide button for developers
+                    if (isDeveloper) {
+                      return const SizedBox.shrink();
+                    }
+                    
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size.fromHeight(48),
+                          side: const BorderSide(color: Colors.black, width: 1.2),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        icon: const Icon(Icons.settings, color: Colors.black),
+                        label: const Text(
+                          "Manage Members",
+                          style: TextStyle(color: Colors.black, fontWeight: FontWeight.w600, fontSize: 16),
+                        ),
+                        onPressed: () {
+                          Navigator.of(context).push(ManageMembersPage.route(project));
+                        },
+                      ),
+                    );
+                  },
                 ),
                 const SizedBox(height: 24),
               ],
