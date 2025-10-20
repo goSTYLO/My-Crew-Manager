@@ -1,3 +1,4 @@
+//topbarLayout.tsx
 import React, { useState, useRef, useEffect } from "react";
 import { Menu, Search, Bell, MessageSquare } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -8,15 +9,78 @@ interface TopNavbarProps {
   onMenuClick: () => void;
 }
 
+interface UserData {
+  user_id: string;
+  name: string;
+  email: string;
+  role: string | null;
+  profile_picture?: string | null;
+}
+
 const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
   const navigate = useNavigate();
   const [showNotifications, setShowNotifications] = useState(false);
+  const [userData, setUserData] = useState<UserData | null>(null);
 
   const [notifications, setNotifications] = useState([
     { id: 1, text: "Need Better Notifications Design", read: false },
     { id: 2, text: "Make the Website Responsive", read: false },
     { id: 3, text: "Fix Bug of Able to go Back to a Page", read: false },
   ]);
+
+  useEffect(() => {
+    // Listener for updates
+    const handleUserUpdate = () => {
+      setUserData((prev) => {
+        if (!prev) return prev; // if userData is null, do nothing
+  
+        return {
+          ...prev, // keep existing required fields
+          name: localStorage.getItem("user_name") || prev.name,
+          profile_picture: localStorage.getItem("user_profile_picture") || prev.profile_picture,
+        };
+      });
+    };
+  
+    window.addEventListener("userDataUpdated", handleUserUpdate);
+    return () => window.removeEventListener("userDataUpdated", handleUserUpdate);
+  }, []);
+  
+
+  // Fetch user data on component mount
+  useEffect(() => {
+    const fetchUserData = async () => {
+      const token = localStorage.getItem('token');
+      
+      if (!token) {
+        // If no token, redirect to login
+        navigate('/login');
+        return;
+      }
+
+      try {
+        const response = await fetch('http://localhost:8000/api/user/me/', {
+          headers: {
+            'Authorization': `Token ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setUserData(data);
+        } else {
+          // Token invalid or expired
+          localStorage.removeItem('token');
+          navigate('/login');
+        }
+      } catch (error) {
+        console.error('Failed to fetch user data:', error);
+      }
+    };
+
+    fetchUserData();
+  }, [navigate]);
 
   const markAllAsRead = () => {
     setNotifications((prev) =>
@@ -40,6 +104,16 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
   }, [showNotifications]);
 
   const { theme } = useTheme();
+
+  // Get user initials from name
+  const getUserInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(word => word[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
 
   return (
     <header
@@ -171,26 +245,71 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
 
           {/* User Profile */}
           <div className="flex items-center space-x-3">
-            <div className="sm:block">
-              <p
-                className={`text-sm font-medium ${
-                  theme === "dark" ? "text-white" : "text-gray-800"
-                }`}
-              >
-                John Wayne
-              </p>
-              <p
-                className={`text-xs ${
-                  theme === "dark" ? "text-gray-400" : "text-gray-500"
-                }`}
-              >
-                Philippines
-              </p>
-            </div>
-            <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white font-medium">
-              JW
-            </div>
+            {userData ? (
+              <>
+                <div className="sm:block">
+                  <p
+                    className={`text-sm font-medium ${
+                      theme === "dark" ? "text-white" : "text-gray-800"
+                    }`}
+                  >
+                    {userData.name}
+                  </p>
+                  <p
+                    className={`text-xs ${
+                      theme === "dark" ? "text-gray-400" : "text-gray-500"
+                    }`}
+                  >
+                    {userData.role || 'User'}
+                  </p>
+                </div>
+
+               {/* Profile Picture */}
+                <div className="w-10 h-10 rounded-full overflow-hidden">
+                  {localStorage.getItem('user_profile_picture') ? (
+                    <img
+                      src={localStorage.getItem('user_profile_picture')!}
+                      alt="Profile"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : userData?.profile_picture ? (
+                    <img
+                      src={userData.profile_picture}
+                      alt="Profile"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white font-medium">
+                      {userData ? getUserInitials(userData.name) : '??'}
+                    </div>
+                  )}
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="sm:block">
+                  <p
+                    className={`text-sm font-medium ${
+                      theme === "dark" ? "text-white" : "text-gray-800"
+                    }`}
+                  >
+                    Loading...
+                  </p>
+                  <p
+                    className={`text-xs ${
+                      theme === "dark" ? "text-gray-400" : "text-gray-500"
+                    }`}
+                  >
+                    ...
+                  </p>
+                </div>
+                <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white font-medium">
+                  ...
+                </div>
+              </>
+            )}
           </div>
+
         </div>
       </div>
     </header>

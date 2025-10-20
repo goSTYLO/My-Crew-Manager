@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Upload, Users, Target, FileText, Plus, X, Sparkles, Check, ArrowRight, Calendar } from 'lucide-react';
 import TopNavbar from "../../components/topbarLayouot";
 import Sidebar from "../../components/sidebarLayout";
+import { useTheme } from "../../components/themeContext"; // <-- import ThemeContext
 
 // Types based on Django models
 interface Member {
@@ -35,6 +36,7 @@ interface TimelineWeek {
 type Step = 'create' | 'upload' | 'analyze' | 'review' | 'backlog';
 
 const App: React.FC = () => {
+  const { theme } = useTheme(); // <-- use theme
   const [currentStep, setCurrentStep] = useState<Step>('create');
   const [projectTitle, setProjectTitle] = useState('');
   const [projectSummary, setProjectSummary] = useState('');
@@ -517,19 +519,19 @@ const App: React.FC = () => {
           <React.Fragment key={step.key}>
             <div className="flex items-center">
               <div className={`flex items-center justify-center w-8 h-8 rounded-full ${
-                step.completed ? 'bg-green-500' : currentStep === step.key ? 'bg-blue-500' : 'bg-gray-300'
+                step.completed ? 'bg-green-500' : currentStep === step.key ? 'bg-blue-500' : theme === "dark" ? 'bg-gray-600' : 'bg-gray-300'
               } text-white font-semibold text-sm`}>
                 {step.completed ? <Check size={16} /> : index + 1}
               </div>
               <span className={`ml-2 text-sm font-medium ${
-                currentStep === step.key ? 'text-blue-600' : 'text-gray-600'
+                currentStep === step.key ? 'text-blue-600' : theme === "dark" ? 'text-gray-300' : 'text-gray-600'
               }`}>
                 {step.label}
               </span>
             </div>
             {index < steps.length - 1 && (
               <div className={`flex-1 h-0.5 mx-4 ${
-                step.completed ? 'bg-green-500' : 'bg-gray-300'
+                step.completed ? 'bg-green-500' : theme === "dark" ? 'bg-gray-600' : 'bg-gray-300'
               }`} />
             )}
           </React.Fragment>
@@ -539,7 +541,7 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className={`flex min-h-screen ${theme === "dark" ? "bg-gray-900" : "bg-gray-50"}`}>
      {/* Sidebar */}
      <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
@@ -550,8 +552,8 @@ const App: React.FC = () => {
 
       <main className="flex-1 p-4 lg:p-[100px] overflow-auto space-y-[40px]">
       <div className="max-w-4xl mx-auto">
-        <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
-          <h1 className="text-2xl font-bold text-gray-800 mb-6">Create New Project</h1>
+        <div className={`rounded-lg border p-6 shadow-sm ${theme === "dark" ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"}`}>
+          <h1 className={`text-2xl font-bold mb-6 ${theme === "dark" ? "text-white" : "text-gray-800"}`}>Create New Project</h1>
           
           <StepIndicator />
 
@@ -559,24 +561,28 @@ const App: React.FC = () => {
           {currentStep === 'create' && (
             <div className="space-y-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Project Title *</label>
+                <label className={`block text-sm font-medium mb-2 ${theme === "dark" ? "text-gray-200" : "text-gray-700"}`}>Project Title *</label>
                 <input
                   type="text"
                   value={projectTitle}
                   onChange={(e) => setProjectTitle(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                    theme === "dark" ? "bg-gray-900 border-gray-700 text-white" : "border-gray-300"
+                  }`}
                   placeholder="Enter project name"
                   disabled={isLoading}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Project Summary *</label>
+                <label className={`block text-sm font-medium mb-2 ${theme === "dark" ? "text-gray-200" : "text-gray-700"}`}>Project Summary *</label>
                 <textarea
                   value={projectSummary}
                   onChange={(e) => setProjectSummary(e.target.value)}
                   rows={4}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                    theme === "dark" ? "bg-gray-900 border-gray-700 text-white" : "border-gray-300"
+                  }`}
                   placeholder="Describe your project"
                   disabled={isLoading}
                 />
@@ -615,23 +621,23 @@ const App: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Upload Proposal (PDF) *</label>
+                <label className={`block text-sm font-medium mb-2 ${theme === "dark" ? "text-gray-200" : "text-gray-700"}`}>Upload Proposal (PDF) *</label>
                 <div
                   onDragOver={handleDragOver}
                   onDragLeave={handleDragLeave}
                   onDrop={handleDrop}
                   className={`border-2 border-dashed rounded-lg p-6 text-center transition-all ${
-                    dragActive ? 'border-blue-400 bg-blue-50' : 'border-gray-300 hover:border-gray-400'
+                    dragActive ? 'border-blue-400 bg-blue-50' : theme === "dark" ? 'border-gray-600 hover:border-gray-500' : 'border-gray-300 hover:border-gray-400'
                   } cursor-pointer ${isLoading ? 'opacity-50 pointer-events-none' : ''}`}
                   onClick={() => !isLoading && document.getElementById('fileInput')?.click()}
                 >
-                  <Upload size={32} className="mx-auto text-gray-400 mb-2" />
-                  <p className="text-sm text-gray-600">
+                  <Upload size={32} className={`mx-auto mb-2 ${theme === "dark" ? "text-gray-400" : "text-gray-400"}`} />
+                  <p className={`text-sm ${theme === "dark" ? "text-gray-300" : "text-gray-600"}`}>
                     {uploadedFile
                       ? `Selected File: ${uploadedFile.name} (${(uploadedFile.size / 1024).toFixed(2)} KB)`
                       : 'Click to upload or drag and drop'}
                   </p>
-                  <p className="text-xs text-gray-500 mt-1">PDF files only</p>
+                  <p className={`text-xs mt-1 ${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}>PDF files only</p>
 
                   <input
                     id="fileInput"
@@ -644,8 +650,10 @@ const App: React.FC = () => {
                 </div>
 
                 {uploadedFile && (
-                  <div className="mt-3 flex items-center justify-between bg-gray-50 border border-gray-200 p-3 rounded-lg">
-                    <span className="text-sm text-gray-700 truncate">{uploadedFile.name}</span>
+                  <div className={`mt-3 flex items-center justify-between border p-3 rounded-lg ${
+                    theme === "dark" ? "bg-gray-900 border-gray-700" : "bg-gray-50 border-gray-200"
+                  }`}>
+                    <span className={`text-sm truncate ${theme === "dark" ? "text-gray-200" : "text-gray-700"}`}>{uploadedFile.name}</span>
                     <button
                       onClick={removeFile}
                       className="text-red-500 hover:text-red-700 flex items-center gap-1 text-sm"
@@ -691,8 +699,8 @@ const App: React.FC = () => {
 
               <div className="text-center py-8">
                 <Sparkles size={48} className="mx-auto text-blue-500 mb-4" />
-                <h3 className="text-lg font-semibold text-gray-800 mb-2">Ready to Analyze</h3>
-                <p className="text-gray-600 mb-6">
+                <h3 className={`text-lg font-semibold mb-2 ${theme === "dark" ? "text-white" : "text-gray-800"}`}>Ready to Analyze</h3>
+                <p className={`mb-6 ${theme === "dark" ? "text-gray-300" : "text-gray-600"}`}>
                   Our AI will analyze your proposal and generate project roles, features, goals, and timeline.
                 </p>
 
@@ -729,7 +737,7 @@ const App: React.FC = () => {
 
               {/* AI Summary */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                <label className={`block text-sm font-medium mb-2 flex items-center gap-2 ${theme === "dark" ? "text-gray-200" : "text-gray-700"}`}>
                   <Sparkles size={16} className="text-purple-500" />
                   AI Generated Summary
                 </label>
@@ -737,7 +745,9 @@ const App: React.FC = () => {
                   value={aiGeneratedSummary}
                   onChange={(e) => setAiGeneratedSummary(e.target.value)}
                   rows={4}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-purple-50"
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                    theme === "dark" ? "bg-purple-900 border-purple-700 text-white" : "bg-purple-50 border-gray-300"
+                  }`}
                   disabled={isLoading}
                 />
               </div>
@@ -745,7 +755,7 @@ const App: React.FC = () => {
               {/* Project Roles */}
               <div>
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-semibold text-gray-800 flex items-center gap-2">
+                  <h3 className={`font-semibold flex items-center gap-2 ${theme === "dark" ? "text-white" : "text-gray-800"}`}>
                     <Users size={20} />
                     Project Roles
                   </h3>
@@ -754,10 +764,10 @@ const App: React.FC = () => {
                 <div className="space-y-2 mb-3 max-h-60 overflow-y-auto">
                   {members.map(member => (
                     <div key={member.id} className={`flex items-center justify-between p-3 rounded-lg ${
-                      member.ai ? 'bg-purple-50 border border-purple-200' : 'bg-gray-50'
+                      member.ai ? 'bg-purple-50 border border-purple-200' : theme === "dark" ? 'bg-gray-900' : 'bg-gray-50'
                     }`}>
                       <div>
-                        <span className="font-medium text-gray-800">{member.role}</span>
+                        <span className={`font-medium ${theme === "dark" && !member.ai ? "text-white" : "text-gray-800"}`}>{member.role}</span>
                         {member.ai && (
                           <span className="ml-2 text-xs text-purple-600 inline-flex items-center gap-1">
                             <Sparkles size={12} /> AI Generated
@@ -781,7 +791,9 @@ const App: React.FC = () => {
                     value={newMember.role}
                     onChange={(e) => setNewMember({ ...newMember, role: e.target.value })}
                     placeholder="Role (e.g., Developer)"
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    className={`flex-1 px-3 py-2 border rounded-lg text-sm ${
+                      theme === "dark" ? "bg-gray-900 border-gray-700 text-white" : "border-gray-300"
+                    }`}
                     disabled={isLoading}
                   />
                   <button 
@@ -797,7 +809,7 @@ const App: React.FC = () => {
               {/* Top Features/Tasks */}
               <div>
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-semibold text-gray-800 flex items-center gap-2">
+                  <h3 className={`font-semibold flex items-center gap-2 ${theme === "dark" ? "text-white" : "text-gray-800"}`}>
                     <FileText size={20} />
                     Top Tasks / Features
                   </h3>
@@ -806,11 +818,11 @@ const App: React.FC = () => {
                 <div className="space-y-2 mb-3 max-h-60 overflow-y-auto">
                   {features.map(feature => (
                     <div key={feature.id} className={`p-3 rounded-lg ${
-                      feature.ai ? 'bg-purple-50 border border-purple-200' : 'bg-gray-50'
+                      feature.ai ? 'bg-purple-50 border border-purple-200' : theme === "dark" ? 'bg-gray-900' : 'bg-gray-50'
                     }`}>
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
-                          <div className="font-medium text-gray-800 mb-1">
+                          <div className={`font-medium mb-1 ${theme === "dark" && !feature.ai ? "text-white" : "text-gray-800"}`}>
                             {feature.title}
                             {feature.ai && (
                               <span className="ml-2 text-xs text-purple-600 inline-flex items-center gap-1">
@@ -837,7 +849,9 @@ const App: React.FC = () => {
                     value={newFeature.title}
                     onChange={(e) => setNewFeature({ ...newFeature, title: e.target.value })}
                     placeholder="Feature title"
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    className={`flex-1 px-3 py-2 border rounded-lg text-sm ${
+                      theme === "dark" ? "bg-gray-900 border-gray-700 text-white" : "border-gray-300"
+                    }`}
                     disabled={isLoading}
                   />
                   <button 
@@ -853,7 +867,7 @@ const App: React.FC = () => {
               {/* Project Goals */}
               <div>
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-semibold text-gray-800 flex items-center gap-2">
+                  <h3 className={`font-semibold flex items-center gap-2 ${theme === "dark" ? "text-white" : "text-gray-800"}`}>
                     <Target size={20} />
                     Project Goals
                   </h3>
@@ -862,11 +876,11 @@ const App: React.FC = () => {
                 <div className="space-y-2 mb-3 max-h-60 overflow-y-auto">
                   {goals.map(goal => (
                     <div key={goal.id} className={`p-3 rounded-lg ${
-                      goal.ai ? 'bg-purple-50 border border-purple-200' : 'bg-gray-50'
+                      goal.ai ? 'bg-purple-50 border border-purple-200' : theme === "dark" ? 'bg-gray-900' : 'bg-gray-50'
                     }`}>
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
-                          <div className="font-medium text-gray-800">
+                          <div className={`font-medium ${theme === "dark" && !goal.ai ? "text-white" : "text-gray-800"}`}>
                             {goal.title}
                             {goal.ai && (
                               <span className="ml-2 text-xs text-purple-600 inline-flex items-center gap-1">
@@ -875,7 +889,7 @@ const App: React.FC = () => {
                             )}
                           </div>
                           {goal.role && (
-                            <div className="text-sm text-gray-600 mt-1">
+                            <div className={`text-sm mt-1 ${theme === "dark" ? "text-gray-400" : "text-gray-600"}`}>
                               Role: {goal.role}
                             </div>
                           )}
@@ -898,7 +912,9 @@ const App: React.FC = () => {
                     value={newGoal.title}
                     onChange={(e) => setNewGoal({ ...newGoal, title: e.target.value })}
                     placeholder="Goal title"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    className={`w-full px-3 py-2 border rounded-lg text-sm ${
+                      theme === "dark" ? "bg-gray-900 border-gray-700 text-white" : "border-gray-300"
+                    }`}
                     disabled={isLoading}
                   />
                   <div className="flex gap-2">
@@ -907,7 +923,9 @@ const App: React.FC = () => {
                       value={newGoal.role}
                       onChange={(e) => setNewGoal({ ...newGoal, role: e.target.value })}
                       placeholder="Assigned role (optional)"
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                      className={`flex-1 px-3 py-2 border rounded-lg text-sm ${
+                        theme === "dark" ? "bg-gray-900 border-gray-700 text-white" : "border-gray-300"
+                      }`}
                       disabled={isLoading}
                     />
                     <button 
@@ -924,7 +942,7 @@ const App: React.FC = () => {
               {/* Timeline */}
               <div>
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-semibold text-gray-800 flex items-center gap-2">
+                  <h3 className={`font-semibold flex items-center gap-2 ${theme === "dark" ? "text-white" : "text-gray-800"}`}>
                     <Calendar size={20} />
                     Project Timeline
                   </h3>
@@ -933,10 +951,10 @@ const App: React.FC = () => {
                 <div className="space-y-3 mb-3 max-h-80 overflow-y-auto">
                   {timeline.map(week => (
                     <div key={week.id} className={`p-4 rounded-lg ${
-                      week.ai ? 'bg-purple-50 border border-purple-200' : 'bg-gray-50'
+                      week.ai ? 'bg-purple-50 border border-purple-200' : theme === "dark" ? 'bg-gray-900' : 'bg-gray-50'
                     }`}>
                       <div className="flex items-center justify-between mb-2">
-                        <h4 className="font-semibold text-gray-800 flex items-center gap-2">
+                        <h4 className={`font-semibold flex items-center gap-2 ${theme === "dark" && !week.ai ? "text-white" : "text-gray-800"}`}>
                           Week {week.week_number}
                           {week.ai && (
                             <span className="text-xs text-purple-600 inline-flex items-center gap-1">
@@ -947,8 +965,10 @@ const App: React.FC = () => {
                       </div>
                       <div className="space-y-2">
                         {week.goals.map((goal, idx) => (
-                          <div key={idx} className="flex items-start justify-between bg-white p-2 rounded">
-                            <span className="text-sm text-gray-700 flex-1">{goal}</span>
+                          <div key={idx} className={`flex items-start justify-between p-2 rounded ${
+                            theme === "dark" ? "bg-gray-800" : "bg-white"
+                          }`}>
+                            <span className={`text-sm flex-1 ${theme === "dark" ? "text-gray-200" : "text-gray-700"}`}>{goal}</span>
                             <button
                               onClick={() => removeTimelineGoal(week.id, idx)}
                               className="text-red-500 hover:text-red-700 ml-2"
@@ -963,15 +983,17 @@ const App: React.FC = () => {
                   ))}
                 </div>
 
-                <div className="space-y-2 border-t pt-4">
+                <div className={`space-y-2 border-t pt-4 ${theme === "dark" ? "border-gray-700" : ""}`}>
                   <div className="flex gap-2 items-center">
-                    <label className="text-sm font-medium text-gray-700 w-20">Week:</label>
+                    <label className={`text-sm font-medium w-20 ${theme === "dark" ? "text-gray-200" : "text-gray-700"}`}>Week:</label>
                     <input
                       type="number"
                       min="1"
                       value={newTimelineWeek.week_number}
                       onChange={(e) => setNewTimelineWeek({ ...newTimelineWeek, week_number: parseInt(e.target.value) || 1 })}
-                      className="w-24 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                      className={`w-24 px-3 py-2 border rounded-lg text-sm ${
+                        theme === "dark" ? "bg-gray-900 border-gray-700 text-white" : "border-gray-300"
+                      }`}
                       disabled={isLoading}
                     />
                   </div>
@@ -981,7 +1003,9 @@ const App: React.FC = () => {
                       value={newTimelineWeek.goal}
                       onChange={(e) => setNewTimelineWeek({ ...newTimelineWeek, goal: e.target.value })}
                       placeholder="Goal/Task for this week"
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                      className={`flex-1 px-3 py-2 border rounded-lg text-sm ${
+                        theme === "dark" ? "bg-gray-900 border-gray-700 text-white" : "border-gray-300"
+                      }`}
                       disabled={isLoading}
                       onKeyPress={(e) => {
                         if (e.key === 'Enter') {
@@ -1001,7 +1025,7 @@ const App: React.FC = () => {
                 </div>
               </div>
 
-              <div className="flex justify-end pt-4 border-t">
+              <div className={`flex justify-end pt-4 border-t ${theme === "dark" ? "border-gray-700" : ""}`}>
                 <button
                   onClick={generateBacklogAndSave}
                   disabled={isLoading}
@@ -1029,8 +1053,8 @@ const App: React.FC = () => {
               <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Check size={32} className="text-green-600" />
               </div>
-              <h3 className="text-2xl font-bold text-gray-800 mb-2">Success!</h3>
-              <p className="text-gray-600 mb-6">
+              <h3 className={`text-2xl font-bold mb-2 ${theme === "dark" ? "text-white" : "text-gray-800"}`}>Success!</h3>
+              <p className={`mb-6 ${theme === "dark" ? "text-gray-300" : "text-gray-600"}`}>
                 Your project has been created with a complete backlog.
               </p>
               <button

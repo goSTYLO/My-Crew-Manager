@@ -1,3 +1,4 @@
+//mainFrame.tsx
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search, Bell, Menu, X, FolderOpen, Folder  } from "lucide-react";

@@ -1,3 +1,4 @@
+#urls.py
 from django.urls import path
 from .views import SignupView, LoginView, LogoutView, UserDetailView, UserListView
 

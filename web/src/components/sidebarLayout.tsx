@@ -11,7 +11,7 @@ import {
   FolderPlus,
   MessageSquare
 } from "lucide-react";
-import { useTheme } from "./themeContext"; // <-- import ThemeContext
+import { useTheme } from "./themeContext";
 
 interface SidebarProps {
   sidebarOpen: boolean;
@@ -22,16 +22,44 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-  const { theme } = useTheme(); // <-- use theme
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const { theme } = useTheme();
 
-  // ✅ logout handler is now inside Sidebar
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    sessionStorage.clear();
-    setShowLogoutConfirm(false);
-
-    // Replace history and force reload
-    window.location.replace("/sign-in");
+  // ✅ API logout handler
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    setShowLogoutConfirm(false); // hide confirmation immediately
+  
+    try {
+      const token = localStorage.getItem("token");
+  
+      // Call the logout API endpoint
+      await fetch("http://localhost:8000/api/user/logout/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Token ${token}`,
+        },
+      });
+  
+      // Clear local storage and session
+      localStorage.removeItem("token");
+      sessionStorage.clear();
+  
+      // Add a small delay so the spinner is visible
+      setTimeout(() => {
+        window.location.replace("/sign-in");
+      }, 1200); // 1 second delay
+  
+    } catch (error) {
+      console.error("Logout error:", error);
+      localStorage.removeItem("token");
+      sessionStorage.clear();
+  
+      setTimeout(() => {
+        window.location.replace("/sign-in");
+      }, 1200);
+    }
   };
 
   const navigationItems = [
@@ -55,14 +83,13 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
     return location.pathname === itemPath;
   };
 
-  // Find if any navigation item is active
   const anyActive = navigationItems.some(
     (item) => item.path && checkIsActive(item.path)
   );
 
   return (
     <>
-      {/* Sidebar overlay (click outside to close) */}
+      {/* Sidebar overlay */}
       {sidebarOpen && (
         <div
           className="fixed inset-0 bg-black bg-opacity-30 z-50"
@@ -93,7 +120,6 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
           >
             MyCrewManager
           </span>
-          {/* Close button */}
           <button
             className={`${
               theme === "dark"
@@ -109,7 +135,6 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
         {/* Navigation */}
         <nav className="mt-6">
           {navigationItems.map((item) => {
-            // Highlight "Settings" if nothing is active and this is the settings item
             const active =
               anyActive
                 ? checkIsActive(item.path)
@@ -124,7 +149,7 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
                   } else {
                     navigate(item.path!);
                   }
-                  setSidebarOpen(false); // close sidebar after click
+                  setSidebarOpen(false);
                 }}
                 className={`flex items-center px-6 py-3 text-left w-full transition-colors ${
                   active
@@ -145,45 +170,55 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
       </div>
 
       {/* Logout Confirmation Modal */}
-      {showLogoutConfirm && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50">
-          <div
-            className={`rounded-xl shadow-lg p-6 w-80 ${
-              theme === "dark" ? "bg-gray-900 text-white" : "bg-white"
-            }`}
-          >
-            <h2
-              className={`text-lg font-semibold mb-4 ${
-                theme === "dark" ? "text-white" : "text-gray-900"
-              }`}
-            >
-              Confirm Logout
-            </h2>
-            <p
-              className={`mb-6 ${
-                theme === "dark" ? "text-gray-300" : "text-gray-600"
-              }`}
-            >
-              Are you sure you want to log out?
-            </p>
-            <div className="flex justify-end gap-3">
-              <button
-                className={`px-4 py-2 rounded-lg ${
-                  theme === "dark"
-                    ? "bg-gray-700 hover:bg-gray-600 text-white"
-                    : "bg-gray-200 hover:bg-gray-300"
-                }`}
-                onClick={() => setShowLogoutConfirm(false)}
-              >
-                Cancel
-              </button>
-              <button
-                className="px-4 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600"
-                onClick={handleLogout}
-              >
-                Logout
-              </button>
-            </div>
+{showLogoutConfirm && !isLoggingOut && (
+  <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50">
+    <div
+      className={`rounded-xl shadow-lg p-6 w-80 ${
+        theme === "dark" ? "bg-gray-900 text-white" : "bg-white"
+      }`}
+    >
+      <h2
+        className={`text-lg font-semibold mb-4 ${
+          theme === "dark" ? "text-white" : "text-gray-900"
+        }`}
+      >
+        Confirm Logout
+      </h2>
+      <p
+        className={`mb-6 ${
+          theme === "dark" ? "text-gray-300" : "text-gray-600"
+        }`}
+      >
+        Are you sure you want to log out?
+      </p>
+      <div className="flex justify-end gap-3">
+        <button
+          className={`px-4 py-2 rounded-lg ${
+            theme === "dark"
+              ? "bg-gray-700 hover:bg-gray-600 text-white"
+              : "bg-gray-200 hover:bg-gray-300"
+          }`}
+          onClick={() => setShowLogoutConfirm(false)}
+        >
+          Cancel
+        </button>
+        <button
+          className="px-4 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600"
+          onClick={handleLogout}
+        >
+          Logout
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
+      {/* Logging Out Animation Overlay */}
+      {isLoggingOut && (
+        <div className="fixed inset-0 flex flex-col items-center justify-center bg-black bg-opacity-50 z-50">
+          <div className="flex flex-col items-center gap-4">
+            <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+            <p className="text-white text-xl font-semibold">Logging out...</p>
           </div>
         </div>
       )}

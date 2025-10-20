@@ -3,6 +3,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.authtoken.models import Token
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from django.contrib.auth import authenticate
 from .models import User
 from .serializers import UserSignupSerializer
@@ -18,7 +19,7 @@ class SignupView(APIView):
                 'id': str(user.user_id),
                 'email': user.email,
                 'name': user.name,
-                'role': user.role,  # ✅ ADD THIS
+                'role': user.role,
                 'token': token.key,
             }, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -34,7 +35,7 @@ class LoginView(APIView):
                 'id': str(user.user_id),
                 'email': user.email,
                 'name': user.name,
-                'role': user.role,  # ✅ ADD THIS - This is the critical fix!
+                'role': user.role,
                 'token': token.key,
             })
         return Response({'message': 'Invalid email or password'}, status=status.HTTP_401_UNAUTHORIZED)
@@ -48,10 +49,57 @@ class LogoutView(APIView):
     
 class UserDetailView(APIView):
     permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def get(self, request):
         serializer = UserSerializer(request.user)
         return Response(serializer.data)
+    
+    def put(self, request):
+        """Update user profile including profile picture"""
+        user = request.user
+        data = request.data
+        
+        # Update fields if provided
+        if 'name' in data:
+            user.name = data['name']
+        
+        if 'email' in data:
+            # Check if email is already taken by another user
+            if User.objects.filter(email=data['email']).exclude(user_id=user.user_id).exists():
+                return Response(
+                    {'error': 'Email already in use by another account'}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            user.email = data['email']
+        
+        if 'role' in data:
+            user.role = data['role']
+        
+        # Handle profile picture upload
+        if 'profile_picture' in request.FILES:
+            # Delete old profile picture if exists
+            if user.profile_picture:
+                try:
+                    user.profile_picture.delete(save=False)
+                except:
+                    pass
+            
+            user.profile_picture = request.FILES['profile_picture']
+        
+        # Only update password if provided
+        if 'password' in data and data['password']:
+            user.set_password(data['password'])
+        
+        try:
+            user.save()
+            serializer = UserSerializer(user)
+            return Response(serializer.data)
+        except Exception as e:
+            return Response(
+                {'error': str(e)}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
 class UserListView(APIView):
     permission_classes = [IsAuthenticated]
