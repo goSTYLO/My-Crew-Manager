@@ -12,6 +12,7 @@ from .models import (
     ProjectFeature, ProjectRole, ProjectGoal,
     TimelineWeek, TimelineItem,
     Epic, SubEpic, UserStory, StoryTask, ProjectMember, ProjectInvitation,
+    Notification,
 )
 from .serializers import (
     ProjectSerializer, ProposalSerializer,
@@ -19,6 +20,7 @@ from .serializers import (
     TimelineWeekSerializer, TimelineItemSerializer,
     EpicSerializer, SubEpicSerializer, UserStorySerializer, StoryTaskSerializer,
     ProjectMemberSerializer, ProjectInvitationSerializer, ProjectInvitationActionSerializer,
+    NotificationSerializer,
 )
 
 # Real LLM pipelines
@@ -34,7 +36,13 @@ class ProjectViewSet(ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def perform_create(self, serializer):
-        serializer.save(created_by=self.request.user)
+        project = serializer.save(created_by=self.request.user)
+        # Automatically add creator as a project member with Owner role
+        ProjectMember.objects.create(
+            project=project,
+            user=self.request.user,
+            role='Owner'
+        )
 
     @action(detail=True, methods=["put"], url_path="ingest-proposal/(?P<proposal_id>[^/.]+)")
     def ingest_proposal(self, request, pk=None, proposal_id=None):
@@ -558,73 +566,13 @@ class ProjectMemberViewSet(ModelViewSet):
         return self.queryset
 
     def create(self, request, *args, **kwargs):
-        try:
-            # Get the project and check if the current user is the creator
-            project_id = request.data.get('project')
-            if not project_id:
-                return Response(
-                    {"error": "Project ID is required"},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-            
-            try:
-                project = Project.objects.get(id=project_id)
-            except Project.DoesNotExist:
-                return Response(
-                    {"error": "Project not found"},
-                    status=status.HTTP_404_NOT_FOUND
-                )
-            
-            # Check if the current user is the project creator
-            if project.created_by != request.user:
-                return Response(
-                    {"error": "Only the project creator can add members"},
-                    status=status.HTTP_403_FORBIDDEN
-                )
-            
-            # Check if the user exists in the database
-            user_email = request.data.get('user_email')
-            if user_email:
-                from django.contrib.auth import get_user_model
-                User = get_user_model()
-                try:
-                    existing_user = User.objects.get(email=user_email)
-                    # Update the user field to use the existing user
-                    request.data['user'] = existing_user.user_id
-                    request.data['user_name'] = existing_user.name
-                    request.data['user_email'] = existing_user.email
-                except User.DoesNotExist:
-                    # User doesn't exist, we need to create a new User first
-                    # Generate a unique user ID that doesn't conflict with existing ones
-                    import hashlib
-                    base_id = int(hashlib.md5(user_email.encode()).hexdigest()[:8], 16) % 10000 + 1000
-                    
-                    # Find a unique user_id that doesn't exist
-                    user_id = base_id
-                    while User.objects.filter(user_id=user_id).exists():
-                        user_id += 1
-                    
-                    # Create the new user
-                    new_user = User.objects.create(
-                        user_id=user_id,
-                        email=user_email,
-                        name=request.data.get('user_name', 'Unknown User'),
-                        password='dummy_password'  # This won't be used for authentication
-                    )
-                    
-                    # Update the request data to use the new user
-                    request.data['user'] = new_user.user_id
-                    request.data['user_name'] = new_user.name
-                    request.data['user_email'] = new_user.email
-            
-            return super().create(request, *args, **kwargs)
-        except Exception as e:
-            if 'unique' in str(e).lower():
-                return Response(
-                    {"error": "This user is already a member of this project"},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-            raise e
+        return Response(
+            {
+                "error": "Direct member creation is not allowed. Please use the project invitation system.",
+                "hint": "Send an invitation via POST /api/ai/invitations/"
+            },
+            status=status.HTTP_403_FORBIDDEN
+        )
 
     def destroy(self, request, *args, **kwargs):
         try:
@@ -658,6 +606,9 @@ class ProjectInvitationViewSet(ModelViewSet):
             return self.queryset.filter(project_id=project_id)
         return self.queryset
 
+    def perform_create(self, serializer):
+        serializer.save(invited_by=self.request.user)
+
     def create(self, request, *args, **kwargs):
         try:
             # Get the project and check permissions
@@ -684,9 +635,27 @@ class ProjectInvitationViewSet(ModelViewSet):
                 )
             
             # Set the invited_by field
-            request.data['invited_by'] = request.user.id
+            request.data['invited_by'] = request.user.user_id
             
             return super().create(request, *args, **kwargs)
+            
+            # Create notification if invitation was successfully created
+            if response.status_code == 201:
+                invitation = ProjectInvitation.objects.get(id=response.data['id'])
+                
+                # Create notification
+                from .services.notification_service import NotificationService
+                NotificationService.create_notification(
+                    recipient=invitation.invitee,
+                    notification_type='project_invitation',
+                    title=f'Project Invitation: {invitation.project.title}',
+                    message=f'{invitation.invited_by.name} invited you to join {invitation.project.title}',
+                    content_object=invitation,
+                    action_url=f'/projects/{invitation.project.id}/invitations',
+                    actor=invitation.invited_by
+                )
+            
+            return response
         except Exception as e:
             if 'unique' in str(e).lower():
                 return Response(
@@ -813,4 +782,29 @@ class ProjectInvitationViewSet(ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+
+class NotificationViewSet(ModelViewSet):
+    serializer_class = NotificationSerializer
+    permission_classes = [IsAuthenticated]
+    
+    def get_queryset(self):
+        return Notification.objects.filter(recipient=self.request.user)
+    
+    @action(detail=False, methods=['get'])
+    def unread_count(self, request):
+        count = self.get_queryset().filter(is_read=False).count()
+        return Response({'unread_count': count})
+    
+    @action(detail=True, methods=['post'])
+    def mark_read(self, request, pk=None):
+        from .services.notification_service import NotificationService
+        notification = self.get_object()
+        NotificationService.mark_as_read(notification.id, request.user)
+        return Response({'status': 'marked as read'})
+    
+    @action(detail=False, methods=['post'])
+    def mark_all_read(self, request):
+        from .services.notification_service import NotificationService
+        NotificationService.mark_all_as_read(request.user)
+        return Response({'status': 'all marked as read'})
 

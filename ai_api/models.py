@@ -1,6 +1,8 @@
 #models.py
 from django.db import models
 from django.conf import settings
+from django.contrib.contenttypes.models import ContentType
+from django.contrib.contenttypes.fields import GenericForeignKey
 
 
 class Project(models.Model):
@@ -145,5 +147,53 @@ class ProjectInvitation(models.Model):
             ).exclude(pk=self.pk)
             if existing.exists():
                 raise ValidationError("A pending invitation already exists for this user")
+
+
+class Notification(models.Model):
+    NOTIFICATION_TYPES = [
+        ('project_invitation', 'Project Invitation'),
+        ('task_assigned', 'Task Assigned'),
+        ('task_updated', 'Task Updated'),
+        ('task_completed', 'Task Completed'),
+        ('mention', 'Mentioned in Chat'),
+        ('deadline_reminder', 'Deadline Reminder'),
+        ('project_update', 'Project Update'),
+        ('member_joined', 'Member Joined Project'),
+        ('member_left', 'Member Left Project'),
+    ]
+    
+    # Core fields
+    recipient = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='notifications')
+    notification_type = models.CharField(max_length=50, choices=NOTIFICATION_TYPES)
+    title = models.CharField(max_length=255)
+    message = models.TextField()
+    
+    # Generic relations for flexibility
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE, null=True, blank=True)
+    object_id = models.PositiveIntegerField(null=True, blank=True)
+    content_object = GenericForeignKey('content_type', 'object_id')
+    
+    # Metadata
+    is_read = models.BooleanField(default=False)
+    read_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    # Optional action URL for frontend navigation
+    action_url = models.CharField(max_length=500, blank=True, null=True)
+    
+    # Optional actor (who triggered the notification)
+    actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='triggered_notifications')
+    
+    class Meta:
+        db_table = 'ai_api_notification'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['recipient', 'is_read']),
+            models.Index(fields=['recipient', 'created_at']),
+            models.Index(fields=['notification_type']),
+        ]
+    
+    def __str__(self):
+        return f"{self.recipient.name} - {self.title}"
 
 

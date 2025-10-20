@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Project, Proposal, ProjectFeature, ProjectGoal, ProjectRole, TimelineWeek, TimelineItem, Epic, SubEpic, UserStory, StoryTask, ProjectMember, ProjectInvitation
+from .models import Project, Proposal, ProjectFeature, ProjectGoal, ProjectRole, TimelineWeek, TimelineItem, Epic, SubEpic, UserStory, StoryTask, ProjectMember, ProjectInvitation, Notification
 
 @admin.register(Project)
 class ProjectAdmin(admin.ModelAdmin):
@@ -193,3 +193,15 @@ class ProjectInvitationAdmin(admin.ModelAdmin):
         return obj.invited_by.name
     invited_by_name.short_description = 'Invited By'
     invited_by_name.admin_order_field = 'invited_by__name'
+
+
+@admin.register(Notification)
+class NotificationAdmin(admin.ModelAdmin):
+    list_display = ['id', 'recipient_name', 'notification_type', 'title', 'is_read', 'created_at']
+    list_filter = ['notification_type', 'is_read', 'created_at']
+    search_fields = ['title', 'message', 'recipient__name', 'recipient__email']
+    readonly_fields = ['created_at', 'read_at']
+    
+    def recipient_name(self, obj):
+        return obj.recipient.name
+    recipient_name.short_description = 'Recipient'

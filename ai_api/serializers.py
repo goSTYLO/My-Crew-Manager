@@ -5,6 +5,7 @@ from .models import (
     ProjectFeature, ProjectRole, ProjectGoal,
     TimelineWeek, TimelineItem,
     Epic, SubEpic, UserStory, StoryTask, ProjectMember, ProjectInvitation,
+    Notification,
 )
 
 
@@ -126,7 +127,7 @@ class ProjectInvitationSerializer(serializers.ModelSerializer):
             'id', 'project', 'project_title', 'invitee', 'invitee_name', 'invitee_email',
             'invited_by', 'invited_by_name', 'status', 'message', 'created_at', 'updated_at'
         ]
-        read_only_fields = ['id', 'invited_by', 'status', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'status', 'created_at', 'updated_at']
     
     def validate(self, data):
         # Additional validation for creating invitations
@@ -151,6 +152,19 @@ class ProjectInvitationSerializer(serializers.ModelSerializer):
 
 class ProjectInvitationActionSerializer(serializers.Serializer):
     """Serializer for accept/decline actions"""
+
+
+class NotificationSerializer(serializers.ModelSerializer):
+    actor_name = serializers.CharField(source='actor.name', read_only=True)
+    
+    class Meta:
+        model = Notification
+        fields = [
+            'id', 'notification_type', 'title', 'message', 
+            'is_read', 'read_at', 'created_at', 'action_url',
+            'actor', 'actor_name'
+        ]
+        read_only_fields = ['id', 'created_at', 'actor_name']
     action = serializers.ChoiceField(choices=['accept', 'decline'])
     
     def validate_action(self, value):

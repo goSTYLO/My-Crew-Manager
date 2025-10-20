@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Sidebar from "../../components/sidebarLayout";
 import TopNavbar from '../../components/topbarLayouot';
 import { useTheme } from "../../components/themeContext"; // <-- import ThemeContext
-import axios from 'axios';
+
 
 // Types for project data
 interface Project {
