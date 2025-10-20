@@ -3,7 +3,7 @@ from .models import (
     Project, Proposal,
     ProjectFeature, ProjectRole, ProjectGoal,
     TimelineWeek, TimelineItem,
-    Epic, SubEpic, UserStory, StoryTask, ProjectMember,
+    Epic, SubEpic, UserStory, StoryTask, ProjectMember, ProjectInvitation,
 )
 
 
@@ -111,5 +111,50 @@ class ProjectMemberSerializer(serializers.ModelSerializer):
         model = ProjectMember
         fields = ['id', 'project', 'user', 'user_name', 'user_email', 'role', 'joined_at']
         read_only_fields = ['id', 'joined_at']
+
+
+class ProjectInvitationSerializer(serializers.ModelSerializer):
+    project_title = serializers.CharField(source='project.title', read_only=True)
+    invitee_name = serializers.CharField(source='invitee.name', read_only=True)
+    invitee_email = serializers.CharField(source='invitee.email', read_only=True)
+    invited_by_name = serializers.CharField(source='invited_by.name', read_only=True)
+    
+    class Meta:
+        model = ProjectInvitation
+        fields = [
+            'id', 'project', 'project_title', 'invitee', 'invitee_name', 'invitee_email',
+            'invited_by', 'invited_by_name', 'status', 'message', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'invited_by', 'status', 'created_at', 'updated_at']
+    
+    def validate(self, data):
+        # Additional validation for creating invitations
+        if self.instance is None:  # Creating new invitation
+            project = data.get('project')
+            invitee = data.get('invitee')
+            
+            # Check if user is already a member
+            if ProjectMember.objects.filter(project=project, user=invitee).exists():
+                raise serializers.ValidationError("User is already a member of this project")
+            
+            # Check for existing pending invitation
+            if ProjectInvitation.objects.filter(
+                project=project, 
+                invitee=invitee, 
+                status='pending'
+            ).exists():
+                raise serializers.ValidationError("A pending invitation already exists for this user")
+        
+        return data
+
+
+class ProjectInvitationActionSerializer(serializers.Serializer):
+    """Serializer for accept/decline actions"""
+    action = serializers.ChoiceField(choices=['accept', 'decline'])
+    
+    def validate_action(self, value):
+        if value not in ['accept', 'decline']:
+            raise serializers.ValidationError("Action must be 'accept' or 'decline'")
+        return value
 
 

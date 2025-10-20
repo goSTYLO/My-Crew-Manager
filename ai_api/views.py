@@ -10,14 +10,14 @@ from .models import (
     Project, Proposal,
     ProjectFeature, ProjectRole, ProjectGoal,
     TimelineWeek, TimelineItem,
-    Epic, SubEpic, UserStory, StoryTask, ProjectMember,
+    Epic, SubEpic, UserStory, StoryTask, ProjectMember, ProjectInvitation,
 )
 from .serializers import (
     ProjectSerializer, ProposalSerializer,
     ProjectFeatureSerializer, ProjectRoleSerializer, ProjectGoalSerializer,
     TimelineWeekSerializer, TimelineItemSerializer,
     EpicSerializer, SubEpicSerializer, UserStorySerializer, StoryTaskSerializer,
-    ProjectMemberSerializer,
+    ProjectMemberSerializer, ProjectInvitationSerializer, ProjectInvitationActionSerializer,
 )
 
 # Real LLM pipelines
@@ -639,6 +639,173 @@ class ProjectMemberViewSet(ModelViewSet):
                 )
             
             return super().destroy(request, *args, **kwargs)
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+
+class ProjectInvitationViewSet(ModelViewSet):
+    queryset = ProjectInvitation.objects.all()
+    serializer_class = ProjectInvitationSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        project_id = self.request.query_params.get('project_id')
+        if project_id:
+            return self.queryset.filter(project_id=project_id)
+        return self.queryset
+
+    def create(self, request, *args, **kwargs):
+        try:
+            # Get the project and check permissions
+            project_id = request.data.get('project')
+            if not project_id:
+                return Response(
+                    {"error": "Project ID is required"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            try:
+                project = Project.objects.get(id=project_id)
+            except Project.DoesNotExist:
+                return Response(
+                    {"error": "Project not found"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            # Check if the current user can invite (project creator only for now)
+            if project.created_by != request.user:
+                return Response(
+                    {"error": "Only the project creator can send invitations"},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            
+            # Set the invited_by field
+            request.data['invited_by'] = request.user.id
+            
+            return super().create(request, *args, **kwargs)
+        except Exception as e:
+            if 'unique' in str(e).lower():
+                return Response(
+                    {"error": "A pending invitation already exists for this user"},
+                    status=status.HTTP_409_CONFLICT
+                )
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+    @action(detail=True, methods=['post'], url_path='accept')
+    def accept_invitation(self, request, pk=None):
+        """Accept a project invitation"""
+        try:
+            invitation = self.get_object()
+            
+            # Check if the current user is the invitee
+            if invitation.invitee != request.user:
+                return Response(
+                    {"error": "You can only accept invitations sent to you"},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            
+            # Check if invitation is still pending
+            if invitation.status != 'pending':
+                return Response(
+                    {"error": f"Invitation has already been {invitation.status}"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Transactionally accept invitation and create membership
+            from django.db import transaction
+            
+            with transaction.atomic():
+                # Update invitation status
+                invitation.status = 'accepted'
+                invitation.save(update_fields=['status', 'updated_at'])
+                
+                # Create project membership if it doesn't exist
+                project_member, created = ProjectMember.objects.get_or_create(
+                    project=invitation.project,
+                    user=invitation.invitee,
+                    defaults={
+                        'user_name': invitation.invitee.name,
+                        'user_email': invitation.invitee.email,
+                        'role': 'Member'
+                    }
+                )
+                
+                if not created:
+                    # Update existing membership with latest user info
+                    project_member.user_name = invitation.invitee.name
+                    project_member.user_email = invitation.invitee.email
+                    project_member.save(update_fields=['user_name', 'user_email'])
+            
+            return Response({
+                "message": "Invitation accepted successfully",
+                "membership_created": created,
+                "project_id": invitation.project.id,
+                "project_title": invitation.project.title
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+    @action(detail=True, methods=['post'], url_path='decline')
+    def decline_invitation(self, request, pk=None):
+        """Decline a project invitation"""
+        try:
+            invitation = self.get_object()
+            
+            # Check if the current user is the invitee
+            if invitation.invitee != request.user:
+                return Response(
+                    {"error": "You can only decline invitations sent to you"},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            
+            # Check if invitation is still pending
+            if invitation.status != 'pending':
+                return Response(
+                    {"error": f"Invitation has already been {invitation.status}"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Update invitation status
+            invitation.status = 'declined'
+            invitation.save(update_fields=['status', 'updated_at'])
+            
+            return Response({
+                "message": "Invitation declined successfully",
+                "project_id": invitation.project.id,
+                "project_title": invitation.project.title
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+    @action(detail=False, methods=['get'], url_path='my-invitations')
+    def my_invitations(self, request):
+        """Get all invitations for the current user"""
+        try:
+            invitations = ProjectInvitation.objects.filter(
+                invitee=request.user,
+                status='pending'
+            ).select_related('project', 'invited_by').order_by('-created_at')
+            
+            serializer = self.get_serializer(invitations, many=True)
+            return Response({
+                "invitations": serializer.data,
+                "count": len(serializer.data)
+            }, status=status.HTTP_200_OK)
+            
         except Exception as e:
             return Response(
                 {"error": str(e)},

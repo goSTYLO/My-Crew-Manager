@@ -97,3 +97,52 @@ class ProjectMember(models.Model):
         return f"{self.user_name} - {self.role}"
 
 
+class ProjectInvitation(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('accepted', 'Accepted'),
+        ('declined', 'Declined'),
+        ('expired', 'Expired'),
+    ]
+    
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='invitations')
+    invitee = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='project_invites')
+    invited_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='project_sent_invites')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    message = models.CharField(max_length=500, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        unique_together = ['project', 'invitee']  # Prevent duplicate invitations
+        db_table = 'ai_api_projectinvitation'
+        indexes = [
+            models.Index(fields=['project', 'status']),
+            models.Index(fields=['invitee', 'status']),
+        ]
+    
+    def __str__(self):
+        return f"{self.invitee.name} -> {self.project.title} ({self.status})"
+    
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        
+        # Prevent self-invitation
+        if self.invitee == self.invited_by:
+            raise ValidationError("Cannot invite yourself to a project")
+        
+        # Check if user is already a member
+        if ProjectMember.objects.filter(project=self.project, user=self.invitee).exists():
+            raise ValidationError("User is already a member of this project")
+        
+        # Check for existing pending invitation
+        if self.status == 'pending':
+            existing = ProjectInvitation.objects.filter(
+                project=self.project, 
+                invitee=self.invitee, 
+                status='pending'
+            ).exclude(pk=self.pk)
+            if existing.exists():
+                raise ValidationError("A pending invitation already exists for this user")
+
+
