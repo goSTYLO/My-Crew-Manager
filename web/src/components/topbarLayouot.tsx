@@ -1,6 +1,6 @@
 //topbarLayout.tsx
 import React, { useState, useRef, useEffect } from "react";
-import { Menu, Search, Bell, MessageSquare } from "lucide-react";
+import { Menu, Search, Bell, MessageSquare, ChevronDown, ChevronUp, User, LogOut } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import logo from "../assets/logo.png";
 import { useTheme } from "./themeContext";
@@ -21,6 +21,10 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
   const navigate = useNavigate();
   const [showNotifications, setShowNotifications] = useState(false);
   const [userData, setUserData] = useState<UserData | null>(null);
+  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+  const profileDropdownRef = useRef<HTMLDivElement>(null);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const [notifications, setNotifications] = useState([
     { id: 1, text: "Need Better Notifications Design", read: false },
@@ -28,23 +32,66 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
     { id: 3, text: "Fix Bug of Able to go Back to a Page", read: false },
   ]);
 
-  useEffect(() => {
-    // Listener for updates
-    const handleUserUpdate = () => {
-      setUserData((prev) => {
-        if (!prev) return prev; // if userData is null, do nothing
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    setShowLogoutConfirm(false); // hide modal immediately
   
-        return {
-          ...prev, // keep existing required fields
-          name: localStorage.getItem("user_name") || prev.name,
-          profile_picture: localStorage.getItem("user_profile_picture") || prev.profile_picture,
-        };
+    try {
+      const token = localStorage.getItem("token");
+  
+      await fetch("http://localhost:8000/api/user/logout/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Token ${token}`,
+        },
       });
-    };
   
-    window.addEventListener("userDataUpdated", handleUserUpdate);
-    return () => window.removeEventListener("userDataUpdated", handleUserUpdate);
+      localStorage.removeItem("token");
+      sessionStorage.clear();
+  
+      setTimeout(() => {
+        window.location.replace("/sign-in");
+      }, 1200);
+  
+    } catch (error) {
+      console.error("Logout error:", error);
+      localStorage.removeItem("token");
+      sessionStorage.clear();
+  
+      setTimeout(() => {
+        window.location.replace("/sign-in");
+      }, 1200);
+    }
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        profileDropdownRef.current &&
+        !profileDropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowProfileDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  useEffect(() => {
+  const handleUserUpdate = () => {
+    setUserData({
+      user_id: localStorage.getItem("user_id") || "",
+      name: localStorage.getItem("user_name") || userData?.name || "User",
+      email: localStorage.getItem("user_email") || userData?.email || "",
+      role: localStorage.getItem("user_role") || userData?.role || "User",
+      profile_picture: localStorage.getItem("user_profile_picture") || userData?.profile_picture || null,
+    });
+  };
+
+  window.addEventListener("userDataUpdated", handleUserUpdate);
+  return () => window.removeEventListener("userDataUpdated", handleUserUpdate);
+}, [userData]);
   
 
   // Fetch user data on component mount
@@ -244,70 +291,116 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
           </div>
 
           {/* User Profile */}
-          <div className="flex items-center space-x-3">
-            {userData ? (
-              <>
-                <div className="sm:block">
-                  <p
-                    className={`text-sm font-medium ${
-                      theme === "dark" ? "text-white" : "text-gray-800"
-                    }`}
-                  >
-                    {userData.name}
-                  </p>
-                  <p
-                    className={`text-xs ${
-                      theme === "dark" ? "text-gray-400" : "text-gray-500"
-                    }`}
-                  >
-                    {userData.role || 'User'}
-                  </p>
-                </div>
+          <div className="relative" ref={profileDropdownRef}>
+            <button
+              className="flex items-center space-x-2 px-3 py-1 border rounded-full hover:shadow-md focus:outline-none"
+              onClick={() => setShowProfileDropdown((prev) => !prev)}
+            >
+              {/* Profile Picture */}
+              <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-blue-500">
+                {localStorage.getItem('user_profile_picture') ? (
+                  <img
+                    src={localStorage.getItem('user_profile_picture')!}
+                    alt="Profile"
+                    className="w-full h-full object-cover"
+                  />
+                ) : userData?.profile_picture ? (
+                  <img
+                    src={userData.profile_picture}
+                    alt="Profile"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white font-medium">
+                    {userData ? getUserInitials(userData.name) : '??'}
+                  </div>
+                )}
+              </div>
 
-               {/* Profile Picture */}
-                <div className="w-10 h-10 rounded-full overflow-hidden">
-                  {localStorage.getItem('user_profile_picture') ? (
-                    <img
-                      src={localStorage.getItem('user_profile_picture')!}
-                      alt="Profile"
-                      className="w-full h-full object-cover"
-                    />
-                  ) : userData?.profile_picture ? (
-                    <img
-                      src={userData.profile_picture}
-                      alt="Profile"
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white font-medium">
-                      {userData ? getUserInitials(userData.name) : '??'}
+              {/* Name and Role */}
+              <div className="flex flex-col text-left">
+                <span className={`text-sm font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-800'}`}>
+                  {userData?.name || "Loading..."}
+                </span>
+                <span className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+                  {userData?.role || "User"}
+                </span>
+              </div>
+
+              {/* Dropdown Icon */}
+              {showProfileDropdown ? (
+                <ChevronUp className={`w-4 h-4 ${theme === 'dark' ? 'text-white' : 'text-gray-800'}`} />
+              ) : (
+                <ChevronDown className={`w-4 h-4 ${theme === 'dark' ? 'text-white' : 'text-gray-800'}`} />
+              )}
+            </button>
+
+            {/* Dropdown Menu */}
+              {showProfileDropdown && (
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50 p-2">
+                  <button
+                    className="w-full flex items-center gap-2 text-left px-4 py-2 text-sm hover:bg-gray-100"
+                    onClick={() => navigate("/account-settings")}
+                  >
+                    <User className="w-4 h-4 text-dark-500" />
+                    Profile
+                  </button>
+                  <hr />
+                  <button
+                    className="w-full flex items-center gap-2 text-left px-4 py-2 text-sm hover:bg-gray-100 text-red-500"
+                    onClick={() => setShowLogoutConfirm(true)}
+                  >
+                    <LogOut className="w-4 h-4 text-red-500" />
+                    Logout
+                  </button>
+
+                  {/* Logout Confirmation Modal */}
+                  {showLogoutConfirm && !isLoggingOut && (
+                    <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50">
+                      <div
+                        className={`rounded-xl shadow-lg p-6 w-80 ${
+                          theme === "dark" ? "bg-gray-900 text-white" : "bg-white"
+                        }`}
+                      >
+                        <h2 className={`text-lg font-semibold mb-4 ${theme === "dark" ? "text-white" : "text-gray-900"}`}>
+                          Confirm Logout
+                        </h2>
+                        <p className={`mb-6 ${theme === "dark" ? "text-gray-300" : "text-gray-600"}`}>
+                          Are you sure you want to log out?
+                        </p>
+                        <div className="flex justify-end gap-3">
+                          <button
+                            className={`px-4 py-2 rounded-lg ${
+                              theme === "dark"
+                                ? "bg-gray-700 hover:bg-gray-600 text-white"
+                                : "bg-gray-200 hover:bg-gray-300"
+                            }`}
+                            onClick={() => setShowLogoutConfirm(false)}
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            className="px-4 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600"
+                            onClick={handleLogout}
+                          >
+                            Logout
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Logging Out Animation Overlay */}
+                  {isLoggingOut && (
+                    <div className="fixed inset-0 flex flex-col items-center justify-center bg-black bg-opacity-50 z-50">
+                      <div className="flex flex-col items-center gap-4">
+                        <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                        <p className="text-white text-xl font-semibold">Logging out...</p>
+                      </div>
                     </div>
                   )}
                 </div>
-              </>
-            ) : (
-              <>
-                <div className="sm:block">
-                  <p
-                    className={`text-sm font-medium ${
-                      theme === "dark" ? "text-white" : "text-gray-800"
-                    }`}
-                  >
-                    Loading...
-                  </p>
-                  <p
-                    className={`text-xs ${
-                      theme === "dark" ? "text-gray-400" : "text-gray-500"
-                    }`}
-                  >
-                    ...
-                  </p>
-                </div>
-                <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white font-medium">
-                  ...
-                </div>
-              </>
-            )}
+              )}
           </div>
 
         </div>
