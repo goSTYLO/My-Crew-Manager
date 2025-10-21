@@ -46,7 +46,6 @@ def load_llm() -> HuggingFacePipeline:
             model = AutoModelForCausalLM.from_pretrained(
                 MODEL_ID,
                 device_map="auto",
-                torch_dtype=torch.float16,
                 trust_remote_code=True,
                 quantization_config=quant_cfg,
             )
@@ -55,7 +54,7 @@ def load_llm() -> HuggingFacePipeline:
             model = AutoModelForCausalLM.from_pretrained(
                 MODEL_ID,
                 device_map=None,
-                torch_dtype=torch.float16,
+                dtype=torch.float16,
                 trust_remote_code=True,
             ).to("cuda")
         pipe = pipeline(
@@ -72,7 +71,7 @@ def load_llm() -> HuggingFacePipeline:
         model = AutoModelForCausalLM.from_pretrained(
             MODEL_ID,
             device_map=None,
-            torch_dtype=torch.float32,
+            dtype=torch.float32,
             trust_remote_code=True,
         )
         pipe = pipeline(

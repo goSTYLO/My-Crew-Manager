@@ -47,7 +47,7 @@ for name, config in MODELS.items():
 
     # Load base model and tokenizer
     tokenizer = AutoTokenizer.from_pretrained(config["model_id"])
-    model = AutoModelForCausalLM.from_pretrained(config["model_id"], torch_dtype="auto")
+    model = AutoModelForCausalLM.from_pretrained(config["model_id"], dtype="auto")
 
     # Apply LoRA adapters
     model = get_peft_model(model, peft_config)
