@@ -24,5 +24,10 @@ node_modules/
 __pycache__/
 *.py[cod]
 *$py.class
+# Django migrations
+*/migrations/
+*/migrations/*
+!*/migrations/__init__.py
+
 # OS specific
 .DS_Store
