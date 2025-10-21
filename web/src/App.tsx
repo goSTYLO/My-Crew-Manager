@@ -18,6 +18,7 @@ import Chat from './view_pages/manager/chat';
 {/* User Web Connections */}
 import UserFrame from './view_pages/user/userFrame';
 import ProjectUser from './view_pages/user/monitorProjects_user';
+import ProjectInvitation from './view_pages/user/projectInvitation';
 import PerformanceUser from './view_pages/user/performance_user';
 import TaskUser from './view_pages/user/viewTask_user';
 import KanbanUser from './view_pages/user/taskkanban_user';
@@ -28,6 +29,7 @@ import GeneralSettings from './view_pages/manager/settings';
 import ProjectDetails from './view_pages/user/projectsDetails'; 
 import SubTask from './view_pages/user/subTaskUser';
 import WorklogsUser from './view_pages/user/worklogsUser';
+import ChatUser from './view_pages/user/chatUser'; 
 
 const App: React.FC = () => {
   return (
@@ -59,12 +61,14 @@ const App: React.FC = () => {
          {/* User routes */}
          <Route path="/user" element={<UserFrame />} />
         <Route path="/projects-user" element={<ProjectUser />} />
+        <Route path="/project-invitation" element={<ProjectInvitation />} />
         <Route path="/project-details" element={<ProjectDetails />} />
         <Route path="/performance-user" element={<PerformanceUser />} />
         <Route path="/task-user" element={<TaskUser />} />
         <Route path="/subtask-user" element={<SubTask/>}/>
         <Route path="/kanban-user" element={<KanbanUser />} />
         <Route path="/worklogs-user" element={<WorklogsUser/>}/> 
+        <Route path="/chat-user" element={<ChatUser/> }/>
         
         <Route path="*" element={<Navigate to="/signIn" replace />} />
       </Routes>

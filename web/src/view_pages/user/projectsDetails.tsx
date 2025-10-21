@@ -331,7 +331,7 @@ const TaskRow: React.FC<{
 };
 
 // Main Project Management Component
-const AddodleProjectManager: React.FC = () => {
+const ProjectManager: React.FC = () => {
   const [tasks] = useState<Task[]>(SAMPLE_TASKS);
   const [teamMembers] = useState<TeamMember[]>(SAMPLE_TEAM_MEMBERS);
   const [stats] = useState<ProjectStats>(SAMPLE_STATS);
@@ -414,4 +414,4 @@ const AddodleProjectManager: React.FC = () => {
   );
 };
 
-export default AddodleProjectManager
+export default ProjectManager;

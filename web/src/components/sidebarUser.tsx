@@ -1,4 +1,4 @@
-import React, { useState} from "react";
+import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -8,6 +8,7 @@ import {
   TrendingUp,
   Settings,
   LogOut,
+  MessageSquare
 } from "lucide-react";
 
 interface SidebarProps {
@@ -17,20 +18,52 @@ interface SidebarProps {
 
 const SidebarUser: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
   const navigate = useNavigate();
-  const location = useLocation(); // 👈 get current path
+  const location = useLocation();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  // ✅ logout handler is now inside Sidebar
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    sessionStorage.clear();
-    setShowLogoutConfirm(false);
-    navigate("/sign-in");
+  // ✅ API logout handler
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    setShowLogoutConfirm(false); // hide confirmation immediately
+  
+    try {
+      const token = localStorage.getItem("token");
+  
+      // Call the logout API endpoint
+      await fetch("http://localhost:8000/api/user/logout/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Token ${token}`,
+        },
+      });
+  
+      // Clear local storage and session
+      localStorage.removeItem("token");
+      sessionStorage.clear();
+  
+      // Add a small delay so the spinner is visible
+      setTimeout(() => {
+        window.location.replace("/sign-in");
+      }, 1200); // 1.2 second delay
+  
+    } catch (error) {
+      console.error("Logout error:", error);
+      localStorage.removeItem("token");
+      sessionStorage.clear();
+  
+      setTimeout(() => {
+        window.location.replace("/sign-in");
+      }, 1200);
+    }
   };
 
   const navigationItems = [
     { name: "Dashboard", icon: LayoutDashboard, path: "/user" },
+    { name: "Team Chat", icon: MessageSquare, path: "/chat-user" },
     { name: "Project", icon: FolderOpen, path: "/projects-user" },
+    { name: "Project Invitation", icon: FolderOpen, path: "/project-invitation" },
     { name: "Task", icon: CheckSquare, path: "/kanban-user" },
     { name: "Work Logs", icon: Clock, path: "/worklogs-user" },
     { name: "Performance", icon: TrendingUp, path: "/performance-user" },
@@ -115,7 +148,7 @@ const SidebarUser: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) =>
       </div>
 
       {/* Logout Confirmation Modal */}
-      {showLogoutConfirm && (
+      {showLogoutConfirm && !isLoggingOut && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50">
           <div className="bg-white rounded-xl shadow-lg p-6 w-80">
             <h2 className="text-lg font-semibold mb-4">Confirm Logout</h2>
@@ -136,6 +169,16 @@ const SidebarUser: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) =>
                 Logout
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Logging Out Animation Overlay */}
+      {isLoggingOut && (
+        <div className="fixed inset-0 flex flex-col items-center justify-center bg-black bg-opacity-50 z-50">
+          <div className="flex flex-col items-center gap-4">
+            <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+            <p className="text-white text-xl font-semibold">Logging out...</p>
           </div>
         </div>
       )}

@@ -1,6 +1,4 @@
-import React from "react";
-
-import { useState } from "react";
+import React, { useState } from "react";
 import Sidebar from "../../components/sidebarUser";
 import TopNavbar from "../../components/topbarLayout_user"; // Corrected the import path
 
@@ -34,7 +32,7 @@ const WorkLogsPage: React.FC = () => {
         <TopNavbar onMenuClick={() => setSidebarOpen(true)} />
 
         {/* Content */}
-        <main className="flex-1 flex gap-6 p-6">
+        <main className="flex flex-col lg:flex-row gap-6 p-6 overflow-y-auto mt-[5rem]">
           {/* Left side: Work logs */}
           <div className="flex-1 bg-white rounded-xl shadow-lg p-6">
             {workLogs.map((log, idx) => (
