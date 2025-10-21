@@ -233,28 +233,60 @@ const ProjectTask = () => {
                     </div>
                   </div>
 
-                  {/* Projects Grid Section */}
-                  <div className={`col-span-12 lg:col-span-4 p-5 rounded-lg shadow-sm ${theme === "dark" ? "bg-gray-800 text-white" : "bg-white"}`}>
+                 {/* Projects Grid Section */}
+                  <div
+                    className={`col-span-12 lg:col-span-4 p-5 rounded-lg shadow-sm ${
+                      theme === "dark" ? "bg-gray-800 text-white" : "bg-white"
+                    }`}
+                  >
                     <div className="flex items-center justify-between mb-5">
-                      <h3 className={`text-base font-semibold ${theme === "dark" ? "text-white" : "text-gray-900"}`}>Projects</h3>
-                      <a href="#" className="text-sm text-blue-600 hover:text-blue-800">View all</a>
+                      <h3
+                        className={`text-base font-semibold ${
+                          theme === "dark" ? "text-white" : "text-gray-900"
+                        }`}
+                      >
+                        Projects
+                      </h3>
+                      <a
+                        onClick={() => navigate("/projects")}
+                        className="text-sm text-blue-600 hover:text-blue-800 cursor-pointer"
+                      >
+                        View all
+                      </a>
                     </div>
-                    
+
                     <div className="grid grid-cols-3 gap-3">
                       {projects.map((project) => (
-                        <div key={project.id} className="text-center group cursor-pointer">
-                          <div className={`w-14 h-14 ${project.image} rounded-lg mb-2 mx-auto group-hover:scale-105 transition-transform flex items-center justify-center`}>
+                        <div
+                          key={project.id}
+                          className="text-center group cursor-pointer"
+                          onClick={() => navigate("/projects")}
+                        >
+                          <div
+                            className={`w-14 h-14 ${project.image} rounded-lg mb-2 mx-auto group-hover:scale-105 transition-transform flex items-center justify-center`}
+                          >
                             <span className="text-white text-xs font-medium">
-                              {project.name === 'Halloween' ? '🎃' : 
-                               project.name === 'Tim Burton' ? '🎭' :
-                               project.name === 'Spooky Art' ? '👻' : ''}
+                              {project.name === "Halloween"
+                                ? "🎃"
+                                : project.name === "Tim Burton"
+                                ? "🎭"
+                                : project.name === "Spooky Art"
+                                ? "👻"
+                                : ""}
                             </span>
                           </div>
-                          <p className={`text-xs truncate px-1 ${theme === "dark" ? "text-gray-300" : "text-gray-600"}`}>{project.name}</p>
+                          <p
+                            className={`text-xs truncate px-1 ${
+                              theme === "dark" ? "text-gray-300" : "text-gray-600"
+                            }`}
+                          >
+                            {project.name}
+                          </p>
                         </div>
                       ))}
                     </div>
                   </div>
+
                 </div>
 
                 {/* UI Developers Section */}

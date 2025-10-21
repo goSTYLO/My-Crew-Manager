@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Upload, Users, Target, FileText, Plus, X, Sparkles, Check, ArrowRight, Calendar } from 'lucide-react';
+import { Upload, Users, Target, FileText, Plus, X, Sparkles, Check, ArrowRight, Calendar, Mail, RefreshCw, Save, Send } from 'lucide-react';
 import TopNavbar from "../../components/topbarLayouot";
 import Sidebar from "../../components/sidebarLayout";
 import { useTheme } from "../../components/themeContext"; // <-- import ThemeContext
@@ -33,10 +33,41 @@ interface TimelineWeek {
   ai: boolean;
 }
 
-type Step = 'create' | 'upload' | 'analyze' | 'review' | 'backlog';
+interface Epic {
+  id: string;
+  title: string;
+  description: string;
+  ai: boolean;
+}
+
+interface SubEpic {
+  id: string;
+  epic_id: string;
+  title: string;
+  description: string;
+  ai: boolean;
+}
+
+interface UserStory {
+  id: string;
+  sub_epic_id: string;
+  title: string;
+  description: string;
+  assigned_role?: string;
+  ai: boolean;
+}
+
+interface Invitation {
+  id: string;
+  email: string;
+  role: string;
+  sent: boolean;
+}
+
+type Step = 'create' | 'upload' | 'analyze' | 'review' | 'backlog' | 'invite';
 
 const App: React.FC = () => {
-  const { theme } = useTheme(); // <-- use theme
+  const { theme } = useTheme();
   const [currentStep, setCurrentStep] = useState<Step>('create');
   const [projectTitle, setProjectTitle] = useState('');
   const [projectSummary, setProjectSummary] = useState('');
@@ -52,6 +83,17 @@ const App: React.FC = () => {
   const [createdProjectId, setCreatedProjectId] = useState<string | null>(null);
   const [uploadedProposalId, setUploadedProposalId] = useState<string | null>(null);
   const [authFormat, setAuthFormat] = useState<'Bearer' | 'Token'>('Bearer');
+
+  // New states for Epic, Sub Epic, User Story
+  const [epics, setEpics] = useState<Epic[]>([]);
+  const [subEpics, setSubEpics] = useState<SubEpic[]>([]);
+  const [userStories, setUserStories] = useState<UserStory[]>([]);
+  const [expandedEpics, setExpandedEpics] = useState<Set<string>>(new Set());
+  const [expandedSubEpics, setExpandedSubEpics] = useState<Set<string>>(new Set());
+
+  // New states for invitations
+  const [invitations, setInvitations] = useState<Invitation[]>([]);
+  const [newInvitation, setNewInvitation] = useState({ email: '', role: '' });
 
   const [newMember, setNewMember] = useState({ role: '', user_name: '', user_email: '' });
   const [newFeature, setNewFeature] = useState({ title: '' });
@@ -93,7 +135,6 @@ const App: React.FC = () => {
       try {
         const token = getAuthToken();
         
-        // Test 1: Try with credentials (session/cookie auth)
         const sessionTest = await fetch(`${API_BASE_URL}/api/ai/projects/`, {
           credentials: 'include',
         });
@@ -109,7 +150,6 @@ const App: React.FC = () => {
           return;
         }
         
-        // Test 2: Try Bearer token
         const bearerTest = await fetch(`${API_BASE_URL}/api/ai/projects/`, {
           headers: { 'Authorization': `Bearer ${token}` },
           credentials: 'include',
@@ -121,7 +161,6 @@ const App: React.FC = () => {
           return;
         }
         
-        // Test 3: Try Token auth
         const tokenTest = await fetch(`${API_BASE_URL}/api/ai/projects/`, {
           headers: { 'Authorization': `Token ${token}` },
           credentials: 'include',
@@ -183,8 +222,8 @@ const App: React.FC = () => {
 
   // STEP 1: Create Project
   const createProject = async () => {
-    if (!projectTitle || !projectSummary) {
-      alert('Please fill in project title and summary');
+    if (!projectTitle) {
+      alert('Please fill in project title');
       return;
     }
 
@@ -199,7 +238,7 @@ const App: React.FC = () => {
     try {
       const projectData = {
         title: projectTitle,
-        summary: projectSummary,
+        summary: projectSummary || 'No summary provided',
       };
 
       const projectResponse = await fetch(`${API_BASE_URL}/api/ai/projects/`, {
@@ -222,6 +261,16 @@ const App: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Skip Create Project
+  const skipCreateProject = () => {
+    if (!projectTitle) {
+      alert('Project Title is required before skipping');
+      return;
+    }
+    // Create a minimal project and skip to upload
+    createProject();
   };
 
   // STEP 2: Upload Proposal
@@ -262,6 +311,11 @@ const App: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Skip Upload Proposal
+  const skipUploadProposal = () => {
+    setCurrentStep('analyze');
   };
 
   // STEP 3: Analyze with LLM (Ingest Proposal)
@@ -370,6 +424,98 @@ const App: React.FC = () => {
     }
   };
 
+  // Skip AI Analysis
+  const skipAnalyzeProposal = () => {
+    setCurrentStep('review');
+  };
+
+  // Skip Review and Edit
+  const skipReviewEdit = () => {
+    setCurrentStep('backlog');
+    generateMockBacklog();
+  };
+
+  // Generate Mock Backlog (for demo purposes)
+  const generateMockBacklog = () => {
+    const mockEpics: Epic[] = [
+      {
+        id: crypto.randomUUID(),
+        title: 'User Authentication System',
+        description: 'Implement complete user authentication and authorization',
+        ai: true,
+      },
+      {
+        id: crypto.randomUUID(),
+        title: 'Dashboard Development',
+        description: 'Create admin and user dashboards',
+        ai: true,
+      },
+    ];
+
+    const mockSubEpics: SubEpic[] = [
+      {
+        id: crypto.randomUUID(),
+        epic_id: mockEpics[0].id,
+        title: 'Login System',
+        description: 'User login functionality',
+        ai: true,
+      },
+      {
+        id: crypto.randomUUID(),
+        epic_id: mockEpics[0].id,
+        title: 'Registration System',
+        description: 'User registration functionality',
+        ai: true,
+      },
+      {
+        id: crypto.randomUUID(),
+        epic_id: mockEpics[1].id,
+        title: 'Admin Dashboard',
+        description: 'Dashboard for administrators',
+        ai: true,
+      },
+    ];
+
+    const mockUserStories: UserStory[] = [
+      {
+        id: crypto.randomUUID(),
+        sub_epic_id: mockSubEpics[0].id,
+        title: 'As a user, I want to login with email and password',
+        description: 'Login form with validation',
+        assigned_role: 'Frontend Developer',
+        ai: true,
+      },
+      {
+        id: crypto.randomUUID(),
+        sub_epic_id: mockSubEpics[0].id,
+        title: 'As a user, I want to reset my password',
+        description: 'Password reset functionality',
+        assigned_role: 'Backend Developer',
+        ai: true,
+      },
+      {
+        id: crypto.randomUUID(),
+        sub_epic_id: mockSubEpics[1].id,
+        title: 'As a new user, I want to create an account',
+        description: 'Registration form with validation',
+        assigned_role: 'Full Stack Developer',
+        ai: true,
+      },
+      {
+        id: crypto.randomUUID(),
+        sub_epic_id: mockSubEpics[2].id,
+        title: 'As an admin, I want to see system statistics',
+        description: 'Statistics widgets and charts',
+        assigned_role: 'Frontend Developer',
+        ai: true,
+      },
+    ];
+
+    setEpics(mockEpics);
+    setSubEpics(mockSubEpics);
+    setUserStories(mockUserStories);
+  };
+
   // STEP 4: Generate Backlog and Save
   const generateBacklogAndSave = async () => {
     if (!createdProjectId) {
@@ -400,16 +546,145 @@ const App: React.FC = () => {
       const data = await handleApiResponse(response, 'generate backlog');
       console.log('Backlog generated:', data);
 
-      alert('Project created successfully with backlog!');
+      // Parse the backlog data into epics, sub-epics, and user stories
+      if (data.epics) {
+        setEpics(data.epics);
+      }
+      if (data.sub_epics) {
+        setSubEpics(data.sub_epics);
+      }
+      if (data.user_stories) {
+        setUserStories(data.user_stories);
+      }
+
       setCurrentStep('backlog');
+    } catch (error) {
+      console.error('Error generating backlog:', error);
+      alert(`Failed to generate backlog: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      // Generate mock backlog for demo
+      generateMockBacklog();
+      setCurrentStep('backlog');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Save Assignments
+  const saveAssignments = async () => {
+    if (!createdProjectId) {
+      alert('Missing project data');
+      return;
+    }
+
+    const token = getAuthToken();
+    if (!token) {
+      alert('Authentication required. Please log in again.');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const assignmentData = {
+        epics,
+        sub_epics: subEpics,
+        user_stories: userStories,
+      };
+
+      const response = await fetch(
+        `${API_BASE_URL}/api/ai/projects/${createdProjectId}/save-assignments/`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `${authFormat} ${token}`,
+          },
+          body: JSON.stringify(assignmentData),
+        }
+      );
+
+      await handleApiResponse(response, 'save assignments');
+      alert('Assignments saved successfully!');
+    } catch (error) {
+      console.error('Error saving assignments:', error);
+      alert(`Failed to save assignments: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Refresh Backlog
+  const refreshBacklog = () => {
+    generateBacklogAndSave();
+  };
+
+  // Skip Generate Backlog
+  const skipGenerateBacklog = () => {
+    generateMockBacklog();
+    setCurrentStep('invite');
+  };
+
+  // Add Invitation
+  const addInvitation = () => {
+    if (newInvitation.email && newInvitation.role) {
+      const invitation: Invitation = {
+        id: crypto.randomUUID(),
+        email: newInvitation.email,
+        role: newInvitation.role,
+        sent: false,
+      };
+      setInvitations([...invitations, invitation]);
+      setNewInvitation({ email: '', role: '' });
+    }
+  };
+
+  // Remove Invitation
+  const removeInvitation = (id: string) => {
+    setInvitations(invitations.filter(inv => inv.id !== id));
+  };
+
+  // Send Invitations
+  const sendInvitations = async () => {
+    if (invitations.length === 0) {
+      alert('Please add at least one invitation');
+      return;
+    }
+
+    const token = getAuthToken();
+    if (!token) {
+      alert('Authentication required. Please log in again.');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/api/ai/projects/${createdProjectId}/send-invitations/`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `${authFormat} ${token}`,
+          },
+          body: JSON.stringify({ invitations }),
+        }
+      );
+
+      await handleApiResponse(response, 'send invitations');
       
-      // Reset form after success
+      // Mark all invitations as sent
+      setInvitations(invitations.map(inv => ({ ...inv, sent: true })));
+      
+      alert('Invitations sent successfully!');
+      
+      // Reset after success
       setTimeout(() => {
         resetForm();
       }, 2000);
     } catch (error) {
-      console.error('Error generating backlog:', error);
-      alert(`Failed to generate backlog: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error('Error sending invitations:', error);
+      alert(`Failed to send invitations: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsLoading(false);
     }
@@ -426,6 +701,10 @@ const App: React.FC = () => {
     setUploadedFile(null);
     setCreatedProjectId(null);
     setUploadedProposalId(null);
+    setEpics([]);
+    setSubEpics([]);
+    setUserStories([]);
+    setInvitations([]);
     setCurrentStep('create');
   };
 
@@ -461,11 +740,9 @@ const App: React.FC = () => {
 
   const addTimelineWeek = () => {
     if (newTimelineWeek.goal) {
-      // Check if week already exists
       const existingWeek = timeline.find(w => w.week_number === newTimelineWeek.week_number);
       
       if (existingWeek) {
-        // Add goal to existing week
         const updatedTimeline = timeline.map(w => 
           w.week_number === newTimelineWeek.week_number
             ? { ...w, goals: [...w.goals, newTimelineWeek.goal] }
@@ -473,7 +750,6 @@ const App: React.FC = () => {
         );
         setTimeline(updatedTimeline);
       } else {
-        // Create new week
         const newWeek: TimelineWeek = {
           id: crypto.randomUUID(),
           week_number: newTimelineWeek.week_number,
@@ -494,7 +770,7 @@ const App: React.FC = () => {
         return { ...week, goals: newGoals };
       }
       return week;
-    }).filter(week => week.goals.length > 0); // Remove empty weeks
+    }).filter(week => week.goals.length > 0);
     
     setTimeline(updatedTimeline);
   };
@@ -503,34 +779,64 @@ const App: React.FC = () => {
   const removeFeature = (id: string) => setFeatures(features.filter(f => f.id !== id));
   const removeGoal = (id: string) => setGoals(goals.filter(g => g.id !== id));
 
+  // Toggle Epic Expansion
+  const toggleEpic = (epicId: string) => {
+    const newExpanded = new Set(expandedEpics);
+    if (newExpanded.has(epicId)) {
+      newExpanded.delete(epicId);
+    } else {
+      newExpanded.add(epicId);
+    }
+    setExpandedEpics(newExpanded);
+  };
+
+  // Toggle Sub Epic Expansion
+  const toggleSubEpic = (subEpicId: string) => {
+    const newExpanded = new Set(expandedSubEpics);
+    if (newExpanded.has(subEpicId)) {
+      newExpanded.delete(subEpicId);
+    } else {
+      newExpanded.add(subEpicId);
+    }
+    setExpandedSubEpics(newExpanded);
+  };
+
+  // Update User Story Assignment
+  const updateUserStoryAssignment = (storyId: string, role: string) => {
+    setUserStories(userStories.map(story => 
+      story.id === storyId ? { ...story, assigned_role: role } : story
+    ));
+  };
+
   // Step indicator component
   const StepIndicator = () => {
     const steps = [
-      { key: 'create', label: 'Create Project', completed: ['upload', 'analyze', 'review', 'backlog'].includes(currentStep) },
-      { key: 'upload', label: 'Upload Proposal', completed: ['analyze', 'review', 'backlog'].includes(currentStep) },
-      { key: 'analyze', label: 'AI Analysis', completed: ['review', 'backlog'].includes(currentStep) },
-      { key: 'review', label: 'Review & Edit', completed: currentStep === 'backlog' },
-      { key: 'backlog', label: 'Generate Backlog', completed: false },
+      { key: 'create', label: 'Create Project', completed: ['upload', 'analyze', 'review', 'backlog', 'invite'].includes(currentStep) },
+      { key: 'upload', label: 'Upload Proposal', completed: ['analyze', 'review', 'backlog', 'invite'].includes(currentStep) },
+      { key: 'analyze', label: 'AI Analysis', completed: ['review', 'backlog', 'invite'].includes(currentStep) },
+      { key: 'review', label: 'Review & Edit', completed: ['backlog', 'invite'].includes(currentStep) },
+      { key: 'backlog', label: 'Generate Backlog', completed: currentStep === 'invite' },
+      { key: 'invite', label: 'Invite Team', completed: false },
     ];
 
     return (
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-8 overflow-x-auto pb-2">
         {steps.map((step, index) => (
           <React.Fragment key={step.key}>
-            <div className="flex items-center">
+            <div className="flex items-center flex-shrink-0">
               <div className={`flex items-center justify-center w-8 h-8 rounded-full ${
                 step.completed ? 'bg-green-500' : currentStep === step.key ? 'bg-blue-500' : theme === "dark" ? 'bg-gray-600' : 'bg-gray-300'
               } text-white font-semibold text-sm`}>
                 {step.completed ? <Check size={16} /> : index + 1}
               </div>
-              <span className={`ml-2 text-sm font-medium ${
+              <span className={`ml-2 text-sm font-medium whitespace-nowrap ${
                 currentStep === step.key ? 'text-blue-600' : theme === "dark" ? 'text-gray-300' : 'text-gray-600'
               }`}>
                 {step.label}
               </span>
             </div>
             {index < steps.length - 1 && (
-              <div className={`flex-1 h-0.5 mx-4 ${
+              <div className={`flex-1 h-0.5 mx-4 min-w-[20px] ${
                 step.completed ? 'bg-green-500' : theme === "dark" ? 'bg-gray-600' : 'bg-gray-300'
               }`} />
             )}
@@ -542,16 +848,13 @@ const App: React.FC = () => {
 
   return (
     <div className={`flex min-h-screen ${theme === "dark" ? "bg-gray-900" : "bg-gray-50"}`}>
-     {/* Sidebar */}
      <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
-    {/* Main Content Area */}
     <div className="flex-1 flex flex-col">
-      {/* Top Navbar */}
       <TopNavbar onMenuClick={() => setSidebarOpen(true)} />
 
       <main className="flex-1 p-4 lg:p-[100px] overflow-auto space-y-[40px]">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-6xl mx-auto">
         <div className={`rounded-lg border p-6 shadow-sm ${theme === "dark" ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"}`}>
           <h1 className={`text-2xl font-bold mb-6 ${theme === "dark" ? "text-white" : "text-gray-800"}`}>Create New Project</h1>
           
@@ -575,7 +878,7 @@ const App: React.FC = () => {
               </div>
 
               <div>
-                <label className={`block text-sm font-medium mb-2 ${theme === "dark" ? "text-gray-200" : "text-gray-700"}`}>Project Summary *</label>
+                <label className={`block text-sm font-medium mb-2 ${theme === "dark" ? "text-gray-200" : "text-gray-700"}`}>Project Summary</label>
                 <textarea
                   value={projectSummary}
                   onChange={(e) => setProjectSummary(e.target.value)}
@@ -583,15 +886,22 @@ const App: React.FC = () => {
                   className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
                     theme === "dark" ? "bg-gray-900 border-gray-700 text-white" : "border-gray-300"
                   }`}
-                  placeholder="Describe your project"
+                  placeholder="Describe your project (optional)"
                   disabled={isLoading}
                 />
               </div>
 
-              <div className="flex justify-end">
+              <div className="flex justify-between">
+                <button
+                  onClick={skipCreateProject}
+                  disabled={!projectTitle || isLoading}
+                  className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Skip
+                </button>
                 <button
                   onClick={createProject}
-                  disabled={!projectTitle || !projectSummary || isLoading}
+                  disabled={!projectTitle || isLoading}
                   className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
                   {isLoading ? (
@@ -621,7 +931,7 @@ const App: React.FC = () => {
               </div>
 
               <div>
-                <label className={`block text-sm font-medium mb-2 ${theme === "dark" ? "text-gray-200" : "text-gray-700"}`}>Upload Proposal (PDF) *</label>
+                <label className={`block text-sm font-medium mb-2 ${theme === "dark" ? "text-gray-200" : "text-gray-700"}`}>Upload Proposal (PDF)</label>
                 <div
                   onDragOver={handleDragOver}
                   onDragLeave={handleDragLeave}
@@ -665,7 +975,14 @@ const App: React.FC = () => {
                 )}
               </div>
 
-              <div className="flex justify-end">
+              <div className="flex justify-between">
+                <button
+                  onClick={skipUploadProposal}
+                  disabled={isLoading}
+                  className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Skip
+                </button>
                 <button
                   onClick={uploadProposal}
                   disabled={!uploadedFile || isLoading}
@@ -690,12 +1007,14 @@ const App: React.FC = () => {
           {/* STEP 3: Analyze */}
           {currentStep === 'analyze' && (
             <div className="space-y-6">
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
-                <p className="text-green-800 text-sm flex items-center gap-2">
-                  <Check size={16} className="text-green-600" />
-                  Proposal uploaded successfully! Ready for AI analysis.
-                </p>
-              </div>
+              {uploadedProposalId && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+                  <p className="text-green-800 text-sm flex items-center gap-2">
+                    <Check size={16} className="text-green-600" />
+                    Proposal uploaded successfully! Ready for AI analysis.
+                  </p>
+                </div>
+              )}
 
               <div className="text-center py-8">
                 <Sparkles size={48} className="mx-auto text-blue-500 mb-4" />
@@ -704,23 +1023,32 @@ const App: React.FC = () => {
                   Our AI will analyze your proposal and generate project roles, features, goals, and timeline.
                 </p>
 
-                <button
-                  onClick={analyzeProposal}
-                  disabled={isLoading}
-                  className="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 mx-auto"
-                >
-                  {isLoading ? (
-                    <>
-                      <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></div>
-                      Analyzing with AI...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles size={20} />
-                      Analyze with AI
-                    </>
-                  )}
-                </button>
+                <div className="flex justify-center gap-4">
+                  <button
+                    onClick={skipAnalyzeProposal}
+                    disabled={isLoading}
+                    className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Skip
+                  </button>
+                  <button
+                    onClick={analyzeProposal}
+                    disabled={isLoading}
+                    className="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  >
+                    {isLoading ? (
+                      <>
+                        <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></div>
+                        Analyzing with AI...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles size={20} />
+                        Analyze with AI
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
           )}
@@ -736,286 +1064,71 @@ const App: React.FC = () => {
               </div>
 
               {/* AI Summary */}
-              <div>
-                <label className={`block text-sm font-medium mb-2 flex items-center gap-2 ${theme === "dark" ? "text-gray-200" : "text-gray-700"}`}>
-                  <Sparkles size={16} className="text-purple-500" />
-                  AI Generated Summary
-                </label>
-                <textarea
-                  value={aiGeneratedSummary}
-                  onChange={(e) => setAiGeneratedSummary(e.target.value)}
-                  rows={4}
-                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                    theme === "dark" ? "bg-purple-900 border-purple-700 text-white" : "bg-purple-50 border-gray-300"
-                  }`}
-                  disabled={isLoading}
-                />
-              </div>
+              {aiGeneratedSummary && (
+                <div>
+                  <label className={`block text-sm font-medium mb-2 flex items-center gap-2 ${theme === "dark" ? "text-gray-200" : "text-gray-700"}`}>
+                    <Sparkles size={16} className="text-purple-500" />
+                    AI Generated Summary
+                  </label>
+                  <textarea
+                    value={aiGeneratedSummary}
+                    onChange={(e) => setAiGeneratedSummary(e.target.value)}
+                    rows={4}
+                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                      theme === "dark" ? "bg-purple-900 border-purple-700 text-white" : "bg-purple-50 border-gray-300"
+                    }`}
+                    disabled={isLoading}
+                  />
+                </div>
+              )}
 
               {/* Project Roles */}
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className={`font-semibold flex items-center gap-2 ${theme === "dark" ? "text-white" : "text-gray-800"}`}>
-                    <Users size={20} />
-                    Project Roles
-                  </h3>
-                </div>
-                
-                <div className="space-y-2 mb-3 max-h-60 overflow-y-auto">
-                  {members.map(member => (
-                    <div key={member.id} className={`flex items-center justify-between p-3 rounded-lg ${
-                      member.ai ? 'bg-purple-50 border border-purple-200' : theme === "dark" ? 'bg-gray-900' : 'bg-gray-50'
-                    }`}>
-                      <div>
-                        <span className={`font-medium ${theme === "dark" && !member.ai ? "text-white" : "text-gray-800"}`}>{member.role}</span>
-                        {member.ai && (
-                          <span className="ml-2 text-xs text-purple-600 inline-flex items-center gap-1">
-                            <Sparkles size={12} /> AI Generated
-                          </span>
-                        )}
-                      </div>
-                      <button 
-                        onClick={() => removeMember(member.id)} 
-                        className="text-red-500 hover:text-red-700"
-                        disabled={isLoading}
-                      >
-                        <X size={16} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={newMember.role}
-                    onChange={(e) => setNewMember({ ...newMember, role: e.target.value })}
-                    placeholder="Role (e.g., Developer)"
-                    className={`flex-1 px-3 py-2 border rounded-lg text-sm ${
-                      theme === "dark" ? "bg-gray-900 border-gray-700 text-white" : "border-gray-300"
-                    }`}
-                    disabled={isLoading}
-                  />
-                  <button 
-                    onClick={addMember} 
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-                    disabled={isLoading}
-                  >
-                    <Plus size={16} />
-                  </button>
-                </div>
-              </div>
-
-              {/* Top Features/Tasks */}
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className={`font-semibold flex items-center gap-2 ${theme === "dark" ? "text-white" : "text-gray-800"}`}>
-                    <FileText size={20} />
-                    Top Tasks / Features
-                  </h3>
-                </div>
-                
-                <div className="space-y-2 mb-3 max-h-60 overflow-y-auto">
-                  {features.map(feature => (
-                    <div key={feature.id} className={`p-3 rounded-lg ${
-                      feature.ai ? 'bg-purple-50 border border-purple-200' : theme === "dark" ? 'bg-gray-900' : 'bg-gray-50'
-                    }`}>
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className={`font-medium mb-1 ${theme === "dark" && !feature.ai ? "text-white" : "text-gray-800"}`}>
-                            {feature.title}
-                            {feature.ai && (
-                              <span className="ml-2 text-xs text-purple-600 inline-flex items-center gap-1">
-                                <Sparkles size={12} /> AI Generated
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        <button 
-                          onClick={() => removeFeature(feature.id)} 
-                          className="text-red-500 hover:text-red-700 ml-2"
-                          disabled={isLoading}
-                        >
-                          <X size={16} />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={newFeature.title}
-                    onChange={(e) => setNewFeature({ ...newFeature, title: e.target.value })}
-                    placeholder="Feature title"
-                    className={`flex-1 px-3 py-2 border rounded-lg text-sm ${
-                      theme === "dark" ? "bg-gray-900 border-gray-700 text-white" : "border-gray-300"
-                    }`}
-                    disabled={isLoading}
-                  />
-                  <button 
-                    onClick={addFeature} 
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-                    disabled={isLoading}
-                  >
-                    <Plus size={16} />
-                  </button>
-                </div>
-              </div>
-
-              {/* Project Goals */}
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className={`font-semibold flex items-center gap-2 ${theme === "dark" ? "text-white" : "text-gray-800"}`}>
-                    <Target size={20} />
-                    Project Goals
-                  </h3>
-                </div>
-                
-                <div className="space-y-2 mb-3 max-h-60 overflow-y-auto">
-                  {goals.map(goal => (
-                    <div key={goal.id} className={`p-3 rounded-lg ${
-                      goal.ai ? 'bg-purple-50 border border-purple-200' : theme === "dark" ? 'bg-gray-900' : 'bg-gray-50'
-                    }`}>
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className={`font-medium ${theme === "dark" && !goal.ai ? "text-white" : "text-gray-800"}`}>
-                            {goal.title}
-                            {goal.ai && (
-                              <span className="ml-2 text-xs text-purple-600 inline-flex items-center gap-1">
-                                <Sparkles size={12} /> AI Generated
-                              </span>
-                            )}
-                          </div>
-                          {goal.role && (
-                            <div className={`text-sm mt-1 ${theme === "dark" ? "text-gray-400" : "text-gray-600"}`}>
-                              Role: {goal.role}
-                            </div>
-                          )}
-                        </div>
-                        <button 
-                          onClick={() => removeGoal(goal.id)} 
-                          className="text-red-500 hover:text-red-700 ml-2"
-                          disabled={isLoading}
-                        >
-                          <X size={16} />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="space-y-2">
-                  <input
-                    type="text"
-                    value={newGoal.title}
-                    onChange={(e) => setNewGoal({ ...newGoal, title: e.target.value })}
-                    placeholder="Goal title"
-                    className={`w-full px-3 py-2 border rounded-lg text-sm ${
-                      theme === "dark" ? "bg-gray-900 border-gray-700 text-white" : "border-gray-300"
-                    }`}
-                    disabled={isLoading}
-                  />
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={newGoal.role}
-                      onChange={(e) => setNewGoal({ ...newGoal, role: e.target.value })}
-                      placeholder="Assigned role (optional)"
-                      className={`flex-1 px-3 py-2 border rounded-lg text-sm ${
-                        theme === "dark" ? "bg-gray-900 border-gray-700 text-white" : "border-gray-300"
-                      }`}
-                      disabled={isLoading}
-                    />
-                    <button 
-                      onClick={addGoal} 
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-                      disabled={isLoading}
-                    >
-                      <Plus size={16} />
-                    </button>
+              {members.length > 0 && (
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className={`font-semibold flex items-center gap-2 ${theme === "dark" ? "text-white" : "text-gray-800"}`}>
+                      <Users size={20} />
+                      Project Roles
+                    </h3>
                   </div>
-                </div>
-              </div>
-
-              {/* Timeline */}
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className={`font-semibold flex items-center gap-2 ${theme === "dark" ? "text-white" : "text-gray-800"}`}>
-                    <Calendar size={20} />
-                    Project Timeline
-                  </h3>
-                </div>
-                
-                <div className="space-y-3 mb-3 max-h-80 overflow-y-auto">
-                  {timeline.map(week => (
-                    <div key={week.id} className={`p-4 rounded-lg ${
-                      week.ai ? 'bg-purple-50 border border-purple-200' : theme === "dark" ? 'bg-gray-900' : 'bg-gray-50'
-                    }`}>
-                      <div className="flex items-center justify-between mb-2">
-                        <h4 className={`font-semibold flex items-center gap-2 ${theme === "dark" && !week.ai ? "text-white" : "text-gray-800"}`}>
-                          Week {week.week_number}
-                          {week.ai && (
-                            <span className="text-xs text-purple-600 inline-flex items-center gap-1">
+                  
+                  <div className="space-y-2 mb-3 max-h-60 overflow-y-auto">
+                    {members.map(member => (
+                      <div key={member.id} className={`flex items-center justify-between p-3 rounded-lg ${
+                        member.ai ? 'bg-purple-50 border border-purple-200' : theme === "dark" ? 'bg-gray-900' : 'bg-gray-50'
+                      }`}>
+                        <div>
+                          <span className={`font-medium ${theme === "dark" && !member.ai ? "text-white" : "text-gray-800"}`}>{member.role}</span>
+                          {member.ai && (
+                            <span className="ml-2 text-xs text-purple-600 inline-flex items-center gap-1">
                               <Sparkles size={12} /> AI Generated
                             </span>
                           )}
-                        </h4>
+                        </div>
+                        <button 
+                          onClick={() => removeMember(member.id)} 
+                          className="text-red-500 hover:text-red-700"
+                          disabled={isLoading}
+                        >
+                          <X size={16} />
+                        </button>
                       </div>
-                      <div className="space-y-2">
-                        {week.goals.map((goal, idx) => (
-                          <div key={idx} className={`flex items-start justify-between p-2 rounded ${
-                            theme === "dark" ? "bg-gray-800" : "bg-white"
-                          }`}>
-                            <span className={`text-sm flex-1 ${theme === "dark" ? "text-gray-200" : "text-gray-700"}`}>{goal}</span>
-                            <button
-                              onClick={() => removeTimelineGoal(week.id, idx)}
-                              className="text-red-500 hover:text-red-700 ml-2"
-                              disabled={isLoading}
-                            >
-                              <X size={14} />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className={`space-y-2 border-t pt-4 ${theme === "dark" ? "border-gray-700" : ""}`}>
-                  <div className="flex gap-2 items-center">
-                    <label className={`text-sm font-medium w-20 ${theme === "dark" ? "text-gray-200" : "text-gray-700"}`}>Week:</label>
-                    <input
-                      type="number"
-                      min="1"
-                      value={newTimelineWeek.week_number}
-                      onChange={(e) => setNewTimelineWeek({ ...newTimelineWeek, week_number: parseInt(e.target.value) || 1 })}
-                      className={`w-24 px-3 py-2 border rounded-lg text-sm ${
-                        theme === "dark" ? "bg-gray-900 border-gray-700 text-white" : "border-gray-300"
-                      }`}
-                      disabled={isLoading}
-                    />
+                    ))}
                   </div>
+
                   <div className="flex gap-2">
                     <input
                       type="text"
-                      value={newTimelineWeek.goal}
-                      onChange={(e) => setNewTimelineWeek({ ...newTimelineWeek, goal: e.target.value })}
-                      placeholder="Goal/Task for this week"
+                      value={newMember.role}
+                      onChange={(e) => setNewMember({ ...newMember, role: e.target.value })}
+                      placeholder="Role (e.g., Developer)"
                       className={`flex-1 px-3 py-2 border rounded-lg text-sm ${
                         theme === "dark" ? "bg-gray-900 border-gray-700 text-white" : "border-gray-300"
                       }`}
                       disabled={isLoading}
-                      onKeyPress={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          addTimelineWeek();
-                        }
-                      }}
                     />
                     <button 
-                      onClick={addTimelineWeek} 
+                      onClick={addMember} 
                       className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
                       disabled={isLoading}
                     >
@@ -1023,9 +1136,241 @@ const App: React.FC = () => {
                     </button>
                   </div>
                 </div>
-              </div>
+              )}
 
-              <div className={`flex justify-end pt-4 border-t ${theme === "dark" ? "border-gray-700" : ""}`}>
+              {/* Top Features/Tasks */}
+              {features.length > 0 && (
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className={`font-semibold flex items-center gap-2 ${theme === "dark" ? "text-white" : "text-gray-800"}`}>
+                      <FileText size={20} />
+                      Top Tasks / Features
+                    </h3>
+                  </div>
+                  
+                  <div className="space-y-2 mb-3 max-h-60 overflow-y-auto">
+                    {features.map(feature => (
+                      <div key={feature.id} className={`p-3 rounded-lg ${
+                        feature.ai ? 'bg-purple-50 border border-purple-200' : theme === "dark" ? 'bg-gray-900' : 'bg-gray-50'
+                      }`}>
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className={`font-medium mb-1 ${theme === "dark" && !feature.ai ? "text-white" : "text-gray-800"}`}>
+                              {feature.title}
+                              {feature.ai && (
+                                <span className="ml-2 text-xs text-purple-600 inline-flex items-center gap-1">
+                                  <Sparkles size={12} /> AI Generated
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <button 
+                            onClick={() => removeFeature(feature.id)} 
+                            className="text-red-500 hover:text-red-700 ml-2"
+                            disabled={isLoading}
+                          >
+                            <X size={16} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={newFeature.title}
+                      onChange={(e) => setNewFeature({ ...newFeature, title: e.target.value })}
+                      placeholder="Feature title"
+                      className={`flex-1 px-3 py-2 border rounded-lg text-sm ${
+                        theme === "dark" ? "bg-gray-900 border-gray-700 text-white" : "border-gray-300"
+                      }`}
+                      disabled={isLoading}
+                    />
+                    <button 
+                      onClick={addFeature} 
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                      disabled={isLoading}
+                    >
+                      <Plus size={16} />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Project Goals */}
+              {goals.length > 0 && (
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className={`font-semibold flex items-center gap-2 ${theme === "dark" ? "text-white" : "text-gray-800"}`}>
+                      <Target size={20} />
+                      Project Goals
+                    </h3>
+                  </div>
+                  
+                  <div className="space-y-2 mb-3 max-h-60 overflow-y-auto">
+                    {goals.map(goal => (
+                      <div key={goal.id} className={`p-3 rounded-lg ${
+                        goal.ai ? 'bg-purple-50 border border-purple-200' : theme === "dark" ? 'bg-gray-900' : 'bg-gray-50'
+                      }`}>
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className={`font-medium ${theme === "dark" && !goal.ai ? "text-white" : "text-gray-800"}`}>
+                              {goal.title}
+                              {goal.ai && (
+                                <span className="ml-2 text-xs text-purple-600 inline-flex items-center gap-1">
+                                  <Sparkles size={12} /> AI Generated
+                                </span>
+                              )}
+                            </div>
+                            {goal.role && (
+                              <div className={`text-sm mt-1 ${theme === "dark" ? "text-gray-400" : "text-gray-600"}`}>
+                                Role: {goal.role}
+                              </div>
+                            )}
+                          </div>
+                          <button 
+                            onClick={() => removeGoal(goal.id)} 
+                            className="text-red-500 hover:text-red-700 ml-2"
+                            disabled={isLoading}
+                          >
+                            <X size={16} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="space-y-2">
+                    <input
+                      type="text"
+                      value={newGoal.title}
+                      onChange={(e) => setNewGoal({ ...newGoal, title: e.target.value })}
+                      placeholder="Goal title"
+                      className={`w-full px-3 py-2 border rounded-lg text-sm ${
+                        theme === "dark" ? "bg-gray-900 border-gray-700 text-white" : "border-gray-300"
+                      }`}
+                      disabled={isLoading}
+                    />
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={newGoal.role}
+                        onChange={(e) => setNewGoal({ ...newGoal, role: e.target.value })}
+                        placeholder="Assigned role (optional)"
+                        className={`flex-1 px-3 py-2 border rounded-lg text-sm ${
+                          theme === "dark" ? "bg-gray-900 border-gray-700 text-white" : "border-gray-300"
+                        }`}
+                        disabled={isLoading}
+                      />
+                      <button 
+                        onClick={addGoal} 
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                        disabled={isLoading}
+                      >
+                        <Plus size={16} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Timeline */}
+              {timeline.length > 0 && (
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className={`font-semibold flex items-center gap-2 ${theme === "dark" ? "text-white" : "text-gray-800"}`}>
+                      <Calendar size={20} />
+                      Project Timeline
+                    </h3>
+                  </div>
+                  
+                  <div className="space-y-3 mb-3 max-h-80 overflow-y-auto">
+                    {timeline.map(week => (
+                      <div key={week.id} className={`p-4 rounded-lg ${
+                        week.ai ? 'bg-purple-50 border border-purple-200' : theme === "dark" ? 'bg-gray-900' : 'bg-gray-50'
+                      }`}>
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className={`font-semibold flex items-center gap-2 ${theme === "dark" && !week.ai ? "text-white" : "text-gray-800"}`}>
+                            Week {week.week_number}
+                            {week.ai && (
+                              <span className="text-xs text-purple-600 inline-flex items-center gap-1">
+                                <Sparkles size={12} /> AI Generated
+                              </span>
+                            )}
+                          </h4>
+                        </div>
+                        <div className="space-y-2">
+                          {week.goals.map((goal, idx) => (
+                            <div key={idx} className={`flex items-start justify-between p-2 rounded ${
+                              theme === "dark" ? "bg-gray-800" : "bg-white"
+                            }`}>
+                              <span className={`text-sm flex-1 ${theme === "dark" ? "text-gray-200" : "text-gray-700"}`}>{goal}</span>
+                              <button
+                                onClick={() => removeTimelineGoal(week.id, idx)}
+                                className="text-red-500 hover:text-red-700 ml-2"
+                                disabled={isLoading}
+                              >
+                                <X size={14} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className={`space-y-2 border-t pt-4 ${theme === "dark" ? "border-gray-700" : ""}`}>
+                    <div className="flex gap-2 items-center">
+                      <label className={`text-sm font-medium w-20 ${theme === "dark" ? "text-gray-200" : "text-gray-700"}`}>Week:</label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={newTimelineWeek.week_number}
+                        onChange={(e) => setNewTimelineWeek({ ...newTimelineWeek, week_number: parseInt(e.target.value) || 1 })}
+                        className={`w-24 px-3 py-2 border rounded-lg text-sm ${
+                          theme === "dark" ? "bg-gray-900 border-gray-700 text-white" : "border-gray-300"
+                        }`}
+                        disabled={isLoading}
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={newTimelineWeek.goal}
+                        onChange={(e) => setNewTimelineWeek({ ...newTimelineWeek, goal: e.target.value })}
+                        placeholder="Goal/Task for this week"
+                        className={`flex-1 px-3 py-2 border rounded-lg text-sm ${
+                          theme === "dark" ? "bg-gray-900 border-gray-700 text-white" : "border-gray-300"
+                        }`}
+                        disabled={isLoading}
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            addTimelineWeek();
+                          }
+                        }}
+                      />
+                      <button 
+                        onClick={addTimelineWeek} 
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                        disabled={isLoading}
+                      >
+                        <Plus size={16} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className={`flex justify-between pt-4 border-t ${theme === "dark" ? "border-gray-700" : ""}`}>
+                <button
+                  onClick={skipReviewEdit}
+                  disabled={isLoading}
+                  className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Skip
+                </button>
                 <button
                   onClick={generateBacklogAndSave}
                   disabled={isLoading}
@@ -1038,8 +1383,8 @@ const App: React.FC = () => {
                     </>
                   ) : (
                     <>
-                      Generate Backlog & Save
-                      <Check size={20} />
+                      Generate Backlog
+                      <ArrowRight size={20} />
                     </>
                   )}
                 </button>
@@ -1047,22 +1392,360 @@ const App: React.FC = () => {
             </div>
           )}
 
-          {/* STEP 5: Success */}
+          {/* STEP 5: Backlog (Epic, Sub Epic, User Story) */}
           {currentStep === 'backlog' && (
-            <div className="text-center py-12">
-              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Check size={32} className="text-green-600" />
+            <div className="space-y-6">
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+                <p className="text-green-800 text-sm flex items-center gap-2">
+                  <Check size={16} className="text-green-600" />
+                  Backlog generated successfully! Review and assign user stories.
+                </p>
               </div>
-              <h3 className={`text-2xl font-bold mb-2 ${theme === "dark" ? "text-white" : "text-gray-800"}`}>Success!</h3>
-              <p className={`mb-6 ${theme === "dark" ? "text-gray-300" : "text-gray-600"}`}>
-                Your project has been created with a complete backlog.
-              </p>
-              <button
-                onClick={resetForm}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-              >
-                Create Another Project
-              </button>
+
+              <div className="flex items-center justify-between mb-4">
+                <h2 className={`text-xl font-bold ${theme === "dark" ? "text-white" : "text-gray-800"}`}>Project Backlog</h2>
+                <button
+                  onClick={refreshBacklog}
+                  disabled={isLoading}
+                  className="px-4 py-2 border border-blue-500 text-blue-600 rounded-lg hover:bg-blue-50 disabled:opacity-50 flex items-center gap-2"
+                >
+                  <RefreshCw size={16} />
+                  Refresh
+                </button>
+              </div>
+
+              {/* Epics, Sub Epics, and User Stories */}
+              <div className="space-y-4">
+                {epics.map(epic => (
+                  <div key={epic.id} className={`border rounded-lg ${theme === "dark" ? "border-gray-700" : "border-gray-200"}`}>
+                    {/* Epic Header */}
+                    <div
+                      onClick={() => toggleEpic(epic.id)}
+                      className={`p-4 cursor-pointer hover:bg-opacity-80 transition-colors ${
+                        epic.ai ? 'bg-purple-50' : theme === "dark" ? 'bg-gray-800' : 'bg-gray-100'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-semibold text-blue-600 bg-blue-100 px-2 py-1 rounded">EPIC</span>
+                            <h3 className={`font-bold text-lg ${theme === "dark" && !epic.ai ? "text-white" : "text-gray-800"}`}>
+                              {epic.title}
+                            </h3>
+                            {epic.ai && (
+                              <span className="text-xs text-purple-600 inline-flex items-center gap-1">
+                                <Sparkles size={12} /> AI
+                              </span>
+                            )}
+                          </div>
+                          <p className={`text-sm mt-1 ${theme === "dark" ? "text-gray-400" : "text-gray-600"}`}>
+                            {epic.description}
+                          </p>
+                        </div>
+                        <div className={`text-2xl ${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}>
+                          {expandedEpics.has(epic.id) ? '−' : '+'}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Sub Epics */}
+                    {expandedEpics.has(epic.id) && (
+                      <div className={`p-4 space-y-3 ${theme === "dark" ? "bg-gray-900" : "bg-white"}`}>
+                        {subEpics.filter(se => se.epic_id === epic.id).map(subEpic => (
+                          <div key={subEpic.id} className={`border rounded-lg ${theme === "dark" ? "border-gray-700" : "border-gray-200"}`}>
+                            {/* Sub Epic Header */}
+                            <div
+                              onClick={() => toggleSubEpic(subEpic.id)}
+                              className={`p-3 cursor-pointer hover:bg-opacity-80 transition-colors ${
+                                subEpic.ai ? 'bg-purple-50' : theme === "dark" ? 'bg-gray-800' : 'bg-gray-50'
+                              }`}
+                            >
+                              <div className="flex items-start justify-between">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-xs font-semibold text-green-600 bg-green-100 px-2 py-1 rounded">SUB-EPIC</span>
+                                    <h4 className={`font-semibold ${theme === "dark" && !subEpic.ai ? "text-white" : "text-gray-800"}`}>
+                                      {subEpic.title}
+                                    </h4>
+                                    {subEpic.ai && (
+                                      <span className="text-xs text-purple-600 inline-flex items-center gap-1">
+                                        <Sparkles size={12} /> AI
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className={`text-sm mt-1 ${theme === "dark" ? "text-gray-400" : "text-gray-600"}`}>
+                                    {subEpic.description}
+                                  </p>
+                                </div>
+                                <div className={`text-xl ${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}>
+                                  {expandedSubEpics.has(subEpic.id) ? '−' : '+'}
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* User Stories */}
+                            {expandedSubEpics.has(subEpic.id) && (
+                              <div className={`p-3 space-y-2 ${theme === "dark" ? "bg-gray-900" : "bg-gray-50"}`}>
+                                {userStories.filter(us => us.sub_epic_id === subEpic.id).map(story => (
+                                  <div key={story.id} className={`border rounded-lg p-3 ${
+                                    story.ai ? 'bg-purple-50 border-purple-200' : theme === "dark" ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+                                  }`}>
+                                    <div className="flex items-start gap-2 mb-2">
+                                      <span className="text-xs font-semibold text-orange-600 bg-orange-100 px-2 py-1 rounded whitespace-nowrap">USER STORY</span>
+                                      <div className="flex-1">
+                                        <p className={`font-medium ${theme === "dark" && !story.ai ? "text-white" : "text-gray-800"}`}>
+                                          {story.title}
+                                        </p>
+                                        {story.ai && (
+                                          <span className="text-xs text-purple-600 inline-flex items-center gap-1 mt-1">
+                                            <Sparkles size={12} /> AI Generated
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+                                    <p className={`text-sm mb-3 ${theme === "dark" ? "text-gray-400" : "text-gray-600"}`}>
+                                      {story.description}
+                                    </p>
+                                    <div className="flex items-center gap-2">
+                                      <label className={`text-sm font-medium ${theme === "dark" ? "text-gray-300" : "text-gray-700"}`}>
+                                        Assign to:
+                                      </label>
+                                      <select
+                                        value={story.assigned_role || ''}
+                                        onChange={(e) => updateUserStoryAssignment(story.id, e.target.value)}
+                                        className={`flex-1 px-3 py-1.5 border rounded text-sm ${
+                                          theme === "dark" ? "bg-gray-900 border-gray-700 text-white" : "border-gray-300"
+                                        }`}
+                                        disabled={isLoading}
+                                      >
+                                        <option value="">Unassigned</option>
+                                        {members.map(member => (
+                                          <option key={member.id} value={member.role}>
+                                            {member.role}
+                                          </option>
+                                        ))}
+                                      </select>
+                                    </div>
+                                  </div>
+                                ))}
+                                {userStories.filter(us => us.sub_epic_id === subEpic.id).length === 0 && (
+                                  <p className={`text-sm text-center py-4 ${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}>
+                                    No user stories in this sub-epic
+                                  </p>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                        {subEpics.filter(se => se.epic_id === epic.id).length === 0 && (
+                          <p className={`text-sm text-center py-4 ${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}>
+                            No sub-epics in this epic
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+
+                {epics.length === 0 && (
+                  <div className={`text-center py-8 border rounded-lg ${theme === "dark" ? "border-gray-700" : "border-gray-200"}`}>
+                    <p className={`${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}>
+                      No backlog items generated yet. Click "Refresh" to generate the backlog.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <div className={`flex justify-between pt-4 border-t ${theme === "dark" ? "border-gray-700" : ""}`}>
+                <button
+                  onClick={skipGenerateBacklog}
+                  disabled={isLoading}
+                  className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Skip
+                </button>
+                <div className="flex gap-3">
+                  <button
+                    onClick={saveAssignments}
+                    disabled={isLoading}
+                    className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  >
+                    {isLoading ? (
+                      <>
+                        <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></div>
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Save size={20} />
+                        Save Assignments
+                      </>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => setCurrentStep('invite')}
+                    disabled={isLoading}
+                    className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  >
+                    Next: Invite Team
+                    <ArrowRight size={20} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 6: Invite Developers */}
+          {currentStep === 'invite' && (
+            <div className="space-y-6">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                <p className="text-blue-800 text-sm flex items-center gap-2">
+                  <Mail size={16} className="text-blue-600" />
+                  Invite team members to collaborate on this project
+                </p>
+              </div>
+
+              <div>
+                <h2 className={`text-xl font-bold mb-4 flex items-center gap-2 ${theme === "dark" ? "text-white" : "text-gray-800"}`}>
+                  <Users size={24} />
+                  Invite Team Members
+                </h2>
+
+                {/* Invitation List */}
+                <div className="space-y-3 mb-4 max-h-96 overflow-y-auto">
+                  {invitations.map(invitation => (
+                    <div key={invitation.id} className={`flex items-center justify-between p-4 rounded-lg border ${
+                      invitation.sent 
+                        ? 'bg-green-50 border-green-200' 
+                        : theme === "dark" ? 'bg-gray-900 border-gray-700' : 'bg-gray-50 border-gray-200'
+                    }`}>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <Mail size={16} className={invitation.sent ? "text-green-600" : theme === "dark" ? "text-gray-400" : "text-gray-600"} />
+                          <span className={`font-medium ${theme === "dark" && !invitation.sent ? "text-white" : "text-gray-800"}`}>
+                            {invitation.email}
+                          </span>
+                        </div>
+                        <div className={`text-sm mt-1 flex items-center gap-2 ${theme === "dark" ? "text-gray-400" : "text-gray-600"}`}>
+                          <span className="font-semibold">Role:</span>
+                          <span>{invitation.role}</span>
+                        </div>
+                        {invitation.sent && (
+                          <span className="text-xs text-green-600 mt-1 inline-flex items-center gap-1">
+                            <Check size={12} /> Invitation Sent
+                          </span>
+                        )}
+                      </div>
+                      {!invitation.sent && (
+                        <button
+                          onClick={() => removeInvitation(invitation.id)}
+                          className="text-red-500 hover:text-red-700 ml-4"
+                          disabled={isLoading}
+                        >
+                          <X size={20} />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+
+                  {invitations.length === 0 && (
+                    <div className={`text-center py-8 border-2 border-dashed rounded-lg ${theme === "dark" ? "border-gray-700" : "border-gray-300"}`}>
+                      <Mail size={48} className={`mx-auto mb-2 ${theme === "dark" ? "text-gray-600" : "text-gray-400"}`} />
+                      <p className={`text-sm ${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}>
+                        No invitations added yet
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Add Invitation Form */}
+                <div className={`border-t pt-4 ${theme === "dark" ? "border-gray-700" : "border-gray-200"}`}>
+                  <h3 className={`text-sm font-semibold mb-3 ${theme === "dark" ? "text-gray-200" : "text-gray-700"}`}>
+                    Add New Invitation
+                  </h3>
+                  <div className="space-y-3">
+                    <div>
+                      <label className={`block text-sm font-medium mb-1 ${theme === "dark" ? "text-gray-300" : "text-gray-700"}`}>
+                        Email Address *
+                      </label>
+                      <input
+                        type="email"
+                        value={newInvitation.email}
+                        onChange={(e) => setNewInvitation({ ...newInvitation, email: e.target.value })}
+                        placeholder="developer@example.com"
+                        className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                          theme === "dark" ? "bg-gray-900 border-gray-700 text-white" : "border-gray-300"
+                        }`}
+                        disabled={isLoading}
+                      />
+                    </div>
+                    <div>
+                      <label className={`block text-sm font-medium mb-1 ${theme === "dark" ? "text-gray-300" : "text-gray-700"}`}>
+                        Role *
+                      </label>
+                      <select
+                        value={newInvitation.role}
+                        onChange={(e) => setNewInvitation({ ...newInvitation, role: e.target.value })}
+                        className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                          theme === "dark" ? "bg-gray-900 border-gray-700 text-white" : "border-gray-300"
+                        }`}
+                        disabled={isLoading}
+                      >
+                        <option value="">Select a role</option>
+                        {members.map(member => (
+                          <option key={member.id} value={member.role}>
+                            {member.role}
+                          </option>
+                        ))}
+                        <option value="Frontend Developer">Frontend Developer</option>
+                        <option value="Backend Developer">Backend Developer</option>
+                        <option value="Full Stack Developer">Full Stack Developer</option>
+                        <option value="UI/UX Designer">UI/UX Designer</option>
+                        <option value="QA Engineer">QA Engineer</option>
+                        <option value="DevOps Engineer">DevOps Engineer</option>
+                      </select>
+                    </div>
+                    <button
+                      onClick={addInvitation}
+                      disabled={!newInvitation.email || !newInvitation.role || isLoading}
+                      className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      <Plus size={16} />
+                      Add Invitation
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className={`flex justify-between pt-4 border-t ${theme === "dark" ? "border-gray-700" : ""}`}>
+                <button
+                  onClick={() => {
+                    alert('Project created successfully!');
+                    resetForm();
+                  }}
+                  className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                >
+                  Skip & Finish
+                </button>
+                <button
+                  onClick={sendInvitations}
+                  disabled={invitations.length === 0 || isLoading}
+                  className="px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  {isLoading ? (
+                    <>
+                      <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></div>
+                      Sending...
+                    </>
+                  ) : (
+                    <>
+                      <Send size={20} />
+                      Save & Send Invitations
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           )}
         </div>

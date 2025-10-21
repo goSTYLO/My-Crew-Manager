@@ -15,6 +15,8 @@ interface UserData {
     profile_picture?: string | null;
 }
 
+
+
 // Main CreateProject Component
 const AccountSettings = () => {
     const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -71,6 +73,8 @@ const AccountSettings = () => {
     }
     }, [nationality]);
 
+    
+
 
 
     useEffect(() => {
@@ -86,54 +90,63 @@ const AccountSettings = () => {
 
       
     // Fetch user data on component mount
-    useEffect(() => {
-        const fetchUserData = async () => {
-            const token = localStorage.getItem('token');
-            
+        useEffect(() => {
+            const fetchUserData = async () => {
+            const token = localStorage.getItem("token");
+        
             if (!token) {
-                navigate('/login');
+                navigate("/login");
                 return;
             }
-
+        
             try {
-                const response = await fetch('http://localhost:8000/api/user/me/', {
-                    headers: {
-                        'Authorization': `Token ${token}`,
-                        'Content-Type': 'application/json',
-                    },
+                const response = await fetch("http://localhost:8000/api/user/me/", {
+                headers: {
+                    Authorization: `Token ${token}`,
+                    "Content-Type": "application/json",
+                },
                 });
-
+        
                 if (response.ok) {
-                    const data = await response.json();
-                    setUserData(data);
-
-                    const storedNationality = localStorage.getItem('user_nationality');
-                    setNationality(storedNationality || data.nationality || "Filipino");
-                    
-                    // Set profile picture preview if exists
-                    if (data.profile_picture) {
-                        setProfilePicturePreview(`http://localhost:8000${data.profile_picture}`);
-                    }
-                    
-                    // Split name into first and last name
-                    const nameParts = data.name.split(' ');
-                    setFirstName(nameParts[0] || '');
-                    setLastName(nameParts.slice(1).join(' ') || '');
-                    setEmail(data.email);
-                    setRole(data.role || '');
+                const data = await response.json();
+        
+                // ✅ Fix relative profile picture path
+                const fixedData = {
+                    ...data,
+                    profile_picture: data.profile_picture
+                    ? data.profile_picture.startsWith("http")
+                        ? data.profile_picture
+                        : `http://localhost:8000${data.profile_picture}`
+                    : null,
+                };
+        
+                setUserData(fixedData);
+        
+                const storedNationality = localStorage.getItem("user_nationality");
+                setNationality(storedNationality || data.nationality || "Filipino");
+        
+                if (fixedData.profile_picture) {
+                    setProfilePicturePreview(fixedData.profile_picture);
+                }
+        
+                const nameParts = fixedData.name.split(" ");
+                setFirstName(nameParts[0] || "");
+                setLastName(nameParts.slice(1).join(" ") || "");
+                setEmail(fixedData.email);
+                setRole(fixedData.role || "");
                 } else {
-                    localStorage.removeItem('token');
-                    navigate('/login');
+                localStorage.removeItem("token");
+                navigate("/login");
                 }
             } catch (error) {
-                console.error('Failed to fetch user data:', error);
+                console.error("Failed to fetch user data:", error);
             } finally {
                 setLoading(false);
             }
-        };
-
-        fetchUserData();
-    }, [navigate]);
+            };
+        
+            fetchUserData();
+        }, [navigate]);
 
     // Handle profile picture selection
     const handleProfilePictureChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -171,77 +184,82 @@ const AccountSettings = () => {
     const handleSaveChanges = async (e: React.FormEvent) => {
         e.preventDefault();
         setSaveMessage("");
-
-        const token = localStorage.getItem('token');
+    
+        const token = localStorage.getItem("token");
         if (!token) {
-            navigate('/login');
-            return;
+        navigate("/login");
+        return;
         }
-
+    
         try {
-            // Combine first and last name
-            const fullName = `${firstName} ${lastName}`.trim();
-
-            // Create FormData for file upload
-            const formData = new FormData();
-            formData.append('name', fullName);
-            formData.append('email', email);
-            formData.append('role', role);
-            formData.append('nationality', nationality);
-
-            // Add profile picture if selected
-            if (profilePicture) {
-                formData.append('profile_picture', profilePicture);
-            }
-
-            // Only include password if it's been changed
-            if (password.trim() !== '') {
-                formData.append('password', password);
-            }
-
-            const response = await fetch('http://localhost:8000/api/user/me/', {
-                method: 'PUT',
-                headers: {
-                    'Authorization': `Token ${token}`,
-                    // Don't set Content-Type, let browser set it with boundary for FormData
-                },
-                body: formData,
+        const fullName = `${firstName} ${lastName}`.trim();
+        const formData = new FormData();
+        formData.append("name", fullName);
+        formData.append("email", email);
+        formData.append("role", role);
+        formData.append("nationality", nationality);
+    
+        if (profilePicture) {
+            formData.append("profile_picture", profilePicture);
+        }
+    
+        if (password.trim() !== "") {
+            formData.append("password", password);
+        }
+    
+        const response = await fetch("http://localhost:8000/api/user/me/", {
+            method: "PUT",
+            headers: {
+            Authorization: `Token ${token}`,
+            },
+            body: formData,
+        });
+    
+        if (response.ok) {
+            const updatedData = await response.json();
+    
+            // ✅ Fix relative profile picture path
+            const updatedProfilePictureURL = updatedData.profile_picture
+            ? updatedData.profile_picture.startsWith("http")
+                ? updatedData.profile_picture
+                : `http://localhost:8000${updatedData.profile_picture}`
+            : null;
+    
+            setUserData({
+            ...updatedData,
+            profile_picture: updatedProfilePictureURL,
             });
-
-            if (response.ok) {
-                const updatedData = await response.json();
-                setUserData(updatedData);
-            
-                // Update profile picture preview
-                if (updatedData.profile_picture) {
-                    const picUrl = `http://localhost:8000${updatedData.profile_picture}`;
-                    setProfilePicturePreview(picUrl);
-            
-                    // Save to localStorage
-                    localStorage.setItem("user_profile_picture", picUrl);
-                }
-            
-                // Save updated name to localStorage
-                const fullName = updatedData.name;
-                localStorage.setItem("user_name", fullName);
-            
-                // Dispatch custom event to notify TopNavbar
-                window.dispatchEvent(new Event("userDataUpdated"));
-            
-                setSaveMessage("Changes saved successfully!");
-                setPassword(""); // Clear password
-                setProfilePicture(null); // Clear file
-                setTimeout(() => setSaveMessage(""), 3000);
-            }else {
-                const errorData = await response.json();
-                setSaveMessage(`Error: ${JSON.stringify(errorData)}`);
+    
+            if (updatedProfilePictureURL) {
+            setProfilePicturePreview(updatedProfilePictureURL);
             }
+    
+            // ✅ Dispatch event with full updated data (for TopNavbar refresh)
+            window.dispatchEvent(
+            new CustomEvent("userDataUpdated", {
+                detail: {
+                name: updatedData.name,
+                email: updatedData.email,
+                role: updatedData.role,
+                profile_picture: updatedProfilePictureURL,
+                },
+            })
+            );
+    
+            setSaveMessage("Changes saved successfully!");
+            setPassword("");
+            setProfilePicture(null);
+            setTimeout(() => setSaveMessage(""), 3000);
+        } else {
+            const errorData = await response.json();
+            setSaveMessage(`Error: ${JSON.stringify(errorData)}`);
+        }
         } catch (error) {
-            console.error('Failed to update user data:', error);
-            setSaveMessage("Failed to save changes. Please try again.");
+        console.error("Failed to update user data:", error);
+        setSaveMessage("Failed to save changes. Please try again.");
         }
     };
-
+  
     // Get user initials for avatar
     const getUserInitials = (name: string) => {
         return name

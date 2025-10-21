@@ -14,6 +14,7 @@ import AccountSettings from './view_pages/manager/settings_account';
 import Notifications from './view_pages/manager/settings_notification'; 
 import GenerateProject from './view_pages/manager/generateProject'; 
 import Chat from './view_pages/manager/chat'; 
+import CreatedProject from './view_pages/manager/monitor_created'; 
 
 {/* User Web Connections */}
 import UserFrame from './view_pages/user/userFrame';
@@ -43,7 +44,7 @@ const App: React.FC = () => {
         <Route path="/signUp" element={<SignUp />} />
         <Route path="/create" element={<CreateTask />} />
         <Route path="/main-projects" element={<MainProjects />} />
-        <Route path="/projects" element={<Projects />} />
+        <Route path="/cprojects" element={<Projects />} />
         <Route path="/work-logs" element={<WorkLogs/>}/>
         <Route path="/performance" element={<Performance />} />
         <Route path="/settings" element={<Settings />} />
@@ -55,6 +56,7 @@ const App: React.FC = () => {
         <Route path="/general" element={<GeneralSettings/> }/>
         <Route path="/generate-project" element={<GenerateProject/> }/>
         <Route path="/chat" element={<Chat/> }/>
+        <Route path="/projects" element={<CreatedProject/> }/>
 
          {/* User routes */}
          <Route path="/user" element={<UserFrame />} />
