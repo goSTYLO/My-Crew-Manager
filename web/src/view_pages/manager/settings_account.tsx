@@ -36,6 +36,7 @@ const AccountSettings = () => {
     const [password, setPassword] = useState("");
     const [role, setRole] = useState("");
     const [saveMessage, setSaveMessage] = useState("");
+    const [country, setCountry] = useState("Philippines");
 
     const nationalities = [
         "Filipino",
@@ -50,6 +51,40 @@ const AccountSettings = () => {
         "Singaporean"
     ];
 
+    const nationalityToCountryMap: Record<string, string> = {
+        Filipino: "Philippines",
+        American: "United States",
+        Canadian: "Canada",
+        British: "United Kingdom",
+        Australian: "Australia",
+        Japanese: "Japan",
+        Korean: "South Korea",
+        Chinese: "China",
+        Indian: "India",
+        Singaporean: "Singapore",
+      };
+      
+    useEffect(() => {
+    const mappedCountry = nationalityToCountryMap[nationality];
+    if (mappedCountry) {
+        setCountry(mappedCountry);
+    }
+    }, [nationality]);
+
+
+
+    useEffect(() => {
+        const storedCountry = localStorage.getItem("user_country");
+        if (storedCountry) {
+          setCountry(storedCountry);
+        }
+      }, []);
+      
+      useEffect(() => {
+        localStorage.setItem("user_country", country);
+      }, [country]);
+
+      
     // Fetch user data on component mount
     useEffect(() => {
         const fetchUserData = async () => {
@@ -297,23 +332,23 @@ const AccountSettings = () => {
                                     <select
                                         id="nationality-select"
                                         className={`p-4 border rounded w-full ${
-                                        theme === "dark"
+                                            theme === "dark"
                                             ? "bg-gray-900 border-gray-700 text-white"
                                             : "bg-white text-gray-700"
                                         }`}
                                         value={nationality}
                                         onChange={(e) => {
                                             setNationality(e.target.value);
-                                            localStorage.setItem('user_nationality', e.target.value);
+                                            localStorage.setItem("user_nationality", e.target.value);
                                         }}
-                                    >
+                                        >
                                         <option value="">Select Nationality</option>
                                         {nationalities.map((nation) => (
                                             <option key={nation} value={nation}>
-                                                {nation}
+                                            {nation}
                                             </option>
                                         ))}
-                                    </select>
+                                        </select>
 
                                     <div className="flex w-full">
                                         <span
@@ -398,7 +433,8 @@ const AccountSettings = () => {
                                     </div>
                                     
                                     <h3 className="font-bold text-2xl mb-3">{userData?.name || 'Loading...'}</h3>
-                                    <p className={`text-sm text-xl mb-1 ${theme === "dark" ? "text-gray-300" : "text-gray-500"}`}>Philippines</p>
+                                    <p className={`text-sm text-xl mb-1 ${ theme === "dark" ? "text-gray-300" : "text-gray-500"}`}>{country}</p>
+
                                     <p className={`text-sm text-xl mb-1 ${theme === "dark" ? "text-gray-300" : "text-gray-500"}`}>{nationality || "Filipino"}</p>
                                 </div>
 

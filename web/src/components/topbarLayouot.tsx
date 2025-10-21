@@ -85,7 +85,7 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
       name: localStorage.getItem("user_name") || userData?.name || "User",
       email: localStorage.getItem("user_email") || userData?.email || "",
       role: localStorage.getItem("user_role") || userData?.role || "User",
-      profile_picture: localStorage.getItem("user_profile_picture") || userData?.profile_picture || null,
+      profile_picture: userData?.profile_picture || null,
     });
   };
 
@@ -298,19 +298,13 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
             >
               {/* Profile Picture */}
               <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-blue-500">
-                {localStorage.getItem('user_profile_picture') ? (
-                  <img
-                    src={localStorage.getItem('user_profile_picture')!}
-                    alt="Profile"
-                    className="w-full h-full object-cover"
-                  />
-                ) : userData?.profile_picture ? (
-                  <img
-                    src={userData.profile_picture}
-                    alt="Profile"
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
+              {userData?.profile_picture ? (
+                <img
+                  src={userData.profile_picture}
+                  alt="Profile"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
                   <div className="w-full h-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white font-medium">
                     {userData ? getUserInitials(userData.name) : '??'}
                   </div>
