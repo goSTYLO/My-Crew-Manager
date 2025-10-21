@@ -637,7 +637,8 @@ class ProjectInvitationViewSet(ModelViewSet):
             # Set the invited_by field
             request.data['invited_by'] = request.user.user_id
             
-            return super().create(request, *args, **kwargs)
+            # Call parent create
+            response = super().create(request, *args, **kwargs)
             
             # Create notification if invitation was successfully created
             if response.status_code == 201:
