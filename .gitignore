@@ -24,5 +24,10 @@ node_modules/
 __pycache__/
 *.py[cod]
 *$py.class
+
+# Migration folders
+migrations/
+**/migrations/
+
 # OS specific
 .DS_Store
