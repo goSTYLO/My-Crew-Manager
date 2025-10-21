@@ -1,7 +1,7 @@
 // pages/signUp.tsx
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Mail, Lock, Eye, EyeOff, User, Shield, Users, BarChart3, Check, X } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, User, CheckCircle, Users, BarChart3, Check, X } from "lucide-react";
 import logo from "../../assets/logo2.png";
 
 export default function SignUpPage() {
@@ -187,11 +187,11 @@ export default function SignUpPage() {
   return (
     <div className="min-h-screen bg-white flex">
       {/* Left Section - Company Branding */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-indigo-600 via-purple-600 to-indigo-800 relative overflow-hidden">
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-[#1a5f7a] via-[#2c7a9e] to-[#57a8c9] relative overflow-hidden">
         {/* Decorative elements */}
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-20 left-20 w-64 h-64 bg-white rounded-full blur-3xl"></div>
-          <div className="absolute bottom-20 right-20 w-96 h-96 bg-purple-300 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-20 right-20 w-96 h-96 bg-[#57a8c9] rounded-full blur-3xl"></div>
         </div>
 
         <div className="relative z-10 flex flex-col justify-between w-full p-12">
@@ -202,7 +202,7 @@ export default function SignUpPage() {
             </div>
             <div>
               <h1 className="text-2xl font-bold text-white">My Crew Manager</h1>
-              <p className="text-indigo-200 text-sm">Project Management Platform</p>
+              <p className="text-[#a5d5e8] text-sm">Project Management Platform</p>
             </div>
           </div>
 
@@ -212,7 +212,7 @@ export default function SignUpPage() {
               <h2 className="text-5xl font-bold text-white mb-4 leading-tight">
                 Join Our<br />Enterprise Platform
               </h2>
-              <p className="text-indigo-100 text-lg leading-relaxed">
+              <p className="text-[#c9e4f0] text-lg leading-relaxed">
                 Get started with powerful project management tools and seamless team collaboration features designed for modern enterprises.
               </p>
             </div>
@@ -222,11 +222,11 @@ export default function SignUpPage() {
               <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-2xl p-6 border border-white border-opacity-20">
                 <div className="flex items-start gap-4">
                   <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center flex-shrink-0">
-                    <Shield className="w-6 h-6 text-white" />
+                    <CheckCircle className="w-6 h-6 text-white" />
                   </div>
                   <div>
-                    <h3 className="text-white font-semibold text-lg mb-1">Enterprise Security</h3>
-                    <p className="text-indigo-100 text-sm">Bank-level encryption and multi-factor authentication to protect your data</p>
+                    <h3 className="text-white font-semibold text-lg mb-1">Project Reliability</h3>
+                    <p className="text-[#c9e4f0] text-sm">Ensure smooth and consistent project performance with robust uptime and real-time monitoring.</p>
                   </div>
                 </div>
               </div>
@@ -238,7 +238,7 @@ export default function SignUpPage() {
                   </div>
                   <div>
                     <h3 className="text-white font-semibold text-lg mb-1">Team Collaboration</h3>
-                    <p className="text-indigo-100 text-sm">Real-time collaboration tools for seamless team coordination</p>
+                    <p className="text-[#c9e4f0] text-sm">Real-time collaboration tools for seamless team coordination</p>
                   </div>
                 </div>
               </div>
@@ -250,7 +250,7 @@ export default function SignUpPage() {
                   </div>
                   <div>
                     <h3 className="text-white font-semibold text-lg mb-1">Advanced Analytics</h3>
-                    <p className="text-indigo-100 text-sm">Comprehensive insights and reporting for data-driven decisions</p>
+                    <p className="text-[#c9e4f0] text-sm">Comprehensive insights and reporting for data-driven decisions</p>
                   </div>
                 </div>
               </div>
@@ -258,7 +258,7 @@ export default function SignUpPage() {
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-between text-indigo-200 text-sm">
+          <div className="flex items-center justify-between text-[#a5d5e8] text-sm">
             <p>© 2025 My Crew Manager. All rights reserved.</p>
             <div className="flex gap-6">
               <button className="hover:text-white transition-colors">Privacy</button>
@@ -341,7 +341,7 @@ export default function SignUpPage() {
                     name="firstname"
                     value={formData.firstname}
                     onChange={handleInputChange}
-                    className="block w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                    className="block w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#2c7a9e] focus:border-transparent transition-all"
                     placeholder="Enter your firstname"
                     required
                     disabled={loading}
@@ -363,7 +363,7 @@ export default function SignUpPage() {
                     name="lastname"
                     value={formData.lastname}
                     onChange={handleInputChange}
-                    className="block w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                    className="block w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#2c7a9e] focus:border-transparent transition-all"
                     placeholder="Enter your lastname"
                     required
                     disabled={loading}
@@ -387,7 +387,7 @@ export default function SignUpPage() {
                   name="email"
                   value={formData.email}
                   onChange={handleInputChange}
-                  className={`block w-full pl-11 pr-4 py-3 border rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all ${
+                  className={`block w-full pl-11 pr-4 py-3 border rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#2c7a9e] focus:border-transparent transition-all ${
                     emailError ? 'border-red-500' : 'border-gray-300'
                   }`}
                   placeholder="Enter your email"
@@ -418,7 +418,7 @@ export default function SignUpPage() {
                   name="password"
                   value={formData.password}
                   onChange={handleInputChange}
-                  className="block w-full pl-11 pr-11 py-3 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                  className="block w-full pl-11 pr-11 py-3 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#2c7a9e] focus:border-transparent transition-all"
                   placeholder="Create a password"
                   required
                   disabled={loading}
@@ -467,7 +467,7 @@ export default function SignUpPage() {
                   name="confirmPassword"
                   value={formData.confirmPassword}
                   onChange={handleInputChange}
-                  className="block w-full pl-11 pr-11 py-3 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                  className="block w-full pl-11 pr-11 py-3 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#2c7a9e] focus:border-transparent transition-all"
                   placeholder="Confirm your password"
                   required
                   disabled={loading}
@@ -509,7 +509,7 @@ export default function SignUpPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white bg-[#1a5f7a] hover:bg-[#2c7a9e] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#2c7a9e] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {loading ? (
                 <div className="flex items-center gap-2">
@@ -528,7 +528,7 @@ export default function SignUpPage() {
                 <button
                   type="button"
                   onClick={() => navigate("/signin")}
-                  className="font-semibold text-indigo-600 hover:text-indigo-700"
+                  className="font-semibold text-[#1a5f7a] hover:text-[#2c7a9e]"
                   disabled={loading}
                 >
                   Sign in
@@ -541,11 +541,11 @@ export default function SignUpPage() {
           <div className="mt-8 text-center">
             <p className="text-xs text-gray-500">
               By creating an account, you agree to our{' '}
-              <a href="#" className="text-indigo-600 hover:text-indigo-700 font-medium">
+              <a href="#" className="text-[#1a5f7a] hover:text-[#2c7a9e] font-medium">
                 Terms of Service
               </a>
               {' '}and{' '}
-              <a href="#" className="text-indigo-600 hover:text-indigo-700 font-medium">
+              <a href="#" className="text-[#1a5f7a] hover:text-[#2c7a9e] font-medium">
                 Privacy Policy
               </a>
             </p>

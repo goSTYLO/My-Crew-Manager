@@ -1,7 +1,7 @@
 // pages/signIn.tsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, Lock, Mail, Chrome, Github, Apple, Shield, Users, BarChart3 } from 'lucide-react';
+import { Eye, EyeOff, Lock, Mail, Chrome, Github, Apple, CheckCircle, Users, BarChart3 } from 'lucide-react';
 import logo from "../../assets/logo2.png";
 
 // MODEL
@@ -251,11 +251,11 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-white flex">
       {/* Left Section - Company Branding */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-indigo-600 via-purple-600 to-indigo-800 relative overflow-hidden">
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-[#1a5f7a] via-[#2c7a9e] to-[#57a8c9] relative overflow-hidden">
         {/* Decorative elements */}
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-20 left-20 w-64 h-64 bg-white rounded-full blur-3xl"></div>
-          <div className="absolute bottom-20 right-20 w-96 h-96 bg-purple-300 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-20 right-20 w-96 h-96 bg-[#57a8c9] rounded-full blur-3xl"></div>
         </div>
 
         <div className="relative z-10 flex flex-col justify-between w-full p-12">
@@ -266,7 +266,7 @@ export default function LoginPage() {
             </div>
             <div>
               <h1 className="text-2xl font-bold text-white">My Crew Manager</h1>
-              <p className="text-indigo-200 text-sm">Project Management Platform</p>
+              <p className="text-[#a5d5e8] text-sm">Project Management Platform</p>
             </div>
           </div>
 
@@ -276,7 +276,7 @@ export default function LoginPage() {
               <h2 className="text-5xl font-bold text-white mb-4 leading-tight">
                 Secure Access to<br />Your Enterprise Tools
               </h2>
-              <p className="text-indigo-100 text-lg leading-relaxed">
+              <p className="text-[#c9e4f0] text-lg leading-relaxed">
                 Connect with your team, manage projects efficiently, and drive business success with our comprehensive enterprise platform.
               </p>
             </div>
@@ -286,11 +286,11 @@ export default function LoginPage() {
               <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-2xl p-6 border border-white border-opacity-20">
                 <div className="flex items-start gap-4">
                   <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center flex-shrink-0">
-                    <Shield className="w-6 h-6 text-white" />
+                    <CheckCircle className="w-6 h-6 text-white" />
                   </div>
                   <div>
-                    <h3 className="text-white font-semibold text-lg mb-1">Enterprise Security</h3>
-                    <p className="text-indigo-100 text-sm">Bank-level encryption and multi-factor authentication to protect your data</p>
+                    <h3 className="text-white font-semibold text-lg mb-1">Project Reliability</h3>
+                    <p className="text-[#c9e4f0] text-sm">Ensure smooth and consistent project performance with robust uptime and real-time monitoring.</p>
                   </div>
                 </div>
               </div>
@@ -302,7 +302,7 @@ export default function LoginPage() {
                   </div>
                   <div>
                     <h3 className="text-white font-semibold text-lg mb-1">Team Collaboration</h3>
-                    <p className="text-indigo-100 text-sm">Real-time collaboration tools for seamless team coordination</p>
+                    <p className="text-[#c9e4f0] text-sm">Real-time collaboration tools for seamless team coordination</p>
                   </div>
                 </div>
               </div>
@@ -314,7 +314,7 @@ export default function LoginPage() {
                   </div>
                   <div>
                     <h3 className="text-white font-semibold text-lg mb-1">Advanced Analytics</h3>
-                    <p className="text-indigo-100 text-sm">Comprehensive insights and reporting for data-driven decisions</p>
+                    <p className="text-[#c9e4f0] text-sm">Comprehensive insights and reporting for data-driven decisions</p>
                   </div>
                 </div>
               </div>
@@ -322,7 +322,7 @@ export default function LoginPage() {
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-between text-indigo-200 text-sm">
+          <div className="flex items-center justify-between text-[#a5d5e8] text-sm">
             <p>© 2025 My Crew Manager. All rights reserved.</p>
             <div className="flex gap-6">
               <button className="hover:text-white transition-colors">Privacy</button>
@@ -358,7 +358,7 @@ export default function LoginPage() {
                   type="email"
                   value={formData.email}
                   onChange={handleInputChange}
-                  className="block w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                  className="block w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#2c7a9e] focus:border-transparent transition-all"
                   placeholder="Enter your email"
                   disabled={isLoading}
                 />
@@ -383,7 +383,7 @@ export default function LoginPage() {
                   type={showPassword ? 'text' : 'password'}
                   value={formData.password}
                   onChange={handleInputChange}
-                  className="block w-full pl-11 pr-11 py-3 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                  className="block w-full pl-11 pr-11 py-3 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#2c7a9e] focus:border-transparent transition-all"
                   placeholder="Enter your password"
                   disabled={isLoading}
                 />
@@ -415,7 +415,7 @@ export default function LoginPage() {
                   type="checkbox"
                   checked={termsAccepted}
                   onChange={(e) => setTermsAccepted(e.target.checked)}
-                  className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                  className="h-4 w-4 text-[#2c7a9e] focus:ring-[#2c7a9e] border-gray-300 rounded"
                   disabled={isLoading}
                 />
                 <label htmlFor="terms" className="ml-2 block text-sm text-gray-700">
@@ -423,8 +423,9 @@ export default function LoginPage() {
                 </label>
               </div>
               <button
+                onClick={() => navigate("/forgot-password")}
                 type="button"
-                className="text-sm font-semibold text-indigo-600 hover:text-indigo-700"
+                className="text-sm font-semibold text-[#1a5f7a] hover:text-[#2c7a9e]"
               >
                 Forgot password?
               </button>
@@ -445,7 +446,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={!isFormValid || isLoading}
-              className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white bg-[#1a5f7a] hover:bg-[#2c7a9e] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#2c7a9e] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {isLoading ? (
                 <div className="flex items-center gap-2">
@@ -479,10 +480,10 @@ export default function LoginPage() {
                   type="button"
                   onClick={() => handleSocialLogin(provider.name)}
                   disabled={socialLoading === provider.name || isLoading}
-                  className="flex justify-center items-center py-3 px-4 border border-gray-300 rounded-lg bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 transition-colors"
+                  className="flex justify-center items-center py-3 px-4 border border-gray-300 rounded-lg bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#2c7a9e] disabled:opacity-50 transition-colors"
                 >
                   {socialLoading === provider.name ? (
-                    <div className="w-5 h-5 border-2 border-gray-300 border-t-indigo-600 rounded-full animate-spin"></div>
+                    <div className="w-5 h-5 border-2 border-gray-300 border-t-[#2c7a9e] rounded-full animate-spin"></div>
                   ) : (
                     <provider.icon className="w-5 h-5 text-gray-600" />
                   )}
@@ -497,7 +498,7 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={() => navigate("/signup")}
-                  className="font-semibold text-indigo-600 hover:text-indigo-700"
+                  className="font-semibold text-[#1a5f7a] hover:text-[#2c7a9e]"
                   disabled={isLoading}
                 >
                   Sign up.
@@ -510,7 +511,7 @@ export default function LoginPage() {
           <div className="mt-8 text-center">
             <p className="text-xs text-gray-500">
               Need help? Contact{' '}
-              <a href="mailto:support@company.com" className="text-indigo-600 hover:text-indigo-700 font-medium">
+              <a href="mailto:support@company.com" className="text-[#1a5f7a] hover:text-[#2c7a9e] font-medium">
                 mycrewmanager@company.com
               </a>
             </p>

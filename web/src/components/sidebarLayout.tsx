@@ -66,7 +66,6 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
     { name: "Dashboard", icon: LayoutDashboard, path: "/main" },
     { name: "Team Chat", icon: MessageSquare, path: "/chat" },
     { name: "Project", icon: FolderOpen, path: "/main-projects" },
-    { name: "Create Project", icon: FolderPlus, path: "/generate-project" },
     { name: "Work Logs", icon: Clock, path: "/work-logs" },
     { name: "Performance", icon: TrendingUp, path: "/performance" },
     { name: "Settings", icon: Settings, path: "/settings" },

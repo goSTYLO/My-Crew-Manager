@@ -30,6 +30,10 @@ import ProjectDetails from './view_pages/user/projectsDetails';
 import SubTask from './view_pages/user/subTaskUser';
 import WorklogsUser from './view_pages/user/worklogsUser';
 
+{/* Components */}
+import ForgotPassword from './components/forgotpassword'; 
+
+
 const App: React.FC = () => {
   return (
     <Router>
@@ -54,9 +58,12 @@ const App: React.FC = () => {
         <Route path="/appearance" element={<AppearanceSettings/> }/>
         <Route path="/team" element={<TeamSettings/> }/>
         <Route path="/general" element={<GeneralSettings/> }/>
-        <Route path="/generate-project" element={<GenerateProject/> }/>
+        <Route path="/create-project" element={<GenerateProject/> }/>
         <Route path="/chat" element={<Chat/> }/>
         <Route path="/projects" element={<CreatedProject/> }/>
+
+        {/* Forgot Password */}
+        <Route path="/forgot-password" element={<ForgotPassword/> }/>
 
          {/* User routes */}
          <Route path="/user" element={<UserFrame />} />

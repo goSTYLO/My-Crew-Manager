@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Upload, Users, Target, FileText, Plus, X, Sparkles, Check, ArrowRight, Calendar, Mail, RefreshCw, Send } from 'lucide-react';
+import { Upload, Users, Target, FileText, Plus, X, Sparkles, Check, ArrowRight, Calendar, Mail, RefreshCw, Send, ArrowLeft } from 'lucide-react';
 import TopNavbar from "../../components/topbarLayouot";
 import Sidebar from "../../components/sidebarLayout";
 import { useTheme } from "../../components/themeContext"; // <-- import ThemeContext
@@ -1218,8 +1218,15 @@ const App: React.FC = () => {
 
     <div className="flex-1 flex flex-col">
       <TopNavbar onMenuClick={() => setSidebarOpen(true)} />
+        
 
       <main className="flex-1 p-4 lg:p-[100px] overflow-auto space-y-[40px]">
+        <button
+            onClick={() => window.history.back()}
+            className="flex items-center text-gray-600 hover:text-gray-900 transition-colors mb-4 group">
+            <ArrowLeft className="w-5 h-5 mr-2 group-hover:-translate-x-1 transition-transform" />
+            <span className="font-medium">Back to Projects</span>
+          </button>
       <div className="max-w-6xl mx-auto">
         <div className={`rounded-lg border p-6 shadow-sm ${theme === "dark" ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"}`}>
           <h1 className={`text-2xl font-bold mb-6 ${theme === "dark" ? "text-white" : "text-gray-800"}`}>Create New Project</h1>
