@@ -8,7 +8,7 @@ class NotificationConsumer(AsyncWebsocketConsumer):
             await self.close()
             return
         
-        self.user_id = self.scope['user'].id
+        self.user_id = self.scope['user'].user_id
         self.notification_group_name = f'user_{self.user_id}_notifications'
         
         await self.channel_layer.group_add(

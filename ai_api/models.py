@@ -127,6 +127,25 @@ class ProjectInvitation(models.Model):
     def __str__(self):
         return f"{self.invitee.name} -> {self.project.title} ({self.status})"
     
+    def save(self, *args, **kwargs):
+        # Check if status is being changed to 'accepted'
+        if self.pk:  # Only for existing objects
+            try:
+                old_invitation = ProjectInvitation.objects.get(pk=self.pk)
+                if old_invitation.status != 'accepted' and self.status == 'accepted':
+                    # Status is being changed to accepted, create ProjectMember
+                    print(f"Invitation {self.pk} status changed to accepted, creating ProjectMember")
+                    ProjectMember.objects.get_or_create(
+                        project=self.project,
+                        user=self.invitee,
+                        defaults={'role': 'Member'}
+                    )
+                    print(f"ProjectMember created for user {self.invitee.name} in project {self.project.title}")
+            except ProjectInvitation.DoesNotExist:
+                pass  # New invitation, no need to check
+        
+        super().save(*args, **kwargs)
+    
     def clean(self):
         from django.core.exceptions import ValidationError
         

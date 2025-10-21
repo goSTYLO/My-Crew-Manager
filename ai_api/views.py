@@ -437,7 +437,7 @@ class StoryTaskViewSet(ModelViewSet):
                             'title': task.title or 'Untitled Task',
                             'status': task.status or 'completed',
                             'completed_at': mock_timestamp.isoformat(),
-                            'user_id': str(assignee.user.id),
+                            'user_id': str(assignee.user.user_id),
                             'user_name': user_name,
                             'user_email': user_email,
                             'project_title': project_title,
@@ -634,10 +634,7 @@ class ProjectInvitationViewSet(ModelViewSet):
                     status=status.HTTP_403_FORBIDDEN
                 )
             
-            # Set the invited_by field
-            request.data['invited_by'] = request.user.user_id
-            
-            # Call parent create
+            # Call parent create (perform_create will handle setting invited_by)
             response = super().create(request, *args, **kwargs)
             
             # Create notification if invitation was successfully created
@@ -697,21 +694,15 @@ class ProjectInvitationViewSet(ModelViewSet):
                 invitation.save(update_fields=['status', 'updated_at'])
                 
                 # Create project membership if it doesn't exist
+                # The ProjectMember.save() method will automatically populate user_name and user_email
                 project_member, created = ProjectMember.objects.get_or_create(
                     project=invitation.project,
                     user=invitation.invitee,
                     defaults={
-                        'user_name': invitation.invitee.name,
-                        'user_email': invitation.invitee.email,
                         'role': 'Member'
                     }
                 )
                 
-                if not created:
-                    # Update existing membership with latest user info
-                    project_member.user_name = invitation.invitee.name
-                    project_member.user_email = invitation.invitee.email
-                    project_member.save(update_fields=['user_name', 'user_email'])
             
             return Response({
                 "message": "Invitation accepted successfully",

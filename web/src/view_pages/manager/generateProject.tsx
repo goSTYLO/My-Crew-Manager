@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Upload, Users, Target, FileText, Plus, X, Sparkles, Check, ArrowRight, Calendar, Mail, RefreshCw, Save, Send } from 'lucide-react';
+import { Upload, Users, Target, FileText, Plus, X, Sparkles, Check, ArrowRight, Calendar, Mail, RefreshCw, Send } from 'lucide-react';
 import TopNavbar from "../../components/topbarLayouot";
 import Sidebar from "../../components/sidebarLayout";
 import { useTheme } from "../../components/themeContext"; // <-- import ThemeContext
@@ -44,7 +44,6 @@ interface SubEpic {
   id: string;
   epic_id: string;
   title: string;
-  description: string;
   ai: boolean;
 }
 
@@ -52,9 +51,20 @@ interface UserStory {
   id: string;
   sub_epic_id: string;
   title: string;
-  description: string;
-  assigned_role?: string;
   ai: boolean;
+}
+
+interface Task {
+  id: string;
+  user_story_id: string;
+  title: string;
+  status: string;
+  ai: boolean;
+  assignee?: {
+    id: string;
+    user_name: string;
+    user_email: string;
+  } | null;
 }
 
 interface Invitation {
@@ -84,10 +94,11 @@ const App: React.FC = () => {
   const [uploadedProposalId, setUploadedProposalId] = useState<string | null>(null);
   const [authFormat, setAuthFormat] = useState<'Bearer' | 'Token'>('Bearer');
 
-  // New states for Epic, Sub Epic, User Story
+  // New states for Epic, Sub Epic, User Story, Tasks
   const [epics, setEpics] = useState<Epic[]>([]);
   const [subEpics, setSubEpics] = useState<SubEpic[]>([]);
   const [userStories, setUserStories] = useState<UserStory[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [expandedEpics, setExpandedEpics] = useState<Set<string>>(new Set());
   const [expandedSubEpics, setExpandedSubEpics] = useState<Set<string>>(new Set());
 
@@ -457,21 +468,18 @@ const App: React.FC = () => {
         id: crypto.randomUUID(),
         epic_id: mockEpics[0].id,
         title: 'Login System',
-        description: 'User login functionality',
         ai: true,
       },
       {
         id: crypto.randomUUID(),
         epic_id: mockEpics[0].id,
         title: 'Registration System',
-        description: 'User registration functionality',
         ai: true,
       },
       {
         id: crypto.randomUUID(),
         epic_id: mockEpics[1].id,
         title: 'Admin Dashboard',
-        description: 'Dashboard for administrators',
         ai: true,
       },
     ];
@@ -481,32 +489,24 @@ const App: React.FC = () => {
         id: crypto.randomUUID(),
         sub_epic_id: mockSubEpics[0].id,
         title: 'As a user, I want to login with email and password',
-        description: 'Login form with validation',
-        assigned_role: 'Frontend Developer',
         ai: true,
       },
       {
         id: crypto.randomUUID(),
         sub_epic_id: mockSubEpics[0].id,
         title: 'As a user, I want to reset my password',
-        description: 'Password reset functionality',
-        assigned_role: 'Backend Developer',
         ai: true,
       },
       {
         id: crypto.randomUUID(),
         sub_epic_id: mockSubEpics[1].id,
         title: 'As a new user, I want to create an account',
-        description: 'Registration form with validation',
-        assigned_role: 'Full Stack Developer',
         ai: true,
       },
       {
         id: crypto.randomUUID(),
         sub_epic_id: mockSubEpics[2].id,
         title: 'As an admin, I want to see system statistics',
-        description: 'Statistics widgets and charts',
-        assigned_role: 'Frontend Developer',
         ai: true,
       },
     ];
@@ -546,17 +546,8 @@ const App: React.FC = () => {
       const data = await handleApiResponse(response, 'generate backlog');
       console.log('Backlog generated:', data);
 
-      // Parse the backlog data into epics, sub-epics, and user stories
-      if (data.epics) {
-        setEpics(data.epics);
-      }
-      if (data.sub_epics) {
-        setSubEpics(data.sub_epics);
-      }
-      if (data.user_stories) {
-        setUserStories(data.user_stories);
-      }
-
+      // Fetch the complete backlog structure after generation
+      await fetchBacklog();
       setCurrentStep('backlog');
     } catch (error) {
       console.error('Error generating backlog:', error);
@@ -569,10 +560,11 @@ const App: React.FC = () => {
     }
   };
 
-  // Save Assignments
-  const saveAssignments = async () => {
+
+  // Fetch Backlog Data
+  const fetchBacklog = async () => {
     if (!createdProjectId) {
-      alert('Missing project data');
+      console.error('No project ID available');
       return;
     }
 
@@ -582,34 +574,364 @@ const App: React.FC = () => {
       return;
     }
 
-    setIsLoading(true);
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/api/ai/projects/${createdProjectId}/backlog/`,
+        {
+          headers: { 'Authorization': `${authFormat} ${token}` },
+          credentials: 'include',
+        }
+      );
+
+      const data = await handleApiResponse(response, 'fetch backlog');
+      console.log('Backlog fetched:', data);
+
+      // Transform backend response to frontend state
+      setEpics(data.epics);
+      
+      // Flatten sub_epics with epic_id
+      const flattenedSubEpics = data.epics.flatMap((epic: any) => 
+        epic.sub_epics.map((subEpic: any) => ({
+          ...subEpic,
+          epic_id: epic.id
+        }))
+      );
+      setSubEpics(flattenedSubEpics);
+
+      // Flatten user_stories with sub_epic_id
+      const flattenedUserStories = data.epics.flatMap((epic: any) => 
+        epic.sub_epics.flatMap((subEpic: any) => 
+          subEpic.user_stories.map((userStory: any) => ({
+            ...userStory,
+            sub_epic_id: subEpic.id
+          }))
+        )
+      );
+      setUserStories(flattenedUserStories);
+
+      // Flatten tasks with user_story_id
+      const flattenedTasks = data.epics.flatMap((epic: any) => 
+        epic.sub_epics.flatMap((subEpic: any) => 
+          subEpic.user_stories.flatMap((userStory: any) => 
+            userStory.tasks.map((task: any) => ({
+              ...task,
+              user_story_id: userStory.id
+            }))
+          )
+        )
+      );
+      setTasks(flattenedTasks);
+      
+      // Auto-expand all epics and sub-epics
+      const allEpicIds = new Set<string>(data.epics.map((epic: any) => String(epic.id)));
+      setExpandedEpics(allEpicIds);
+      
+      const allSubEpicIds = new Set<string>(
+        data.epics.flatMap((epic: any) => 
+          epic.sub_epics.map((subEpic: any) => String(subEpic.id))
+        )
+      );
+      setExpandedSubEpics(allSubEpicIds);
+
+    } catch (error) {
+      console.error('Error fetching backlog:', error);
+      alert(`Failed to fetch backlog: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
+  // Epic CRUD Functions
+  const createEpic = async (epicData: { title: string; description: string }) => {
+    const token = getAuthToken();
+    if (!token || !createdProjectId) return;
 
     try {
-      const assignmentData = {
-        epics,
-        sub_epics: subEpics,
-        user_stories: userStories,
-      };
+      const response = await fetch(`${API_BASE_URL}/api/ai/epics/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `${authFormat} ${token}`,
+        },
+        body: JSON.stringify({
+          project: createdProjectId,
+          title: epicData.title,
+          description: epicData.description || '',
+          ai: false
+        }),
+      });
 
-      const response = await fetch(
-        `${API_BASE_URL}/api/ai/projects/${createdProjectId}/save-assignments/`,
-        {
-          method: 'PUT',
+      await handleApiResponse(response, 'create epic');
+      await fetchBacklog(); // Refresh the backlog
+    } catch (error) {
+      console.error('Error creating epic:', error);
+      alert(`Failed to create epic: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
+  const updateEpic = async (epicId: string, epicData: { title?: string; description?: string }) => {
+    const token = getAuthToken();
+    if (!token) return;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/ai/epics/${epicId}/`, {
+        method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `${authFormat} ${token}`,
           },
-          body: JSON.stringify(assignmentData),
-        }
-      );
+        body: JSON.stringify(epicData),
+      });
 
-      await handleApiResponse(response, 'save assignments');
-      alert('Assignments saved successfully!');
+      await handleApiResponse(response, 'update epic');
+      await fetchBacklog(); // Refresh the backlog
     } catch (error) {
-      console.error('Error saving assignments:', error);
-      alert(`Failed to save assignments: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    } finally {
-      setIsLoading(false);
+      console.error('Error updating epic:', error);
+      alert(`Failed to update epic: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
+  const deleteEpic = async (epicId: string) => {
+    const token = getAuthToken();
+    if (!token) return;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/ai/epics/${epicId}/`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `${authFormat} ${token}` },
+      });
+
+      await handleApiResponse(response, 'delete epic');
+      await fetchBacklog(); // Refresh the backlog
+    } catch (error) {
+      console.error('Error deleting epic:', error);
+      alert(`Failed to delete epic: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
+  // SubEpic CRUD Functions
+  const createSubEpic = async (subEpicData: { epic_id: string; title: string }) => {
+    const token = getAuthToken();
+    if (!token) return;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/ai/sub-epics/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `${authFormat} ${token}`,
+        },
+        body: JSON.stringify({
+          epic: subEpicData.epic_id,
+          title: subEpicData.title,
+          ai: false
+        }),
+      });
+
+      await handleApiResponse(response, 'create sub-epic');
+      await fetchBacklog(); // Refresh the backlog
+    } catch (error) {
+      console.error('Error creating sub-epic:', error);
+      alert(`Failed to create sub-epic: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
+  const updateSubEpic = async (subEpicId: string, subEpicData: { title?: string }) => {
+    const token = getAuthToken();
+    if (!token) return;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/ai/sub-epics/${subEpicId}/`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `${authFormat} ${token}`,
+        },
+        body: JSON.stringify(subEpicData),
+      });
+
+      await handleApiResponse(response, 'update sub-epic');
+      await fetchBacklog(); // Refresh the backlog
+    } catch (error) {
+      console.error('Error updating sub-epic:', error);
+      alert(`Failed to update sub-epic: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
+  const deleteSubEpic = async (subEpicId: string) => {
+    const token = getAuthToken();
+    if (!token) return;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/ai/sub-epics/${subEpicId}/`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `${authFormat} ${token}` },
+      });
+
+      await handleApiResponse(response, 'delete sub-epic');
+      await fetchBacklog(); // Refresh the backlog
+    } catch (error) {
+      console.error('Error deleting sub-epic:', error);
+      alert(`Failed to delete sub-epic: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
+  // UserStory CRUD Functions
+  const createUserStory = async (userStoryData: { sub_epic_id: string; title: string }) => {
+    const token = getAuthToken();
+    if (!token) return;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/ai/user-stories/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `${authFormat} ${token}`,
+        },
+        body: JSON.stringify({
+          sub_epic: userStoryData.sub_epic_id,
+          title: userStoryData.title,
+          ai: false
+        }),
+      });
+
+      await handleApiResponse(response, 'create user story');
+      await fetchBacklog(); // Refresh the backlog
+    } catch (error) {
+      console.error('Error creating user story:', error);
+      alert(`Failed to create user story: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
+  const updateUserStory = async (userStoryId: string, userStoryData: { title?: string }) => {
+    const token = getAuthToken();
+    if (!token) return;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/ai/user-stories/${userStoryId}/`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `${authFormat} ${token}`,
+        },
+        body: JSON.stringify(userStoryData),
+      });
+
+      await handleApiResponse(response, 'update user story');
+      await fetchBacklog(); // Refresh the backlog
+    } catch (error) {
+      console.error('Error updating user story:', error);
+      alert(`Failed to update user story: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
+  const deleteUserStory = async (userStoryId: string) => {
+    const token = getAuthToken();
+    if (!token) return;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/ai/user-stories/${userStoryId}/`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `${authFormat} ${token}` },
+      });
+
+      await handleApiResponse(response, 'delete user story');
+      await fetchBacklog(); // Refresh the backlog
+    } catch (error) {
+      console.error('Error deleting user story:', error);
+      alert(`Failed to delete user story: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
+  // Task CRUD Functions
+  const createTask = async (taskData: { user_story_id: string; title: string; status?: string; assignee_id?: string }) => {
+    const token = getAuthToken();
+    if (!token) return;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/ai/story-tasks/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `${authFormat} ${token}`,
+        },
+        body: JSON.stringify({
+          user_story: taskData.user_story_id,
+          title: taskData.title,
+          status: taskData.status || 'pending',
+          ai: false,
+          assignee: taskData.assignee_id || null
+        }),
+      });
+
+      await handleApiResponse(response, 'create task');
+      await fetchBacklog(); // Refresh the backlog
+    } catch (error) {
+      console.error('Error creating task:', error);
+      alert(`Failed to create task: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
+  const updateTask = async (taskId: string, taskData: { title?: string; status?: string; assignee_id?: string }) => {
+    const token = getAuthToken();
+    if (!token) return;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/ai/story-tasks/${taskId}/`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `${authFormat} ${token}`,
+        },
+        body: JSON.stringify({
+          ...taskData,
+          assignee: taskData.assignee_id || null
+        }),
+      });
+
+      await handleApiResponse(response, 'update task');
+      await fetchBacklog(); // Refresh the backlog
+    } catch (error) {
+      console.error('Error updating task:', error);
+      alert(`Failed to update task: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
+  const deleteTask = async (taskId: string) => {
+    const token = getAuthToken();
+    if (!token) return;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/ai/story-tasks/${taskId}/`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `${authFormat} ${token}` },
+      });
+
+      await handleApiResponse(response, 'delete task');
+      await fetchBacklog(); // Refresh the backlog
+    } catch (error) {
+      console.error('Error deleting task:', error);
+      alert(`Failed to delete task: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
+  const updateTaskAssignment = async (taskId: string, assigneeId: string | null) => {
+    const token = getAuthToken();
+    if (!token) return;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/ai/story-tasks/${taskId}/`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `${authFormat} ${token}`,
+        },
+        body: JSON.stringify({ assignee: assigneeId }),
+      });
+
+      await handleApiResponse(response, 'update task assignment');
+      await fetchBacklog(); // Refresh the backlog
+    } catch (error) {
+      console.error('Error updating task assignment:', error);
+      alert(`Failed to update task assignment: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -659,29 +981,78 @@ const App: React.FC = () => {
     setIsLoading(true);
 
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/api/ai/projects/${createdProjectId}/send-invitations/`,
-        {
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (const invitation of invitations) {
+        try {
+          // Look up user by email first
+          const usersResponse = await fetch(
+            `${API_BASE_URL}/api/user/?email=${encodeURIComponent(invitation.email)}`,
+            {
+              headers: { 'Authorization': `${authFormat} ${token}` },
+              credentials: 'include',
+            }
+          );
+
+          if (!usersResponse.ok) {
+            console.warn(`Failed to lookup user with email ${invitation.email}`);
+            errorCount++;
+            continue;
+          }
+
+          const users = await usersResponse.json();
+          
+          if (users.length === 0) {
+            console.warn(`User with email ${invitation.email} not found`);
+            errorCount++;
+            continue;
+          }
+          
+          const user = users[0];
+          
+          // Create invitation with user ID
+          const response = await fetch(`${API_BASE_URL}/api/ai/invitations/`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `${authFormat} ${token}`,
           },
-          body: JSON.stringify({ invitations }),
-        }
-      );
+            body: JSON.stringify({
+              project: parseInt(createdProjectId!),
+              invitee: parseInt(user.user_id),
+              message: `You've been invited as ${invitation.role}`
+            }),
+          });
 
-      await handleApiResponse(response, 'send invitations');
-      
-      // Mark all invitations as sent
+          if (response.ok) {
+            successCount++;
+          } else {
+            const errorData = await response.json();
+            console.warn(`Failed to send invitation to ${invitation.email}:`, errorData);
+            errorCount++;
+          }
+        } catch (error) {
+          console.error(`Error sending invitation to ${invitation.email}:`, error);
+          errorCount++;
+        }
+      }
+
+      // Mark successful invitations as sent
       setInvitations(invitations.map(inv => ({ ...inv, sent: true })));
       
-      alert('Invitations sent successfully!');
+      if (successCount > 0) {
+        alert(`Successfully sent ${successCount} invitation(s)${errorCount > 0 ? `. ${errorCount} failed.` : '!'}`);
+      } else {
+        alert('Failed to send any invitations. Please check the email addresses.');
+      }
       
       // Reset after success
+      if (successCount > 0) {
       setTimeout(() => {
         resetForm();
       }, 2000);
+      }
     } catch (error) {
       console.error('Error sending invitations:', error);
       alert(`Failed to send invitations: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -704,6 +1075,7 @@ const App: React.FC = () => {
     setEpics([]);
     setSubEpics([]);
     setUserStories([]);
+    setTasks([]);
     setInvitations([]);
     setCurrentStep('create');
   };
@@ -801,12 +1173,6 @@ const App: React.FC = () => {
     setExpandedSubEpics(newExpanded);
   };
 
-  // Update User Story Assignment
-  const updateUserStoryAssignment = (storyId: string, role: string) => {
-    setUserStories(userStories.map(story => 
-      story.id === storyId ? { ...story, assigned_role: role } : story
-    ));
-  };
 
   // Step indicator component
   const StepIndicator = () => {
@@ -1404,6 +1770,21 @@ const App: React.FC = () => {
 
               <div className="flex items-center justify-between mb-4">
                 <h2 className={`text-xl font-bold ${theme === "dark" ? "text-white" : "text-gray-800"}`}>Project Backlog</h2>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      const title = prompt('Enter epic title:');
+                      const description = prompt('Enter epic description:');
+                      if (title) {
+                        createEpic({ title, description: description || '' });
+                      }
+                    }}
+                    disabled={isLoading}
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center gap-2"
+                  >
+                    <Plus size={16} />
+                    Add Epic
+                  </button>
                 <button
                   onClick={refreshBacklog}
                   disabled={isLoading}
@@ -1412,6 +1793,7 @@ const App: React.FC = () => {
                   <RefreshCw size={16} />
                   Refresh
                 </button>
+                </div>
               </div>
 
               {/* Epics, Sub Epics, and User Stories */}
@@ -1473,9 +1855,6 @@ const App: React.FC = () => {
                                       </span>
                                     )}
                                   </div>
-                                  <p className={`text-sm mt-1 ${theme === "dark" ? "text-gray-400" : "text-gray-600"}`}>
-                                    {subEpic.description}
-                                  </p>
                                 </div>
                                 <div className={`text-xl ${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}>
                                   {expandedSubEpics.has(subEpic.id) ? '−' : '+'}
@@ -1503,28 +1882,84 @@ const App: React.FC = () => {
                                         )}
                                       </div>
                                     </div>
-                                    <p className={`text-sm mb-3 ${theme === "dark" ? "text-gray-400" : "text-gray-600"}`}>
-                                      {story.description}
-                                    </p>
+                                    
+                                    {/* Tasks under this user story */}
+                                    <div className="mt-3 space-y-2">
+                                      {tasks.filter(task => task.user_story_id === story.id).map(task => (
+                                        <div key={task.id} className={`border rounded-lg p-2 ${
+                                          task.ai ? 'bg-blue-50 border-blue-200' : theme === "dark" ? 'bg-gray-700 border-gray-600' : 'bg-gray-100 border-gray-300'
+                                        }`}>
+                                          <div className="flex items-start justify-between">
+                                            <div className="flex-1">
                                     <div className="flex items-center gap-2">
-                                      <label className={`text-sm font-medium ${theme === "dark" ? "text-gray-300" : "text-gray-700"}`}>
-                                        Assign to:
-                                      </label>
+                                                <span className="text-xs font-semibold text-blue-600 bg-blue-100 px-2 py-1 rounded">TASK</span>
+                                                <p className={`text-sm font-medium ${theme === "dark" && !task.ai ? "text-white" : "text-gray-800"}`}>
+                                                  {task.title}
+                                                </p>
+                                                {task.ai && (
+                                                  <span className="text-xs text-blue-600 inline-flex items-center gap-1">
+                                                    <Sparkles size={10} /> AI
+                                                  </span>
+                                                )}
+                                              </div>
+                                              <div className="flex items-center gap-2 mt-1">
+                                                <span className={`text-xs ${theme === "dark" ? "text-gray-400" : "text-gray-600"}`}>
+                                                  Status: {task.status}
+                                                </span>
+                                                {task.assignee && (
+                                                  <span className={`text-xs ${theme === "dark" ? "text-gray-400" : "text-gray-600"}`}>
+                                                    Assigned to: {task.assignee.user_name}
+                                                  </span>
+                                                )}
+                                              </div>
+                                            </div>
+                                            <div className="flex items-center gap-1">
                                       <select
-                                        value={story.assigned_role || ''}
-                                        onChange={(e) => updateUserStoryAssignment(story.id, e.target.value)}
-                                        className={`flex-1 px-3 py-1.5 border rounded text-sm ${
-                                          theme === "dark" ? "bg-gray-900 border-gray-700 text-white" : "border-gray-300"
+                                                value={task.assignee?.id || ''}
+                                                onChange={(e) => updateTaskAssignment(task.id, e.target.value || null)}
+                                                className={`text-xs px-2 py-1 border rounded ${
+                                                  theme === "dark" ? "bg-gray-800 border-gray-600 text-white" : "border-gray-300"
                                         }`}
                                         disabled={isLoading}
                                       >
                                         <option value="">Unassigned</option>
                                         {members.map(member => (
-                                          <option key={member.id} value={member.role}>
+                                                  <option key={member.id} value={member.id}>
                                             {member.role}
                                           </option>
                                         ))}
                                       </select>
+                                              <button
+                                                onClick={() => deleteTask(task.id)}
+                                                className="text-red-500 hover:text-red-700 text-xs"
+                                                disabled={isLoading}
+                                              >
+                                                <X size={12} />
+                                              </button>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      ))}
+                                      
+                                      {/* Add new task button */}
+                                      <button
+                                        onClick={() => {
+                                          const taskTitle = prompt('Enter task title:');
+                                          if (taskTitle) {
+                                            createTask({
+                                              user_story_id: story.id,
+                                              title: taskTitle,
+                                              status: 'pending'
+                                            });
+                                          }
+                                        }}
+                                        className={`w-full text-xs px-3 py-2 border-2 border-dashed rounded-lg ${
+                                          theme === "dark" ? "border-gray-600 text-gray-400 hover:border-gray-500" : "border-gray-300 text-gray-600 hover:border-gray-400"
+                                        }`}
+                                        disabled={isLoading}
+                                      >
+                                        + Add Task
+                                      </button>
                                     </div>
                                   </div>
                                 ))}
@@ -1563,24 +1998,6 @@ const App: React.FC = () => {
                   className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Skip
-                </button>
-                <div className="flex gap-3">
-                  <button
-                    onClick={saveAssignments}
-                    disabled={isLoading}
-                    className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                  >
-                    {isLoading ? (
-                      <>
-                        <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></div>
-                        Saving...
-                      </>
-                    ) : (
-                      <>
-                        <Save size={20} />
-                        Save Assignments
-                      </>
-                    )}
                   </button>
                   <button
                     onClick={() => setCurrentStep('invite')}
@@ -1590,7 +2007,6 @@ const App: React.FC = () => {
                     Next: Invite Team
                     <ArrowRight size={20} />
                   </button>
-                </div>
               </div>
             </div>
           )}

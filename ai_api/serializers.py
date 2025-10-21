@@ -127,7 +127,7 @@ class ProjectInvitationSerializer(serializers.ModelSerializer):
             'id', 'project', 'project_title', 'invitee', 'invitee_name', 'invitee_email',
             'invited_by', 'invited_by_name', 'status', 'message', 'created_at', 'updated_at'
         ]
-        read_only_fields = ['id', 'status', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'status', 'created_at', 'updated_at', 'invited_by']
     
     def validate(self, data):
         # Additional validation for creating invitations

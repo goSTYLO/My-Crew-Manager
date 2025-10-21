@@ -518,7 +518,7 @@ class NotificationWebSocketTests(TransactionTestCase):
         
         # Test that user is in the correct group
         channel_layer = get_channel_layer()
-        group_name = f'user_{self.user.id}_notifications'
+        group_name = f'user_{self.user.user_id}_notifications'
         
         # Send a test message to the group
         await channel_layer.group_send(group_name, {
@@ -557,7 +557,7 @@ class NotificationWebSocketTests(TransactionTestCase):
         
         # Send notification through WebSocket
         channel_layer = get_channel_layer()
-        group_name = f'user_{self.user.id}_notifications'
+        group_name = f'user_{self.user.user_id}_notifications'
         
         await channel_layer.group_send(group_name, {
             'type': 'notification_message',
@@ -594,7 +594,7 @@ class NotificationWebSocketTests(TransactionTestCase):
         
         # Send test message with expected structure
         channel_layer = get_channel_layer()
-        group_name = f'user_{self.user.id}_notifications'
+        group_name = f'user_{self.user.user_id}_notifications'
         
         test_notification = {
             'id': 123,
@@ -643,7 +643,7 @@ class NotificationWebSocketTests(TransactionTestCase):
         
         # Send notification to user1 only
         channel_layer = get_channel_layer()
-        group_name1 = f'user_{self.user.id}_notifications'
+        group_name1 = f'user_{self.user.user_id}_notifications'
         
         await channel_layer.group_send(group_name1, {
             'type': 'notification_message',
@@ -684,7 +684,7 @@ class NotificationWebSocketTests(TransactionTestCase):
         
         # Try to send message after disconnect - should not cause errors
         channel_layer = get_channel_layer()
-        group_name = f'user_{self.user.id}_notifications'
+        group_name = f'user_{self.user.user_id}_notifications'
         
         # This should not raise an exception
         await channel_layer.group_send(group_name, {

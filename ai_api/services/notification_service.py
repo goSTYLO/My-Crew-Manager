@@ -27,8 +27,13 @@ class NotificationService:
             actor=actor
         )
         
-        # Send real-time notification via WebSocket
-        NotificationService.send_realtime_notification(notification)
+        # Send real-time notification via WebSocket (if Redis is available)
+        try:
+            NotificationService.send_realtime_notification(notification)
+        except Exception as e:
+            # Log the error but don't fail the notification creation
+            print(f"Failed to send real-time notification: {e}")
+            # The notification is still created in the database
         
         return notification
     
@@ -36,7 +41,7 @@ class NotificationService:
     def send_realtime_notification(notification):
         """Send notification through WebSocket"""
         channel_layer = get_channel_layer()
-        notification_group = f'user_{notification.recipient.id}_notifications'
+        notification_group = f'user_{notification.recipient.user_id}_notifications'
         
         async_to_sync(channel_layer.group_send)(
             notification_group,

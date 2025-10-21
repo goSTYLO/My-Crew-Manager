@@ -107,6 +107,14 @@ class UserListView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        users = User.objects.all()
+        # Get email query parameter
+        email = request.query_params.get('email')
+        
+        # Filter by email if provided
+        if email:
+            users = User.objects.filter(email=email)
+        else:
+            users = User.objects.all()
+        
         serializer = UserSerializer(users, many=True)
         return Response(serializer.data)

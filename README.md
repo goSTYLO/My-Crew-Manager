@@ -429,7 +429,22 @@ For support and questions:
 
 ## 🔄 Recent Updates
 
-### Real-time Notification System Testing Suite (Latest)
+### Frontend-Backend Integration & Invitation System Fixes (Latest)
+- ✅ **Complete Frontend Integration**: Successfully connected React frontend (`generateProject.tsx`) to Django backend
+- ✅ **Backlog Management**: Full CRUD operations for epics, sub-epics, user stories, and tasks
+- ✅ **Auto-Expansion**: Backlog items automatically expand when fetched for immediate visibility
+- ✅ **Task Assignment**: Real-time task assignment with member dropdown and status tracking
+- ✅ **Invitation System Overhaul**: Fixed multiple critical issues in project invitation workflow
+  - **Fixed User Model References**: Corrected all `User.id` references to `User.user_id` (primary key mismatch)
+  - **Fixed Serializer Issues**: Made `invited_by` field read-only to prevent validation errors
+  - **Fixed URL Mismatch**: Corrected frontend API calls from `/api/users/` to `/api/user/`
+  - **Fixed Data Types**: Converted string IDs to integers for proper foreign key relationships
+  - **Fixed Redis Dependencies**: Made notification system resilient to Redis connection failures
+  - **Fixed Admin Integration**: Added automatic ProjectMember creation when invitations are accepted via Django admin
+- ✅ **Comprehensive Error Handling**: Added extensive debugging and error handling throughout the system
+- ✅ **Real-time Notifications**: Working notification system with graceful Redis failure handling
+
+### Real-time Notification System Testing Suite
 - ✅ **Critical Bug Fixed**: Project invitation notifications now trigger correctly
 - ✅ **Comprehensive Test Suite**: 32 automated tests covering all notification functionality
   - NotificationModelTests (5 tests) - Model functionality and relationships
@@ -467,7 +482,21 @@ For support and questions:
 - ✅ **ENFORCED INVITATION FLOW** - Direct member creation blocked, all members must be invited
 - ✅ **AUTOMATIC CREATOR MEMBERSHIP** - Project creators automatically become Owner members
 
-### Enforced Invitation Flow Implementation (Latest)
+### Frontend-Backend Integration Details
+- ✅ **React-Django Connection**: Complete integration between `web/src/view_pages/manager/generateProject.tsx` and Django backend
+- ✅ **API Endpoint Integration**: Connected all missing endpoints for project creation, proposal upload, AI analysis, and team management
+- ✅ **Backlog CRUD Operations**: Full Create, Read, Update, Delete functionality for:
+  - Epics (with AI-generated and manual creation)
+  - Sub-epics (nested under epics)
+  - User stories (nested under sub-epics)
+  - Tasks (with assignee management and status tracking)
+- ✅ **Data Structure Alignment**: Fixed frontend TypeScript interfaces to match backend Django models
+- ✅ **State Management**: Proper React state management for nested backlog data with auto-expansion
+- ✅ **Error Handling**: Comprehensive error handling with user-friendly messages
+- ✅ **Authentication**: Proper Bearer token authentication for all API calls
+- ✅ **Real-time Updates**: Backlog refreshes automatically after CRUD operations
+
+### Enforced Invitation Flow Implementation
 - ✅ **Security Enhancement** - Eliminated direct member creation bypass
 - ✅ **Automatic Owner Assignment** - Project creators automatically become members with Owner role
 - ✅ **Blocked Direct Creation** - ProjectMemberViewSet.create() returns HTTP 403 with helpful error message
@@ -477,6 +506,37 @@ For support and questions:
 - ✅ **Serializer Updates** - Updated ProjectInvitationSerializer to handle invited_by field properly
 - ✅ **ViewSet Enhancements** - Added perform_create method to ProjectInvitationViewSet
 - ✅ **Documentation Updates** - Updated README with enforced flow details and testing results
+
+### Technical Issues Resolved (Session Summary)
+During this development session, we identified and resolved multiple critical issues:
+
+#### Backend Issues Fixed:
+1. **User Model Primary Key Mismatch**: Fixed all references from `User.id` to `User.user_id` across:
+   - `ai_api/views.py` (line 440: `assignee.user.user_id`)
+   - `ai_api/services/notification_service.py` (line 39: `notification.recipient.user_id`)
+   - `ai_api/consumers.py` (line 11: `self.scope['user'].user_id`)
+   - `ai_api/tests.py` (5 instances of `self.user.user_id`)
+
+2. **Serializer Validation Issues**: Made `invited_by` field read-only in `ProjectInvitationSerializer` to prevent validation errors
+
+3. **Notification System Resilience**: Added try-catch blocks to handle Redis connection failures gracefully
+
+4. **Admin Integration**: Added `save()` method to `ProjectInvitation` model to automatically create `ProjectMember` when status changes to 'accepted' via Django admin
+
+#### Frontend Issues Fixed:
+1. **API URL Mismatch**: Corrected frontend calls from `/api/users/` to `/api/user/` to match backend configuration
+
+2. **Data Type Conversion**: Added `parseInt()` to convert string IDs to integers for proper foreign key relationships
+
+3. **TypeScript Interface Alignment**: Updated interfaces to match backend data structures
+
+4. **State Management**: Implemented proper nested data handling with auto-expansion for backlog items
+
+#### Integration Improvements:
+1. **Complete CRUD Operations**: Implemented full Create, Read, Update, Delete functionality for all backlog entities
+2. **Real-time Updates**: Backlog refreshes automatically after any CRUD operation
+3. **Error Handling**: Added comprehensive error handling with user-friendly messages
+4. **Authentication**: Proper Bearer token authentication for all API calls
 
 ---
 
