@@ -1,7 +1,7 @@
 // pages/signIn.tsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, Lock, Mail, Chrome, Github, Apple } from 'lucide-react';
+import { Eye, EyeOff, Lock, Mail, Chrome, Github, Apple, Shield, Users, BarChart3 } from 'lucide-react';
 import logo from "../../assets/logo2.png";
 
 // MODEL
@@ -249,80 +249,165 @@ export default function LoginPage() {
   const isFormValid = Object.keys(errors).length === 0 && formData.email && formData.password && termsAccepted;
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
-      {/* Left Section */}
+    <div className="min-h-screen bg-white flex">
+      {/* Left Section - Company Branding */}
       <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-indigo-600 via-purple-600 to-indigo-800 relative overflow-hidden">
-        <div className="absolute inset-0 bg-black bg-opacity-25"></div>
-        <div className="relative z-10 flex flex-col justify-center items-center w-full h-full text-white space-y-6 p-12">
-          <div className="w-64 h-64 bg-white bg-opacity-10 rounded-full flex items-center justify-center backdrop-blur-md shadow-lg overflow-hidden">
-            <img src={logo} alt="Logo" className="w-70 h-70 object-contain mt-2 mr-1" />
+        {/* Decorative elements */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-20 left-20 w-64 h-64 bg-white rounded-full blur-3xl"></div>
+          <div className="absolute bottom-20 right-20 w-96 h-96 bg-purple-300 rounded-full blur-3xl"></div>
+        </div>
+
+        <div className="relative z-10 flex flex-col justify-between w-full p-12">
+          {/* Logo & Brand */}
+          <div className="flex items-center gap-3">
+            <div className="w-14 h-14 bg-white rounded-2xl shadow-lg flex items-center justify-center overflow-hidden">
+              <img src={logo} alt="Company Logo" className="w-12 h-12 object-contain" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-white">My Crew Manager</h1>
+              <p className="text-indigo-200 text-sm">Project Management Platform</p>
+            </div>
           </div>
-          <h2 className="text-4xl font-extrabold text-center">Welcome Back!</h2>
-          <p className="text-lg text-center max-w-xs opacity-90">
-            Access your account and continue your journey with us.
-          </p>
+
+          {/* Main Content */}
+          <div className="space-y-8">
+            <div>
+              <h2 className="text-5xl font-bold text-white mb-4 leading-tight">
+                Secure Access to<br />Your Enterprise Tools
+              </h2>
+              <p className="text-indigo-100 text-lg leading-relaxed">
+                Connect with your team, manage projects efficiently, and drive business success with our comprehensive enterprise platform.
+              </p>
+            </div>
+
+            {/* Feature Cards */}
+            <div className="grid grid-cols-1 gap-4">
+              <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-2xl p-6 border border-white border-opacity-20">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <Shield className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-white font-semibold text-lg mb-1">Enterprise Security</h3>
+                    <p className="text-indigo-100 text-sm">Bank-level encryption and multi-factor authentication to protect your data</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-2xl p-6 border border-white border-opacity-20">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <Users className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-white font-semibold text-lg mb-1">Team Collaboration</h3>
+                    <p className="text-indigo-100 text-sm">Real-time collaboration tools for seamless team coordination</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-2xl p-6 border border-white border-opacity-20">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <BarChart3 className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-white font-semibold text-lg mb-1">Advanced Analytics</h3>
+                    <p className="text-indigo-100 text-sm">Comprehensive insights and reporting for data-driven decisions</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="flex items-center justify-between text-indigo-200 text-sm">
+            <p>© 2025 My Crew Manager. All rights reserved.</p>
+            <div className="flex gap-6">
+              <button className="hover:text-white transition-colors">Privacy</button>
+              <button className="hover:text-white transition-colors">Terms</button>
+              <button className="hover:text-white transition-colors">Support</button>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Right Section - Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8">
-        <div className="max-w-md w-full space-y-8">
-          <div className="text-center">
-            <h2 className="text-3xl font-bold text-gray-900 mb-2">Welcome back!</h2>
-            <p className="text-gray-600">Please enter your details.</p>
+      {/* Right Section - Login Form */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-gray-50">
+        <div className="w-full max-w-md">
+          {/* Header */}
+          <div className="mb-8">
+            <h2 className="text-3xl font-bold text-gray-900 mb-2">Sign In</h2>
+            <p className="text-gray-600">Access your enterprise account</p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Email Input */}
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                Email
+              <label htmlFor="email" className="block text-sm font-semibold text-gray-700 mb-2">
+                Email Address
               </label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <Mail className="h-5 w-5 text-gray-400" />
+                </div>
                 <input
                   id="email"
                   name="email"
                   type="email"
                   value={formData.email}
                   onChange={handleInputChange}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="block w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
                   placeholder="Enter your email"
                   disabled={isLoading}
                 />
               </div>
-              {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
-            </div>
-
-            <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-              Password
-            </label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <input
-                id="password"
-                name="password"
-                type={showPassword ? 'text' : 'password'}
-                value={formData.password}
-                onChange={handleInputChange}
-                className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Enter your password"
-                disabled={isLoading}
-              />
-              {formData.password && (
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-                  disabled={isLoading}
-                >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </button>
+              {errors.email && (
+                <p className="mt-2 text-sm text-red-600">{errors.email}</p>
               )}
             </div>
-            {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
-          </div>
 
+            {/* Password Input */}
+            <div>
+              <label htmlFor="password" className="block text-sm font-semibold text-gray-700 mb-2">
+                Password
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <Lock className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                  id="password"
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={formData.password}
+                  onChange={handleInputChange}
+                  className="block w-full pl-11 pr-11 py-3 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                  placeholder="Enter your password"
+                  disabled={isLoading}
+                />
+                {formData.password && (
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-0 pr-4 flex items-center"
+                    disabled={isLoading}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                    ) : (
+                      <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                    )}
+                  </button>
+                )}
+              </div>
+              {errors.password && (
+                <p className="mt-2 text-sm text-red-600">{errors.password}</p>
+              )}
+            </div>
+
+            {/* Remember Me & Forgot Password */}
             <div className="flex items-center justify-between">
               <div className="flex items-center">
                 <input
@@ -330,43 +415,59 @@ export default function LoginPage() {
                   type="checkbox"
                   checked={termsAccepted}
                   onChange={(e) => setTermsAccepted(e.target.checked)}
-                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded"
+                  className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
                   disabled={isLoading}
                 />
-                <label htmlFor="terms" className="ml-2 text-sm text-gray-700">
-                  Terms & Conditions
+                <label htmlFor="terms" className="ml-2 block text-sm text-gray-700">
+                  Accept Terms & Conditions
                 </label>
               </div>
-              <button type="button" className="text-sm text-blue-600 font-medium hover:underline">
-                Forgot Password?
+              <button
+                type="button"
+                className="text-sm font-semibold text-indigo-600 hover:text-indigo-700"
+              >
+                Forgot password?
               </button>
             </div>
 
             {/* Error/Success Message */}
             {message && (
-              <div className={`p-3 rounded-lg text-sm ${
+              <div className={`rounded-lg p-4 ${
                 message.type === 'error'
-                  ? 'bg-red-50 text-red-700 border border-red-200'
-                  : 'bg-green-50 text-green-700 border border-green-200'
+                  ? 'bg-red-50 border border-red-200 text-red-800'
+                  : 'bg-green-50 border border-green-200 text-green-800'
               }`}>
-                {message.text}
+                <p className="text-sm font-medium">{message.text}</p>
               </div>
             )}
 
+            {/* Submit Button */}
             <button
               type="submit"
               disabled={!isFormValid || isLoading}
-              className="w-full bg-black text-white py-3 px-4 rounded-lg font-medium hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              {isLoading ? 'Logging in...' : 'Log in'}
+              {isLoading ? (
+                <div className="flex items-center gap-2">
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <span>Signing in...</span>
+                </div>
+              ) : (
+                'Sign In'
+              )}
             </button>
 
-            <div className="my-6 flex items-center">
-              <div className="flex-1 border-t border-gray-300"></div>
-              <span className="px-4 text-sm text-gray-500">Or continue with</span>
-              <div className="flex-1 border-t border-gray-300"></div>
+            {/* Divider */}
+            <div className="relative my-6">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-300"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-4 bg-gray-50 text-gray-500 font-medium">Or continue with</span>
+              </div>
             </div>
 
+            {/* Social Login */}
             <div className="grid grid-cols-3 gap-3">
               {[
                 { name: 'Google', icon: Chrome },
@@ -378,31 +479,42 @@ export default function LoginPage() {
                   type="button"
                   onClick={() => handleSocialLogin(provider.name)}
                   disabled={socialLoading === provider.name || isLoading}
-                  className="p-3 bg-white border border-gray-300 rounded-lg hover:scale-105 disabled:opacity-50 transition-transform"
+                  className="flex justify-center items-center py-3 px-4 border border-gray-300 rounded-lg bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 transition-colors"
                 >
                   {socialLoading === provider.name ? (
-                    <div className="animate-spin h-5 w-5 border-b-2 border-gray-400 mx-auto rounded-full"></div>
+                    <div className="w-5 h-5 border-2 border-gray-300 border-t-indigo-600 rounded-full animate-spin"></div>
                   ) : (
-                    <provider.icon className="w-5 h-5 text-gray-600 mx-auto" />
+                    <provider.icon className="w-5 h-5 text-gray-600" />
                   )}
                 </button>
               ))}
             </div>
 
-            <div className="text-center">
-              <p className="text-gray-600">
+            {/* Sign Up Link */}
+            <div className="text-center pt-4">
+              <p className="text-sm text-gray-600">
                 Don't have an account?{' '}
-                <button 
+                <button
                   type="button"
                   onClick={() => navigate("/signup")}
-                  className="text-blue-600 font-medium hover:underline"
+                  className="font-semibold text-indigo-600 hover:text-indigo-700"
                   disabled={isLoading}
                 >
-                  Sign up for free
+                  Sign up.
                 </button>
               </p>
             </div>
           </form>
+
+          {/* Help Text */}
+          <div className="mt-8 text-center">
+            <p className="text-xs text-gray-500">
+              Need help? Contact{' '}
+              <a href="mailto:support@company.com" className="text-indigo-600 hover:text-indigo-700 font-medium">
+                mycrewmanager@company.com
+              </a>
+            </p>
+          </div>
         </div>
       </div>
     </div>
