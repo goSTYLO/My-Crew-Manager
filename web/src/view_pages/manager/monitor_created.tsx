@@ -78,6 +78,61 @@ export default function ProjectDetailsUI() {
     }
   };
 
+  // Regenerate functions
+  const regenerateOverview = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(`${API_BASE_URL}/projects/${projectId}/generate-overview/`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('✅ Overview regenerated:', data);
+      
+      // Refresh all data
+      await fetchProjectData();
+      alert('Project overview regenerated successfully!');
+    } catch (error) {
+      console.error('❌ Error regenerating overview:', error);
+      handleApiError(error, 'regenerate overview');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const regenerateBacklog = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(`${API_BASE_URL}/projects/${projectId}/generate-backlog/`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('✅ Backlog regenerated:', data);
+      
+      // Refresh backlog data
+      await fetchBacklog();
+      alert('Backlog regenerated successfully!');
+    } catch (error) {
+      console.error('❌ Error regenerating backlog:', error);
+      handleApiError(error, 'regenerate backlog');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Fetch Project Overview Data
   const fetchProjectData = async () => {
     try {
@@ -247,6 +302,11 @@ export default function ProjectDetailsUI() {
       });
 
       if (!response.ok) {
+        if (response.status === 404) {
+          console.log('ℹ️ No repositories found for this project (404) - this is normal');
+          setRepositories([]);
+          return;
+        }
         console.error('❌ Repositories fetch failed:', response.status);
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -256,7 +316,8 @@ export default function ProjectDetailsUI() {
       setRepositories(data);
     } catch (error) {
       console.error('❌ Error in fetchRepositories:', error);
-      handleApiError(error, 'fetch repositories');
+      // Don't show error for repositories as it's optional
+      setRepositories([]);
     }
   };
 
@@ -1348,13 +1409,21 @@ export default function ProjectDetailsUI() {
                       <h2 className="text-2xl font-bold text-white">{projectData.title}</h2>
                     )}
                     <div className="flex space-x-2">
-                    <button
+                      <button
+                        onClick={regenerateOverview}
+                        className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors flex items-center font-medium"
+                        title="Regenerate project overview using AI"
+                      >
+                        <RefreshCw className="w-4 h-4 mr-2" />
+                        Regenerate
+                      </button>
+                      <button
                         onClick={() => isEditingOverview ? updateProject() : setIsEditingOverview(true)}
-                      className="px-4 py-2 bg-white text-blue-600 rounded-lg hover:bg-blue-50 transition-colors flex items-center font-medium"
-                    >
-                      <Edit2 className="w-4 h-4 mr-2" />
+                        className="px-4 py-2 bg-white text-blue-600 rounded-lg hover:bg-blue-50 transition-colors flex items-center font-medium"
+                      >
+                        <Edit2 className="w-4 h-4 mr-2" />
                         {isEditingOverview ? 'Save Changes' : 'Edit'}
-                    </button>
+                      </button>
                       {isEditingOverview && (
                         <button
                           onClick={() => setIsEditingOverview(false)}
@@ -1613,6 +1682,14 @@ export default function ProjectDetailsUI() {
                     <p className="text-sm text-gray-500 mt-1">Manage epics, user stories, and tasks</p>
                   </div>
                   <div className="flex items-center gap-3">
+                    <button
+                      onClick={regenerateBacklog}
+                      className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors flex items-center shadow-sm"
+                      title="Regenerate backlog using AI"
+                    >
+                      <RefreshCw className="w-4 h-4 mr-2" />
+                      Regenerate
+                    </button>
                     {!isEditingBacklog ? (
                   <button
                         onClick={() => setIsEditingBacklog(true)}

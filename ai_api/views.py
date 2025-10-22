@@ -154,6 +154,70 @@ class ProjectViewSet(ModelViewSet):
             "backlog": backlog_dict,
         }, status=status.HTTP_200_OK)
 
+    @action(detail=True, methods=["put"], url_path="generate-overview")
+    def generate_overview(self, request, pk=None):
+        project = self.get_object()
+        # Use latest proposal for this project
+        proposal = project.proposals.order_by('-uploaded_at').first()
+        if not proposal or not proposal.parsed_text:
+            return Response({"error": "No parsed proposal found for project"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Generate project overview using LLM
+        project_model = run_pipeline_from_text(proposal.parsed_text)
+        output = model_to_dict(project_model)
+
+        # Update project title and summary if they exist in the output
+        if output.get('title'):
+            project.title = output['title']
+        if output.get('summary'):
+            project.summary = output['summary']
+        project.save()
+
+        # Clear existing features, roles, goals, and timeline
+        ProjectFeature.objects.filter(project=project).delete()
+        ProjectRole.objects.filter(project=project).delete()
+        ProjectGoal.objects.filter(project=project).delete()
+        TimelineWeek.objects.filter(project=project).delete()
+
+        # Create new features
+        for feature in output.get('features', []):
+            ProjectFeature.objects.create(
+                project=project,
+                title=feature.get('title', '')[:512]
+            )
+
+        # Create new roles
+        for role in output.get('roles', []):
+            ProjectRole.objects.create(
+                project=project,
+                role=role.get('role', '')[:255]
+            )
+
+        # Create new goals
+        for goal in output.get('goals', []):
+            ProjectGoal.objects.create(
+                project=project,
+                title=goal.get('title', '')[:512],
+                role=goal.get('role', '')[:255]
+            )
+
+        # Create new timeline
+        for week_data in output.get('timeline', []):
+            week = TimelineWeek.objects.create(
+                project=project,
+                week_number=week_data.get('week_number', 1)
+            )
+            for item in week_data.get('items', []):
+                TimelineItem.objects.create(
+                    week=week,
+                    title=item.get('title', '')[:512]
+                )
+
+        return Response({
+            "message": "Project overview generated successfully",
+            "overview": output,
+        }, status=status.HTTP_200_OK)
+
     @action(detail=True, methods=["get"], url_path="backlog")
     def backlog(self, request, pk=None):
         """Return the project's backlog as a nested structure: epics -> sub_epics -> user_stories -> tasks"""
