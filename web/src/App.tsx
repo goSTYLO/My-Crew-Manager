@@ -70,6 +70,7 @@ const App: React.FC = () => {
          {/* User routes */}
          <Route path="/user" element={<UserFrame />} />
         <Route path="/projects-user" element={<ProjectUser />} />
+        <Route path="/project-details/:id" element={<CreatedProject />} />
         <Route path="/project-details" element={<ProjectDetails />} />
         <Route path="/performance-user" element={<PerformanceUser />} />
         <Route path="/task-user" element={<TaskUser />} />

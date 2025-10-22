@@ -168,6 +168,25 @@ class ProjectInvitation(models.Model):
                 raise ValidationError("A pending invitation already exists for this user")
 
 
+class Repository(models.Model):
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='repositories')
+    name = models.CharField(max_length=255)
+    url = models.URLField()
+    branch = models.CharField(max_length=100, default='main')
+    assigned_to = models.ForeignKey(ProjectMember, on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_repositories')
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        db_table = 'ai_api_repository'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['project']),
+        ]
+    
+    def __str__(self):
+        return f"{self.name} - {self.project.title}"
+
+
 class Notification(models.Model):
     NOTIFICATION_TYPES = [
         ('project_invitation', 'Project Invitation'),

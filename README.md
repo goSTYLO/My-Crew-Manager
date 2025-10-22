@@ -285,10 +285,24 @@ DEBUG=True
 - **Projects**: `/api/ai/projects/`
 - **Invitations**: `/api/ai/invitations/`
 - **Notifications**: `/api/ai/notifications/`
-- **Epics**: `/api/ai/epics/`
-- **User Stories**: `/api/ai/user-stories/`
-- **Tasks**: `/api/ai/story-tasks/`
+- **Epics**: `/api/ai/epics/` *(Full CRUD including PATCH for title updates)*
+- **Sub-Epics**: `/api/ai/sub-epics/` *(Full CRUD including PATCH for title updates)*
+- **User Stories**: `/api/ai/user-stories/` *(Full CRUD including PATCH for title updates)*
+- **Tasks**: `/api/ai/story-tasks/` *(Full CRUD including PATCH for title updates)*
+- **Project Features**: `/api/ai/project-features/` *(Full CRUD)*
+- **Project Roles**: `/api/ai/project-roles/` *(Full CRUD)*
+- **Project Goals**: `/api/ai/project-goals/` *(Full CRUD)*
+- **Timeline Weeks**: `/api/ai/timeline-weeks/` *(Full CRUD)*
+- **Timeline Items**: `/api/ai/timeline-items/` *(Full CRUD)*
+- **Repositories**: `/api/ai/repositories/` *(Full CRUD)*
 - **Members**: `/api/ai/project-members/` *(Read-only: Direct creation blocked, use invitations)*
+
+#### Backlog-Specific Endpoints
+- **Project Backlog**: `GET /api/ai/projects/{id}/backlog/` - Returns nested structure (epics → sub-epics → user stories → tasks)
+- **Update Epic Title**: `PATCH /api/ai/epics/{id}/` - Update epic title
+- **Update Sub-Epic Title**: `PATCH /api/ai/sub-epics/{id}/` - Update sub-epic title
+- **Update User Story Title**: `PATCH /api/ai/user-stories/{id}/` - Update user story title
+- **Update Task Title**: `PATCH /api/ai/story-tasks/{id}/` - Update task title
 
 ### WebSocket Endpoints
 - **Notifications**: `ws://localhost:8000/ws/notifications/`
@@ -429,7 +443,30 @@ For support and questions:
 
 ## 🔄 Recent Updates
 
-### Frontend-Backend Integration & Invitation System Fixes (Latest)
+### Backlog Editing & Database Integration (Latest)
+- ✅ **Backlog Edit Mode Implementation**: Added comprehensive edit functionality for backlog section
+  - **Edit Button**: Backlog now follows the same pattern as project overview with Edit/Cancel/Save Changes buttons
+  - **Read-Only by Default**: All backlog content displays in read-only mode until Edit is clicked
+  - **Conditional Editing**: All input fields, delete buttons, and add buttons only show when in editing mode
+  - **Consistent UI/UX**: Matches the exact behavior and styling of the project overview tab
+- ✅ **Database Integration for Backlog Titles**: Fixed critical bug where title changes weren't being saved
+  - **Individual Update Functions**: Added API functions for updating epic, sub-epic, user story, and task titles
+  - **Batch Save Implementation**: Save Changes button now sends all title updates to database in parallel
+  - **Data Refresh**: Backlog data refreshes from server after saving to ensure consistency
+  - **Error Handling**: Comprehensive error handling with user feedback for failed updates
+  - **API Endpoints Used**: PATCH requests to `/epics/{id}/`, `/sub-epics/{id}/`, `/user-stories/{id}/`, `/story-tasks/{id}/`
+- ✅ **Modal-Based CRUD Operations**: Enhanced backlog management with professional modal dialogs
+  - **Add Modals**: Professional modals for adding epics, sub-epics, user stories, and tasks
+  - **Delete Confirmation**: Generic delete confirmation modal with cascading delete warnings
+  - **Contextual Information**: Modals show relevant context (e.g., "Adding sub-epic to: [Epic Title]")
+  - **Consistent Styling**: All modals match the project's aesthetic and design system
+- ✅ **Data Structure Alignment**: Fixed nested data structure issues between frontend and backend
+  - **API Response Mapping**: Correctly transforms snake_case API response to camelCase frontend structure
+  - **Nested Rendering**: Proper handling of epics → sub-epics → user stories → tasks hierarchy
+  - **Safety Checks**: Added optional chaining and fallback arrays for robust rendering
+  - **Type Safety**: Updated TypeScript interfaces to match backend data structures
+
+### Frontend-Backend Integration & Invitation System Fixes
 - ✅ **Complete Frontend Integration**: Successfully connected React frontend (`generateProject.tsx`) to Django backend
 - ✅ **Backlog Management**: Full CRUD operations for epics, sub-epics, user stories, and tasks
 - ✅ **Auto-Expansion**: Backlog items automatically expand when fetched for immediate visibility
@@ -496,6 +533,15 @@ For support and questions:
 - ✅ **Authentication**: Proper Bearer token authentication for all API calls
 - ✅ **Real-time Updates**: Backlog refreshes automatically after CRUD operations
 
+#### Latest Integration Improvements (Current Session)
+- ✅ **Edit Mode Consistency**: Backlog section now follows the same edit pattern as project overview
+- ✅ **Database Persistence**: All backlog title changes are now properly saved to the database
+- ✅ **Modal-Based UI**: Professional modal dialogs replace basic `prompt()` dialogs for better UX
+- ✅ **Nested Data Handling**: Proper handling of complex nested data structures (epics → sub-epics → user stories → tasks)
+- ✅ **Batch Operations**: Efficient parallel API calls for saving multiple changes simultaneously
+- ✅ **Type Safety**: Enhanced TypeScript interfaces and optional chaining for robust error handling
+- ✅ **UI/UX Consistency**: All sections now follow the same interaction patterns and visual design
+
 ### Enforced Invitation Flow Implementation
 - ✅ **Security Enhancement** - Eliminated direct member creation bypass
 - ✅ **Automatic Owner Assignment** - Project creators automatically become members with Owner role
@@ -507,8 +553,44 @@ For support and questions:
 - ✅ **ViewSet Enhancements** - Added perform_create method to ProjectInvitationViewSet
 - ✅ **Documentation Updates** - Updated README with enforced flow details and testing results
 
-### Technical Issues Resolved (Session Summary)
-During this development session, we identified and resolved multiple critical issues:
+### Technical Issues Resolved (Latest Session)
+During this latest development session, we identified and resolved several critical issues:
+
+#### Backlog Section Issues Fixed:
+1. **TypeError: Cannot read properties of undefined (reading 'map')**: Fixed nested data structure mismatch between API response and frontend expectations
+   - **Root Cause**: API returned `epics` with `sub_epics` → `user_stories` → `tasks` structure, but frontend expected flattened arrays
+   - **Solution**: Updated `fetchBacklog()` to correctly transform nested API response to nested frontend structure
+   - **Files Modified**: `web/src/view_pages/manager/monitor_created.tsx` (lines 1539+)
+
+2. **Missing Edit Mode for Backlog**: Backlog section lacked the edit button pattern used in project overview
+   - **Root Cause**: Backlog was immediately editable without user control
+   - **Solution**: Added `isEditingBacklog` state and wrapped all editing functionality with conditional rendering
+   - **Implementation**: Edit/Cancel/Save Changes buttons, conditional input fields, delete buttons, and add buttons
+
+3. **Title Changes Not Saved to Database**: Backlog title edits were only updating local state
+   - **Root Cause**: No API calls to persist title changes to backend
+   - **Solution**: Implemented individual update functions and batch save functionality
+   - **API Functions Added**: `updateEpicTitle()`, `updateSubEpicTitle()`, `updateUserStoryTitle()`, `updateTaskTitle()`, `saveBacklogChanges()`
+
+4. **Missing Modal-Based CRUD**: Backlog used `prompt()` dialogs instead of professional modals
+   - **Root Cause**: Inconsistent UI/UX compared to other sections
+   - **Solution**: Implemented modal-based add/delete operations with contextual information
+   - **Modals Added**: Add Epic, Add Sub-Epic, Add User Story, Add Task, Delete Confirmation
+
+5. **Data Structure Inconsistencies**: Frontend expected different property names than backend provided
+   - **Root Cause**: API used snake_case (`sub_epics`, `user_stories`) while frontend expected camelCase (`subEpics`, `userStories`)
+   - **Solution**: Added proper data transformation in `fetchBacklog()` function
+   - **Property Mapping**: `sub_epics` → `subEpics`, `user_stories` → `userStories`, `title` properties throughout
+
+#### Code Quality Improvements:
+- **TypeScript Safety**: Added proper type annotations and optional chaining throughout
+- **Error Handling**: Comprehensive error handling with user feedback
+- **State Management**: Proper React state management for nested data structures
+- **UI Consistency**: All backlog functionality now matches project overview patterns
+- **Performance**: Parallel API calls for batch operations using `Promise.all()`
+
+### Technical Issues Resolved (Previous Sessions)
+During previous development sessions, we identified and resolved multiple critical issues:
 
 #### Backend Issues Fixed:
 1. **User Model Primary Key Mismatch**: Fixed all references from `User.id` to `User.user_id` across:

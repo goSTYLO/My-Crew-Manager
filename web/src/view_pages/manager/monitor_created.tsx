@@ -1,8 +1,16 @@
+<<<<<<< Updated upstream
 import React, { useState } from 'react';
 import { Plus, Edit2, Trash2, Send, X, BarChart3, Users, FileText, Target, CheckCircle, Clock, RefreshCw, ArrowLeft, GitBranch, Save, Camera } from 'lucide-react';
 import TopNavbar from "../../components/topbarLayouot";
 import Sidebar from "../../components/sidebarLayout";
 import { useTheme } from "../../components/themeContext";
+=======
+import { useState, useEffect } from 'react';
+import { Plus, Edit, Edit2, Trash2, Send, X, BarChart3, Users, FileText, Target, CheckCircle, Clock, RefreshCw, ArrowLeft, GitBranch, Save, Camera } from 'lucide-react';
+import TopNavbar from "../../components/topbarLayouot";
+import Sidebar from "../../components/sidebarLayout";
+import { useParams, useNavigate } from 'react-router-dom';
+>>>>>>> Stashed changes
 
 export default function ProjectDetailsUI() {
   const { theme } = useTheme();
@@ -10,19 +18,328 @@ export default function ProjectDetailsUI() {
   const [isEditingOverview, setIsEditingOverview] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  
+  // Modal states
+  const [showAddFeatureModal, setShowAddFeatureModal] = useState(false);
+  const [showAddRoleModal, setShowAddRoleModal] = useState(false);
+  const [showAddGoalModal, setShowAddGoalModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteItem, setDeleteItem] = useState<{type: string, id: any, name: string} | null>(null);
+  
+  // Modal input states
+  const [newFeatureTitle, setNewFeatureTitle] = useState('');
+  const [newRoleTitle, setNewRoleTitle] = useState('');
+  const [newGoalTitle, setNewGoalTitle] = useState('');
+  const [showAddWeekModal, setShowAddWeekModal] = useState(false);
+  const [showAddTimelineTaskModal, setShowAddTimelineTaskModal] = useState(false);
+  const [newWeekNumber, setNewWeekNumber] = useState('');
+  const [newTimelineTaskTitle, setNewTimelineTaskTitle] = useState('');
+  const [selectedWeekIndex, setSelectedWeekIndex] = useState<number | null>(null);
+  
+  // Backlog modal states
+  const [showAddEpicModal, setShowAddEpicModal] = useState(false);
+  const [showAddSubEpicModal, setShowAddSubEpicModal] = useState(false);
+  const [showAddUserStoryModal, setShowAddUserStoryModal] = useState(false);
+  const [showAddTaskModal, setShowAddTaskModal] = useState(false);
+  const [newEpicTitle, setNewEpicTitle] = useState('');
+  const [newEpicDescription, setNewEpicDescription] = useState('');
+  const [newSubEpicTitle, setNewSubEpicTitle] = useState('');
+  const [newUserStoryTitle, setNewUserStoryTitle] = useState('');
+  const [newTaskTitle, setNewTaskTitle] = useState('');
+  const [selectedEpicId, setSelectedEpicId] = useState<number | null>(null);
+  const [selectedSubEpicId, setSelectedSubEpicId] = useState<number | null>(null);
+  const [selectedUserStoryId, setSelectedUserStoryId] = useState<number | null>(null);
+  
+  // Backlog editing state
+  const [isEditingBacklog, setIsEditingBacklog] = useState(false);
+  
   const [showEditMemberModal, setShowEditMemberModal] = useState(false);
-  const [editingMember, setEditingMember] = useState(null);
+  const [editingMember, setEditingMember] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
+  const { id: projectId } = useParams();
+  const navigate = useNavigate();
+  
+  // API Configuration
+  const API_BASE_URL = 'http://localhost:8000/api/ai';
+
+  // API Utility Functions
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem('token');
+    console.log('🔍 Token from localStorage:', token ? 'Found' : 'Not found');
+    return {
+      'Authorization': `Token ${token}`,
+      'Content-Type': 'application/json',
+    };
+  };
+
+  const handleApiError = (error: any, operation: string) => {
+    console.error(`Error ${operation}:`, error);
+    if (error.status === 401) {
+      alert('Authentication failed. Please log in again.');
+      localStorage.removeItem('token');
+      navigate('/sign-in');
+    } else {
+      alert(`Failed to ${operation}. Please try again.`);
+    }
+  };
+
+  // Fetch Project Overview Data
+  const fetchProjectData = async () => {
+    try {
+      console.log('🔍 Fetching project data for projectId:', projectId);
+      
+      // First, fetch the main project data
+      const projectRes = await fetch(`${API_BASE_URL}/projects/${projectId}/`, {
+        headers: getAuthHeaders(),
+        credentials: 'include',
+      });
+
+      if (!projectRes.ok) {
+        console.error('❌ Project fetch failed:', projectRes.status);
+        throw new Error(`HTTP error! status: ${projectRes.status}`);
+      }
+
+      const project = await projectRes.json();
+      console.log('✅ Project data fetched:', project);
+
+      // Then fetch related data in parallel, but handle each one individually
+      const [featuresRes, rolesRes, goalsRes, timelineRes] = await Promise.allSettled([
+        fetch(`${API_BASE_URL}/project-features/?project_id=${projectId}`, {
+          headers: getAuthHeaders(),
+          credentials: 'include',
+        }),
+        fetch(`${API_BASE_URL}/project-roles/?project_id=${projectId}`, {
+          headers: getAuthHeaders(),
+          credentials: 'include',
+        }),
+        fetch(`${API_BASE_URL}/project-goals/?project_id=${projectId}`, {
+          headers: getAuthHeaders(),
+          credentials: 'include',
+        }),
+        fetch(`${API_BASE_URL}/timeline-weeks/?project_id=${projectId}`, {
+          headers: getAuthHeaders(),
+          credentials: 'include',
+        }),
+      ]);
+
+      // Process each response, handling failures gracefully
+      const features = featuresRes.status === 'fulfilled' && featuresRes.value.ok 
+        ? await featuresRes.value.json() 
+        : [];
+      const roles = rolesRes.status === 'fulfilled' && rolesRes.value.ok 
+        ? await rolesRes.value.json() 
+        : [];
+      const goals = goalsRes.status === 'fulfilled' && goalsRes.value.ok 
+        ? await goalsRes.value.json() 
+        : [];
+      const timeline = timelineRes.status === 'fulfilled' && timelineRes.value.ok 
+        ? await timelineRes.value.json() 
+        : [];
+
+      console.log('✅ Related data fetched:', { features, roles, goals, timeline });
+
+      const processedTimeline = (timeline || []).map((week: any) => ({
+        id: week.id,
+        week: week.week_number,
+        items: (week.timeline_items || []).map((item: any) => ({ id: item.id, title: item.title }))
+      }));
+
+      setProjectData({
+        id: project.id,
+        title: project.title,
+        aiSummary: project.summary,
+        roles: (roles || []).map((role: any) => ({ id: role.id, role: role.role })),
+        features: (features || []).map((feature: any) => ({ id: feature.id, title: feature.title })),
+        goals: (goals || []).map((goal: any) => ({ id: goal.id, title: goal.title })),
+        timeline: processedTimeline
+      });
+    } catch (error) {
+      console.error('❌ Error in fetchProjectData:', error);
+      handleApiError(error, 'fetch project data');
+    }
+  };
+
+  // Fetch Backlog Data
+  const fetchBacklog = async () => {
+    try {
+      console.log('🔍 Fetching backlog for projectId:', projectId);
+      const response = await fetch(`${API_BASE_URL}/projects/${projectId}/backlog/`, {
+        headers: getAuthHeaders(),
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        console.error('❌ Backlog fetch failed:', response.status);
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('✅ Backlog data fetched:', data);
+      
+      // Transform nested structure to match frontend state
+      const transformedBacklog = {
+        epics: (data.epics || []).map((epic: any) => ({
+          id: epic.id,
+          title: epic.title,
+          description: epic.description,
+          ai: epic.ai,
+          subEpics: (epic.sub_epics || []).map((subEpic: any) => ({
+            id: subEpic.id,
+            title: subEpic.title,
+            ai: subEpic.ai,
+            userStories: (subEpic.user_stories || []).map((story: any) => ({
+              id: story.id,
+              title: story.title,
+              ai: story.ai,
+              tasks: (story.tasks || []).map((task: any) => ({
+                id: task.id,
+                title: task.title,
+                status: task.status,
+                ai: task.ai,
+                assignee: task.assignee
+              }))
+            }))
+          }))
+        }))
+      };
+
+      setBacklog(transformedBacklog);
+    } catch (error) {
+      handleApiError(error, 'fetch backlog');
+    }
+  };
+
+  // Fetch Members Data
+  const fetchMembers = async () => {
+    try {
+      console.log('🔍 Fetching members for projectId:', projectId);
+      const response = await fetch(`${API_BASE_URL}/project-members/?project_id=${projectId}`, {
+        headers: getAuthHeaders(),
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        console.error('❌ Members fetch failed:', response.status);
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('✅ Members data fetched:', data);
+      
+      // Map to frontend format
+      const transformedMembers = data.map((member: any) => ({
+        id: member.id,
+        name: member.user_name,
+        email: member.user_email,
+        position: member.role,
+        avatar: `bg-${['blue', 'green', 'purple', 'red', 'yellow'][member.id % 5]}-400`,
+        image: `bg-${['blue', 'green', 'purple', 'red', 'yellow'][member.id % 5]}-400`
+      }));
+
+      setMembers(transformedMembers);
+    } catch (error) {
+      handleApiError(error, 'fetch members');
+    }
+  };
+
+  // Fetch Repositories Data
+  const fetchRepositories = async () => {
+    try {
+      console.log('🔍 Fetching repositories for projectId:', projectId);
+      const response = await fetch(`${API_BASE_URL}/repositories/?project_id=${projectId}`, {
+        headers: getAuthHeaders(),
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        console.error('❌ Repositories fetch failed:', response.status);
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('✅ Repositories data fetched:', data);
+      setRepositories(data);
+    } catch (error) {
+      console.error('❌ Error in fetchRepositories:', error);
+      handleApiError(error, 'fetch repositories');
+    }
+  };
+
+  // Load all data on component mount
+  useEffect(() => {
+    if (projectId) {
+      console.log('🚀 Starting to load all data for projectId:', projectId);
+      const loadAllData = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+          console.log('📡 Making parallel API calls...');
+          await Promise.all([
+            fetchProjectData(),
+            fetchBacklog(),
+            fetchMembers(),
+            fetchRepositories()
+          ]);
+          console.log('✅ All data loaded successfully');
+        } catch (error) {
+          console.error('❌ Error loading data:', error);
+          setError('Failed to load project data');
+        } finally {
+          console.log('🏁 Setting loading to false');
+          setLoading(false);
+        }
+      };
+      loadAllData();
+    } else {
+      console.log('❌ No projectId provided');
+    }
+  }, [projectId]);
   
   const [projectData, setProjectData] = useState({
     id: 1,
     title: 'Finder 4 — Lost & Found Tracker',
     aiSummary: 'A comprehensive mobile application project focused on creating an intuitive user experience with modern design principles and seamless functionality.',
-    roles: ['UI/UX Designer', 'Frontend Developer', 'Backend Developer', 'QA Engineer'],
-    features: ['User Authentication', 'Dashboard Analytics', 'Real-time Notifications', 'Data Visualization'],
-    goals: ['Launch MVP by Q2 2025', 'Achieve 10k+ active users', 'Maintain 99.9% uptime', 'Implement AI-powered features'],
+    roles: [
+      { id: 1, role: 'UI/UX Designer' },
+      { id: 2, role: 'Frontend Developer' },
+      { id: 3, role: 'Backend Developer' },
+      { id: 4, role: 'QA Engineer' }
+    ],
+    features: [
+      { id: 1, title: 'User Authentication' },
+      { id: 2, title: 'Dashboard Analytics' },
+      { id: 3, title: 'Real-time Notifications' },
+      { id: 4, title: 'Data Visualization' }
+    ],
+    goals: [
+      { id: 1, title: 'Launch MVP by Q2 2025' },
+      { id: 2, title: 'Achieve 10k+ active users' },
+      { id: 3, title: 'Maintain 99.9% uptime' },
+      { id: 4, title: 'Implement AI-powered features' }
+    ],
     timeline: [
-      { week: 'Week 1', tasks: ['Project kickoff', 'Requirements gathering', 'Initial wireframes', 'Tech stack selection'] },
-      { week: 'Week 2', tasks: ['Database design', 'API architecture', 'UI mockups', 'Development environment setup'] }
+      { 
+        id: 1, 
+        week: 'Week 1', 
+        items: [
+          { id: 1, title: 'Project kickoff' },
+          { id: 2, title: 'Requirements gathering' },
+          { id: 3, title: 'Initial wireframes' },
+          { id: 4, title: 'Tech stack selection' }
+        ] 
+      },
+      { 
+        id: 2, 
+        week: 'Week 2', 
+        items: [
+          { id: 5, title: 'Database design' },
+          { id: 6, title: 'API architecture' },
+          { id: 7, title: 'UI mockups' },
+          { id: 8, title: 'Development environment setup' }
+        ] 
+      }
     ]
   });
 
@@ -30,16 +347,22 @@ export default function ProjectDetailsUI() {
     epics: [
       {
         id: 1,
-        name: 'User Management System',
+        title: 'User Management System',
+        description: 'Core user features',
+        ai: true,
         subEpics: [
           {
             id: 1,
-            name: 'Authentication',
+            title: 'Authentication',
+            ai: true,
             userStories: [
               {
                 id: 1,
-                story: 'As a user, I want to register with email',
-                tasks: ['Create registration form', 'Setup email validation', 'Database integration']
+                title: 'As a user, I want to register with email',
+                ai: true,
+                tasks: [
+                  { id: 1, title: 'Create registration form', status: 'pending', ai: true, assignee: null }
+                ]
               }
             ]
           }
@@ -49,8 +372,8 @@ export default function ProjectDetailsUI() {
   });
 
   const [members, setMembers] = useState([
-    { id: 1, name: 'Randal Phuta', email: 'randal@example.com', position: 'Project Manager' },
-    { id: 2, name: 'Sarah Chen', email: 'sarah@example.com', position: 'Frontend Developer' }
+    { id: 1, name: 'Randal Phuta', email: 'randal@example.com', position: 'Project Manager', image: 'bg-blue-400' },
+    { id: 2, name: 'Sarah Chen', email: 'sarah@example.com', position: 'Frontend Developer', image: 'bg-green-400' }
   ]);
 
   const [repositories, setRepositories] = useState([
@@ -73,6 +396,7 @@ export default function ProjectDetailsUI() {
   const handleInvite = async () => {
     if (inviteForm.email && inviteForm.position) {
       try {
+<<<<<<< Updated upstream
         const token = localStorage.getItem('token');
         if (!token) {
           alert('You are not authenticated. Please log in.');
@@ -85,33 +409,38 @@ export default function ProjectDetailsUI() {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`,
           },
+=======
+        const response = await fetch(`${API_BASE_URL}/invitations/`, {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          credentials: 'include',
+>>>>>>> Stashed changes
           body: JSON.stringify({
-            project_id: projectData.id,
+            project: projectId,
             invitee_email: inviteForm.email,
-            position: inviteForm.position,
             message: `You have been invited to join the project "${projectData.title}" as ${inviteForm.position}.`,
           }),
         });
   
         if (response.ok) {
-          const data = await response.json();
           alert('Invitation sent successfully!');
           setInviteForm({ email: '', position: '' });
           setShowInviteModal(false);
+          // Refresh members list to show any new members
+          fetchMembers();
         } else {
           const errorData = await response.json();
           alert(`Failed to send invitation: ${errorData.message || 'Unknown error'}`);
         }
       } catch (error) {
-        console.error('Error sending invitation:', error);
-        alert('An error occurred while sending the invitation. Please try again.');
+        handleApiError(error, 'send invitation');
       }
     } else {
       alert('Please fill out both email and position fields.');
     }
   };
 
-  const handleEditMember = (updatedMember) => {
+  const handleEditMember = (updatedMember: any) => {
     setMembers((prevMembers) =>
       prevMembers.map((m) =>
         m.id === updatedMember.id
@@ -128,212 +457,695 @@ export default function ProjectDetailsUI() {
     setEditingMember(null);
   };
 
-  const openEditMember = (member) => {
+  // Backlog CRUD Operations
+  const addNewEpic = async (epicData: any) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/epics/`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+        body: JSON.stringify({
+          project: projectId,
+          title: epicData.title,
+          description: epicData.description || '',
+          ai: false
+        }),
+      });
+
+      if (response.ok) {
+        fetchBacklog(); // Refresh backlog
+      } else {
+        const errorData = await response.json();
+        alert(`Failed to create epic: ${errorData.message || 'Unknown error'}`);
+      }
+    } catch (error) {
+      handleApiError(error, 'create epic');
+    }
+  };
+
+
+  const addNewSubEpic = async (subEpicData: any, epicId: any) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/sub-epics/`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+        body: JSON.stringify({
+          epic: epicId,
+          title: subEpicData.title,
+          ai: false
+        }),
+      });
+
+      if (response.ok) {
+        fetchBacklog(); // Refresh backlog
+      } else {
+        const errorData = await response.json();
+        alert(`Failed to create sub-epic: ${errorData.message || 'Unknown error'}`);
+      }
+    } catch (error) {
+      handleApiError(error, 'create sub-epic');
+    }
+  };
+
+
+  const addNewUserStory = async (storyData: any, subEpicId: any) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/user-stories/`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+        body: JSON.stringify({
+          sub_epic: subEpicId,
+          title: storyData.title,
+          ai: false
+        }),
+      });
+
+      if (response.ok) {
+        fetchBacklog(); // Refresh backlog
+      } else {
+        const errorData = await response.json();
+        alert(`Failed to create user story: ${errorData.message || 'Unknown error'}`);
+      }
+    } catch (error) {
+      handleApiError(error, 'create user story');
+    }
+  };
+
+
+  const addNewTask = async (taskData: any, userStoryId: any) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/story-tasks/`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+        body: JSON.stringify({
+          user_story: userStoryId,
+          title: taskData.title,
+          status: 'pending',
+          ai: false
+        }),
+      });
+
+      if (response.ok) {
+        fetchBacklog(); // Refresh backlog
+      } else {
+        const errorData = await response.json();
+        alert(`Failed to create task: ${errorData.message || 'Unknown error'}`);
+      }
+    } catch (error) {
+      handleApiError(error, 'create task');
+    }
+  };
+
+  // Backlog Update Functions
+  const updateEpicTitle = async (epicId: number, newTitle: string) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/epics/${epicId}/`, {
+        method: 'PATCH',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+        body: JSON.stringify({ title: newTitle })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update epic title');
+      }
+    } catch (error) {
+      handleApiError(error, 'update epic title');
+    }
+  };
+
+  const updateSubEpicTitle = async (subEpicId: number, newTitle: string) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/sub-epics/${subEpicId}/`, {
+        method: 'PATCH',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+        body: JSON.stringify({ title: newTitle })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update sub-epic title');
+      }
+    } catch (error) {
+      handleApiError(error, 'update sub-epic title');
+    }
+  };
+
+  const updateUserStoryTitle = async (storyId: number, newTitle: string) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/user-stories/${storyId}/`, {
+        method: 'PATCH',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+        body: JSON.stringify({ title: newTitle })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update user story title');
+      }
+    } catch (error) {
+      handleApiError(error, 'update user story title');
+    }
+  };
+
+  const updateTaskTitle = async (taskId: number, newTitle: string) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/story-tasks/${taskId}/`, {
+        method: 'PATCH',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+        body: JSON.stringify({ title: newTitle })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update task title');
+      }
+    } catch (error) {
+      handleApiError(error, 'update task title');
+    }
+  };
+
+  // Save all backlog changes
+  const saveBacklogChanges = async () => {
+    try {
+      const updatePromises = [];
+
+      // Collect all updates from the current backlog state
+      for (const epic of backlog.epics) {
+        // Update epic title
+        updatePromises.push(updateEpicTitle(epic.id, epic.title));
+
+        // Update sub-epic titles
+        for (const subEpic of epic.subEpics || []) {
+          updatePromises.push(updateSubEpicTitle(subEpic.id, subEpic.title));
+
+          // Update user story titles
+          for (const userStory of subEpic.userStories || []) {
+            updatePromises.push(updateUserStoryTitle(userStory.id, userStory.title));
+
+            // Update task titles
+            for (const task of userStory.tasks || []) {
+              updatePromises.push(updateTaskTitle(task.id, task.title));
+            }
+          }
+        }
+      }
+
+      // Execute all updates in parallel
+      await Promise.all(updatePromises);
+      
+      // Refresh the backlog data to ensure we have the latest from the server
+      await fetchBacklog();
+      
+      // Exit editing mode
+      setIsEditingBacklog(false);
+      
+      console.log('✅ All backlog changes saved successfully');
+    } catch (error) {
+      console.error('❌ Error saving backlog changes:', error);
+      alert('Failed to save some changes. Please try again.');
+    }
+  };
+
+  // Overview CRUD Operations
+  // TODO: Implement project title/summary update in UI
+  const updateProject = async () => {
+    try {
+      // Update project title and summary
+      const projectResponse = await fetch(`${API_BASE_URL}/projects/${projectId}/`, {
+        method: 'PATCH',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+        body: JSON.stringify({
+          title: projectData.title,
+          summary: projectData.aiSummary
+        }),
+      });
+
+      if (!projectResponse.ok) {
+        const errorData = await projectResponse.json();
+        alert(`Failed to update project: ${errorData.message || 'Unknown error'}`);
+        return;
+      }
+
+      // Update features
+      const featuresPromises = projectData.features.map(async (feature) => {
+        if (feature.id) {
+          const response = await fetch(`${API_BASE_URL}/project-features/${feature.id}/`, {
+            method: 'PATCH',
+            headers: getAuthHeaders(),
+            credentials: 'include',
+            body: JSON.stringify({ title: feature.title }),
+          });
+          return response.ok;
+        }
+        return true;
+      });
+
+      // Update roles
+      const rolesPromises = projectData.roles.map(async (role) => {
+        if (role.id) {
+          const response = await fetch(`${API_BASE_URL}/project-roles/${role.id}/`, {
+            method: 'PATCH',
+            headers: getAuthHeaders(),
+            credentials: 'include',
+            body: JSON.stringify({ role: role.role }),
+          });
+          return response.ok;
+        }
+        return true;
+      });
+
+      // Update goals
+      const goalsPromises = projectData.goals.map(async (goal) => {
+        if (goal.id) {
+          const response = await fetch(`${API_BASE_URL}/project-goals/${goal.id}/`, {
+            method: 'PATCH',
+            headers: getAuthHeaders(),
+            credentials: 'include',
+            body: JSON.stringify({ title: goal.title }),
+          });
+          return response.ok;
+        }
+        return true;
+      });
+
+      // Update timeline items
+      const timelinePromises = projectData.timeline.flatMap(week => 
+        week.items.map(async (item) => {
+          if (item.id) {
+            const response = await fetch(`${API_BASE_URL}/timeline-items/${item.id}/`, {
+              method: 'PATCH',
+              headers: getAuthHeaders(),
+              credentials: 'include',
+              body: JSON.stringify({ title: item.title }),
+            });
+            return response.ok;
+          }
+          return true;
+        })
+      );
+
+      // Wait for all updates to complete
+      await Promise.all([...featuresPromises, ...rolesPromises, ...goalsPromises, ...timelinePromises]);
+
+      // Refresh all data from the server
+      await fetchProjectData();
+
+      alert('Project updated successfully!');
+      setIsEditingOverview(false);
+    } catch (error) {
+      handleApiError(error, 'update project');
+    }
+  };
+
+  const addFeature = async () => {
+    if (!newFeatureTitle.trim()) return;
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/project-features/`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+        body: JSON.stringify({
+          project: projectId,
+          title: newFeatureTitle.trim()
+        }),
+      });
+
+      if (response.ok) {
+        setNewFeatureTitle('');
+        setShowAddFeatureModal(false);
+        fetchProjectData(); // Refresh project data
+      } else {
+        const errorData = await response.json();
+        alert(`Failed to add feature: ${errorData.message || 'Unknown error'}`);
+      }
+    } catch (error) {
+      handleApiError(error, 'add feature');
+    }
+  };
+
+  const handleDeleteClick = (type: string, id: any, name: string) => {
+    setDeleteItem({ type, id, name });
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteItem) return;
+    
+    try {
+      let endpoint = '';
+      switch (deleteItem.type) {
+        case 'feature':
+          endpoint = `${API_BASE_URL}/project-features/${deleteItem.id}/`;
+          break;
+        case 'role':
+          endpoint = `${API_BASE_URL}/project-roles/${deleteItem.id}/`;
+          break;
+        case 'goal':
+          endpoint = `${API_BASE_URL}/project-goals/${deleteItem.id}/`;
+          break;
+        case 'timeline':
+          endpoint = `${API_BASE_URL}/timeline-items/${deleteItem.id}/`;
+          break;
+        case 'timeline-week':
+          endpoint = `${API_BASE_URL}/timeline-weeks/${deleteItem.id}/`;
+          break;
+        case 'epic':
+          endpoint = `${API_BASE_URL}/epics/${deleteItem.id}/`;
+          break;
+        case 'sub-epic':
+          endpoint = `${API_BASE_URL}/sub-epics/${deleteItem.id}/`;
+          break;
+        case 'user-story':
+          endpoint = `${API_BASE_URL}/user-stories/${deleteItem.id}/`;
+          break;
+        case 'task':
+          endpoint = `${API_BASE_URL}/story-tasks/${deleteItem.id}/`;
+          break;
+        default:
+          return;
+      }
+
+      const response = await fetch(endpoint, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+      });
+
+      if (response.ok) {
+        setShowDeleteModal(false);
+        setDeleteItem(null);
+        fetchProjectData(); // Refresh project data
+      } else {
+        const errorData = await response.json();
+        alert(`Failed to delete ${deleteItem.type}: ${errorData.message || 'Unknown error'}`);
+      }
+    } catch (error) {
+      handleApiError(error, `delete ${deleteItem.type}`);
+    }
+  };
+
+  const addRole = async () => {
+    if (!newRoleTitle.trim()) return;
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/project-roles/`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+        body: JSON.stringify({
+          project: projectId,
+          role: newRoleTitle.trim()
+        }),
+      });
+
+      if (response.ok) {
+        setNewRoleTitle('');
+        setShowAddRoleModal(false);
+        fetchProjectData(); // Refresh project data
+      } else {
+        const errorData = await response.json();
+        alert(`Failed to add role: ${errorData.message || 'Unknown error'}`);
+      }
+    } catch (error) {
+      handleApiError(error, 'add role');
+    }
+  };
+
+
+  const addGoal = async () => {
+    if (!newGoalTitle.trim()) return;
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/project-goals/`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+        body: JSON.stringify({
+          project: projectId,
+          title: newGoalTitle.trim()
+        }),
+      });
+
+      if (response.ok) {
+        setNewGoalTitle('');
+        setShowAddGoalModal(false);
+        fetchProjectData(); // Refresh project data
+      } else {
+        const errorData = await response.json();
+        alert(`Failed to add goal: ${errorData.message || 'Unknown error'}`);
+      }
+    } catch (error) {
+      handleApiError(error, 'add goal');
+    }
+  };
+
+
+  // Repository CRUD Operations
+  const handleAddRepo = async (repoData: any) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/repositories/`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+        body: JSON.stringify({
+          project: projectId,
+          name: repoData.name,
+          url: repoData.url,
+          branch: repoData.branch || 'main',
+          assigned_to: repoData.assigned_to || null
+        }),
+      });
+
+      if (response.ok) {
+        fetchRepositories(); // Refresh repositories
+      } else {
+        const errorData = await response.json();
+        alert(`Failed to add repository: ${errorData.message || 'Unknown error'}`);
+      }
+    } catch (error) {
+      handleApiError(error, 'add repository');
+    }
+  };
+
+  const deleteRepo = async (repoId: any) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/repositories/${repoId}/`, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+      });
+
+      if (response.ok) {
+        fetchRepositories(); // Refresh repositories
+      } else {
+        alert('Failed to delete repository');
+      }
+    } catch (error) {
+      handleApiError(error, 'delete repository');
+    }
+  };
+
+  const openEditMember = (member: any) => {
     setEditingMember({ ...member });
     setShowEditMemberModal(true);
   };
 
-  const handleAddRepo = () => {
+  // Updated handleAddRepo to use the API-based function
+  const handleAddRepoLocal = () => {
     if (repoForm.name && repoForm.url) {
-      if (editingRepo) {
-        setRepositories(repositories.map(r => r.id === editingRepo.id ? { ...repoForm, id: editingRepo.id } : r));
-      } else {
-        setRepositories([...repositories, { ...repoForm, id: Date.now() }]);
-      }
+      handleAddRepo({
+        name: repoForm.name,
+        url: repoForm.url,
+        branch: repoForm.branch,
+        assigned_to: repoForm.assignedTo
+      });
       setRepoForm({ name: '', url: '', branch: 'main', assignedTo: '' });
       setShowRepoModal(false);
       setEditingRepo(null);
     }
   };
 
-  const openEditRepo = (repo) => {
+  const openEditRepo = (repo: any) => {
     setEditingRepo(repo);
     setRepoForm({ name: repo.name, url: repo.url, branch: repo.branch, assignedTo: repo.assignedTo });
     setShowRepoModal(true);
   };
 
-  const deleteRepo = (repoId) => {
-    setRepositories(repositories.filter(r => r.id !== repoId));
+  // Old local state manipulation functions removed - now using API-based CRUD operations
+
+  // Wrapper functions for UI compatibility
+  const addEpic = async () => {
+    if (newEpicTitle) {
+      await addNewEpic({ title: newEpicTitle, description: newEpicDescription });
+      setNewEpicTitle('');
+      setNewEpicDescription('');
+      setShowAddEpicModal(false);
+    }
   };
 
-  const addNewEpic = () => {
-    const newEpic = {
-      id: Date.now(),
-      name: 'New Epic',
-      subEpics: []
-    };
-    setBacklog({ ...backlog, epics: [...backlog.epics, newEpic] });
+  const addSubEpic = async () => {
+    if (newSubEpicTitle && selectedEpicId) {
+      await addNewSubEpic({ title: newSubEpicTitle }, selectedEpicId);
+      setNewSubEpicTitle('');
+      setSelectedEpicId(null);
+      setShowAddSubEpicModal(false);
+    }
   };
 
-  const addSubEpic = (epicId) => {
-    const updatedEpics = backlog.epics.map(epic => {
-      if (epic.id === epicId) {
-        return {
-          ...epic,
-          subEpics: [...epic.subEpics, { id: Date.now(), name: 'New Sub-Epic', userStories: [] }]
-        };
+  const openAddSubEpicModal = (epicId: number) => {
+    setSelectedEpicId(epicId);
+    setShowAddSubEpicModal(true);
+  };
+
+  const addUserStory = async () => {
+    if (newUserStoryTitle && selectedSubEpicId) {
+      await addNewUserStory({ title: newUserStoryTitle }, selectedSubEpicId);
+      setNewUserStoryTitle('');
+      setSelectedSubEpicId(null);
+      setShowAddUserStoryModal(false);
+    }
+  };
+
+  const openAddUserStoryModal = (subEpicId: number) => {
+    setSelectedSubEpicId(subEpicId);
+    setShowAddUserStoryModal(true);
+  };
+
+  const addTask = async () => {
+    if (newTaskTitle && selectedUserStoryId) {
+      await addNewTask({ title: newTaskTitle }, selectedUserStoryId);
+      setNewTaskTitle('');
+      setSelectedUserStoryId(null);
+      setShowAddTaskModal(false);
+    }
+  };
+
+  const openAddTaskModal = (userStoryId: number) => {
+    setSelectedUserStoryId(userStoryId);
+    setShowAddTaskModal(true);
+  };
+
+
+  const addWeek = async () => {
+    if (!newWeekNumber.trim()) {
+      alert('Please enter a week number');
+      return;
+    }
+    
+    const weekNum = parseInt(newWeekNumber.trim());
+    if (isNaN(weekNum) || weekNum < 1) {
+      alert('Please enter a valid week number (1 or higher)');
+      return;
+    }
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/timeline-weeks/`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+        body: JSON.stringify({
+          project: projectId,
+          week_number: weekNum
+        }),
+      });
+
+      if (response.ok) {
+        fetchProjectData(); // Refresh project data
+        setShowAddWeekModal(false);
+        setNewWeekNumber('');
+      } else {
+        const errorData = await response.json();
+        alert(`Failed to add week: ${errorData.message || 'Unknown error'}`);
       }
-      return epic;
-    });
-    setBacklog({ ...backlog, epics: updatedEpics });
+    } catch (error) {
+      handleApiError(error, 'add week');
+    }
   };
 
-  const addUserStory = (epicId, subEpicId) => {
-    const updatedEpics = backlog.epics.map(epic => {
-      if (epic.id === epicId) {
-        return {
-          ...epic,
-          subEpics: epic.subEpics.map(subEpic => {
-            if (subEpic.id === subEpicId) {
-              return {
-                ...subEpic,
-                userStories: [...subEpic.userStories, { id: Date.now(), story: 'New User Story', tasks: [] }]
-              };
-            }
-            return subEpic;
-          })
-        };
+  const openAddTimelineTaskModal = (weekIndex: number) => {
+    setSelectedWeekIndex(weekIndex);
+    setShowAddTimelineTaskModal(true);
+  };
+
+  const addTimelineTask = async () => {
+    if (!newTimelineTaskTitle.trim()) {
+      alert('Please enter a task title');
+      return;
+    }
+    
+    if (selectedWeekIndex === null) {
+      alert('No week selected');
+      return;
+    }
+    
+    try {
+      // Get the week ID from the current timeline data
+      const week = projectData.timeline[selectedWeekIndex];
+      if (!week || !week.id) {
+        alert('Week not found. Please refresh and try again.');
+        return;
       }
-      return epic;
-    });
-    setBacklog({ ...backlog, epics: updatedEpics });
-  };
 
-  const addTask = (epicId, subEpicId, storyId) => {
-    const updatedEpics = backlog.epics.map(epic => {
-      if (epic.id === epicId) {
-        return {
-          ...epic,
-          subEpics: epic.subEpics.map(subEpic => {
-            if (subEpic.id === subEpicId) {
-              return {
-                ...subEpic,
-                userStories: subEpic.userStories.map(story => {
-                  if (story.id === storyId) {
-                    return { ...story, tasks: [...story.tasks, 'New Task'] };
-                  }
-                  return story;
-                })
-              };
-            }
-            return subEpic;
-          })
-        };
+      const response = await fetch(`${API_BASE_URL}/timeline-items/`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+        body: JSON.stringify({
+          week: week.id,
+          title: newTimelineTaskTitle.trim()
+        }),
+      });
+
+      if (response.ok) {
+        fetchProjectData(); // Refresh project data
+        setShowAddTimelineTaskModal(false);
+        setNewTimelineTaskTitle('');
+        setSelectedWeekIndex(null);
+      } else {
+        const errorData = await response.json();
+        alert(`Failed to add task: ${errorData.message || 'Unknown error'}`);
       }
-      return epic;
-    });
-    setBacklog({ ...backlog, epics: updatedEpics });
+    } catch (error) {
+      handleApiError(error, 'add timeline task');
+    }
   };
 
-  const addRole = () => {
-    setProjectData({ ...projectData, roles: [...projectData.roles, 'New Role'] });
-  };
 
-  const addFeature = () => {
-    setProjectData({ ...projectData, features: [...projectData.features, 'New Feature'] });
-  };
 
-  const addGoal = () => {
-    setProjectData({ ...projectData, goals: [...projectData.goals, 'New Goal'] });
-  };
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="flex min-h-screen w-full bg-gray-50 items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading project data...</p>
+        </div>
+      </div>
+    );
+  }
 
-  const addWeek = () => {
-    const newWeekNumber = projectData.timeline.length + 1;
-    setProjectData({
-      ...projectData,
-      timeline: [...projectData.timeline, { week: `Week ${newWeekNumber}`, tasks: [] }]
-    });
-  };
-
-  const addTimelineTask = (weekIndex) => {
-    const updatedTimeline = projectData.timeline.map((week, idx) => {
-      if (idx === weekIndex) {
-        return { ...week, tasks: [...week.tasks, 'New Task'] };
-      }
-      return week;
-    });
-    setProjectData({ ...projectData, timeline: updatedTimeline });
-  };
-
-  const deleteEpic = (epicId) => {
-    setBacklog({ ...backlog, epics: backlog.epics.filter(e => e.id !== epicId) });
-  };
-
-  const deleteSubEpic = (epicId, subEpicId) => {
-    const updatedEpics = backlog.epics.map(epic => {
-      if (epic.id === epicId) {
-        return { ...epic, subEpics: epic.subEpics.filter(se => se.id !== subEpicId) };
-      }
-      return epic;
-    });
-    setBacklog({ ...backlog, epics: updatedEpics });
-  };
-
-  const deleteUserStory = (epicId, subEpicId, storyId) => {
-    const updatedEpics = backlog.epics.map(epic => {
-      if (epic.id === epicId) {
-        return {
-          ...epic,
-          subEpics: epic.subEpics.map(subEpic => {
-            if (subEpic.id === subEpicId) {
-              return { ...subEpic, userStories: subEpic.userStories.filter(s => s.id !== storyId) };
-            }
-            return subEpic;
-          })
-        };
-      }
-      return epic;
-    });
-    setBacklog({ ...backlog, epics: updatedEpics });
-  };
-
-  const deleteTask = (epicId, subEpicId, storyId, taskIndex) => {
-    const updatedEpics = backlog.epics.map(epic => {
-      if (epic.id === epicId) {
-        return {
-          ...epic,
-          subEpics: epic.subEpics.map(subEpic => {
-            if (subEpic.id === subEpicId) {
-              return {
-                ...subEpic,
-                userStories: subEpic.userStories.map(story => {
-                  if (story.id === storyId) {
-                    return { ...story, tasks: story.tasks.filter((_, idx) => idx !== taskIndex) };
-                  }
-                  return story;
-                })
-              };
-            }
-            return subEpic;
-          })
-        };
-      }
-      return epic;
-    });
-    setBacklog({ ...backlog, epics: updatedEpics });
-  };
-
-  const deleteRole = (index) => {
-    setProjectData({ ...projectData, roles: projectData.roles.filter((_, idx) => idx !== index) });
-  };
-
-  const deleteFeature = (index) => {
-    setProjectData({ ...projectData, features: projectData.features.filter((_, idx) => idx !== index) });
-  };
-
-  const deleteGoal = (index) => {
-    setProjectData({ ...projectData, goals: projectData.goals.filter((_, idx) => idx !== index) });
-  };
-
-  const deleteTimelineTask = (weekIndex, taskIndex) => {
-    const updatedTimeline = projectData.timeline.map((week, wIdx) => {
-      if (wIdx === weekIndex) {
-        return { ...week, tasks: week.tasks.filter((_, tIdx) => tIdx !== taskIndex) };
-      }
-      return week;
-    });
-    setProjectData({ ...projectData, timeline: updatedTimeline });
-  };
+  // Show error state
+  if (error) {
+    return (
+      <div className="flex min-h-screen w-full bg-gray-50 items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-600 mb-4">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`flex min-h-screen w-full ${theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'}`}>
@@ -550,13 +1362,24 @@ export default function ProjectDetailsUI() {
                     ) : (
                       <h2 className="text-2xl font-bold text-white">{projectData.title}</h2>
                     )}
+                    <div className="flex space-x-2">
                     <button
-                      onClick={() => setIsEditingOverview(!isEditingOverview)}
+                        onClick={() => isEditingOverview ? updateProject() : setIsEditingOverview(true)}
                       className="px-4 py-2 bg-white text-blue-600 rounded-lg hover:bg-blue-50 transition-colors flex items-center font-medium"
                     >
                       <Edit2 className="w-4 h-4 mr-2" />
-                      {isEditingOverview ? 'Done Editing' : 'Edit'}
+                        {isEditingOverview ? 'Save Changes' : 'Edit'}
                     </button>
+                      {isEditingOverview && (
+                        <button
+                          onClick={() => setIsEditingOverview(false)}
+                          className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors flex items-center font-medium"
+                        >
+                          <X className="w-4 h-4 mr-2" />
+                          Cancel
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   <div className="p-6 space-y-8">
@@ -572,8 +1395,13 @@ export default function ProjectDetailsUI() {
                         <textarea
                           value={projectData.aiSummary}
                           onChange={(e) => setProjectData({ ...projectData, aiSummary: e.target.value })}
+<<<<<<< Updated upstream
                           className={`w-full p-4 border ${theme === 'dark' ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow`}
                           rows="3"
+=======
+                          className="w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow"
+                          rows={3}
+>>>>>>> Stashed changes
                         />
                       ) : (
                         <p className={`${theme === 'dark' ? 'text-gray-300 bg-gray-700' : 'text-gray-600 bg-gray-50'} leading-relaxed p-4 rounded-lg`}>{projectData.aiSummary}</p>
@@ -590,25 +1418,38 @@ export default function ProjectDetailsUI() {
                       </h3>
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                         {projectData.roles.map((role, idx) => (
+<<<<<<< Updated upstream
                           <div key={idx} className={`flex items-center justify-between p-4 bg-gradient-to-r ${theme === 'dark' ? 'from-blue-900 to-indigo-900 border-blue-800' : 'from-blue-50 to-indigo-50 border-blue-100'} rounded-lg border hover:shadow-md transition-shadow`}>
+=======
+                          <div key={role.id || idx} className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-100 hover:shadow-md transition-shadow">
+>>>>>>> Stashed changes
                             {isEditingOverview ? (
                               <input
                                 type="text"
-                                value={role}
+                                value={role.role}
                                 onChange={(e) => {
                                   const newRoles = [...projectData.roles];
-                                  newRoles[idx] = e.target.value;
+                                  newRoles[idx] = { ...newRoles[idx], role: e.target.value };
                                   setProjectData({ ...projectData, roles: newRoles });
                                 }}
                                 className={`${theme === 'dark' ? 'text-gray-200 border-blue-400' : 'text-gray-700 border-blue-300'} font-medium bg-transparent border-b focus:outline-none focus:border-blue-500 flex-1`}
                               />
                             ) : (
+<<<<<<< Updated upstream
                               <span className={`${theme === 'dark' ? 'text-gray-200' : 'text-gray-700'} font-medium`}>{role}</span>
                             )}
                             {isEditingOverview && (
                               <button 
                                 onClick={() => deleteRole(idx)}
                                 className="text-red-500 hover:text-red-700 transition-colors p-1 hover:bg-red-50 dark:hover:bg-red-900 rounded ml-2"
+=======
+                              <span className="text-gray-700 font-medium">{role.role}</span>
+                            )}
+                            {isEditingOverview && (
+                              <button 
+                                onClick={() => handleDeleteClick('role', role.id, role.role)}
+                                className="text-red-500 hover:text-red-700 transition-colors p-1 hover:bg-red-50 rounded ml-2"
+>>>>>>> Stashed changes
                               >
                                 <Trash2 className="w-4 h-4" />
                               </button>
@@ -616,7 +1457,11 @@ export default function ProjectDetailsUI() {
                           </div>
                         ))}
                         {isEditingOverview && (
+<<<<<<< Updated upstream
                           <button onClick={addRole} className={`p-4 border-2 border-dashed ${theme === 'dark' ? 'border-gray-600 text-gray-400 hover:border-blue-500 hover:text-blue-400 hover:bg-blue-900' : 'border-gray-300 text-gray-500 hover:border-blue-500 hover:text-blue-500 hover:bg-blue-50'} rounded-lg transition-all`}>
+=======
+                          <button onClick={() => setShowAddRoleModal(true)} className="p-4 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-blue-500 hover:text-blue-500 hover:bg-blue-50 transition-all">
+>>>>>>> Stashed changes
                             <Plus className="w-5 h-5 mx-auto" />
                           </button>
                         )}
@@ -633,25 +1478,38 @@ export default function ProjectDetailsUI() {
                       </h3>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         {projectData.features.map((feature, idx) => (
+<<<<<<< Updated upstream
                           <div key={idx} className={`flex items-center justify-between p-4 bg-gradient-to-r ${theme === 'dark' ? 'from-green-900 to-emerald-900 border-green-800' : 'from-green-50 to-emerald-50 border-green-100'} rounded-lg border hover:shadow-md transition-shadow`}>
+=======
+                          <div key={feature.id || idx} className="flex items-center justify-between p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-100 hover:shadow-md transition-shadow">
+>>>>>>> Stashed changes
                             {isEditingOverview ? (
                               <input
                                 type="text"
-                                value={feature}
+                                value={feature.title}
                                 onChange={(e) => {
                                   const newFeatures = [...projectData.features];
-                                  newFeatures[idx] = e.target.value;
+                                  newFeatures[idx] = { ...newFeatures[idx], title: e.target.value };
                                   setProjectData({ ...projectData, features: newFeatures });
                                 }}
                                 className={`${theme === 'dark' ? 'text-gray-200 border-green-400' : 'text-gray-700 border-green-300'} font-medium bg-transparent border-b focus:outline-none focus:border-green-500 flex-1`}
                               />
                             ) : (
+<<<<<<< Updated upstream
                               <span className={`${theme === 'dark' ? 'text-gray-200' : 'text-gray-700'} font-medium`}>{feature}</span>
                             )}
                             {isEditingOverview && (
                               <button 
                                 onClick={() => deleteFeature(idx)}
                                 className="text-red-500 hover:text-red-700 transition-colors p-1 hover:bg-red-50 dark:hover:bg-red-900 rounded ml-2"
+=======
+                              <span className="text-gray-700 font-medium">{feature.title}</span>
+                            )}
+                            {isEditingOverview && (
+                              <button 
+                                onClick={() => handleDeleteClick('feature', feature.id, feature.title)}
+                                className="text-red-500 hover:text-red-700 transition-colors p-1 hover:bg-red-50 rounded ml-2"
+>>>>>>> Stashed changes
                               >
                                 <Trash2 className="w-4 h-4" />
                               </button>
@@ -659,7 +1517,11 @@ export default function ProjectDetailsUI() {
                           </div>
                         ))}
                         {isEditingOverview && (
+<<<<<<< Updated upstream
                           <button onClick={addFeature} className={`p-4 border-2 border-dashed ${theme === 'dark' ? 'border-gray-600 text-gray-400 hover:border-green-500 hover:text-green-400 hover:bg-green-900' : 'border-gray-300 text-gray-500 hover:border-green-500 hover:text-green-500 hover:bg-green-50'} rounded-lg transition-all`}>
+=======
+                          <button onClick={() => setShowAddFeatureModal(true)} className="p-4 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-green-500 hover:text-green-500 hover:bg-green-50 transition-all">
+>>>>>>> Stashed changes
                             <Plus className="w-5 h-5 mx-auto" />
                           </button>
                         )}
@@ -676,7 +1538,11 @@ export default function ProjectDetailsUI() {
                       </h3>
                       <div className="space-y-3">
                         {projectData.goals.map((goal, idx) => (
+<<<<<<< Updated upstream
                           <div key={idx} className={`flex items-center justify-between p-4 bg-gradient-to-r ${theme === 'dark' ? 'from-purple-900 to-pink-900 border-purple-800' : 'from-purple-50 to-pink-50 border-purple-100'} rounded-lg border hover:shadow-md transition-shadow`}>
+=======
+                          <div key={goal.id || idx} className="flex items-center justify-between p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border border-purple-100 hover:shadow-md transition-shadow">
+>>>>>>> Stashed changes
                             <div className="flex items-center flex-1">
                               <div className="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center text-white font-bold text-sm mr-3">
                                 {idx + 1}
@@ -684,22 +1550,31 @@ export default function ProjectDetailsUI() {
                               {isEditingOverview ? (
                                 <input
                                   type="text"
-                                  value={goal}
+                                  value={goal.title}
                                   onChange={(e) => {
                                     const newGoals = [...projectData.goals];
-                                    newGoals[idx] = e.target.value;
+                                    newGoals[idx] = { ...newGoals[idx], title: e.target.value };
                                     setProjectData({ ...projectData, goals: newGoals });
                                   }}
                                   className={`${theme === 'dark' ? 'text-gray-200 border-purple-400' : 'text-gray-700 border-purple-300'} font-medium bg-transparent border-b focus:outline-none focus:border-purple-500 flex-1`}
                                 />
                               ) : (
+<<<<<<< Updated upstream
                                 <span className={`${theme === 'dark' ? 'text-gray-200' : 'text-gray-700'} font-medium`}>{goal}</span>
+=======
+                                <span className="text-gray-700 font-medium">{goal.title}</span>
+>>>>>>> Stashed changes
                               )}
                             </div>
                             {isEditingOverview && (
                               <button 
+<<<<<<< Updated upstream
                                 onClick={() => deleteGoal(idx)}
                                 className="text-red-500 hover:text-red-700 transition-colors p-1 hover:bg-red-50 dark:hover:bg-red-900 rounded ml-2"
+=======
+                                onClick={() => handleDeleteClick('goal', goal.id, goal.title)}
+                                className="text-red-500 hover:text-red-700 transition-colors p-1 hover:bg-red-50 rounded ml-2"
+>>>>>>> Stashed changes
                               >
                                 <Trash2 className="w-4 h-4" />
                               </button>
@@ -707,7 +1582,11 @@ export default function ProjectDetailsUI() {
                           </div>
                         ))}
                         {isEditingOverview && (
+<<<<<<< Updated upstream
                           <button onClick={addGoal} className={`w-full p-4 border-2 border-dashed ${theme === 'dark' ? 'border-gray-600 text-gray-400 hover:border-purple-500 hover:text-purple-400 hover:bg-purple-900' : 'border-gray-300 text-gray-500 hover:border-purple-500 hover:text-purple-500 hover:bg-purple-50'} rounded-lg transition-all`}>
+=======
+                          <button onClick={() => setShowAddGoalModal(true)} className="w-full p-4 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-purple-500 hover:text-purple-500 hover:bg-purple-50 transition-all">
+>>>>>>> Stashed changes
                             <Plus className="w-5 h-5 mx-auto" />
                           </button>
                         )}
@@ -723,27 +1602,51 @@ export default function ProjectDetailsUI() {
                         Project Timeline
                       </h3>
                       <div className="space-y-4">
+<<<<<<< Updated upstream
                         {projectData.timeline.map((week, idx) => (
                           <div key={idx} className={`border ${theme === 'dark' ? 'border-gray-700 bg-gray-700' : 'border-gray-200 bg-gradient-to-br from-gray-50 to-white'} rounded-xl p-5 hover:shadow-md transition-shadow`}>
                             <h4 className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'} mb-3 flex items-center`}>
                               <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-white text-xs font-bold mr-2">
                                 {idx + 1}
+=======
+                        {projectData.timeline?.map((week, idx) => (
+                          <div key={idx} className="border border-gray-200 rounded-xl p-5 bg-gradient-to-br from-gray-50 to-white hover:shadow-md transition-shadow">
+                            <h4 className="font-semibold text-gray-900 mb-3 flex items-center justify-between">
+                              <div className="flex items-center">
+                                <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-white text-xs font-bold mr-2">
+                                  {idx + 1}
+                                </div>
+                                {week.week}
+>>>>>>> Stashed changes
                               </div>
-                              {week.week}
+                              {isEditingOverview && (
+                                <button
+                                  onClick={() => handleDeleteClick('timeline-week', week.id, week.week)}
+                                  className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+                                  title="Delete week"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              )}
                             </h4>
                             <div className="space-y-2 ml-8">
+<<<<<<< Updated upstream
                               {week.tasks.map((task, taskIdx) => (
                                 <div key={taskIdx} className={`flex items-center justify-between p-3 ${theme === 'dark' ? 'bg-gray-600 border-gray-500 hover:border-blue-500' : 'bg-white border-gray-200 hover:border-blue-300'} rounded-lg border transition-colors`}>
+=======
+                              {week.items?.map((task, taskIdx) => (
+                                <div key={task.id || taskIdx} className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200 hover:border-blue-300 transition-colors">
+>>>>>>> Stashed changes
                                   {isEditingOverview ? (
                                     <input
                                       type="text"
-                                      value={task}
+                                      value={task.title}
                                       onChange={(e) => {
-                                        const updatedTimeline = projectData.timeline.map((w, wIdx) => {
+                                        const updatedTimeline = (projectData.timeline || []).map((w, wIdx) => {
                                           if (wIdx === idx) {
-                                            const newTasks = [...w.tasks];
-                                            newTasks[taskIdx] = e.target.value;
-                                            return { ...w, tasks: newTasks };
+                                            const newItems = [...(w.items || [])];
+                                            newItems[taskIdx] = { ...newItems[taskIdx], title: e.target.value };
+                                            return { ...w, items: newItems };
                                           }
                                           return w;
                                         });
@@ -752,12 +1655,21 @@ export default function ProjectDetailsUI() {
                                       className={`${theme === 'dark' ? 'text-gray-200 border-blue-400' : 'text-gray-700 border-blue-300'} bg-transparent border-b focus:outline-none focus:border-blue-500 flex-1`}
                                     />
                                   ) : (
+<<<<<<< Updated upstream
                                     <span className={`${theme === 'dark' ? 'text-gray-200' : 'text-gray-700'}`}>{task}</span>
                                   )}
                                   {isEditingOverview && (
                                     <button 
                                       onClick={() => deleteTimelineTask(idx, taskIdx)}
                                       className="text-red-500 hover:text-red-700 transition-colors p-1 hover:bg-red-50 dark:hover:bg-red-900 rounded ml-2"
+=======
+                                    <span className="text-gray-700">{task.title}</span>
+                                  )}
+                                  {isEditingOverview && (
+                                    <button 
+                                      onClick={() => handleDeleteClick('timeline', task.id, task.title)}
+                                      className="text-red-500 hover:text-red-700 transition-colors p-1 hover:bg-red-50 rounded ml-2"
+>>>>>>> Stashed changes
                                     >
                                       <Trash2 className="w-4 h-4" />
                                     </button>
@@ -765,7 +1677,11 @@ export default function ProjectDetailsUI() {
                                 </div>
                               ))}
                               {isEditingOverview && (
+<<<<<<< Updated upstream
                                 <button onClick={() => addTimelineTask(idx)} className={`w-full p-3 border border-dashed ${theme === 'dark' ? 'border-gray-600 text-gray-400 hover:border-blue-500 hover:text-blue-400 hover:bg-blue-900' : 'border-gray-300 text-gray-500 hover:border-blue-500 hover:text-blue-500 hover:bg-blue-50'} rounded-lg text-sm transition-all`}>
+=======
+                                <button onClick={() => openAddTimelineTaskModal(idx)} className="w-full p-3 border border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-blue-500 hover:text-blue-500 hover:bg-blue-50 text-sm transition-all">
+>>>>>>> Stashed changes
                                   + Add Task
                                 </button>
                               )}
@@ -773,7 +1689,11 @@ export default function ProjectDetailsUI() {
                           </div>
                         ))}
                         {isEditingOverview && (
+<<<<<<< Updated upstream
                           <button onClick={addWeek} className={`w-full p-5 border-2 border-dashed ${theme === 'dark' ? 'border-gray-600 text-gray-400 hover:border-blue-500 hover:text-blue-400 hover:bg-blue-900' : 'border-gray-300 text-gray-500 hover:border-blue-500 hover:text-blue-500 hover:bg-blue-50'} rounded-xl transition-all`}>
+=======
+                          <button onClick={() => setShowAddWeekModal(true)} className="w-full p-5 border-2 border-dashed border-gray-300 rounded-xl text-gray-500 hover:border-blue-500 hover:text-blue-500 hover:bg-blue-50 transition-all">
+>>>>>>> Stashed changes
                             <Plus className="w-5 h-5 mx-auto mb-1" />
                             <span className="text-sm font-medium">Add Week</span>
                           </button>
@@ -793,23 +1713,58 @@ export default function ProjectDetailsUI() {
                     <h2 className={`text-2xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>Generated Backlog</h2>
                     <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'} mt-1`}>Manage epics, user stories, and tasks</p>
                   </div>
-                  <button
-                    onClick={addNewEpic}
-                    className="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center shadow-sm"
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Epic
-                  </button>
+                  <div className="flex items-center gap-3">
+                    {!isEditingBacklog ? (
+                      <button
+                        onClick={() => setIsEditingBacklog(true)}
+                        className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors flex items-center shadow-sm"
+                      >
+                        <Edit className="w-4 h-4 mr-2" />
+                        Edit
+                      </button>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setIsEditingBacklog(false)}
+                          className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={saveBacklogChanges}
+                          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                        >
+                          Save Changes
+                        </button>
+                      </div>
+                    )}
+                    {isEditingBacklog && (
+                      <button
+                        onClick={() => setShowAddEpicModal(true)}
+                        className="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center shadow-sm"
+                      >
+                        <Plus className="w-4 h-4 mr-2" />
+                        Add Epic
+                      </button>
+                    )}
+                  </div>
                 </div>
 
+<<<<<<< Updated upstream
                 {backlog.epics.map((epic) => (
                   <div key={epic.id} className={`${theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} rounded-xl shadow-sm border overflow-hidden`}>
                     <div className={`bg-gradient-to-r from-red-50 to-pink-50 ${theme === 'dark' ? 'dark:from-red-900 dark:to-pink-900' : ''} px-6 py-4 border-b border-red-100 dark:border-red-800`}>
+=======
+                {(backlog.epics || []).map((epic) => (
+                  <div key={epic.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <div className="bg-gradient-to-r from-red-50 to-pink-50 px-6 py-4 border-b border-red-100">
+>>>>>>> Stashed changes
                       <div className="flex items-center justify-between">
                         <div className="flex items-center flex-1">
                           <span className="px-4 py-1.5 bg-red-500 text-white rounded-full text-sm font-semibold mr-4 shadow-sm">
                             Epic
                           </span>
+<<<<<<< Updated upstream
                           <input
                             type="text"
                             value={epic.name}
@@ -828,19 +1783,46 @@ export default function ProjectDetailsUI() {
                         >
                           <Trash2 className="w-5 h-5" />
                         </button>
+=======
+                          {isEditingBacklog ? (
+                            <input
+                              type="text"
+                              value={epic.title}
+                              className="text-xl font-bold text-gray-900 bg-transparent border-b-2 border-transparent hover:border-red-300 focus:border-red-500 focus:outline-none transition-colors flex-1"
+                              onChange={(e) => {
+                                const updatedEpics = backlog.epics.map(ep => 
+                                  ep.id === epic.id ? { ...ep, title: e.target.value } : ep
+                                );
+                                setBacklog({ ...backlog, epics: updatedEpics });
+                              }}
+                            />
+                          ) : (
+                            <span className="text-xl font-bold text-gray-900">{epic.title}</span>
+                          )}
+                        </div>
+                        {isEditingBacklog && (
+                          <button 
+                            onClick={() => handleDeleteClick('epic', epic.id, epic.title)}
+                            className="text-red-500 hover:text-red-700 hover:bg-red-100 p-2 rounded-lg transition-colors"
+                          >
+                            <Trash2 className="w-5 h-5" />
+                          </button>
+                        )}
+>>>>>>> Stashed changes
                       </div>
                     </div>
 
                     <div className="p-6">
                       {/* Sub-Epics */}
                       <div className="space-y-6">
-                        {epic.subEpics.map((subEpic) => (
+                        {(epic.subEpics || []).map((subEpic) => (
                           <div key={subEpic.id} className="border-l-4 border-orange-400 pl-6 py-2">
                             <div className="flex items-center justify-between mb-4">
                               <div className="flex items-center flex-1">
                                 <span className="px-3 py-1.5 bg-orange-500 text-white rounded-full text-sm font-semibold mr-3 shadow-sm">
                                   Sub-Epic
                                 </span>
+<<<<<<< Updated upstream
                                 <input
                                   type="text"
                                   value={subEpic.name}
@@ -867,17 +1849,52 @@ export default function ProjectDetailsUI() {
                               >
                                 <Trash2 className="w-4 h-4" />
                               </button>
+=======
+                                {isEditingBacklog ? (
+                                  <input
+                                    type="text"
+                                    value={subEpic.title}
+                                    onChange={(e) => {
+                                      const updatedEpics = backlog.epics.map(ep => {
+                                        if (ep.id === epic.id) {
+                                          return {
+                                            ...ep,
+                                            subEpics: ep.subEpics.map(se =>
+                                              se.id === subEpic.id ? { ...se, title: e.target.value } : se
+                                            )
+                                          };
+                                        }
+                                        return ep;
+                                      });
+                                      setBacklog({ ...backlog, epics: updatedEpics });
+                                    }}
+                                    className="text-lg font-semibold text-gray-900 bg-transparent border-b-2 border-transparent hover:border-orange-300 focus:border-orange-500 focus:outline-none transition-colors flex-1"
+                                  />
+                                ) : (
+                                  <span className="text-lg font-semibold text-gray-900">{subEpic.title}</span>
+                                )}
+                              </div>
+                              {isEditingBacklog && (
+                                <button 
+                                  onClick={() => handleDeleteClick('sub-epic', subEpic.id, subEpic.title)}
+                                  className="text-red-500 hover:text-red-700 hover:bg-red-50 p-2 rounded-lg transition-colors"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              )}
+>>>>>>> Stashed changes
                             </div>
 
                             {/* User Stories */}
                             <div className="space-y-4 ml-6">
-                              {subEpic.userStories.map((story) => (
+                              {(subEpic.userStories || []).map((story) => (
                                 <div key={story.id} className="border-l-4 border-blue-400 pl-6 py-2">
                                   <div className="flex items-center justify-between mb-3">
                                     <div className="flex items-center flex-1">
                                       <span className="px-3 py-1.5 bg-blue-500 text-white rounded-full text-sm font-semibold mr-3 shadow-sm">
                                         User Story
                                       </span>
+<<<<<<< Updated upstream
                                       <input
                                         type="text"
                                         value={story.story}
@@ -912,16 +1929,64 @@ export default function ProjectDetailsUI() {
                                     >
                                       <Trash2 className="w-4 h-4" />
                                     </button>
+=======
+                                      {isEditingBacklog ? (
+                                        <input
+                                          type="text"
+                                          value={story.title}
+                                          onChange={(e) => {
+                                            const updatedEpics = backlog.epics.map(ep => {
+                                              if (ep.id === epic.id) {
+                                                return {
+                                                  ...ep,
+                                                  subEpics: ep.subEpics.map(se => {
+                                                    if (se.id === subEpic.id) {
+                                                      return {
+                                                        ...se,
+                                                        userStories: se.userStories.map(us =>
+                                                          us.id === story.id ? { ...us, title: e.target.value } : us
+                                                        )
+                                                      };
+                                                    }
+                                                    return se;
+                                                  })
+                                                };
+                                              }
+                                              return ep;
+                                            });
+                                            setBacklog({ ...backlog, epics: updatedEpics });
+                                          }}
+                                          className="flex-1 text-gray-900 bg-transparent border-b-2 border-transparent hover:border-blue-300 focus:border-blue-500 focus:outline-none transition-colors"
+                                        />
+                                      ) : (
+                                        <span className="flex-1 text-gray-900">{story.title}</span>
+                                      )}
+                                    </div>
+                                    {isEditingBacklog && (
+                                      <button 
+                                        onClick={() => handleDeleteClick('user-story', story.id, story.title)}
+                                        className="text-red-500 hover:text-red-700 hover:bg-red-50 p-2 rounded-lg transition-colors"
+                                      >
+                                        <Trash2 className="w-4 h-4" />
+                                      </button>
+                                    )}
+>>>>>>> Stashed changes
                                   </div>
 
                                   {/* Tasks */}
                                   <div className="space-y-2 ml-6">
+<<<<<<< Updated upstream
                                     {story.tasks.map((task, taskIdx) => (
                                       <div key={taskIdx} className={`flex items-center justify-between p-3 bg-gradient-to-r ${theme === 'dark' ? 'from-green-900 to-emerald-900 border-green-800' : 'from-green-50 to-emerald-50 border-green-200'} rounded-lg border hover:shadow-md transition-shadow`}>
+=======
+                                    {(story.tasks || []).map((task) => (
+                                      <div key={task.id} className="flex items-center justify-between p-3 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-200 hover:shadow-md transition-shadow">
+>>>>>>> Stashed changes
                                         <div className="flex items-center flex-1">
                                           <span className="px-2.5 py-1 bg-green-600 text-white rounded-md text-xs font-semibold mr-3 shadow-sm">
                                             Task
                                           </span>
+<<<<<<< Updated upstream
                                           <input
                                             type="text"
                                             value={task}
@@ -978,6 +2043,79 @@ export default function ProjectDetailsUI() {
                         <button onClick={() => addSubEpic(epic.id)} className={`px-4 py-2.5 border-2 border-dashed ${theme === 'dark' ? 'border-gray-600 text-gray-400 hover:border-orange-500 hover:text-orange-400 hover:bg-orange-900' : 'border-gray-300 text-gray-500 hover:border-orange-500 hover:text-orange-500 hover:bg-orange-50'} rounded-lg text-sm font-medium transition-all`}>
                           + Add Sub-Epic
                         </button>
+=======
+                                          {isEditingBacklog ? (
+                                            <input
+                                              type="text"
+                                              value={task.title}
+                                              onChange={(e) => {
+                                                const updatedEpics = backlog.epics.map(ep => {
+                                                  if (ep.id === epic.id) {
+                                                    return {
+                                                      ...ep,
+                                                      subEpics: ep.subEpics.map(se => {
+                                                        if (se.id === subEpic.id) {
+                                                          return {
+                                                            ...se,
+                                                            userStories: se.userStories.map(us => {
+                                                              if (us.id === story.id) {
+                                                                return {
+                                                                  ...us,
+                                                                  tasks: us.tasks.map(t =>
+                                                                    t.id === task.id ? { ...t, title: e.target.value } : t
+                                                                  )
+                                                                };
+                                                              }
+                                                              return us;
+                                                            })
+                                                          };
+                                                        }
+                                                        return se;
+                                                      })
+                                                    };
+                                                  }
+                                                  return ep;
+                                                });
+                                                setBacklog({ ...backlog, epics: updatedEpics });
+                                              }}
+                                              className="bg-transparent text-gray-700 border-b-2 border-transparent hover:border-green-300 focus:border-green-500 focus:outline-none flex-1 transition-colors"
+                                            />
+                                          ) : (
+                                            <span className="flex-1 text-gray-700">{task.title}</span>
+                                          )}
+                                        </div>
+                                        {isEditingBacklog && (
+                                          <button 
+                                            onClick={() => handleDeleteClick('task', task.id, task.title)}
+                                            className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1.5 rounded-lg transition-colors"
+                                          >
+                                            <Trash2 className="w-4 h-4" />
+                                          </button>
+                                        )}
+                                      </div>
+                                    ))}
+                                    {isEditingBacklog && (
+                                      <button onClick={() => openAddTaskModal(story.id)} className="w-full p-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-green-500 hover:text-green-500 hover:bg-green-50 text-sm font-medium transition-all">
+                                        + Add Task
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                              {isEditingBacklog && (
+                                <button onClick={() => openAddUserStoryModal(subEpic.id)} className="px-4 py-2.5 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-blue-500 hover:text-blue-500 hover:bg-blue-50 text-sm font-medium transition-all">
+                                  + Add User Story
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                        {isEditingBacklog && (
+                          <button onClick={() => openAddSubEpicModal(epic.id)} className="px-4 py-2.5 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-orange-500 hover:text-orange-500 hover:bg-orange-50 text-sm font-medium transition-all">
+                            + Add Sub-Epic
+                          </button>
+                        )}
+>>>>>>> Stashed changes
                       </div>
                     </div>
                   </div>
@@ -1382,7 +2520,7 @@ export default function ProjectDetailsUI() {
                       accept="image/*"
                       className="hidden"
                       onChange={(e) => {
-                        const file = e.target.files[0];
+                        const file = e.target.files?.[0];
                         if (file) {
                           const reader = new FileReader();
                           reader.onloadend = () => {
@@ -1563,8 +2701,13 @@ export default function ProjectDetailsUI() {
                   Cancel
                 </button>
                 <button
+<<<<<<< Updated upstream
                   onClick={handleAddRepo}
                   className="flex-1 px-4 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-purple-700 text-white hover:from-purple-700 hover:to-purple-800 font-medium shadow-lg transition-all flex items-center justify-center"
+=======
+                  onClick={handleAddRepoLocal}
+                  className="flex-1 px-4 py-3 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-lg hover:from-purple-700 hover:to-purple-800 font-medium shadow-md transition-all flex items-center justify-center"
+>>>>>>> Stashed changes
                 >
                   {editingRepo ? (
                     <>
@@ -1577,6 +2720,364 @@ export default function ProjectDetailsUI() {
                   )}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Feature Modal */}
+      {showAddFeatureModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Add New Feature</h3>
+            <input
+              type="text"
+              value={newFeatureTitle}
+              onChange={(e) => setNewFeatureTitle(e.target.value)}
+              placeholder="Enter feature title..."
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent mb-4"
+              autoFocus
+            />
+            <div className="flex space-x-3">
+              <button
+                onClick={() => {
+                  setNewFeatureTitle('');
+                  setShowAddFeatureModal(false);
+                }}
+                className="flex-1 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={addFeature}
+                className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              >
+                Add Feature
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Role Modal */}
+      {showAddRoleModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Add New Role</h3>
+            <input
+              type="text"
+              value={newRoleTitle}
+              onChange={(e) => setNewRoleTitle(e.target.value)}
+              placeholder="Enter role title..."
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-4"
+              autoFocus
+            />
+            <div className="flex space-x-3">
+              <button
+                onClick={() => {
+                  setNewRoleTitle('');
+                  setShowAddRoleModal(false);
+                }}
+                className="flex-1 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={addRole}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Add Role
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Goal Modal */}
+      {showAddGoalModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Add New Goal</h3>
+            <input
+              type="text"
+              value={newGoalTitle}
+              onChange={(e) => setNewGoalTitle(e.target.value)}
+              placeholder="Enter goal title..."
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent mb-4"
+              autoFocus
+            />
+            <div className="flex space-x-3">
+              <button
+                onClick={() => {
+                  setNewGoalTitle('');
+                  setShowAddGoalModal(false);
+                }}
+                className="flex-1 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={addGoal}
+                className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+              >
+                Add Goal
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && deleteItem && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Confirm Delete</h3>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to delete "{deleteItem.name}"? 
+              {deleteItem.type === 'epic' && ' This will also delete all sub-epics, user stories, and tasks within this epic.'}
+              {deleteItem.type === 'sub-epic' && ' This will also delete all user stories and tasks within this sub-epic.'}
+              {deleteItem.type === 'user-story' && ' This will also delete all tasks within this user story.'}
+              {!['epic', 'sub-epic', 'user-story'].includes(deleteItem.type) && ' This action cannot be undone.'}
+            </p>
+            <div className="flex space-x-3">
+              <button
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setDeleteItem(null);
+                }}
+                className="flex-1 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Week Modal */}
+      {showAddWeekModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Add New Week</h3>
+            <input
+              type="number"
+              value={newWeekNumber}
+              onChange={(e) => setNewWeekNumber(e.target.value)}
+              placeholder="Enter week number (e.g., 1, 2, 3...)"
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-4"
+              min="1"
+            />
+            <div className="flex space-x-3">
+              <button
+                onClick={() => {
+                  setShowAddWeekModal(false);
+                  setNewWeekNumber('');
+                }}
+                className="flex-1 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={addWeek}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Add Week
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Timeline Task Modal */}
+      {showAddTimelineTaskModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Add New Task</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Adding task to: {selectedWeekIndex !== null ? projectData.timeline[selectedWeekIndex]?.week : 'Unknown Week'}
+            </p>
+            <input
+              type="text"
+              value={newTimelineTaskTitle}
+              onChange={(e) => setNewTimelineTaskTitle(e.target.value)}
+              placeholder="Enter task title"
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-4"
+            />
+            <div className="flex space-x-3">
+              <button
+                onClick={() => {
+                  setShowAddTimelineTaskModal(false);
+                  setNewTimelineTaskTitle('');
+                  setSelectedWeekIndex(null);
+                }}
+                className="flex-1 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={addTimelineTask}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Add Task
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Epic Modal */}
+      {showAddEpicModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Add New Epic</h3>
+            <input
+              type="text"
+              value={newEpicTitle}
+              onChange={(e) => setNewEpicTitle(e.target.value)}
+              placeholder="Enter epic title"
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-4"
+            />
+            <textarea
+              value={newEpicDescription}
+              onChange={(e) => setNewEpicDescription(e.target.value)}
+              placeholder="Enter epic description (optional)"
+              rows={3}
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-4"
+            />
+            <div className="flex space-x-3">
+              <button
+                onClick={() => {
+                  setShowAddEpicModal(false);
+                  setNewEpicTitle('');
+                  setNewEpicDescription('');
+                }}
+                className="flex-1 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={addEpic}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Add Epic
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add SubEpic Modal */}
+      {showAddSubEpicModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Add New Sub-Epic</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Adding sub-epic to: {selectedEpicId ? backlog.epics.find(e => e.id === selectedEpicId)?.title : 'Unknown Epic'}
+            </p>
+            <input
+              type="text"
+              value={newSubEpicTitle}
+              onChange={(e) => setNewSubEpicTitle(e.target.value)}
+              placeholder="Enter sub-epic title"
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-4"
+            />
+            <div className="flex space-x-3">
+              <button
+                onClick={() => {
+                  setShowAddSubEpicModal(false);
+                  setNewSubEpicTitle('');
+                  setSelectedEpicId(null);
+                }}
+                className="flex-1 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={addSubEpic}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Add Sub-Epic
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add UserStory Modal */}
+      {showAddUserStoryModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Add New User Story</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Adding user story to: {selectedSubEpicId ? backlog.epics.flatMap(e => e.subEpics).find(se => se.id === selectedSubEpicId)?.title : 'Unknown Sub-Epic'}
+            </p>
+            <textarea
+              value={newUserStoryTitle}
+              onChange={(e) => setNewUserStoryTitle(e.target.value)}
+              placeholder="Enter user story (e.g., As a user, I want to...)"
+              rows={3}
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-4"
+            />
+            <div className="flex space-x-3">
+              <button
+                onClick={() => {
+                  setShowAddUserStoryModal(false);
+                  setNewUserStoryTitle('');
+                  setSelectedSubEpicId(null);
+                }}
+                className="flex-1 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={addUserStory}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Add User Story
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Task Modal */}
+      {showAddTaskModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Add New Task</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Adding task to: {selectedUserStoryId ? backlog.epics.flatMap(e => e.subEpics).flatMap(se => se.userStories).find(us => us.id === selectedUserStoryId)?.title : 'Unknown User Story'}
+            </p>
+            <input
+              type="text"
+              value={newTaskTitle}
+              onChange={(e) => setNewTaskTitle(e.target.value)}
+              placeholder="Enter task title"
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-4"
+            />
+            <div className="flex space-x-3">
+              <button
+                onClick={() => {
+                  setShowAddTaskModal(false);
+                  setNewTaskTitle('');
+                  setSelectedUserStoryId(null);
+                }}
+                className="flex-1 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={addTask}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Add Task
+              </button>
             </div>
           </div>
         </div>

@@ -5,7 +5,7 @@ from .models import (
     ProjectFeature, ProjectRole, ProjectGoal,
     TimelineWeek, TimelineItem,
     Epic, SubEpic, UserStory, StoryTask, ProjectMember, ProjectInvitation,
-    Notification,
+    Notification, Repository,
 )
 
 
@@ -49,20 +49,21 @@ class ProjectGoalSerializer(serializers.ModelSerializer):
         fields = ['id', 'project', 'title', 'role']
 
 
-class TimelineWeekSerializer(serializers.ModelSerializer):
-    id = serializers.IntegerField(read_only=True)
-
-    class Meta:
-        model = TimelineWeek
-        fields = ['id', 'project', 'week_number']
-
-
 class TimelineItemSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = TimelineItem
         fields = ['id', 'week', 'title']
+
+
+class TimelineWeekSerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(read_only=True)
+    timeline_items = TimelineItemSerializer(source='items', many=True, read_only=True)
+
+    class Meta:
+        model = TimelineWeek
+        fields = ['id', 'project', 'week_number', 'timeline_items']
 
 
 class EpicSerializer(serializers.ModelSerializer):
@@ -152,6 +153,24 @@ class ProjectInvitationSerializer(serializers.ModelSerializer):
 
 class ProjectInvitationActionSerializer(serializers.Serializer):
     """Serializer for accept/decline actions"""
+
+
+class RepositorySerializer(serializers.ModelSerializer):
+    assigned_to_details = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Repository
+        fields = ['id', 'project', 'name', 'url', 'branch', 'assigned_to', 'assigned_to_details', 'created_at']
+        read_only_fields = ['id', 'created_at']
+    
+    def get_assigned_to_details(self, obj):
+        if obj.assigned_to:
+            return {
+                'id': obj.assigned_to.id,
+                'user_name': obj.assigned_to.user_name,
+                'user_email': obj.assigned_to.user_email,
+            }
+        return None
 
 
 class NotificationSerializer(serializers.ModelSerializer):

@@ -98,8 +98,10 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
   useEffect(() => {
     const fetchUserData = async () => {
       const token = localStorage.getItem("token");
+      console.log('🔍 TopNavbar - Token check:', token ? 'Found' : 'Not found');
       if (!token) {
-        navigate("/login");
+        console.log('❌ TopNavbar - No token, redirecting to sign-in');
+        navigate("/sign-in");
         return;
       }
   
@@ -113,6 +115,7 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
   
         if (response.ok) {
           const data = await response.json();
+          console.log('✅ TopNavbar - User data fetched successfully');
   
           // ✅ Fix the profile picture path
           const fixedData = {
@@ -126,8 +129,9 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
   
           setUserData(fixedData);
         } else {
+          console.log('❌ TopNavbar - API call failed, status:', response.status);
           localStorage.removeItem("token");
-          navigate("/login");
+          navigate("/sign-in");
         }
       } catch (error) {
         console.error("Failed to fetch user data:", error);

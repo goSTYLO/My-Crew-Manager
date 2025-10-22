@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState, useEffect } from "react";
 import Sidebar from "../../components/sidebarLayout";
 import { useNavigate } from "react-router-dom";
 import { Search, Plus, Folder, FolderOpen } from 'lucide-react';
@@ -6,7 +6,7 @@ import { PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tool
 import TopNavbar from "../../components/topbarLayouot";
 import { useTheme } from "../../components/themeContext";
 
-// Sample data for charts
+// Sample data for charts - TODO: Replace with real task statistics from backend
 const taskData = [
     { name: 'Completed', value: 32, color: '#10B981' },
     { name: 'On Hold', value: 25, color: '#F59E0B' },
@@ -14,6 +14,7 @@ const taskData = [
     { name: 'Pending', value: 18, color: '#EF4444' }
   ];
 
+  // TODO: Replace with real performance data from backend
   const performanceData = [
     { month: 'Oct 2021', achieved: 3, target: 3 },
     { month: 'Nov 2021', achieved: 4, target: 4 },
@@ -49,26 +50,68 @@ const developers = [
   ];
 
   // Sample project data matching the image
-  const projects = [
-    { id: 1, name: 'Emo stuff', image: 'bg-gray-800' },
-    { id: 2, name: 'Tim Burton', image: 'bg-gray-700' },
-    { id: 3, name: 'Halloween', image: 'bg-orange-600' },
-    { id: 4, name: 'Spooky Art', image: 'bg-blue-600' },
-    { id: 5, name: 'Dark Art', image: 'bg-gray-500' },
-    { id: 6, name: 'Gothic art', image: 'bg-gray-900' },
-    { id: 7, name: '- happy :3', image: 'bg-orange-500' },
-    { id: 8, name: '*VAMPYR*', image: 'bg-red-900' },
-    { id: 9, name: 'I <3 Art', image: 'bg-gray-600' },
-  ];
+  // Old mock projects data removed - now fetched from backend
 
 
 
 // Project Performance Component
 const ProjectTask = () => {
     const [sidebarOpen, setSidebarOpen] = useState(false);
-    const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+    const [projects, setProjects] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     const navigate = useNavigate();
     const { theme } = useTheme();
+
+    // API Configuration
+    const API_BASE_URL = 'http://localhost:8000/api/ai';
+
+    // Fetch projects from backend
+    const fetchProjects = async () => {
+        try {
+            setLoading(true);
+            setError(null);
+            const token = localStorage.getItem('token');
+            console.log('🔍 Token from localStorage:', token ? 'Found' : 'Not found');
+            if (!token) {
+                alert('You are not authenticated. Please log in.');
+                navigate('/sign-in');
+                return;
+            }
+
+            const response = await fetch(`${API_BASE_URL}/projects/`, {
+                headers: {
+                    'Authorization': `Token ${token}`,
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'include',
+            });
+
+            if (!response.ok) {
+                if (response.status === 401) {
+                    alert('Authentication failed. Please log in again.');
+                    localStorage.removeItem('token');
+                    navigate('/sign-in');
+                    return;
+                }
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            setProjects(data);
+            console.log('Fetched projects:', data);
+        } catch (error) {
+            console.error('Error fetching projects:', error);
+            setError('Failed to load projects. Please try again.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Load projects on component mount
+    useEffect(() => {
+        fetchProjects();
+    }, []);
 
     return (
       <div className={`flex min-h-screen w-full overflow-x-hidden ${theme === "dark" ? "bg-gray-900" : "bg-gray-50"}`}>
@@ -122,10 +165,10 @@ const ProjectTask = () => {
                               outerRadius={80}
                               dataKey="value"
                               labelLine={false}
-                              label={({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
-                                const radius = innerRadius + (outerRadius - innerRadius) / 2;
-                                const x = cx + radius * Math.cos(-midAngle * (Math.PI / 180));
-                                const y = cy + radius * Math.sin(-midAngle * (Math.PI / 180));
+                              label={({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
+                                const radius = (innerRadius as number) + ((outerRadius as number) - (innerRadius as number)) / 2;
+                                const x = (cx as number) + radius * Math.cos(-(midAngle as number) * (Math.PI / 180));
+                                const y = (cy as number) + radius * Math.sin(-(midAngle as number) * (Math.PI / 180));
                                 return (
                                   <text
                                     x={x}
@@ -136,7 +179,7 @@ const ProjectTask = () => {
                                     fontSize={13}
                                     fontWeight="bold"
                                   >
-                                    {`${(percent * 100).toFixed(0)}%`}
+                                    {`${((percent as number) * 100).toFixed(0)}%`}
                                   </text>
                                 );
                               }}
@@ -244,27 +287,49 @@ const ProjectTask = () => {
 
                     {/* vertical list — fixed height, scrollable */}
                     <div className="flex flex-col gap-3 h-[310px] overflow-y-auto overflow-x-hidden pr-2">
-                      {projects.slice(0, 9).map((project) => (
-                        <button
-                          key={project.id}
-                          onClick={() => navigate("/projects")} 
-                          className={`w-full flex items-center space-x-3 text-left p-2 rounded-md transition-shadow hover:shadow-md
-                            ${theme === "dark" ? "bg-gray-900 border border-gray-700" : "bg-white border border-gray-100"}`}
-                          style={{ minHeight: 56 }}
-                          aria-label={`Open ${project.name}`}
-                        >
-                          <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${project.image}`}>
-                            <FolderOpen className={`w-5 h-5 ${theme === "dark" ? "text-gray-200" : "text-gray-600"}`} />
+                      {loading ? (
+                        <div className="flex items-center justify-center h-full">
+                          <div className={`text-sm ${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}>
+                            Loading projects...
                           </div>
-
-                          <div className="flex-1">
-                            <div className={`text-sm font-medium truncate ${theme === "dark" ? "text-white" : "text-gray-800"}`}>
-                              {project.name}
+                        </div>
+                      ) : error ? (
+                        <div className="flex items-center justify-center h-full">
+                          <div className={`text-sm ${theme === "dark" ? "text-red-400" : "text-red-500"}`}>
+                            {error}
+                          </div>
+                        </div>
+                      ) : projects.length === 0 ? (
+                        <div className="flex items-center justify-center h-full">
+                          <div className={`text-sm ${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}>
+                            No projects found
+                          </div>
+                        </div>
+                      ) : (
+                        projects.slice(0, 9).map((project: any) => (
+                          <button
+                            key={project.id}
+                            onClick={() => navigate(`/project-details/${project.id}`)} 
+                            className={`w-full flex items-center space-x-3 text-left p-2 rounded-md transition-shadow hover:shadow-md
+                              ${theme === "dark" ? "bg-gray-900 border border-gray-700" : "bg-white border border-gray-100"}`}
+                            style={{ minHeight: 56 }}
+                            aria-label={`Open ${project.title}`}
+                          >
+                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center bg-blue-500`}>
+                              <FolderOpen className={`w-5 h-5 text-white`} />
                             </div>
-                            <div className={`text-xs ${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}>Updated recently</div>
-                          </div>
-                        </button>
-                      ))}
+
+                            <div className="flex-1">
+                              <div className={`text-sm font-medium truncate ${theme === "dark" ? "text-white" : "text-gray-800"}`}>
+                                {project.title}
+                              </div>
+                              <div className={`text-xs ${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}>
+                                Created {new Date(project.created_at).toLocaleDateString()}
+                              </div>
+                            </div>
+                          </button>
+                        ))
+                      )}
                     </div>
                   </div>
                 </div>

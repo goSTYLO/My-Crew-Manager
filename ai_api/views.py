@@ -6,13 +6,14 @@ from rest_framework.parsers import MultiPartParser
 from rest_framework import status
 from django.shortcuts import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.exceptions import PermissionDenied
 
 from .models import (
     Project, Proposal,
     ProjectFeature, ProjectRole, ProjectGoal,
     TimelineWeek, TimelineItem,
     Epic, SubEpic, UserStory, StoryTask, ProjectMember, ProjectInvitation,
-    Notification,
+    Notification, Repository,
 )
 from .serializers import (
     ProjectSerializer, ProposalSerializer,
@@ -20,7 +21,7 @@ from .serializers import (
     TimelineWeekSerializer, TimelineItemSerializer,
     EpicSerializer, SubEpicSerializer, UserStorySerializer, StoryTaskSerializer,
     ProjectMemberSerializer, ProjectInvitationSerializer, ProjectInvitationActionSerializer,
-    NotificationSerializer,
+    NotificationSerializer, RepositorySerializer,
 )
 
 # Real LLM pipelines
@@ -799,4 +800,36 @@ class NotificationViewSet(ModelViewSet):
         from .services.notification_service import NotificationService
         NotificationService.mark_all_as_read(request.user)
         return Response({'status': 'all marked as read'})
+
+
+class RepositoryViewSet(ModelViewSet):
+    queryset = Repository.objects.all()
+    serializer_class = RepositorySerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        project_id = self.request.query_params.get('project_id')
+        if project_id:
+            return Repository.objects.filter(project_id=project_id)
+        return Repository.objects.none()
+
+    def perform_create(self, serializer):
+        # Only allow project creators to create repositories
+        project = serializer.validated_data['project']
+        if project.created_by != self.request.user:
+            raise PermissionDenied("Only project creators can add repositories")
+        serializer.save()
+
+    def perform_update(self, serializer):
+        # Only allow project creators to update repositories
+        repository = self.get_object()
+        if repository.project.created_by != self.request.user:
+            raise PermissionDenied("Only project creators can update repositories")
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        # Only allow project creators to delete repositories
+        if instance.project.created_by != self.request.user:
+            raise PermissionDenied("Only project creators can delete repositories")
+        instance.delete()
 
