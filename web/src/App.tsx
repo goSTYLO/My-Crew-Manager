@@ -32,6 +32,7 @@ import WorklogsUser from './view_pages/user/worklogsUser';
 
 {/* Components */}
 import ForgotPassword from './components/forgotpassword'; 
+import LandingPage from './components/landingpage'; 
 
 
 const App: React.FC = () => {
@@ -39,9 +40,10 @@ const App: React.FC = () => {
     <Router>
       <Routes>
         {/* Root path shows Sign In */}
-        <Route path="/" element={<SignIn />} />
+        <Route path="/" element={<LandingPage />} />
         <Route path="/signin" element={<SignIn />} />
         <Route path="/sign-in" element={<SignIn />} />
+        <Route path="/landing-page" element={<LandingPage/> }/>
         
         {/* Fallback: redirect unknown paths to root */}
         <Route path="/main" element={<MainFrame />} />
@@ -50,7 +52,7 @@ const App: React.FC = () => {
         <Route path="/main-projects" element={<MainProjects />} />
         <Route path="/cprojects" element={<Projects />} />
         <Route path="/work-logs" element={<WorkLogs/>}/>
-        <Route path="/performance" element={<Performance />} />
+        <Route path="/leaderboard" element={<Performance />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/account-settings" element={<AccountSettings />} />
         <Route path="/notifications" element={<Notifications />} />
@@ -62,7 +64,7 @@ const App: React.FC = () => {
         <Route path="/chat" element={<Chat/> }/>
         <Route path="/projects" element={<CreatedProject/> }/>
 
-        {/* Forgot Password */}
+        {/* Components */}
         <Route path="/forgot-password" element={<ForgotPassword/> }/>
 
          {/* User routes */}
@@ -75,7 +77,7 @@ const App: React.FC = () => {
         <Route path="/kanban-user" element={<KanbanUser />} />
         <Route path="/worklogs-user" element={<WorklogsUser/>}/> 
         
-        <Route path="*" element={<Navigate to="/signIn" replace />} />
+        <Route path="*" element={<Navigate to="/landing-page" replace />} />
       </Routes>
     </Router>
   );

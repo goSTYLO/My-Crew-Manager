@@ -1,7 +1,4 @@
 import React, { useState } from "react";
-import Sidebar from "../../components/sidebarLayout";
-import TopNavbar from "../../components/topbarLayouot";
-import { useTheme } from "../../components/themeContext";
 import {
   Search,
   Bell,
@@ -10,6 +7,11 @@ import {
   Clock,
   TrendingUp,
   MessageSquareText,
+  Trophy,
+  Medal,
+  Award,
+  Star,
+  Target,
 } from "lucide-react";
 import {
   PieChart,
@@ -23,6 +25,9 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import Sidebar from "../../components/sidebarLayout";
+import TopNavbar from "../../components/topbarLayouot";
+import { useTheme } from "../../components/themeContext";
 
 const workLogData = [
   { name: "Product 1", value: 30, color: "#EF4444" },
@@ -41,20 +46,66 @@ const performanceData = [
   { month: "Mar 2022", achieved: 6, target: 4 },
 ];
 
+// Developer Leaderboard Data (sorted by EXP)
+const developerLeaderboard = [
+  { rank: 1, name: "Sarah Johnson", role: "Senior Developer", exp: 15420, projects: 38, efficiency: 96, avatar: "SJ" },
+  { rank: 2, name: "Michael Chen", role: "Lead Developer", exp: 14850, projects: 42, efficiency: 94, avatar: "MC" },
+  { rank: 3, name: "Emily Rodriguez", role: "Full Stack Developer", exp: 13990, projects: 35, efficiency: 92, avatar: "ER" },
+  { rank: 4, name: "David Kim", role: "Backend Developer", exp: 12750, projects: 31, efficiency: 90, avatar: "DK" },
+  { rank: 5, name: "Jessica Martinez", role: "Frontend Developer", exp: 11680, projects: 29, efficiency: 89, avatar: "JM" },
+  { rank: 6, name: "Ryan Thompson", role: "DevOps Engineer", exp: 10920, projects: 26, efficiency: 87, avatar: "RT" },
+  { rank: 7, name: "Amanda Wilson", role: "UI/UX Developer", exp: 9850, projects: 24, efficiency: 85, avatar: "AW" },
+  { rank: 8, name: "James Anderson", role: "Mobile Developer", exp: 8740, projects: 22, efficiency: 83, avatar: "JA" },
+];
+
+// Project Leaderboard Data (sorted by EXP)
+const projectLeaderboard = [
+  { rank: 1, name: "E-Commerce Platform", category: "Web Development", exp: 8950, completion: 100, team: 12, status: "Completed" },
+  { rank: 2, name: "Mobile Banking App", category: "Mobile Development", exp: 8420, completion: 100, team: 10, status: "Completed" },
+  { rank: 3, name: "AI Analytics Dashboard", category: "Data Science", exp: 7850, completion: 100, team: 8, status: "Completed" },
+  { rank: 4, name: "Healthcare Portal", category: "Web Development", exp: 7320, completion: 95, team: 9, status: "In Progress" },
+  { rank: 5, name: "Social Media Integration", category: "API Development", exp: 6890, completion: 100, team: 6, status: "Completed" },
+  { rank: 6, name: "Cloud Infrastructure", category: "DevOps", exp: 6450, completion: 88, team: 7, status: "In Progress" },
+  { rank: 7, name: "CRM System", category: "Enterprise Software", exp: 5920, completion: 100, team: 11, status: "Completed" },
+  { rank: 8, name: "IoT Dashboard", category: "IoT Development", exp: 5380, completion: 92, team: 5, status: "In Progress" },
+];
+
 const Performance = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const { theme } = useTheme();
+
+  const getRankIcon = (rank) => {
+    switch(rank) {
+      case 1:
+        return <Trophy className="w-5 h-5 text-yellow-500" />;
+      case 2:
+        return <Medal className="w-5 h-5 text-gray-400" />;
+      case 3:
+        return <Award className="w-5 h-5 text-orange-600" />;
+      default:
+        return <span className="text-sm font-bold text-gray-500">#{rank}</span>;
+    }
+  };
+
+  const getRankBadgeColor = (rank) => {
+    switch(rank) {
+      case 1:
+        return "bg-gradient-to-r from-yellow-400 to-yellow-600";
+      case 2:
+        return "bg-gradient-to-r from-gray-300 to-gray-500";
+      case 3:
+        return "bg-gradient-to-r from-orange-400 to-orange-600";
+      default:
+        return theme === "dark" ? "bg-gray-700" : "bg-gray-200";
+    }
+  };
 
   return (
     <div className={`flex min-h-screen w-full overflow-x-hidden ${theme === "dark" ? "bg-gray-900" : "bg-gray-50"}`}>
-      {/* Sidebar */}
       <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
-
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0 max-w-full">
-        <TopNavbar onMenuClick={() => setSidebarOpen(true)} />
-
+      <div className="flex-1 flex flex-col">
+      <TopNavbar onMenuClick={() => setSidebarOpen(true)} />
         {/* Main Content Area */}
         <main className="flex-1 p-4 lg:p-[100px] overflow-auto space-y-[40px]">
           {/* Performance Overview Cards */}
@@ -121,9 +172,7 @@ const Performance = () => {
                 </select>
               </div>
 
-              {/* Flex container for Pie + Legend */}
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6">
-                {/* Pie Chart */}
                 <div className="h-48 w-48 sm:h-56 sm:w-56 md:h-64 md:w-64">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
@@ -145,7 +194,6 @@ const Performance = () => {
                   </ResponsiveContainer>
                 </div>
 
-                {/* Product List */}
                 <div className="space-y-2 sm:space-y-3">
                   {workLogData.map((item, index) => (
                     <div key={index} className="flex items-center justify-between w-full sm:w-32">
@@ -218,6 +266,172 @@ const Performance = () => {
                   <div className="w-3 h-3 rounded-full bg-blue-500"></div>
                   <span className={`text-xs sm:text-sm ${theme === "dark" ? "text-gray-200" : "text-gray-600"}`}>5 Projects Target</span>
                 </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Leaderboards Section */}
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
+            {/* Developer Leaderboard */}
+            <div className={`rounded-xl shadow-sm border p-4 sm:p-6 ${theme === "dark" ? "bg-gray-800 border-gray-700 text-white" : "bg-white border-gray-200"}`}>
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                    <Trophy className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <h2 className={`text-base sm:text-lg font-bold ${theme === "dark" ? "text-white" : "text-gray-800"}`}>Developer Leaderboard</h2>
+                    <p className={`text-xs ${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}>Ranked by Experience Points</p>
+                  </div>
+                </div>
+                <select className={`text-xs border rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 ${theme === "dark" ? "bg-gray-900 border-gray-700 text-white" : "border-gray-300"}`}>
+                  <option>This Month</option>
+                  <option>Last Month</option>
+                  <option>All Time</option>
+                </select>
+              </div>
+
+              <div className="space-y-3">
+                {developerLeaderboard.map((dev) => (
+                  <div
+                    key={dev.rank}
+                    className={`flex items-center justify-between p-3 rounded-lg transition-all hover:scale-[1.02] ${
+                      dev.rank <= 3
+                        ? theme === "dark"
+                          ? "bg-gradient-to-r from-gray-700 to-gray-800 border border-gray-600"
+                          : "bg-gradient-to-r from-gray-50 to-white border border-gray-200 shadow-sm"
+                        : theme === "dark"
+                        ? "bg-gray-900 border border-gray-700"
+                        : "bg-gray-50 border border-gray-100"
+                    }`}
+                  >
+                    <div className="flex items-center space-x-3 flex-1 min-w-0">
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${getRankBadgeColor(dev.rank)}`}>
+                        {dev.rank <= 3 ? (
+                          getRankIcon(dev.rank)
+                        ) : (
+                          <span className={`text-xs font-bold ${theme === "dark" ? "text-white" : "text-gray-700"}`}>#{dev.rank}</span>
+                        )}
+                      </div>
+                      
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-sm ${
+                        theme === "dark" ? "bg-blue-900 text-blue-200" : "bg-blue-100 text-blue-700"
+                      }`}>
+                        {dev.avatar}
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <h3 className={`font-semibold text-sm truncate ${theme === "dark" ? "text-white" : "text-gray-800"}`}>
+                          {dev.name}
+                        </h3>
+                        <p className={`text-xs truncate ${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}>
+                          {dev.role}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center space-x-4 flex-shrink-0">
+                      <div className="text-right hidden sm:block">
+                        <p className={`text-xs ${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}>Projects</p>
+                        <p className={`text-sm font-semibold ${theme === "dark" ? "text-white" : "text-gray-800"}`}>{dev.projects}</p>
+                      </div>
+                      <div className="text-right hidden md:block">
+                        <p className={`text-xs ${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}>Efficiency</p>
+                        <p className={`text-sm font-semibold text-green-600`}>{dev.efficiency}%</p>
+                      </div>
+                      <div className="text-right">
+                        <p className={`text-xs ${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}>EXP</p>
+                        <p className="text-sm font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                          {dev.exp.toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Project Leaderboard */}
+            <div className={`rounded-xl shadow-sm border p-4 sm:p-6 ${theme === "dark" ? "bg-gray-800 border-gray-700 text-white" : "bg-white border-gray-200"}`}>
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg flex items-center justify-center">
+                    <Target className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <h2 className={`text-base sm:text-lg font-bold ${theme === "dark" ? "text-white" : "text-gray-800"}`}>Project Leaderboard</h2>
+                    <p className={`text-xs ${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}>Ranked by Total EXP Earned</p>
+                  </div>
+                </div>
+                <select className={`text-xs border rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-green-500 ${theme === "dark" ? "bg-gray-900 border-gray-700 text-white" : "border-gray-300"}`}>
+                  <option>All Projects</option>
+                  <option>Completed</option>
+                  <option>In Progress</option>
+                </select>
+              </div>
+
+              <div className="space-y-3">
+                {projectLeaderboard.map((project) => (
+                  <div
+                    key={project.rank}
+                    className={`flex items-center justify-between p-3 rounded-lg transition-all hover:scale-[1.02] ${
+                      project.rank <= 3
+                        ? theme === "dark"
+                          ? "bg-gradient-to-r from-gray-700 to-gray-800 border border-gray-600"
+                          : "bg-gradient-to-r from-gray-50 to-white border border-gray-200 shadow-sm"
+                        : theme === "dark"
+                        ? "bg-gray-900 border border-gray-700"
+                        : "bg-gray-50 border border-gray-100"
+                    }`}
+                  >
+                    <div className="flex items-center space-x-3 flex-1 min-w-0">
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${getRankBadgeColor(project.rank)}`}>
+                        {project.rank <= 3 ? (
+                          getRankIcon(project.rank)
+                        ) : (
+                          <span className={`text-xs font-bold ${theme === "dark" ? "text-white" : "text-gray-700"}`}>#{project.rank}</span>
+                        )}
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <h3 className={`font-semibold text-sm truncate ${theme === "dark" ? "text-white" : "text-gray-800"}`}>
+                          {project.name}
+                        </h3>
+                        <div className="flex items-center space-x-2 mt-0.5">
+                          <p className={`text-xs truncate ${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}>
+                            {project.category}
+                          </p>
+                          <span className={`text-xs px-2 py-0.5 rounded-full ${
+                            project.status === "Completed"
+                              ? "bg-green-100 text-green-700"
+                              : "bg-orange-100 text-orange-700"
+                          }`}>
+                            {project.status}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center space-x-4 flex-shrink-0">
+                      <div className="text-right hidden sm:block">
+                        <p className={`text-xs ${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}>Team</p>
+                        <p className={`text-sm font-semibold ${theme === "dark" ? "text-white" : "text-gray-800"}`}>{project.team}</p>
+                      </div>
+                      <div className="text-right hidden md:block">
+                        <p className={`text-xs ${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}>Progress</p>
+                        <p className={`text-sm font-semibold ${project.completion === 100 ? "text-green-600" : "text-orange-600"}`}>
+                          {project.completion}%
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className={`text-xs ${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}>EXP</p>
+                        <p className="text-sm font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+                          {project.exp.toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
@@ -312,69 +526,6 @@ const Performance = () => {
                   </div>
                   <div className={`w-full ${theme === "dark" ? "bg-gray-700" : "bg-gray-200"} rounded-full h-2`}>
                     <div className="bg-purple-600 h-2 rounded-full" style={{ width: '96%' }}></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Task Section */}
-          <div className="grid grid-cols-1 gap-4 sm:gap-6">
-            {/* Task 1 */}
-            <div className={`rounded-xl shadow-sm border p-4 sm:p-6 ${theme === "dark" ? "bg-gray-800 border-gray-700 text-white" : "bg-white border-gray-200"}`}>
-              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                <div className="flex-1">
-                  <h4 className={`text-xs sm:text-sm font-medium ${theme === "dark" ? "text-white" : "text-gray-800"}`}>
-                    Make an Automatic Payment System that enable the design
-                  </h4>
-                  <p className={`text-xs mt-1 ${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}>#A32235 • Opened 10 days ago by Yash Ghel</p>
-                </div>
-                <div className="flex items-center justify-between sm:justify-start flex-wrap gap-2 sm:gap-4">
-                  <span className="px-3 py-1 text-xs font-medium bg-red-100 text-red-600 rounded-lg">
-                    UI Design
-                  </span>
-                  <button className="px-4 py-1 text-xs sm:text-sm bg-green-500 text-white rounded-lg hover:bg-green-600">
-                    View
-                  </button>
-                  <div className="flex items-center space-x-2">
-                    <div className="w-8 h-8 rounded-full overflow-hidden">
-                      <img
-                        src="https://i.pravatar.cc/40?img=1"
-                        alt="user"
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <MessageSquareText className={`w-5 h-5 ${theme === "dark" ? "text-gray-400 hover:text-white" : "text-gray-500 hover:text-gray-700"}`} />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Task 2 */}
-            <div className={`rounded-xl shadow-sm border p-4 sm:p-6 ${theme === "dark" ? "bg-gray-800 border-gray-700 text-white" : "bg-white border-gray-200"}`}>
-              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                <div className="flex-1">
-                  <h4 className={`text-xs sm:text-sm font-medium ${theme === "dark" ? "text-white" : "text-gray-800"}`}>
-                    Make an Automatic Payment System that enable the design
-                  </h4>
-                  <p className={`text-xs mt-1 ${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}>#A32236 • Opened 10 days ago by Yash Ghel</p>
-                </div>
-                <div className="flex items-center justify-between sm:justify-start flex-wrap gap-2 sm:gap-4">
-                  <span className="px-3 py-1 text-xs font-medium bg-blue-100 text-blue-600 rounded-lg">
-                    Meeting
-                  </span>
-                  <button className="px-4 py-1 text-xs sm:text-sm bg-green-500 text-white rounded-lg hover:bg-green-600">
-                    View
-                  </button>
-                  <div className="flex items-center space-x-2">
-                    <div className="w-8 h-8 rounded-full overflow-hidden">
-                      <img
-                        src="https://i.pravatar.cc/40?img=2"
-                        alt="user"
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <MessageSquareText className={`w-5 h-5 ${theme === "dark" ? "text-gray-400 hover:text-white" : "text-gray-500 hover:text-gray-700"}`} />
                   </div>
                 </div>
               </div>

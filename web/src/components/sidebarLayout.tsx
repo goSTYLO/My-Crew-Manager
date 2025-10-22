@@ -3,12 +3,10 @@ import { useNavigate, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
   FolderOpen,
-  CheckSquare,
   Clock,
   TrendingUp,
   Settings,
   LogOut,
-  FolderPlus,
   MessageSquare
 } from "lucide-react";
 import { useTheme } from "./themeContext";
@@ -67,7 +65,7 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
     { name: "Team Chat", icon: MessageSquare, path: "/chat" },
     { name: "Project", icon: FolderOpen, path: "/main-projects" },
     { name: "Work Logs", icon: Clock, path: "/work-logs" },
-    { name: "Performance", icon: TrendingUp, path: "/performance" },
+    { name: "Leaderboard", icon: TrendingUp, path: "/leaderboard" },
     { name: "Settings", icon: Settings, path: "/settings" },
     { name: "Logout", icon: LogOut, action: () => setShowLogoutConfirm(true) },
   ];

@@ -1,14 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import {
-  Menu,
-  Search,
-  Bell,
-  MessageSquare,
-  ChevronDown,
-  ChevronUp,
-  User,
-  LogOut,
-} from "lucide-react";
+import {Menu,Search,Bell,MessageSquare,ChevronDown,ChevronUp,User,LogOut,Sun, Moon} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import logo from "../assets/logo.png";
 import { useTheme } from "./themeContext";
@@ -167,7 +158,7 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [showNotifications]);
 
-  const { theme } = useTheme();
+  const { theme, toggleTheme } = useTheme();
 
   const getUserInitials = (name: string) => {
     return name
@@ -445,6 +436,22 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
               </div>
             )}
           </div>
+          {/* 🌞🌜 Theme Toggle */}
+          <button
+            onClick={toggleTheme}
+            className={`p-2 rounded-full transition-all duration-200 ${
+              theme === "dark"
+                ? "bg-gray-700 hover:bg-gray-600 text-yellow-300"
+                : "bg-gray-100 hover:bg-gray-200 text-gray-700"
+            }`}
+            title={theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
+          >
+            {theme === "dark" ? (
+              <Sun className="w-5 h-5" />
+            ) : (
+              <Moon className="w-5 h-5" />
+            )}
+          </button>
         </div>
       </div>
     </header>
