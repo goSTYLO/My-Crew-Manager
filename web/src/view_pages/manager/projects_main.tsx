@@ -60,6 +60,8 @@ const ProjectTask = () => {
     const [projects, setProjects] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [projectsPerPage] = useState(9);
     const navigate = useNavigate();
     const { theme } = useTheme();
 
@@ -98,8 +100,14 @@ const ProjectTask = () => {
             }
 
             const data = await response.json();
-            setProjects(data);
-            console.log('Fetched projects:', data);
+            // Sort projects by updated_at (most recent first)
+            const sortedProjects = data.sort((a: any, b: any) => {
+                const dateA = new Date(a.updated_at || a.created_at);
+                const dateB = new Date(b.updated_at || b.created_at);
+                return dateB.getTime() - dateA.getTime();
+            });
+            setProjects(sortedProjects);
+            console.log('Fetched projects:', sortedProjects);
         } catch (error) {
             console.error('Error fetching projects:', error);
             setError('Failed to load projects. Please try again.');
@@ -112,6 +120,29 @@ const ProjectTask = () => {
     useEffect(() => {
         fetchProjects();
     }, []);
+
+    // Pagination logic
+    const totalPages = Math.ceil(projects.length / projectsPerPage);
+    const startIndex = (currentPage - 1) * projectsPerPage;
+    const endIndex = startIndex + projectsPerPage;
+    const currentProjects = projects.slice(startIndex, endIndex);
+
+    // Pagination handlers
+    const handlePageChange = (page: number) => {
+        setCurrentPage(page);
+    };
+
+    const handlePreviousPage = () => {
+        if (currentPage > 1) {
+            setCurrentPage(currentPage - 1);
+        }
+    };
+
+    const handleNextPage = () => {
+        if (currentPage < totalPages) {
+            setCurrentPage(currentPage + 1);
+        }
+    };
 
     return (
       <div className={`flex min-h-screen w-full overflow-x-hidden ${theme === "dark" ? "bg-gray-900" : "bg-gray-50"}`}>
@@ -274,7 +305,12 @@ const ProjectTask = () => {
                       <div className="flex items-center gap-4">
                         <div className={`flex items-center space-x-2 text-sm ${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}>
                           <Folder className="w-4 h-4" />
-                          <span>{projects.length} files</span>
+                          <span>{projects.length} projects</span>
+                          {projects.length > projectsPerPage && (
+                            <span className="text-xs">
+                              (Page {currentPage} of {totalPages})
+                            </span>
+                          )}
                         </div>
                         <button 
                            onClick={() => navigate("#")} 
@@ -306,7 +342,7 @@ const ProjectTask = () => {
                           </div>
                         </div>
                       ) : (
-                        projects.slice(0, 9).map((project: any) => (
+                        currentProjects.map((project: any) => (
                           <button
                             key={project.id}
                             onClick={() => navigate(`/project-details/${project.id}`)} 
@@ -324,13 +360,56 @@ const ProjectTask = () => {
                                 {project.title}
                               </div>
                               <div className={`text-xs ${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}>
-                                Created {new Date(project.created_at).toLocaleDateString()}
+                                Updated {new Date(project.updated_at || project.created_at).toLocaleDateString()}
                               </div>
                             </div>
                           </button>
                         ))
                       )}
                     </div>
+
+                    {/* Pagination Controls */}
+                    {projects.length > projectsPerPage && (
+                      <div className="flex items-center justify-center space-x-2 mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                        <button
+                          onClick={handlePreviousPage}
+                          disabled={currentPage === 1}
+                          className={`px-3 py-1 text-sm rounded-md transition-colors ${
+                            currentPage === 1
+                              ? `text-gray-400 ${theme === "dark" ? "cursor-not-allowed" : "cursor-not-allowed"}`
+                              : `text-blue-600 hover:text-blue-700 hover:bg-blue-50 ${theme === "dark" ? "hover:bg-blue-900" : ""}`
+                          }`}
+                        >
+                          Previous
+                        </button>
+                        
+                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                          <button
+                            key={page}
+                            onClick={() => handlePageChange(page)}
+                            className={`px-3 py-1 text-sm rounded-md transition-colors ${
+                              currentPage === page
+                                ? "bg-blue-600 text-white"
+                                : `text-gray-600 hover:text-gray-800 hover:bg-gray-100 ${theme === "dark" ? "text-gray-400 hover:text-gray-200 hover:bg-gray-700" : ""}`
+                            }`}
+                          >
+                            {page}
+                          </button>
+                        ))}
+                        
+                        <button
+                          onClick={handleNextPage}
+                          disabled={currentPage === totalPages}
+                          className={`px-3 py-1 text-sm rounded-md transition-colors ${
+                            currentPage === totalPages
+                              ? `text-gray-400 ${theme === "dark" ? "cursor-not-allowed" : "cursor-not-allowed"}`
+                              : `text-blue-600 hover:text-blue-700 hover:bg-blue-50 ${theme === "dark" ? "hover:bg-blue-900" : ""}`
+                          }`}
+                        >
+                          Next
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
 
