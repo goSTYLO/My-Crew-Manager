@@ -29,7 +29,9 @@ import GeneralSettings from './view_pages/manager/settings';
 import ProjectDetails from './view_pages/user/projectsDetails'; 
 import SubTask from './view_pages/user/subTaskUser';
 import WorklogsUser from './view_pages/user/worklogsUser';
-import ChatUser from './view_pages/user/chatUser'; 
+import ChatUser from './view_pages/user/chatUser';
+import UserSettings from './view_pages/user/settings_user';
+import SmartSettings from './components/smartSettings'; 
 
 const App: React.FC = () => {
   return (
@@ -48,7 +50,8 @@ const App: React.FC = () => {
         <Route path="/projects" element={<Projects />} />
         <Route path="/work-logs" element={<WorkLogs/>}/>
         <Route path="/performance" element={<Performance />} />
-        <Route path="/settings" element={<Settings />} />
+        <Route path="/settings" element={<SmartSettings />} />
+        <Route path="/manager-settings" element={<Settings />} />
         <Route path="/account-settings" element={<AccountSettings />} />
         <Route path="/notifications" element={<Notifications />} />
         <Route path="/security" element={<SecuritySettings/> }/>
@@ -69,6 +72,14 @@ const App: React.FC = () => {
         <Route path="/kanban-user" element={<KanbanUser />} />
         <Route path="/worklogs-user" element={<WorklogsUser/>}/> 
         <Route path="/chat-user" element={<ChatUser/> }/>
+        <Route path="/settings-user" element={<UserSettings />} />
+        
+        {/* User Settings Sub-pages (same components, but will show user sidebar) */}
+        <Route path="/account-settings-user" element={<AccountSettings />} />
+        <Route path="/notifications-user" element={<Notifications />} />
+        <Route path="/security-user" element={<SecuritySettings />} />
+        <Route path="/appearance-user" element={<AppearanceSettings />} />
+        <Route path="/team-user" element={<TeamSettings />} />
         
         <Route path="*" element={<Navigate to="/signIn" replace />} />
       </Routes>

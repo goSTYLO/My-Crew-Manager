@@ -218,9 +218,9 @@ const TopNavbarUser: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
 
           {/* Chat Icon */}
           <button
-            className="p-2 text-gray-500 hover:text-gray-700"
+            className={`p-2 ${theme === 'dark' ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'}`}
             title="Team Chat"
-            onClick={() => navigate("/chat")}
+            onClick={() => navigate("/chat-user")}
           >
             <MessageSquare className="w-6 h-6" />
           </button>
@@ -228,7 +228,7 @@ const TopNavbarUser: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
           {/* Notifications */}
           <div className="relative">
             <button
-              className="p-2 text-gray-500 hover:text-gray-700 relative -ml-2"
+              className={`p-2 relative -ml-2 ${theme === 'dark' ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'}`}
               title="Notifications"
               aria-label="Notifications"
               onClick={() => setShowNotifications((prev) => !prev)}
@@ -243,22 +243,22 @@ const TopNavbarUser: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
             {showNotifications && (
               <div
                 ref={dropdownRef}
-                className="absolute right-0 mt-3 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50"
+                className={`absolute right-0 mt-3 w-80 rounded-lg shadow-lg border z-50 ${theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}
               >
-                <div className="flex items-center justify-between p-4 border-b border-gray-200">
-                  <h3 className="text-sm font-semibold text-gray-700">
+                <div className={`flex items-center justify-between p-4 border-b ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'}`}>
+                  <h3 className={`text-sm font-semibold ${theme === 'dark' ? 'text-gray-200' : 'text-gray-700'}`}>
                     Notifications
                   </h3>
                   <button
-                    className="text-xs text-blue-600 hover:underline"
+                    className={`text-xs hover:underline ${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'}`}
                     onClick={markAllAsRead}
                   >
                     Mark all as read
                   </button>
                 </div>
-                <ul className="max-h-80 overflow-y-auto divide-y divide-gray-200">
+                <ul className={`max-h-80 overflow-y-auto divide-y ${theme === 'dark' ? 'divide-gray-700' : 'divide-gray-200'}`}>
                   {notifications.length === 0 ? (
-                    <li className="px-4 py-6 text-center text-gray-400 text-sm">
+                    <li className={`px-4 py-6 text-center text-sm ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`}>
                       No new notifications
                     </li>
                   ) : (
@@ -267,8 +267,8 @@ const TopNavbarUser: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
                         key={note.id}
                         className={`flex items-center px-4 py-4 text-sm transition ${
                           note.read
-                            ? "text-gray-400"
-                            : "text-gray-700 hover:bg-gray-50 cursor-pointer"
+                            ? theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
+                            : theme === 'dark' ? 'text-gray-200 hover:bg-gray-700 cursor-pointer' : 'text-gray-700 hover:bg-gray-50 cursor-pointer'
                         }`}
                       >
                         {!note.read && (
@@ -279,8 +279,8 @@ const TopNavbarUser: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
                     ))
                   )}
                 </ul>
-                <div className="p-3 border-t border-gray-200 text-center">
-                  <button className="text-blue-600 text-sm font-medium hover:underline">
+                <div className={`p-3 border-t text-center ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'}`}>
+                  <button className={`text-sm font-medium hover:underline ${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'}`}>
                     View All
                   </button>
                 </div>
@@ -291,7 +291,7 @@ const TopNavbarUser: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
           {/* User Profile */}
           <div className="relative" ref={profileDropdownRef}>
             <button
-              className="flex items-center space-x-2 px-3 py-1 border rounded-full hover:shadow-md focus:outline-none"
+              className={`flex items-center space-x-2 px-3 py-1 border rounded-full hover:shadow-md focus:outline-none ${theme === 'dark' ? 'border-gray-600 hover:border-gray-500' : 'border-gray-300 hover:border-gray-400'}`}
               onClick={() => setShowProfileDropdown((prev) => !prev)}
             >
               {/* Profile Picture */}
@@ -329,17 +329,17 @@ const TopNavbarUser: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
 
             {/* Dropdown Menu */}
               {showProfileDropdown && (
-                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50 p-2">
+                <div className={`absolute right-0 mt-2 w-48 rounded-lg shadow-lg border z-50 p-2 ${theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
                   <button
-                    className="w-full flex items-center gap-2 text-left px-4 py-2 text-sm hover:bg-gray-100"
+                    className={`w-full flex items-center gap-2 text-left px-4 py-2 text-sm ${theme === 'dark' ? 'hover:bg-gray-700 text-gray-200' : 'hover:bg-gray-100'}`}
                     onClick={() => navigate("/account-settings")}
                   >
-                    <User className="w-4 h-4 text-dark-500" />
+                    <User className={`w-4 h-4 ${theme === 'dark' ? 'text-gray-400' : 'text-dark-500'}`} />
                     Profile
                   </button>
-                  <hr />
+                  <hr className={`${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'}`} />
                   <button
-                    className="w-full flex items-center gap-2 text-left px-4 py-2 text-sm hover:bg-gray-100 text-red-500"
+                    className={`w-full flex items-center gap-2 text-left px-4 py-2 text-sm text-red-500 ${theme === 'dark' ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
                     onClick={() => setShowLogoutConfirm(true)}
                   >
                     <LogOut className="w-4 h-4 text-red-500" />

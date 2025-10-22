@@ -1,5 +1,5 @@
 import { useState } from "react";
-import Sidebar from "../../components/sidebarLayout";
+import RoleBasedSidebar from "../../components/roleBasedSidebar";
 import SettingsNavigation from "../../components/sidebarNavLayout";
 import TopNavbar from "../../components/topbarLayouot";
 import { useTheme } from "../../components/themeContext";
@@ -20,7 +20,7 @@ const AppearanceSettings = () => {
         theme === "dark" ? "bg-gray-900" : "bg-gray-50"
       }`}
     >
-      <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+      <RoleBasedSidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
       <div className="flex-1 flex flex-col min-w-0">
         <TopNavbar onMenuClick={() => setSidebarOpen(true)} />
         <main className="flex-1 p-4 lg:p-[100px] overflow-auto space-y-[40px]">

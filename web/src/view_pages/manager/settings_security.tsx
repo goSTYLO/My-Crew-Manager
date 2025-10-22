@@ -1,5 +1,5 @@
 import { useState } from "react";
-import Sidebar from "../../components/sidebarLayout";
+import RoleBasedSidebar from "../../components/roleBasedSidebar";
 import SettingsNavigation from "../../components/sidebarNavLayout";
 import TopNavbar from "../../components/topbarLayouot";
 import { useTheme } from "../../components/themeContext";
@@ -10,8 +10,8 @@ const SecuritySettings = () => {
 
   return (
     <div className={`flex min-h-screen w-screen ${theme === "dark" ? "bg-gray-900" : "bg-gray-50"}`}>
-      {/* Sidebar (reusable, same as mainFrame/settings) */}
-      <Sidebar
+      {/* Role-based Sidebar (automatically chooses manager or user sidebar) */}
+      <RoleBasedSidebar
         sidebarOpen={sidebarOpen}
         setSidebarOpen={setSidebarOpen}
       />

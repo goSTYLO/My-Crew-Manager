@@ -1,8 +1,9 @@
 // Project Invitation
-import React, { useState } from 'react';
+import { useState } from 'react';
 import Sidebar from "../../components/sidebarUser"; // <-- import Sidebar
 import TopNavbar from "../../components/topbarLayout_user";
-import { Bell, CheckCircle, XCircle, Users, FolderOpen, Calendar, User, ChevronDown } from 'lucide-react';
+import { Bell, CheckCircle, XCircle, Users, FolderOpen, Calendar } from 'lucide-react';
+import { useTheme } from "../../components/themeContext";
 
 // Types based on models.py
 interface User {
@@ -46,6 +47,7 @@ interface Notification {
 
 const App: React.FC = () => {
    const [sidebarOpen, setSidebarOpen] = useState(false);
+   const { theme } = useTheme();
    const [currentUser] = useState<User>({
       id: 1,
       name: 'Kitkat',
@@ -193,12 +195,16 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className={`min-h-screen ${theme === "dark" ? "bg-gray-900" : "bg-gray-50"}`}>
       {/* Sidebar */}
       <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
   
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
+      <header className={`border-b sticky top-0 z-50 ${
+        theme === "dark" 
+          ? "bg-gray-800 border-gray-700" 
+          : "bg-white border-gray-200"
+      }`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         </div>
       </header>
@@ -207,8 +213,12 @@ const App: React.FC = () => {
       {/* Main Content */}
       <main className="flex-1 p-4 lg:p-[100px] overflow-auto space-y-[40px]   ">
         <div className="mb-6">
-          <h2 className="text-2xl font-semibold text-gray-900 mb-2">Project Invitations</h2>
-          <p className="text-gray-600">Review and respond to project invitations</p>
+          <h2 className={`text-2xl font-semibold mb-2 ${
+            theme === "dark" ? "text-white" : "text-gray-900"
+          }`}>Project Invitations</h2>
+          <p className={`${
+            theme === "dark" ? "text-gray-400" : "text-gray-600"
+          }`}>Review and respond to project invitations</p>
         </div>
 
         <div className="space-y-4">
@@ -219,7 +229,11 @@ const App: React.FC = () => {
             return (
               <div
                 key={notif.id}
-                className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow"
+                className={`rounded-lg border p-6 hover:shadow-md transition-shadow ${
+                  theme === "dark"
+                    ? "bg-gray-800 border-gray-700"
+                    : "bg-white border-gray-200"
+                }`}
               >
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center space-x-3">
@@ -227,8 +241,12 @@ const App: React.FC = () => {
                       {invitation.invited_by.avatar || invitation.invited_by.name.substring(0, 2).toUpperCase()}
                     </div>
                     <div>
-                      <h3 className="text-lg font-semibold text-gray-900">{invitation.project.title}</h3>
-                      <p className="text-sm text-gray-600">
+                      <h3 className={`text-lg font-semibold ${
+                        theme === "dark" ? "text-white" : "text-gray-900"
+                      }`}>{invitation.project.title}</h3>
+                      <p className={`text-sm ${
+                        theme === "dark" ? "text-gray-400" : "text-gray-600"
+                      }`}>
                         Invited by <span className="font-medium">{invitation.invited_by.name}</span> •{' '}
                         {formatDate(invitation.created_at)}
                       </p>
@@ -239,15 +257,23 @@ const App: React.FC = () => {
                   )}
                 </div>
 
-                <p className="text-gray-700 mb-4">{invitation.project.summary}</p>
+                <p className={`mb-4 ${
+                  theme === "dark" ? "text-gray-300" : "text-gray-700"
+                }`}>{invitation.project.summary}</p>
 
                {invitation.message && (
-               <div className="mb-4 p-3 bg-gray-50 rounded-lg border-l-4 border-blue-500">
-                  <p className="text-sm text-gray-700 italic">"{invitation.message}"</p>
+               <div className={`mb-4 p-3 rounded-lg border-l-4 border-blue-500 ${
+                 theme === "dark" ? "bg-gray-700" : "bg-gray-50"
+               }`}>
+                  <p className={`text-sm italic ${
+                    theme === "dark" ? "text-gray-300" : "text-gray-700"
+                  }`}>"{invitation.message}"</p>
                </div>
                )}
 
-                <div className="flex items-center space-x-6 mb-4 text-sm text-gray-600">
+                <div className={`flex items-center space-x-6 mb-4 text-sm ${
+                  theme === "dark" ? "text-gray-400" : "text-gray-600"
+                }`}>
                   <div className="flex items-center space-x-2">
                     <Users className="w-4 h-4" />
                     <span>{invitation.project.member_count} team members</span>
@@ -283,8 +309,12 @@ const App: React.FC = () => {
                   <div
                      className={`px-4 py-3 rounded-lg text-center font-medium ${
                         invitation.status === 'accepted'
-                           ? 'bg-green-100 text-green-700'
-                           : 'bg-red-100 text-red-700'
+                           ? theme === "dark" 
+                             ? 'bg-green-900 text-green-300' 
+                             : 'bg-green-100 text-green-700'
+                           : theme === "dark"
+                             ? 'bg-red-900 text-red-300'
+                             : 'bg-red-100 text-red-700'
                      }`}
                   >
                      {invitation.status === 'accepted' ? (
@@ -306,10 +336,20 @@ const App: React.FC = () => {
         </div>
 
         {invitationNotifications.length === 0 && (
-          <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
-            <Bell className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No pending invitations</h3>
-            <p className="text-gray-600">You're all caught up! New project invitations will appear here.</p>
+          <div className={`rounded-lg border p-12 text-center ${
+            theme === "dark"
+              ? "bg-gray-800 border-gray-700"
+              : "bg-white border-gray-200"
+          }`}>
+            <Bell className={`w-16 h-16 mx-auto mb-4 ${
+              theme === "dark" ? "text-gray-600" : "text-gray-300"
+            }`} />
+            <h3 className={`text-lg font-medium mb-2 ${
+              theme === "dark" ? "text-white" : "text-gray-900"
+            }`}>No pending invitations</h3>
+            <p className={`${
+              theme === "dark" ? "text-gray-400" : "text-gray-600"
+            }`}>You're all caught up! New project invitations will appear here.</p>
           </div>
         )}
       </main>

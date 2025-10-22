@@ -69,7 +69,7 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
     { name: "Create Project", icon: FolderPlus, path: "/generate-project" },
     { name: "Work Logs", icon: Clock, path: "/work-logs" },
     { name: "Performance", icon: TrendingUp, path: "/performance" },
-    { name: "Settings", icon: Settings, path: "/settings" },
+    { name: "Settings", icon: Settings, path: "/manager-settings" },
     { name: "Logout", icon: LogOut, action: () => setShowLogoutConfirm(true) },
   ];
 
@@ -79,6 +79,9 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
     if (!itemPath) return false;
     if (itemPath === "/main-projects") {
       return projectPaths.includes(location.pathname);
+    }
+    if (itemPath === "/manager-settings") {
+      return location.pathname === "/manager-settings" || location.pathname.startsWith("/manager-settings/");
     }
     return location.pathname === itemPath;
   };

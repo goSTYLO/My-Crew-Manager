@@ -1,21 +1,50 @@
-import React from "react";
+
 import { useNavigate, useLocation } from "react-router-dom";
 import { Settings, User, Bell, Shield, Palette, Users } from "lucide-react";
 import { useTheme } from "./themeContext"; // Add this import
 
-export const tabs = [
-	{ id: "general", label: "General", icon: Settings, path: "/general" },
-	{ id: "account", label: "Account", icon: User, path: "/account-settings" },
-	{ id: "notifications", label: "Notifications", icon: Bell, path: "/notifications" },
-	{ id: "security", label: "Security", icon: Shield, path: "/security" },
-	{ id: "appearance", label: "Appearance", icon: Palette, path: "/appearance" },
-	{ id: "team", label: "Team", icon: Users, path: "/team" },
-];
+// Function to get role-based tabs
+const getRoleBasedTabs = () => {
+	const userRole = localStorage.getItem("userRole");
+	const normalizedRole = userRole ? userRole.trim().toLowerCase() : "";
+	
+	const isProjectManager = 
+		normalizedRole === "project manager" || 
+		normalizedRole.includes("project") && normalizedRole.includes("manager") ||
+		normalizedRole === "projectmanager" ||
+		normalizedRole === "pm";
+
+	// Return appropriate paths based on role
+	if (isProjectManager) {
+		return [
+			{ id: "general", label: "General", icon: Settings, path: "/manager-settings" },
+			{ id: "account", label: "Account", icon: User, path: "/account-settings" },
+			{ id: "notifications", label: "Notifications", icon: Bell, path: "/notifications" },
+			{ id: "security", label: "Security", icon: Shield, path: "/security" },
+			{ id: "appearance", label: "Appearance", icon: Palette, path: "/appearance" },
+			{ id: "team", label: "Team", icon: Users, path: "/team" },
+		];
+	} else {
+		return [
+			{ id: "general", label: "General", icon: Settings, path: "/settings-user" },
+			{ id: "account", label: "Account", icon: User, path: "/account-settings-user" },
+			{ id: "notifications", label: "Notifications", icon: Bell, path: "/notifications-user" },
+			{ id: "security", label: "Security", icon: Shield, path: "/security-user" },
+			{ id: "appearance", label: "Appearance", icon: Palette, path: "/appearance-user" },
+			{ id: "team", label: "Team", icon: Users, path: "/team-user" },
+		];
+	}
+};
+
+// tabs are now generated dynamically in the component
 
 const SettingsNavigation: React.FC = () => {
 	const navigate = useNavigate();
 	const location = useLocation();
 	const { theme } = useTheme(); // Use theme
+	
+	// Get role-based tabs dynamically
+	const tabs = getRoleBasedTabs();
 
 	// Check if current path matches any tab
 	const activeTab = tabs.find((tab) => tab.path === location.pathname);

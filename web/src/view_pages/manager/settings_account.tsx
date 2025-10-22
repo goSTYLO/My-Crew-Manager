@@ -1,6 +1,6 @@
 //settings_accouts.tsx
 import { useState, useEffect, useRef } from "react";
-import Sidebar from "../../components/sidebarLayout";
+import RoleBasedSidebar from "../../components/roleBasedSidebar";
 import SettingsNavigation from "../../components/sidebarNavLayout";
 import TopNavbar from "../../components/topbarLayouot";
 import { useTheme } from "../../components/themeContext";
@@ -262,8 +262,8 @@ const AccountSettings = () => {
 
     return (
         <div className={`flex min-h-screen w-full ${theme === "dark" ? "bg-gray-900" : "bg-gray-50"}`}>
-            {/* Sidebar (reusable, same as mainFrame/settings) */}
-            <Sidebar
+            {/* Role-based Sidebar (automatically chooses manager or user sidebar) */}
+            <RoleBasedSidebar
                 sidebarOpen={sidebarOpen}
                 setSidebarOpen={setSidebarOpen}
             />

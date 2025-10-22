@@ -1,9 +1,11 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import Sidebar from "../../components/sidebarUser";
 import TopNavbar from "../../components/topbarLayout_user"; // Corrected the import path
+import { useTheme } from "../../components/themeContext";
 
 const WorkLogsPage: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { theme } = useTheme();
 
   // Example work logs
   const workLogs = [
@@ -22,7 +24,7 @@ const WorkLogsPage: React.FC = () => {
   ];
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className={`flex h-screen ${theme === "dark" ? "bg-gray-900" : "bg-gray-50"}`}>
       {/* Sidebar */}
       <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
@@ -34,11 +36,19 @@ const WorkLogsPage: React.FC = () => {
         {/* Content */}
         <main className="flex flex-col lg:flex-row gap-6 p-6 overflow-y-auto mt-[5rem]">
           {/* Left side: Work logs */}
-          <div className="flex-1 bg-white rounded-xl shadow-lg p-6">
+          <div className={`flex-1 rounded-xl shadow-lg p-6 ${
+            theme === "dark" ? "bg-gray-800" : "bg-white"
+          }`}>
             {workLogs.map((log, idx) => (
-              <div key={idx} className="flex items-start py-4 border-b border-gray-200 last:border-0">
-                <span className="w-32 text-sm text-gray-500">{log.date}</span>
-                <p className="text-gray-800 font-medium">{log.text}</p>
+              <div key={idx} className={`flex items-start py-4 border-b last:border-0 ${
+                theme === "dark" ? "border-gray-700" : "border-gray-200"
+              }`}>
+                <span className={`w-32 text-sm ${
+                  theme === "dark" ? "text-gray-400" : "text-gray-500"
+                }`}>{log.date}</span>
+                <p className={`font-medium ${
+                  theme === "dark" ? "text-gray-200" : "text-gray-800"
+                }`}>{log.text}</p>
               </div>
             ))}
           </div>
@@ -46,12 +56,20 @@ const WorkLogsPage: React.FC = () => {
           {/* Right side */}
           <div className="w-80 flex flex-col gap-6">
             {/* WorkLog Stats */}
-            <div className="bg-white rounded-xl shadow-lg p-6">
+            <div className={`rounded-xl shadow-lg p-6 ${
+              theme === "dark" ? "bg-gray-800" : "bg-white"
+            }`}>
               <div className="flex items-center justify-between">
-                                <div className="text-gray-600 text-sm font-semibold">Adoddle</div>
+                                <div className={`text-sm font-semibold ${
+                                  theme === "dark" ? "text-gray-300" : "text-gray-600"
+                                }`}>Adoddle</div>
 
                                 {/* Right side: status */}
-                                <button className="px-1 py-.5 bg-transparent text-black text-sm font-medium rounded-lg hover:text-black hover:bg-gray-300 transition-colors">
+                                <button className={`px-1 py-.5 bg-transparent text-sm font-medium rounded-lg transition-colors ${
+                                  theme === "dark" 
+                                    ? "text-gray-300 hover:text-white hover:bg-gray-700" 
+                                    : "text-black hover:text-black hover:bg-gray-300"
+                                }`}>
                                 <svg
                                 xmlns="http://www.w3.org/2000/svg"
                                 width="24"
@@ -72,32 +90,52 @@ const WorkLogsPage: React.FC = () => {
                             </div>
               <div className="flex items-center justify-center">
                 {/* Placeholder circle */}
-                <div className="w-32 h-32 rounded-full border-8 border-blue-500 border-r-gray-200 flex items-center justify-center">
-                  <span className="text-center text-gray-700 font-semibold">
+                <div className={`w-32 h-32 rounded-full border-8 border-blue-500 flex items-center justify-center ${
+                  theme === "dark" ? "border-r-gray-600" : "border-r-gray-200"
+                }`}>
+                  <span className={`text-center font-semibold ${
+                    theme === "dark" ? "text-gray-200" : "text-gray-700"
+                  }`}>
                     5w: 2d
                   </span>
                 </div>
               </div>
-              <p className="text-center text-sm text-gray-500 mt-2">Statistics</p>
+              <p className={`text-center text-sm mt-2 ${
+                theme === "dark" ? "text-gray-400" : "text-gray-500"
+              }`}>Statistics</p>
             </div>
 
             {/* Notifications */}
-            <div className="bg-white rounded-xl shadow-lg p-6 flex-1">
+            <div className={`rounded-xl shadow-lg p-6 flex-1 ${
+              theme === "dark" ? "bg-gray-800" : "bg-white"
+            }`}>
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-sm font-semibold text-gray-600">Notifications</h3>
-                <button className="text-blue-600 text-xs hover:underline">View All</button>
+                <h3 className={`text-sm font-semibold ${
+                  theme === "dark" ? "text-gray-300" : "text-gray-600"
+                }`}>Notifications</h3>
+                <button className={`text-xs hover:underline ${
+                  theme === "dark" ? "text-blue-400" : "text-blue-600"
+                }`}>View All</button>
               </div>
               <ul className="space-y-4">
                 {notifications.map((n) => (
                   <li key={n.id} className="flex items-start space-x-3">
-                    <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 font-bold">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${
+                      theme === "dark" 
+                        ? "bg-gray-700 text-gray-300" 
+                        : "bg-gray-200 text-gray-600"
+                    }`}>
                       {n.name[0]}
                     </div>
                     <div>
-                      <p className="text-sm text-gray-800">
+                      <p className={`text-sm ${
+                        theme === "dark" ? "text-gray-200" : "text-gray-800"
+                      }`}>
                         <span className="font-medium">{n.name}</span> {n.action}
                       </p>
-                      <p className="text-xs text-gray-500">{n.time}</p>
+                      <p className={`text-xs ${
+                        theme === "dark" ? "text-gray-400" : "text-gray-500"
+                      }`}>{n.time}</p>
                     </div>
                   </li>
                 ))}
