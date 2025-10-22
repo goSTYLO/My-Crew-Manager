@@ -22,6 +22,15 @@ A comprehensive project management platform with AI-powered features, real-time 
 - **LLM-Powered Analysis** - Extract features, roles, goals, and timelines from project proposals
 - **Backlog Generation** - Automatically create epics, sub-epics, user stories, and tasks
 - **Smart Project Insights** - AI-driven project recommendations and analysis
+- **AI Regeneration** - Regenerate project overviews and backlogs with fresh AI insights
+- **Dynamic Loading Messages** - Engaging loading experience with rotating messages during AI operations
+
+### User Experience
+- **Custom Toast Notifications** - Professional, themed toast notifications replacing browser alerts
+- **Dark/Light Theme Support** - Comprehensive theme switching across all components
+- **Modal-Based Interactions** - Professional modal dialogs for all user interactions
+- **Real-time Feedback** - Instant visual feedback for all user actions
+- **Responsive Design** - Optimized for desktop and mobile devices
 
 ## 🏗️ Architecture
 
@@ -120,6 +129,75 @@ NotificationService.create_notification(
     actor=request.user
 )
 ```
+
+## 🎨 Custom Toast Notification System
+
+The platform includes a comprehensive custom toast notification system that provides professional, themed feedback for all user actions.
+
+### Features
+- **4 Toast Types**: Success (green), Error (red), Warning (yellow), Info (blue)
+- **Theme Support**: Automatically adapts to dark/light theme
+- **Auto-dismiss**: Toasts disappear after 5 seconds (configurable)
+- **Manual Close**: Users can close toasts early with X button
+- **Smooth Animations**: Slide-in from right with fade effects
+- **Non-blocking**: Doesn't interrupt user workflow like browser alerts
+
+### Usage in React Components
+
+```typescript
+import { useToast } from '../components/ToastContext';
+
+const MyComponent = () => {
+  const { showSuccess, showError, showWarning, showInfo } = useToast();
+
+  const handleSuccess = () => {
+    showSuccess('Operation Successful!', 'Your changes have been saved.');
+  };
+
+  const handleError = () => {
+    showError('Operation Failed', 'Please try again or contact support.');
+  };
+
+  const handleWarning = () => {
+    showWarning('Missing Information', 'Please fill out all required fields.');
+  };
+
+  const handleInfo = () => {
+    showInfo('Information', 'This feature is coming soon.');
+  };
+
+  return (
+    <div>
+      <button onClick={handleSuccess}>Success Toast</button>
+      <button onClick={handleError}>Error Toast</button>
+      <button onClick={handleWarning}>Warning Toast</button>
+      <button onClick={handleInfo}>Info Toast</button>
+    </div>
+  );
+};
+```
+
+### Toast Provider Setup
+
+```typescript
+// App.tsx
+import { ToastProvider } from './components/ToastContext';
+
+const App = () => {
+  return (
+    <ToastProvider>
+      {/* Your app components */}
+    </ToastProvider>
+  );
+};
+```
+
+### Replaced Browser Alerts
+All browser `alert()` calls have been replaced with appropriate toast notifications:
+- **Success Operations**: Project creation, invitation sending, data saving
+- **Error Handling**: API failures, validation errors, network issues
+- **Warning Messages**: Missing information, invalid input, confirmation prompts
+- **Info Messages**: Feature announcements, helpful tips, status updates
 
 ## 📋 Project Invitation System
 
@@ -256,6 +334,13 @@ My-Crew-Manager/
 ├── chat/                     # Real-time messaging
 ├── users/                    # User authentication
 ├── web/                      # React frontend
+│   ├── src/
+│   │   ├── components/       # Reusable UI components
+│   │   │   ├── Toast.tsx     # Custom toast notification component
+│   │   │   ├── ToastContext.tsx # Toast context provider
+│   │   │   ├── LoadingSpinner.tsx # Dynamic loading messages
+│   │   │   └── RegenerationSuccessModal.tsx # AI operation success modals
+│   │   └── view_pages/       # Page components
 ├── mobile/                   # Flutter mobile app
 ├── LLMs/                     # AI/LLM integration
 └── docs/                     # API documentation
@@ -310,6 +395,10 @@ DEBUG=True
 
 ### Chat Endpoints
 - **Messages**: `/api/chat/messages/`
+
+### AI Regeneration Endpoints
+- **Regenerate Project Overview**: `PUT /api/ai/projects/{id}/generate-overview/` - Regenerate project features, roles, goals, and timeline
+- **Regenerate Project Backlog**: `PUT /api/ai/projects/{id}/generate-backlog/` - Regenerate epics, sub-epics, user stories, and tasks
 
 ## 🧪 Testing
 
@@ -556,6 +645,19 @@ For support and questions:
 ### Technical Issues Resolved (Latest Session)
 During this latest development session, we identified and resolved several critical issues:
 
+#### Custom Toast Notification System Implementation:
+1. **Browser Alert Replacement**: Replaced all browser `alert()` calls with professional toast notifications
+   - **Files Updated**: `monitor_created.tsx` (28 alerts), `generateProject.tsx` (36 alerts), `projects_main.tsx` (2 alerts), `settings.tsx` (1 alert)
+   - **New Components**: Created `Toast.tsx` and `ToastContext.tsx` for global toast management
+   - **Features**: 4 toast types (success, error, warning, info), themed design, auto-dismiss, manual close, smooth animations
+   - **Integration**: Added `ToastProvider` to `App.tsx` for global toast functionality
+
+2. **Team Invitation Bug Fixes**: Fixed critical 400/403 errors in team invitation system
+   - **Root Cause**: Incorrect API endpoint and request format in `monitor_created.tsx`
+   - **Solution**: Updated `handleInvite` function to follow correct logic from `generateProject.tsx`
+   - **Changes**: Added user lookup by email, changed from `invitee_email` to `invitee` (user ID), proper error handling
+   - **Result**: Team invitations now work correctly with proper user validation and error messages
+
 #### Backlog Section Issues Fixed:
 1. **TypeError: Cannot read properties of undefined (reading 'map')**: Fixed nested data structure mismatch between API response and frontend expectations
    - **Root Cause**: API returned `epics` with `sub_epics` → `user_stories` → `tasks` structure, but frontend expected flattened arrays
@@ -582,12 +684,35 @@ During this latest development session, we identified and resolved several criti
    - **Solution**: Added proper data transformation in `fetchBacklog()` function
    - **Property Mapping**: `sub_epics` → `subEpics`, `user_stories` → `userStories`, `title` properties throughout
 
+#### AI Regeneration System Enhancements:
+1. **Timeline Storage Bug**: Fixed timeline items not being stored during project overview regeneration
+   - **Root Cause**: LLM output uses `goals` key for timeline items, but backend expected `items` key
+   - **Solution**: Updated `generate_overview` endpoint to handle both `goals` and `items` formats
+   - **Files Modified**: `ai_api/views.py` (lines 183-199)
+
+2. **LLM Output Format Handling**: Fixed `AttributeError` when LLM returns features/roles/goals as strings instead of objects
+   - **Root Cause**: Backend expected objects with `.get('title')` but LLM sometimes returns simple strings
+   - **Solution**: Added `isinstance(item, str)` checks to handle both string and object formats
+   - **Implementation**: Proper string/object handling for features, roles, goals, and timeline items
+
+3. **Enhanced Loading Experience**: Implemented dynamic loading messages for AI operations
+   - **New Component**: `LoadingSpinner.tsx` with rotating messages like "AI is thinking...", "Analyzing your proposal..."
+   - **Integration**: Added to `generateProject.tsx` and `monitor_created.tsx` for AI operations
+   - **UX Improvement**: Full-screen overlay during AI operations to prevent user interaction
+
+4. **Regeneration Success Modals**: Added professional success modals for AI regeneration operations
+   - **New Component**: `RegenerationSuccessModal.tsx` with type-specific styling (blue for overview, green for backlog)
+   - **Features**: Contextual success messages, themed design, proper visual feedback
+   - **Replacement**: Replaced `alert()` calls with professional modal dialogs
+
 #### Code Quality Improvements:
 - **TypeScript Safety**: Added proper type annotations and optional chaining throughout
-- **Error Handling**: Comprehensive error handling with user feedback
+- **Error Handling**: Comprehensive error handling with user feedback via toast notifications
 - **State Management**: Proper React state management for nested data structures
 - **UI Consistency**: All backlog functionality now matches project overview patterns
 - **Performance**: Parallel API calls for batch operations using `Promise.all()`
+- **User Experience**: Professional toast notifications instead of jarring browser alerts
+- **Theme Integration**: All new components support dark/light theme switching
 
 ### Technical Issues Resolved (Previous Sessions)
 During previous development sessions, we identified and resolved multiple critical issues:
