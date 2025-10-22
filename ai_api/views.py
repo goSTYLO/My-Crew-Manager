@@ -767,8 +767,7 @@ class ProjectInvitationViewSet(ModelViewSet):
         """Get all invitations for the current user"""
         try:
             invitations = ProjectInvitation.objects.filter(
-                invitee=request.user,
-                status='pending'
+                invitee=request.user
             ).select_related('project', 'invited_by').order_by('-created_at')
             
             serializer = self.get_serializer(invitations, many=True)

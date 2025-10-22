@@ -1,9 +1,59 @@
 // Project Invitation
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Sidebar from "../../components/sidebarUser"; // <-- import Sidebar
 import TopNavbar from "../../components/topbarLayout_user";
 import { Bell, CheckCircle, XCircle, Users, FolderOpen, Calendar } from 'lucide-react';
 import { useTheme } from "../../components/themeContext";
+
+// API functions
+const API_BASE_URL = 'http://localhost:8000/api';
+
+const getAuthToken = () => {
+  return localStorage.getItem('token') || sessionStorage.getItem('token');
+};
+
+const apiHeaders = () => {
+  const token = getAuthToken();
+  if (!token) {
+    throw new Error('No authentication token found. Please log in again.');
+  }
+  return {
+    'Content-Type': 'application/json',
+    'Authorization': `Token ${token}`
+  };
+};
+
+const invitationAPI = {
+  getMyInvitations: async () => {
+    const response = await fetch(`${API_BASE_URL}/ai/invitations/my-invitations/`, {
+      headers: apiHeaders()
+    });
+    if (!response.ok) {
+      throw new Error(`Failed to fetch invitations: ${response.statusText}`);
+    }
+    return response.json();
+  },
+
+  acceptInvitation: async (invitationId: number) => {
+    const response = await fetch(`${API_BASE_URL}/ai/invitations/${invitationId}/accept/`, {
+      method: 'POST',
+      headers: apiHeaders()
+    });
+    if (!response.ok) {
+      throw new Error(`Failed to accept invitation: ${response.statusText}`);
+    }
+  },
+
+  declineInvitation: async (invitationId: number) => {
+    const response = await fetch(`${API_BASE_URL}/ai/invitations/${invitationId}/decline/`, {
+      method: 'POST',
+      headers: apiHeaders()
+    });
+    if (!response.ok) {
+      throw new Error(`Failed to decline invitation: ${response.statusText}`);
+    }
+  }
+};
 
 // Types based on models.py
 interface User {
@@ -48,6 +98,44 @@ interface Notification {
 const App: React.FC = () => {
    const [sidebarOpen, setSidebarOpen] = useState(false);
    const { theme } = useTheme();
+   const [loading, setLoading] = useState(true);
+   const [error, setError] = useState<string | null>(null);
+   const [invitations, setInvitations] = useState<ProjectInvitation[]>([]);
+
+   // Load invitations from Django API
+   useEffect(() => {
+      const loadInvitations = async () => {
+         setLoading(true);
+         setError(null);
+         
+         try {
+            const response = await invitationAPI.getMyInvitations();
+            setInvitations(response.invitations || []);
+            console.log('Loaded invitations:', response.invitations);
+         } catch (err) {
+            console.error('Error loading invitations:', err);
+            const errorMessage = err instanceof Error ? err.message : 'Failed to load invitations';
+            setError(errorMessage);
+         } finally {
+            setLoading(false);
+         }
+      };
+      
+      loadInvitations();
+   }, []);
+
+   // Convert API invitations to notification format for display
+   const notifications: Notification[] = invitations.map((invitation, index) => ({
+      id: index + 1,
+      notification_type: 'project_invitation',
+      title: `Project Invitation: ${invitation.project.title}`,
+      message: `You have been invited to join "${invitation.project.title}"`,
+      is_read: invitation.status !== 'pending',
+      created_at: invitation.created_at,
+      actor: invitation.invited_by,
+      related_invitation: invitation
+   }));
+
    const [currentUser] = useState<User>({
       id: 1,
       name: 'Kitkat',
@@ -55,125 +143,36 @@ const App: React.FC = () => {
       avatar: 'KK'
    });
 
-   const [notifications, setNotifications] = useState<Notification[]>([
-      {
-         id: 1,
-         notification_type: 'project_invitation',
-         title: 'New Project Invitation',
-         message: 'You have been invited to join "E-Commerce Platform Redesign"',
-         is_read: false,
-         created_at: '2025-10-20T10:30:00Z',
-         actor: {
-         id: 2,
-         name: 'Sarah Johnson',
-         email: 'sarah@example.com',
-         avatar: 'SJ'
-         },
-         related_invitation: {
-         id: 1,
-         project: {
-            id: 1,
-            title: 'E-Commerce Platform Redesign',
-            summary: 'Complete redesign of our e-commerce platform with modern UI/UX principles and improved performance.',
-            created_by: {
-               id: 2,
-               name: 'Sarah Johnson',
-               email: 'sarah@example.com'
-            },
-            created_at: '2025-10-15T08:00:00Z',
-            member_count: 5,
-            task_count: 24
-         },
-         invitee: currentUser,
-         invited_by: {
-            id: 2,
-            name: 'Sarah Johnson',
-            email: 'sarah@example.com',
-            avatar: 'SJ'
-         },
-         status: 'pending',
-         message: 'We would love to have you join our team! Your expertise in frontend development would be invaluable.',
-         created_at: '2025-10-20T10:30:00Z',
-         updated_at: '2025-10-20T10:30:00Z'
-         }
-      },
-      {
-         id: 2,
-         notification_type: 'project_invitation',
-         title: 'New Project Invitation',
-         message: 'You have been invited to join "Mobile App Development"',
-         is_read: false,
-         created_at: '2025-10-19T14:20:00Z',
-         actor: {
-         id: 3,
-         name: 'Michael Chen',
-         email: 'michael@example.com',
-         avatar: 'MC'
-         },
-         related_invitation: {
-         id: 2,
-         project: {
-            id: 2,
-            title: 'Mobile App Development',
-            summary: 'Building a cross-platform mobile application for our startup. React Native expertise needed.',
-            created_by: {
-               id: 3,
-               name: 'Michael Chen',
-               email: 'michael@example.com'
-            },
-            created_at: '2025-10-10T09:00:00Z',
-            member_count: 3,
-            task_count: 18
-         },
-         invitee: currentUser,
-         invited_by: {
-            id: 3,
-            name: 'Michael Chen',
-            email: 'michael@example.com',
-            avatar: 'MC'
-         },
-         status: 'pending',
-         message: 'Join us in building something amazing! Looking forward to collaborating with you.',
-         created_at: '2025-10-19T14:20:00Z',
-         updated_at: '2025-10-19T14:20:00Z'
-         }
-      },
-      {
-         id: 3,
-         notification_type: 'task_assigned',
-         title: 'New Task Assigned',
-         message: 'You have been assigned to "Implement user authentication"',
-         is_read: true,
-         created_at: '2025-10-18T11:15:00Z',
-         actor: {
-         id: 4,
-         name: 'Emma Davis',
-         email: 'emma@example.com',
-         avatar: 'ED'
-         }
-      }
-   ]);
-
    const [showNotifications, setShowNotifications] = useState(false);
    const [activeTab, setActiveTab] = useState<'all' | 'invitations'>('invitations');
 
-   const handleInvitationResponse = (notificationId: number, invitationId: number, response: 'accepted' | 'declined') => {
-      setNotifications(prev =>
-         prev.map(notif => {
-         if (notif.id === notificationId && notif.related_invitation) {
-            return {
-               ...notif,
-               is_read: true,
-               related_invitation: {
-               ...notif.related_invitation,
-               status: response,
-               updated_at: new Date().toISOString()
-               }
-            };
+   const handleInvitationResponse = async (notificationId: number, invitationId: number, response: 'accepted' | 'declined') => {
+      try {
+         // Call the API
+         if (response === 'accepted') {
+            await invitationAPI.acceptInvitation(invitationId);
+         } else {
+            await invitationAPI.declineInvitation(invitationId);
          }
-         return notif;
-         })
-      );
+         
+         // Update local state
+         setInvitations(prev =>
+            prev.map(inv => {
+               if (inv.id === invitationId) {
+                  return {
+                     ...inv,
+                     status: response,
+                     updated_at: new Date().toISOString()
+                  };
+               }
+               return inv;
+            })
+         );
+         
+      } catch (err) {
+         console.error('Error responding to invitation:', err);
+         setError(err instanceof Error ? err.message : 'Failed to respond to invitation');
+      }
    };
 
   const unreadCount = notifications.filter(n => !n.is_read).length;
@@ -221,7 +220,52 @@ const App: React.FC = () => {
           }`}>Review and respond to project invitations</p>
         </div>
 
-        <div className="space-y-4">
+        {/* Loading State */}
+        {loading && (
+          <div className={`rounded-lg border p-12 text-center ${
+            theme === "dark"
+              ? "bg-gray-800 border-gray-700"
+              : "bg-white border-gray-200"
+          }`}>
+            <div className="w-8 h-8 mx-auto mb-4 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+            <h3 className={`text-lg font-medium mb-2 ${
+              theme === "dark" ? "text-white" : "text-gray-900"
+            }`}>Loading invitations...</h3>
+            <p className={`${
+              theme === "dark" ? "text-gray-400" : "text-gray-600"
+            }`}>Fetching your project invitations from the server.</p>
+          </div>
+        )}
+
+        {/* Error State */}
+        {error && !loading && (
+          <div className={`rounded-lg border p-6 ${
+            theme === "dark"
+              ? "bg-red-900 border-red-700"
+              : "bg-red-50 border-red-200"
+          }`}>
+            <h3 className={`text-lg font-medium mb-2 ${
+              theme === "dark" ? "text-red-200" : "text-red-800"
+            }`}>Error Loading Invitations</h3>
+            <p className={`mb-3 ${
+              theme === "dark" ? "text-red-300" : "text-red-700"
+            }`}>{error}</p>
+            <button 
+              onClick={() => window.location.reload()} 
+              className={`px-4 py-2 rounded-lg text-sm font-medium ${
+                theme === "dark" 
+                  ? "bg-red-800 hover:bg-red-700 text-red-200" 
+                  : "bg-red-100 hover:bg-red-200 text-red-800"
+              }`}
+            >
+              Retry
+            </button>
+          </div>
+        )}
+
+        {/* Content */}
+        {!loading && !error && (
+          <div className="space-y-4">
           {invitationNotifications.map(notif => {
             if (!notif.related_invitation) return null;
             const invitation = notif.related_invitation;
@@ -333,23 +377,24 @@ const App: React.FC = () => {
               </div>
             );
          })}
-        </div>
 
-        {invitationNotifications.length === 0 && (
-          <div className={`rounded-lg border p-12 text-center ${
-            theme === "dark"
-              ? "bg-gray-800 border-gray-700"
-              : "bg-white border-gray-200"
-          }`}>
-            <Bell className={`w-16 h-16 mx-auto mb-4 ${
-              theme === "dark" ? "text-gray-600" : "text-gray-300"
-            }`} />
-            <h3 className={`text-lg font-medium mb-2 ${
-              theme === "dark" ? "text-white" : "text-gray-900"
-            }`}>No pending invitations</h3>
-            <p className={`${
-              theme === "dark" ? "text-gray-400" : "text-gray-600"
-            }`}>You're all caught up! New project invitations will appear here.</p>
+            {invitationNotifications.length === 0 && (
+              <div className={`rounded-lg border p-12 text-center ${
+                theme === "dark"
+                  ? "bg-gray-800 border-gray-700"
+                  : "bg-white border-gray-200"
+              }`}>
+                <Bell className={`w-16 h-16 mx-auto mb-4 ${
+                  theme === "dark" ? "text-gray-600" : "text-gray-300"
+                }`} />
+                <h3 className={`text-lg font-medium mb-2 ${
+                  theme === "dark" ? "text-white" : "text-gray-900"
+                }`}>No pending invitations</h3>
+                <p className={`${
+                  theme === "dark" ? "text-gray-400" : "text-gray-600"
+                }`}>You're all caught up! New project invitations will appear here.</p>
+              </div>
+            )}
           </div>
         )}
       </main>
