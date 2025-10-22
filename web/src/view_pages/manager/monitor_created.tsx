@@ -5,6 +5,7 @@ import Sidebar from "../../components/sidebarLayout";
 import { useTheme } from "../../components/themeContext";
 import { useParams, useNavigate } from 'react-router-dom';
 import LoadingSpinner from '../../components/LoadingSpinner';
+import RegenerationSuccessModal from '../../components/RegenerationSuccessModal';
 
 export default function ProjectDetailsUI() {
   const { theme } = useTheme();
@@ -52,6 +53,8 @@ export default function ProjectDetailsUI() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isAiOperation, setIsAiOperation] = useState(false);
+  const [showRegenerationModal, setShowRegenerationModal] = useState(false);
+  const [regenerationType, setRegenerationType] = useState<'overview' | 'backlog'>('overview');
   
   const { id: projectId } = useParams();
   const navigate = useNavigate();
@@ -100,7 +103,10 @@ export default function ProjectDetailsUI() {
       
       // Refresh all data
       await fetchProjectData();
-      alert('Project overview regenerated successfully!');
+      
+      // Show success modal
+      setRegenerationType('overview');
+      setShowRegenerationModal(true);
     } catch (error) {
       console.error('❌ Error regenerating overview:', error);
       handleApiError(error, 'regenerate overview');
@@ -129,7 +135,10 @@ export default function ProjectDetailsUI() {
       
       // Refresh backlog data
       await fetchBacklog();
-      alert('Backlog regenerated successfully!');
+      
+      // Show success modal
+      setRegenerationType('backlog');
+      setShowRegenerationModal(true);
     } catch (error) {
       console.error('❌ Error regenerating backlog:', error);
       handleApiError(error, 'regenerate backlog');
@@ -2822,6 +2831,18 @@ export default function ProjectDetailsUI() {
           </div>
         </div>
       )}
+
+      {/* Regeneration Success Modal */}
+      <RegenerationSuccessModal
+        isOpen={showRegenerationModal}
+        onClose={() => setShowRegenerationModal(false)}
+        title={regenerationType === 'overview' ? 'Project Overview Regenerated!' : 'Backlog Regenerated!'}
+        message={regenerationType === 'overview' 
+          ? 'Your project overview has been successfully regenerated with fresh AI insights. All features, roles, goals, and timeline have been updated.'
+          : 'Your project backlog has been successfully regenerated with fresh AI insights. All epics, sub-epics, user stories, and tasks have been updated.'
+        }
+        type={regenerationType}
+      />
     </div>
   );
 }

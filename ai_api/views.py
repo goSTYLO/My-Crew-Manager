@@ -215,10 +215,16 @@ class ProjectViewSet(ModelViewSet):
                 project=project,
                 week_number=week_data.get('week_number', 1)
             )
-            for item in week_data.get('items', []):
+            # Handle both 'goals' (from LLM) and 'items' (from frontend) formats
+            timeline_items = week_data.get('goals', []) or week_data.get('items', [])
+            for item in timeline_items:
+                if isinstance(item, str):
+                    item_title = item
+                else:
+                    item_title = item.get('title', '')
                 TimelineItem.objects.create(
                     week=week,
-                    title=item.get('title', '')[:512]
+                    title=item_title[:512]
                 )
 
         return Response({
