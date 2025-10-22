@@ -26,12 +26,10 @@ const getRoleBasedTabs = () => {
 		];
 	} else {
 		return [
-			{ id: "general", label: "General", icon: Settings, path: "/settings-user" },
 			{ id: "account", label: "Account", icon: User, path: "/account-settings-user" },
 			{ id: "notifications", label: "Notifications", icon: Bell, path: "/notifications-user" },
 			{ id: "security", label: "Security", icon: Shield, path: "/security-user" },
 			{ id: "appearance", label: "Appearance", icon: Palette, path: "/appearance-user" },
-			{ id: "team", label: "Team", icon: Users, path: "/team-user" },
 		];
 	}
 };

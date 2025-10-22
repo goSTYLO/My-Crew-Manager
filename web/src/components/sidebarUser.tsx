@@ -65,16 +65,15 @@ const SidebarUser: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) =>
     { name: "Dashboard", icon: LayoutDashboard, path: "/user" },
     { name: "Team Chat", icon: MessageSquare, path: "/chat-user" },
     { name: "Project", icon: FolderOpen, path: "/projects-user" },
-    { name: "Project Invitation", icon: FolderOpen, path: "/project-invitation" },
     { name: "Task", icon: CheckSquare, path: "/kanban-user" },
     { name: "Work Logs", icon: Clock, path: "/worklogs-user" },
     { name: "Performance", icon: TrendingUp, path: "/performance-user" },
-    { name: "Settings", icon: Settings, path: "/settings-user" },
+    { name: "Settings", icon: Settings, path: "/account-settings-user" },
     { name: "Logout", icon: LogOut, action: () => setShowLogoutConfirm(true) },
   ];
 
   // ✅ Define aliases for Project (user routes)
-  const projectPaths = ["/projects-user", "/project-details"];
+  const projectPaths = ["/projects-user", "/project-details", "/project-invitation"];
 
   // ✅ Improved active check
   const checkIsActive = (itemPath: string | undefined) => {
@@ -87,13 +86,10 @@ const SidebarUser: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) =>
 
     // Highlight "Settings" for user settings pages
     if (itemPath === "/settings-user") {
-      return location.pathname === "/settings-user" || 
-             location.pathname.startsWith("/settings-user/") ||
-             location.pathname === "/account-settings-user" ||
-             location.pathname === "/notifications-user" ||
-             location.pathname === "/security-user" ||
-             location.pathname === "/appearance-user" ||
-             location.pathname === "/team-user";
+      return  location.pathname.startsWith("/account-settings-user/") ||
+              location.pathname === "/notifications-user" ||
+              location.pathname === "/security-user" ||
+              location.pathname === "/appearance-user";
     }
 
     // Exact match for other items

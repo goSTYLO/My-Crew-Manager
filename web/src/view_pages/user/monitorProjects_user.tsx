@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Sidebar from "../../components/sidebarUser";
 import TopNavbar from "../../components/topbarLayout_user";
-import { Search } from "lucide-react";
+import { Search, Mail } from "lucide-react";
 import { useTheme } from "../../components/themeContext";
 
 // ✅ Member & Project Types
@@ -156,6 +156,7 @@ const ProjectCard = ({ project, theme }: { project: Project; theme: string }) =>
 const Projects = () => {
   const { theme } = useTheme();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const navigate = useNavigate();
 
   return (
     <div className={`flex h-screen ${theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'}`}>
@@ -164,16 +165,33 @@ const Projects = () => {
         <TopNavbar onMenuClick={() => setSidebarOpen(true)} />
 
         <main className="flex-1 p-4 lg:p-[100px] overflow-auto space-y-[40px]">
-          {/* Header with search */}
+          {/* Header with search and invitation button */}
           <div className="flex items-center justify-between mb-6">
             <h2 className={`text-2xl font-semibold ${theme === 'dark' ? 'text-gray-100' : 'text-gray-800'}`}>Projects</h2>
-            <div className="relative w-[400px]">
-              <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-400'}`} />
-              <input
-                type="text"
-                placeholder="Search for anything..."
-                className={`pl-10 pr-4 py-2 w-[400px] border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${theme === 'dark' ? 'border-gray-600 bg-gray-800 text-gray-200 placeholder-gray-400' : 'border-gray-300 bg-white text-gray-800'}`}
-              />
+            
+            <div className="flex items-center gap-4">
+              {/* Search Input */}
+              <div className="relative w-[400px]">
+                <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-400'}`} />
+                <input
+                  type="text"
+                  placeholder="Search for anything..."
+                  className={`pl-10 pr-4 py-2 w-full border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${theme === 'dark' ? 'border-gray-600 bg-gray-800 text-gray-200 placeholder-gray-400' : 'border-gray-300 bg-white text-gray-800'}`}
+                />
+              </div>
+
+              {/* Project Invitation Button */}
+              <button
+                onClick={() => navigate('/project-invitation')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+                  theme === 'dark'
+                    ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                    : 'bg-blue-500 hover:bg-blue-600 text-white'
+                }`}
+              >
+                <Mail className="w-5 h-5" />
+                <span>Project Invitations</span>
+              </button>
             </div>
           </div>
 

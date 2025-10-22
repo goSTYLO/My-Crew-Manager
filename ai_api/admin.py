@@ -1,3 +1,4 @@
+# admin.py
 from django.contrib import admin
 from .models import Project, Proposal, ProjectFeature, ProjectGoal, ProjectRole, TimelineWeek, TimelineItem, Epic, SubEpic, UserStory, StoryTask, ProjectMember, ProjectInvitation, Notification
 
