@@ -1433,15 +1433,15 @@ export default function ProjectDetailsUI() {
 
                     {/* Top Features */}
                     <div>
-                      <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                        <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center mr-3">
-                          <Target className="w-4 h-4 text-green-600" />
+                      <h3 className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'} mb-4 flex items-center`}>
+                        <div className={`w-8 h-8 ${theme === 'dark' ? 'bg-green-900' : 'bg-green-100'} rounded-lg flex items-center justify-center mr-3`}>
+                          <Target className={`w-4 h-4 ${theme === 'dark' ? 'text-green-300' : 'text-green-600'}`} />
                         </div>
                         Top Features
                       </h3>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         {projectData.features.map((feature, idx) => (
-                          <div key={feature.id || idx} className="flex items-center justify-between p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-100 hover:shadow-md transition-shadow">
+                          <div key={feature.id || idx} className={`flex items-center justify-between p-4 bg-gradient-to-r ${theme === 'dark' ? 'from-green-900 to-emerald-900 border-green-800' : 'from-green-50 to-emerald-50 border-green-100'} rounded-lg border hover:shadow-md transition-shadow`}>
                             {isEditingOverview ? (
                               <input
                                 type="text"
@@ -1451,15 +1451,15 @@ export default function ProjectDetailsUI() {
                                   newFeatures[idx] = { ...newFeatures[idx], title: e.target.value };
                                   setProjectData({ ...projectData, features: newFeatures });
                                 }}
-                                className="text-gray-700 font-medium bg-transparent border-b border-green-300 focus:outline-none focus:border-green-500 flex-1"
+                                className={`${theme === 'dark' ? 'text-gray-200 border-green-400' : 'text-gray-700 border-green-300'} font-medium bg-transparent border-b focus:outline-none focus:border-green-500 flex-1`}
                               />
                             ) : (
-                              <span className="text-gray-700 font-medium">{feature.title}</span>
+                              <span className={`${theme === 'dark' ? 'text-gray-200' : 'text-gray-700'} font-medium`}>{feature.title}</span>
                             )}
                             {isEditingOverview && (
                               <button 
                                 onClick={() => handleDeleteClick('feature', feature.id, feature.title)}
-                                className="text-red-500 hover:text-red-700 transition-colors p-1 hover:bg-red-50 rounded ml-2"
+                                className="text-red-500 hover:text-red-700 transition-colors p-1 hover:bg-red-50 dark:hover:bg-red-900 rounded ml-2"
                               >
                                 <Trash2 className="w-4 h-4" />
                               </button>
@@ -1467,7 +1467,7 @@ export default function ProjectDetailsUI() {
                           </div>
                         ))}
                         {isEditingOverview && (
-                          <button onClick={() => setShowAddFeatureModal(true)} className="p-4 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-green-500 hover:text-green-500 hover:bg-green-50 transition-all">
+                          <button onClick={() => setShowAddFeatureModal(true)} className={`p-4 border-2 border-dashed ${theme === 'dark' ? 'border-gray-600 text-gray-400 hover:border-green-500 hover:text-green-400 hover:bg-green-900' : 'border-gray-300 text-gray-500 hover:border-green-500 hover:text-green-500 hover:bg-green-50'} rounded-lg transition-all`}>
                             <Plus className="w-5 h-5 mx-auto" />
                           </button>
                         )}
@@ -1476,15 +1476,15 @@ export default function ProjectDetailsUI() {
 
                     {/* Project Goals */}
                     <div>
-                      <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                        <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center mr-3">
-                          <CheckCircle className="w-4 h-4 text-orange-600" />
+                      <h3 className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'} mb-4 flex items-center`}>
+                        <div className={`w-8 h-8 ${theme === 'dark' ? 'bg-orange-900' : 'bg-orange-100'} rounded-lg flex items-center justify-center mr-3`}>
+                          <CheckCircle className={`w-4 h-4 ${theme === 'dark' ? 'text-orange-300' : 'text-orange-600'}`} />
                         </div>
                         Project Goals
                       </h3>
                       <div className="space-y-3">
                         {projectData.goals.map((goal, idx) => (
-                          <div key={goal.id || idx} className="flex items-center justify-between p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border border-purple-100 hover:shadow-md transition-shadow">
+                          <div key={goal.id || idx} className={`flex items-center justify-between p-4 bg-gradient-to-r ${theme === 'dark' ? 'from-purple-900 to-pink-900 border-purple-800' : 'from-purple-50 to-pink-50 border-purple-100'} rounded-lg border hover:shadow-md transition-shadow`}>
                             <div className="flex items-center flex-1">
                               <div className="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center text-white font-bold text-sm mr-3">
                                 {idx + 1}
@@ -1498,16 +1498,16 @@ export default function ProjectDetailsUI() {
                                     newGoals[idx] = { ...newGoals[idx], title: e.target.value };
                                     setProjectData({ ...projectData, goals: newGoals });
                                   }}
-                                  className="text-gray-700 font-medium bg-transparent border-b border-purple-300 focus:outline-none focus:border-purple-500 flex-1"
+                                  className={`${theme === 'dark' ? 'text-gray-200 border-purple-400' : 'text-gray-700 border-purple-300'} font-medium bg-transparent border-b focus:outline-none focus:border-purple-500 flex-1`}
                                 />
                               ) : (
-                                <span className="text-gray-700 font-medium">{goal.title}</span>
+                                <span className={`${theme === 'dark' ? 'text-gray-200' : 'text-gray-700'} font-medium`}>{goal.title}</span>
                               )}
                             </div>
                             {isEditingOverview && (
                               <button 
                                 onClick={() => handleDeleteClick('goal', goal.id, goal.title)}
-                                className="text-red-500 hover:text-red-700 transition-colors p-1 hover:bg-red-50 rounded ml-2"
+                                className="text-red-500 hover:text-red-700 transition-colors p-1 hover:bg-red-50 dark:hover:bg-red-900 rounded ml-2"
                               >
                                 <Trash2 className="w-4 h-4" />
                               </button>
@@ -1515,7 +1515,7 @@ export default function ProjectDetailsUI() {
                           </div>
                         ))}
                         {isEditingOverview && (
-                          <button onClick={() => setShowAddGoalModal(true)} className="w-full p-4 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-purple-500 hover:text-purple-500 hover:bg-purple-50 transition-all">
+                          <button onClick={() => setShowAddGoalModal(true)} className={`w-full p-4 border-2 border-dashed ${theme === 'dark' ? 'border-gray-600 text-gray-400 hover:border-purple-500 hover:text-purple-400 hover:bg-purple-900' : 'border-gray-300 text-gray-500 hover:border-purple-500 hover:text-purple-500 hover:bg-purple-50'} rounded-lg transition-all`}>
                             <Plus className="w-5 h-5 mx-auto" />
                           </button>
                         )}
@@ -1524,16 +1524,16 @@ export default function ProjectDetailsUI() {
 
                     {/* Project Timeline */}
                     <div>
-                      <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                        <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
-                          <Clock className="w-4 h-4 text-blue-600" />
+                      <h3 className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'} mb-4 flex items-center`}>
+                        <div className={`w-8 h-8 ${theme === 'dark' ? 'bg-blue-900' : 'bg-blue-100'} rounded-lg flex items-center justify-center mr-3`}>
+                          <Clock className={`w-4 h-4 ${theme === 'dark' ? 'text-blue-300' : 'text-blue-600'}`} />
                         </div>
                         Project Timeline
                       </h3>
                       <div className="space-y-4">
                         {projectData.timeline?.map((week, idx) => (
-                          <div key={idx} className="border border-gray-200 rounded-xl p-5 bg-gradient-to-br from-gray-50 to-white hover:shadow-md transition-shadow">
-                            <h4 className="font-semibold text-gray-900 mb-3 flex items-center justify-between">
+                          <div key={idx} className={`border ${theme === 'dark' ? 'border-gray-700 bg-gradient-to-br from-gray-800 to-gray-900' : 'border-gray-200 bg-gradient-to-br from-gray-50 to-white'} rounded-xl p-5 hover:shadow-md transition-shadow`}>
+                            <h4 className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'} mb-3 flex items-center justify-between`}>
                               <div className="flex items-center">
                               <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-white text-xs font-bold mr-2">
                                 {idx + 1}
@@ -1568,15 +1568,15 @@ export default function ProjectDetailsUI() {
                                         });
                                         setProjectData({ ...projectData, timeline: updatedTimeline });
                                       }}
-                                      className="text-gray-700 bg-transparent border-b border-blue-300 focus:outline-none focus:border-blue-500 flex-1"
+                                      className={`${theme === 'dark' ? 'text-gray-200 border-blue-400' : 'text-gray-700 border-blue-300'} bg-transparent border-b focus:outline-none focus:border-blue-500 flex-1`}
                                     />
                                   ) : (
-                                    <span className="text-gray-700">{task.title}</span>
+                                    <span className={`${theme === 'dark' ? 'text-gray-200' : 'text-gray-700'}`}>{task.title}</span>
                                   )}
                                   {isEditingOverview && (
                                     <button 
                                       onClick={() => handleDeleteClick('timeline', task.id, task.title)}
-                                      className="text-red-500 hover:text-red-700 transition-colors p-1 hover:bg-red-50 rounded ml-2"
+                                      className="text-red-500 hover:text-red-700 transition-colors p-1 hover:bg-red-50 dark:hover:bg-red-900 rounded ml-2"
                                     >
                                       <Trash2 className="w-4 h-4" />
                                     </button>
@@ -1584,7 +1584,7 @@ export default function ProjectDetailsUI() {
                                 </div>
                               ))}
                               {isEditingOverview && (
-                                <button onClick={() => openAddTimelineTaskModal(idx)} className="w-full p-3 border border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-blue-500 hover:text-blue-500 hover:bg-blue-50 text-sm transition-all">
+                                <button onClick={() => openAddTimelineTaskModal(idx)} className={`w-full p-3 border border-dashed ${theme === 'dark' ? 'border-gray-600 text-gray-400 hover:border-blue-500 hover:text-blue-400 hover:bg-blue-900' : 'border-gray-300 text-gray-500 hover:border-blue-500 hover:text-blue-500 hover:bg-blue-50'} rounded-lg text-sm transition-all`}>
                                   + Add Task
                                 </button>
                               )}
@@ -1592,7 +1592,7 @@ export default function ProjectDetailsUI() {
                           </div>
                         ))}
                         {isEditingOverview && (
-                          <button onClick={() => setShowAddWeekModal(true)} className="w-full p-5 border-2 border-dashed border-gray-300 rounded-xl text-gray-500 hover:border-blue-500 hover:text-blue-500 hover:bg-blue-50 transition-all">
+                          <button onClick={() => setShowAddWeekModal(true)} className={`w-full p-5 border-2 border-dashed ${theme === 'dark' ? 'border-gray-600 text-gray-400 hover:border-blue-500 hover:text-blue-400 hover:bg-blue-900' : 'border-gray-300 text-gray-500 hover:border-blue-500 hover:text-blue-500 hover:bg-blue-50'} rounded-xl transition-all`}>
                             <Plus className="w-5 h-5 mx-auto mb-1" />
                             <span className="text-sm font-medium">Add Week</span>
                           </button>
@@ -2374,14 +2374,14 @@ export default function ProjectDetailsUI() {
       {/* Add Feature Modal */}
       {showAddFeatureModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Add New Feature</h3>
+          <div className={`${theme === 'dark' ? 'bg-gray-800' : 'bg-white'} rounded-xl p-6 w-full max-w-md mx-4`}>
+            <h3 className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'} mb-4`}>Add New Feature</h3>
             <input
               type="text"
               value={newFeatureTitle}
               onChange={(e) => setNewFeatureTitle(e.target.value)}
               placeholder="Enter feature title..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent mb-4"
+              className={`w-full px-3 py-2 border ${theme === 'dark' ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent mb-4`}
               autoFocus
             />
             <div className="flex space-x-3">
