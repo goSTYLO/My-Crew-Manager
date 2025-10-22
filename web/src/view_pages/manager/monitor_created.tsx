@@ -1,16 +1,9 @@
-<<<<<<< Updated upstream
-import React, { useState } from 'react';
-import { Plus, Edit2, Trash2, Send, X, BarChart3, Users, FileText, Target, CheckCircle, Clock, RefreshCw, ArrowLeft, GitBranch, Save, Camera } from 'lucide-react';
-import TopNavbar from "../../components/topbarLayouot";
-import Sidebar from "../../components/sidebarLayout";
-import { useTheme } from "../../components/themeContext";
-=======
 import { useState, useEffect } from 'react';
 import { Plus, Edit, Edit2, Trash2, Send, X, BarChart3, Users, FileText, Target, CheckCircle, Clock, RefreshCw, ArrowLeft, GitBranch, Save, Camera } from 'lucide-react';
 import TopNavbar from "../../components/topbarLayouot";
 import Sidebar from "../../components/sidebarLayout";
+import { useTheme } from "../../components/themeContext";
 import { useParams, useNavigate } from 'react-router-dom';
->>>>>>> Stashed changes
 
 export default function ProjectDetailsUI() {
   const { theme } = useTheme();
@@ -298,7 +291,7 @@ export default function ProjectDetailsUI() {
   }, [projectId]);
   
   const [projectData, setProjectData] = useState({
-    id: 1,
+    id: 1, // Assuming project ID is available here
     title: 'Finder 4 — Lost & Found Tracker',
     aiSummary: 'A comprehensive mobile application project focused on creating an intuitive user experience with modern design principles and seamless functionality.',
     roles: [
@@ -396,25 +389,10 @@ export default function ProjectDetailsUI() {
   const handleInvite = async () => {
     if (inviteForm.email && inviteForm.position) {
       try {
-<<<<<<< Updated upstream
-        const token = localStorage.getItem('token');
-        if (!token) {
-          alert('You are not authenticated. Please log in.');
-          return;
-        }
-  
-        const response = await fetch('http://localhost:8000/api/ai/invitations/', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
-=======
         const response = await fetch(`${API_BASE_URL}/invitations/`, {
           method: 'POST',
           headers: getAuthHeaders(),
           credentials: 'include',
->>>>>>> Stashed changes
           body: JSON.stringify({
             project: projectId,
             invitee_email: inviteForm.email,
@@ -1120,11 +1098,11 @@ export default function ProjectDetailsUI() {
 
   // Show loading state
   if (loading) {
-    return (
-      <div className="flex min-h-screen w-full bg-gray-50 items-center justify-center">
+  return (
+      <div className={`flex min-h-screen w-full ${theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'} items-center justify-center`}>
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading project data...</p>
+          <p className={`${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}>Loading project data...</p>
         </div>
       </div>
     );
@@ -1133,7 +1111,7 @@ export default function ProjectDetailsUI() {
   // Show error state
   if (error) {
     return (
-      <div className="flex min-h-screen w-full bg-gray-50 items-center justify-center">
+      <div className={`flex min-h-screen w-full ${theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'} items-center justify-center`}>
         <div className="text-center">
           <p className="text-red-600 mb-4">{error}</p>
           <button
@@ -1210,12 +1188,12 @@ export default function ProjectDetailsUI() {
               <div className="space-y-6">
                 {/* Stats Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900 dark:to-green-800 rounded-xl shadow-sm p-6 border border-green-200 dark:border-green-700">
+                  <div className={`bg-gradient-to-br ${theme === 'dark' ? 'from-green-900 to-green-800 border-green-700' : 'from-green-50 to-green-100 border-green-200'} rounded-xl shadow-sm p-6 border`}>
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-medium text-green-600 dark:text-green-300 mb-1">Total Completed</p>
-                        <p className="text-4xl font-bold text-green-700 dark:text-green-200">45</p>
-                        <p className="text-xs text-green-600 dark:text-green-400 mt-1">+8 from last week</p>
+                        <p className={`text-sm font-medium ${theme === 'dark' ? 'text-green-300' : 'text-green-600'} mb-1`}>Total Completed</p>
+                        <p className={`text-4xl font-bold ${theme === 'dark' ? 'text-green-200' : 'text-green-700'}`}>45</p>
+                        <p className={`text-xs ${theme === 'dark' ? 'text-green-400' : 'text-green-600'} mt-1`}>+8 from last week</p>
                       </div>
                       <div className="w-14 h-14 bg-green-500 rounded-full flex items-center justify-center shadow-lg">
                         <CheckCircle className="w-7 h-7 text-white" />
@@ -1223,12 +1201,12 @@ export default function ProjectDetailsUI() {
                     </div>
                   </div>
                   
-                  <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900 dark:to-blue-800 rounded-xl shadow-sm p-6 border border-blue-200 dark:border-blue-700">
+                  <div className={`bg-gradient-to-br ${theme === 'dark' ? 'from-blue-900 to-blue-800 border-blue-700' : 'from-blue-50 to-blue-100 border-blue-200'} rounded-xl shadow-sm p-6 border`}>
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-medium text-blue-600 dark:text-blue-300 mb-1">In Progress</p>
-                        <p className="text-4xl font-bold text-blue-700 dark:text-blue-200">10</p>
-                        <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">Active tasks</p>
+                        <p className={`text-sm font-medium ${theme === 'dark' ? 'text-blue-300' : 'text-blue-600'} mb-1`}>In Progress</p>
+                        <p className={`text-4xl font-bold ${theme === 'dark' ? 'text-blue-200' : 'text-blue-700'}`}>10</p>
+                        <p className={`text-xs ${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'} mt-1`}>Active tasks</p>
                       </div>
                       <div className="w-14 h-14 bg-blue-500 rounded-full flex items-center justify-center shadow-lg">
                         <RefreshCw className="w-7 h-7 text-white" />
@@ -1236,12 +1214,12 @@ export default function ProjectDetailsUI() {
                     </div>
                   </div>
                   
-                  <div className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900 dark:to-orange-800 rounded-xl shadow-sm p-6 border border-orange-200 dark:border-orange-700">
+                  <div className={`bg-gradient-to-br ${theme === 'dark' ? 'from-orange-900 to-orange-800 border-orange-700' : 'from-orange-50 to-orange-100 border-orange-200'} rounded-xl shadow-sm p-6 border`}>
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-medium text-orange-600 dark:text-orange-300 mb-1">Pending</p>
-                        <p className="text-4xl font-bold text-orange-700 dark:text-orange-200">2</p>
-                        <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">Awaiting start</p>
+                        <p className={`text-sm font-medium ${theme === 'dark' ? 'text-orange-300' : 'text-orange-600'} mb-1`}>Pending</p>
+                        <p className={`text-4xl font-bold ${theme === 'dark' ? 'text-orange-200' : 'text-orange-700'}`}>2</p>
+                        <p className={`text-xs ${theme === 'dark' ? 'text-orange-400' : 'text-orange-600'} mt-1`}>Awaiting start</p>
                       </div>
                       <div className="w-14 h-14 bg-orange-500 rounded-full flex items-center justify-center shadow-lg">
                         <Clock className="w-7 h-7 text-white" />
@@ -1272,9 +1250,16 @@ export default function ProjectDetailsUI() {
                   
                   <div className="relative h-80 overflow-x-auto">
                     <svg className="w-full h-full min-w-[600px]" viewBox="0 0 800 300">
+                      <defs>
+                        <linearGradient id="gridGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#f3f4f6" stopOpacity="0.5"/>
+                          <stop offset="100%" stopColor="#f3f4f6" stopOpacity="0"/>
+                        </linearGradient>
+                      </defs>
+                      
                       <line x1="50" y1="20" x2="50" y2="260" stroke={theme === 'dark' ? '#4b5563' : '#d1d5db'} strokeWidth="2" />
                       <line x1="50" y1="260" x2="750" y2="260" stroke={theme === 'dark' ? '#4b5563' : '#d1d5db'} strokeWidth="2" />
-                      
+
                       {[0, 10, 20, 30, 40, 50].map((val, i) => (
                         <g key={i}>
                           <text x="30" y={260 - (i * 48) + 4} fontSize="12" fill={theme === 'dark' ? '#9ca3af' : '#6b7280'} textAnchor="end" fontWeight="500">
@@ -1382,12 +1367,12 @@ export default function ProjectDetailsUI() {
                     </div>
                   </div>
 
-                  <div className="p-6 space-y-8">
+                  <div className={`p-6 space-y-8 ${theme === 'dark' ? 'bg-gray-800' : 'bg-white'}`}>
                     {/* AI Summary */}
                     <div>
                       <h3 className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'} mb-3 flex items-center`}>
-                        <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center mr-3">
-                          <FileText className="w-4 h-4 text-blue-600 dark:text-blue-300" />
+                        <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
+                          <FileText className="w-4 h-4 text-blue-600" />
                         </div>
                         AI Summary
                       </h3>
@@ -1395,13 +1380,8 @@ export default function ProjectDetailsUI() {
                         <textarea
                           value={projectData.aiSummary}
                           onChange={(e) => setProjectData({ ...projectData, aiSummary: e.target.value })}
-<<<<<<< Updated upstream
                           className={`w-full p-4 border ${theme === 'dark' ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow`}
-                          rows="3"
-=======
-                          className="w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow"
                           rows={3}
->>>>>>> Stashed changes
                         />
                       ) : (
                         <p className={`${theme === 'dark' ? 'text-gray-300 bg-gray-700' : 'text-gray-600 bg-gray-50'} leading-relaxed p-4 rounded-lg`}>{projectData.aiSummary}</p>
@@ -1411,18 +1391,14 @@ export default function ProjectDetailsUI() {
                     {/* Project Roles */}
                     <div>
                       <h3 className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'} mb-4 flex items-center`}>
-                        <div className="w-8 h-8 bg-purple-100 dark:bg-purple-900 rounded-lg flex items-center justify-center mr-3">
-                          <Users className="w-4 h-4 text-purple-600 dark:text-purple-300" />
+                        <div className={`w-8 h-8 ${theme === 'dark' ? 'bg-purple-900' : 'bg-purple-100'} rounded-lg flex items-center justify-center mr-3`}>
+                          <Users className={`w-4 h-4 ${theme === 'dark' ? 'text-purple-300' : 'text-purple-600'}`} />
                         </div>
                         Project Roles
                       </h3>
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                         {projectData.roles.map((role, idx) => (
-<<<<<<< Updated upstream
-                          <div key={idx} className={`flex items-center justify-between p-4 bg-gradient-to-r ${theme === 'dark' ? 'from-blue-900 to-indigo-900 border-blue-800' : 'from-blue-50 to-indigo-50 border-blue-100'} rounded-lg border hover:shadow-md transition-shadow`}>
-=======
-                          <div key={role.id || idx} className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-100 hover:shadow-md transition-shadow">
->>>>>>> Stashed changes
+                          <div key={role.id || idx} className={`flex items-center justify-between p-4 bg-gradient-to-r ${theme === 'dark' ? 'from-blue-900 to-indigo-900 border-blue-800' : 'from-blue-50 to-indigo-50 border-blue-100'} rounded-lg border hover:shadow-md transition-shadow`}>
                             {isEditingOverview ? (
                               <input
                                 type="text"
@@ -1435,21 +1411,12 @@ export default function ProjectDetailsUI() {
                                 className={`${theme === 'dark' ? 'text-gray-200 border-blue-400' : 'text-gray-700 border-blue-300'} font-medium bg-transparent border-b focus:outline-none focus:border-blue-500 flex-1`}
                               />
                             ) : (
-<<<<<<< Updated upstream
-                              <span className={`${theme === 'dark' ? 'text-gray-200' : 'text-gray-700'} font-medium`}>{role}</span>
-                            )}
-                            {isEditingOverview && (
-                              <button 
-                                onClick={() => deleteRole(idx)}
-                                className="text-red-500 hover:text-red-700 transition-colors p-1 hover:bg-red-50 dark:hover:bg-red-900 rounded ml-2"
-=======
-                              <span className="text-gray-700 font-medium">{role.role}</span>
+                              <span className={`${theme === 'dark' ? 'text-gray-200' : 'text-gray-700'} font-medium`}>{role.role}</span>
                             )}
                             {isEditingOverview && (
                               <button 
                                 onClick={() => handleDeleteClick('role', role.id, role.role)}
-                                className="text-red-500 hover:text-red-700 transition-colors p-1 hover:bg-red-50 rounded ml-2"
->>>>>>> Stashed changes
+                                className="text-red-500 hover:text-red-700 transition-colors p-1 hover:bg-red-50 dark:hover:bg-red-900 rounded ml-2"
                               >
                                 <Trash2 className="w-4 h-4" />
                               </button>
@@ -1457,11 +1424,7 @@ export default function ProjectDetailsUI() {
                           </div>
                         ))}
                         {isEditingOverview && (
-<<<<<<< Updated upstream
-                          <button onClick={addRole} className={`p-4 border-2 border-dashed ${theme === 'dark' ? 'border-gray-600 text-gray-400 hover:border-blue-500 hover:text-blue-400 hover:bg-blue-900' : 'border-gray-300 text-gray-500 hover:border-blue-500 hover:text-blue-500 hover:bg-blue-50'} rounded-lg transition-all`}>
-=======
-                          <button onClick={() => setShowAddRoleModal(true)} className="p-4 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-blue-500 hover:text-blue-500 hover:bg-blue-50 transition-all">
->>>>>>> Stashed changes
+                          <button onClick={() => setShowAddRoleModal(true)} className={`p-4 border-2 border-dashed ${theme === 'dark' ? 'border-gray-600 text-gray-400 hover:border-blue-500 hover:text-blue-400 hover:bg-blue-900' : 'border-gray-300 text-gray-500 hover:border-blue-500 hover:text-blue-500 hover:bg-blue-50'} rounded-lg transition-all`}>
                             <Plus className="w-5 h-5 mx-auto" />
                           </button>
                         )}
@@ -1470,19 +1433,15 @@ export default function ProjectDetailsUI() {
 
                     {/* Top Features */}
                     <div>
-                      <h3 className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'} mb-4 flex items-center`}>
-                        <div className="w-8 h-8 bg-green-100 dark:bg-green-900 rounded-lg flex items-center justify-center mr-3">
-                          <Target className="w-4 h-4 text-green-600 dark:text-green-300" />
+                      <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                        <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center mr-3">
+                          <Target className="w-4 h-4 text-green-600" />
                         </div>
                         Top Features
                       </h3>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         {projectData.features.map((feature, idx) => (
-<<<<<<< Updated upstream
-                          <div key={idx} className={`flex items-center justify-between p-4 bg-gradient-to-r ${theme === 'dark' ? 'from-green-900 to-emerald-900 border-green-800' : 'from-green-50 to-emerald-50 border-green-100'} rounded-lg border hover:shadow-md transition-shadow`}>
-=======
                           <div key={feature.id || idx} className="flex items-center justify-between p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-100 hover:shadow-md transition-shadow">
->>>>>>> Stashed changes
                             {isEditingOverview ? (
                               <input
                                 type="text"
@@ -1492,24 +1451,15 @@ export default function ProjectDetailsUI() {
                                   newFeatures[idx] = { ...newFeatures[idx], title: e.target.value };
                                   setProjectData({ ...projectData, features: newFeatures });
                                 }}
-                                className={`${theme === 'dark' ? 'text-gray-200 border-green-400' : 'text-gray-700 border-green-300'} font-medium bg-transparent border-b focus:outline-none focus:border-green-500 flex-1`}
+                                className="text-gray-700 font-medium bg-transparent border-b border-green-300 focus:outline-none focus:border-green-500 flex-1"
                               />
                             ) : (
-<<<<<<< Updated upstream
-                              <span className={`${theme === 'dark' ? 'text-gray-200' : 'text-gray-700'} font-medium`}>{feature}</span>
-                            )}
-                            {isEditingOverview && (
-                              <button 
-                                onClick={() => deleteFeature(idx)}
-                                className="text-red-500 hover:text-red-700 transition-colors p-1 hover:bg-red-50 dark:hover:bg-red-900 rounded ml-2"
-=======
                               <span className="text-gray-700 font-medium">{feature.title}</span>
                             )}
                             {isEditingOverview && (
                               <button 
                                 onClick={() => handleDeleteClick('feature', feature.id, feature.title)}
                                 className="text-red-500 hover:text-red-700 transition-colors p-1 hover:bg-red-50 rounded ml-2"
->>>>>>> Stashed changes
                               >
                                 <Trash2 className="w-4 h-4" />
                               </button>
@@ -1517,11 +1467,7 @@ export default function ProjectDetailsUI() {
                           </div>
                         ))}
                         {isEditingOverview && (
-<<<<<<< Updated upstream
-                          <button onClick={addFeature} className={`p-4 border-2 border-dashed ${theme === 'dark' ? 'border-gray-600 text-gray-400 hover:border-green-500 hover:text-green-400 hover:bg-green-900' : 'border-gray-300 text-gray-500 hover:border-green-500 hover:text-green-500 hover:bg-green-50'} rounded-lg transition-all`}>
-=======
                           <button onClick={() => setShowAddFeatureModal(true)} className="p-4 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-green-500 hover:text-green-500 hover:bg-green-50 transition-all">
->>>>>>> Stashed changes
                             <Plus className="w-5 h-5 mx-auto" />
                           </button>
                         )}
@@ -1530,19 +1476,15 @@ export default function ProjectDetailsUI() {
 
                     {/* Project Goals */}
                     <div>
-                      <h3 className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'} mb-4 flex items-center`}>
-                        <div className="w-8 h-8 bg-orange-100 dark:bg-orange-900 rounded-lg flex items-center justify-center mr-3">
-                          <CheckCircle className="w-4 h-4 text-orange-600 dark:text-orange-300" />
+                      <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                        <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center mr-3">
+                          <CheckCircle className="w-4 h-4 text-orange-600" />
                         </div>
                         Project Goals
                       </h3>
                       <div className="space-y-3">
                         {projectData.goals.map((goal, idx) => (
-<<<<<<< Updated upstream
-                          <div key={idx} className={`flex items-center justify-between p-4 bg-gradient-to-r ${theme === 'dark' ? 'from-purple-900 to-pink-900 border-purple-800' : 'from-purple-50 to-pink-50 border-purple-100'} rounded-lg border hover:shadow-md transition-shadow`}>
-=======
                           <div key={goal.id || idx} className="flex items-center justify-between p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border border-purple-100 hover:shadow-md transition-shadow">
->>>>>>> Stashed changes
                             <div className="flex items-center flex-1">
                               <div className="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center text-white font-bold text-sm mr-3">
                                 {idx + 1}
@@ -1556,25 +1498,16 @@ export default function ProjectDetailsUI() {
                                     newGoals[idx] = { ...newGoals[idx], title: e.target.value };
                                     setProjectData({ ...projectData, goals: newGoals });
                                   }}
-                                  className={`${theme === 'dark' ? 'text-gray-200 border-purple-400' : 'text-gray-700 border-purple-300'} font-medium bg-transparent border-b focus:outline-none focus:border-purple-500 flex-1`}
+                                  className="text-gray-700 font-medium bg-transparent border-b border-purple-300 focus:outline-none focus:border-purple-500 flex-1"
                                 />
                               ) : (
-<<<<<<< Updated upstream
-                                <span className={`${theme === 'dark' ? 'text-gray-200' : 'text-gray-700'} font-medium`}>{goal}</span>
-=======
                                 <span className="text-gray-700 font-medium">{goal.title}</span>
->>>>>>> Stashed changes
                               )}
                             </div>
                             {isEditingOverview && (
                               <button 
-<<<<<<< Updated upstream
-                                onClick={() => deleteGoal(idx)}
-                                className="text-red-500 hover:text-red-700 transition-colors p-1 hover:bg-red-50 dark:hover:bg-red-900 rounded ml-2"
-=======
                                 onClick={() => handleDeleteClick('goal', goal.id, goal.title)}
                                 className="text-red-500 hover:text-red-700 transition-colors p-1 hover:bg-red-50 rounded ml-2"
->>>>>>> Stashed changes
                               >
                                 <Trash2 className="w-4 h-4" />
                               </button>
@@ -1582,11 +1515,7 @@ export default function ProjectDetailsUI() {
                           </div>
                         ))}
                         {isEditingOverview && (
-<<<<<<< Updated upstream
-                          <button onClick={addGoal} className={`w-full p-4 border-2 border-dashed ${theme === 'dark' ? 'border-gray-600 text-gray-400 hover:border-purple-500 hover:text-purple-400 hover:bg-purple-900' : 'border-gray-300 text-gray-500 hover:border-purple-500 hover:text-purple-500 hover:bg-purple-50'} rounded-lg transition-all`}>
-=======
                           <button onClick={() => setShowAddGoalModal(true)} className="w-full p-4 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-purple-500 hover:text-purple-500 hover:bg-purple-50 transition-all">
->>>>>>> Stashed changes
                             <Plus className="w-5 h-5 mx-auto" />
                           </button>
                         )}
@@ -1595,29 +1524,21 @@ export default function ProjectDetailsUI() {
 
                     {/* Project Timeline */}
                     <div>
-                      <h3 className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'} mb-4 flex items-center`}>
-                        <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center mr-3">
-                          <Clock className="w-4 h-4 text-blue-600 dark:text-blue-300" />
+                      <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                        <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
+                          <Clock className="w-4 h-4 text-blue-600" />
                         </div>
                         Project Timeline
                       </h3>
                       <div className="space-y-4">
-<<<<<<< Updated upstream
-                        {projectData.timeline.map((week, idx) => (
-                          <div key={idx} className={`border ${theme === 'dark' ? 'border-gray-700 bg-gray-700' : 'border-gray-200 bg-gradient-to-br from-gray-50 to-white'} rounded-xl p-5 hover:shadow-md transition-shadow`}>
-                            <h4 className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'} mb-3 flex items-center`}>
-                              <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-white text-xs font-bold mr-2">
-                                {idx + 1}
-=======
                         {projectData.timeline?.map((week, idx) => (
                           <div key={idx} className="border border-gray-200 rounded-xl p-5 bg-gradient-to-br from-gray-50 to-white hover:shadow-md transition-shadow">
                             <h4 className="font-semibold text-gray-900 mb-3 flex items-center justify-between">
                               <div className="flex items-center">
-                                <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-white text-xs font-bold mr-2">
-                                  {idx + 1}
-                                </div>
-                                {week.week}
->>>>>>> Stashed changes
+                              <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-white text-xs font-bold mr-2">
+                                {idx + 1}
+                              </div>
+                              {week.week}
                               </div>
                               {isEditingOverview && (
                                 <button
@@ -1630,13 +1551,8 @@ export default function ProjectDetailsUI() {
                               )}
                             </h4>
                             <div className="space-y-2 ml-8">
-<<<<<<< Updated upstream
-                              {week.tasks.map((task, taskIdx) => (
-                                <div key={taskIdx} className={`flex items-center justify-between p-3 ${theme === 'dark' ? 'bg-gray-600 border-gray-500 hover:border-blue-500' : 'bg-white border-gray-200 hover:border-blue-300'} rounded-lg border transition-colors`}>
-=======
                               {week.items?.map((task, taskIdx) => (
                                 <div key={task.id || taskIdx} className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200 hover:border-blue-300 transition-colors">
->>>>>>> Stashed changes
                                   {isEditingOverview ? (
                                     <input
                                       type="text"
@@ -1652,24 +1568,15 @@ export default function ProjectDetailsUI() {
                                         });
                                         setProjectData({ ...projectData, timeline: updatedTimeline });
                                       }}
-                                      className={`${theme === 'dark' ? 'text-gray-200 border-blue-400' : 'text-gray-700 border-blue-300'} bg-transparent border-b focus:outline-none focus:border-blue-500 flex-1`}
+                                      className="text-gray-700 bg-transparent border-b border-blue-300 focus:outline-none focus:border-blue-500 flex-1"
                                     />
                                   ) : (
-<<<<<<< Updated upstream
-                                    <span className={`${theme === 'dark' ? 'text-gray-200' : 'text-gray-700'}`}>{task}</span>
-                                  )}
-                                  {isEditingOverview && (
-                                    <button 
-                                      onClick={() => deleteTimelineTask(idx, taskIdx)}
-                                      className="text-red-500 hover:text-red-700 transition-colors p-1 hover:bg-red-50 dark:hover:bg-red-900 rounded ml-2"
-=======
                                     <span className="text-gray-700">{task.title}</span>
                                   )}
                                   {isEditingOverview && (
                                     <button 
                                       onClick={() => handleDeleteClick('timeline', task.id, task.title)}
                                       className="text-red-500 hover:text-red-700 transition-colors p-1 hover:bg-red-50 rounded ml-2"
->>>>>>> Stashed changes
                                     >
                                       <Trash2 className="w-4 h-4" />
                                     </button>
@@ -1677,11 +1584,7 @@ export default function ProjectDetailsUI() {
                                 </div>
                               ))}
                               {isEditingOverview && (
-<<<<<<< Updated upstream
-                                <button onClick={() => addTimelineTask(idx)} className={`w-full p-3 border border-dashed ${theme === 'dark' ? 'border-gray-600 text-gray-400 hover:border-blue-500 hover:text-blue-400 hover:bg-blue-900' : 'border-gray-300 text-gray-500 hover:border-blue-500 hover:text-blue-500 hover:bg-blue-50'} rounded-lg text-sm transition-all`}>
-=======
                                 <button onClick={() => openAddTimelineTaskModal(idx)} className="w-full p-3 border border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-blue-500 hover:text-blue-500 hover:bg-blue-50 text-sm transition-all">
->>>>>>> Stashed changes
                                   + Add Task
                                 </button>
                               )}
@@ -1689,11 +1592,7 @@ export default function ProjectDetailsUI() {
                           </div>
                         ))}
                         {isEditingOverview && (
-<<<<<<< Updated upstream
-                          <button onClick={addWeek} className={`w-full p-5 border-2 border-dashed ${theme === 'dark' ? 'border-gray-600 text-gray-400 hover:border-blue-500 hover:text-blue-400 hover:bg-blue-900' : 'border-gray-300 text-gray-500 hover:border-blue-500 hover:text-blue-500 hover:bg-blue-50'} rounded-xl transition-all`}>
-=======
                           <button onClick={() => setShowAddWeekModal(true)} className="w-full p-5 border-2 border-dashed border-gray-300 rounded-xl text-gray-500 hover:border-blue-500 hover:text-blue-500 hover:bg-blue-50 transition-all">
->>>>>>> Stashed changes
                             <Plus className="w-5 h-5 mx-auto mb-1" />
                             <span className="text-sm font-medium">Add Week</span>
                           </button>
@@ -1710,12 +1609,12 @@ export default function ProjectDetailsUI() {
               <div className="space-y-6">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                   <div>
-                    <h2 className={`text-2xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>Generated Backlog</h2>
-                    <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'} mt-1`}>Manage epics, user stories, and tasks</p>
+                    <h2 className="text-2xl font-bold text-gray-900">Generated Backlog</h2>
+                    <p className="text-sm text-gray-500 mt-1">Manage epics, user stories, and tasks</p>
                   </div>
                   <div className="flex items-center gap-3">
                     {!isEditingBacklog ? (
-                      <button
+                  <button
                         onClick={() => setIsEditingBacklog(true)}
                         className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors flex items-center shadow-sm"
                       >
@@ -1741,74 +1640,47 @@ export default function ProjectDetailsUI() {
                     {isEditingBacklog && (
                       <button
                         onClick={() => setShowAddEpicModal(true)}
-                        className="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center shadow-sm"
-                      >
-                        <Plus className="w-4 h-4 mr-2" />
-                        Add Epic
-                      </button>
+                    className="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center shadow-sm"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Epic
+                  </button>
                     )}
                   </div>
                 </div>
 
-<<<<<<< Updated upstream
-                {backlog.epics.map((epic) => (
-                  <div key={epic.id} className={`${theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} rounded-xl shadow-sm border overflow-hidden`}>
-                    <div className={`bg-gradient-to-r from-red-50 to-pink-50 ${theme === 'dark' ? 'dark:from-red-900 dark:to-pink-900' : ''} px-6 py-4 border-b border-red-100 dark:border-red-800`}>
-=======
                 {(backlog.epics || []).map((epic) => (
                   <div key={epic.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                     <div className="bg-gradient-to-r from-red-50 to-pink-50 px-6 py-4 border-b border-red-100">
->>>>>>> Stashed changes
                       <div className="flex items-center justify-between">
                         <div className="flex items-center flex-1">
                           <span className="px-4 py-1.5 bg-red-500 text-white rounded-full text-sm font-semibold mr-4 shadow-sm">
                             Epic
                           </span>
-<<<<<<< Updated upstream
+                          {isEditingBacklog ? (
                           <input
                             type="text"
-                            value={epic.name}
-                            className={`text-xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'} bg-transparent border-b-2 border-transparent hover:border-red-300 focus:border-red-500 focus:outline-none transition-colors flex-1`}
+                              value={epic.title}
+                            className="text-xl font-bold text-gray-900 bg-transparent border-b-2 border-transparent hover:border-red-300 focus:border-red-500 focus:outline-none transition-colors flex-1"
                             onChange={(e) => {
-                              const updatedEpics = backlog.epics.map(e => 
-                                e.id === epic.id ? { ...e, name: e.target.value } : e
+                                const updatedEpics = backlog.epics.map(ep => 
+                                  ep.id === epic.id ? { ...ep, title: e.target.value } : ep
                               );
                               setBacklog({ ...backlog, epics: updatedEpics });
                             }}
                           />
-                        </div>
-                        <button 
-                          onClick={() => deleteEpic(epic.id)}
-                          className="text-red-500 hover:text-red-700 hover:bg-red-100 dark:hover:bg-red-900 p-2 rounded-lg transition-colors"
-                        >
-                          <Trash2 className="w-5 h-5" />
-                        </button>
-=======
-                          {isEditingBacklog ? (
-                            <input
-                              type="text"
-                              value={epic.title}
-                              className="text-xl font-bold text-gray-900 bg-transparent border-b-2 border-transparent hover:border-red-300 focus:border-red-500 focus:outline-none transition-colors flex-1"
-                              onChange={(e) => {
-                                const updatedEpics = backlog.epics.map(ep => 
-                                  ep.id === epic.id ? { ...ep, title: e.target.value } : ep
-                                );
-                                setBacklog({ ...backlog, epics: updatedEpics });
-                              }}
-                            />
                           ) : (
                             <span className="text-xl font-bold text-gray-900">{epic.title}</span>
                           )}
                         </div>
                         {isEditingBacklog && (
-                          <button 
+                        <button 
                             onClick={() => handleDeleteClick('epic', epic.id, epic.title)}
-                            className="text-red-500 hover:text-red-700 hover:bg-red-100 p-2 rounded-lg transition-colors"
-                          >
-                            <Trash2 className="w-5 h-5" />
-                          </button>
+                          className="text-red-500 hover:text-red-700 hover:bg-red-100 p-2 rounded-lg transition-colors"
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </button>
                         )}
->>>>>>> Stashed changes
                       </div>
                     </div>
 
@@ -1822,17 +1694,17 @@ export default function ProjectDetailsUI() {
                                 <span className="px-3 py-1.5 bg-orange-500 text-white rounded-full text-sm font-semibold mr-3 shadow-sm">
                                   Sub-Epic
                                 </span>
-<<<<<<< Updated upstream
+                                {isEditingBacklog ? (
                                 <input
                                   type="text"
-                                  value={subEpic.name}
+                                    value={subEpic.title}
                                   onChange={(e) => {
                                     const updatedEpics = backlog.epics.map(ep => {
                                       if (ep.id === epic.id) {
                                         return {
                                           ...ep,
                                           subEpics: ep.subEpics.map(se =>
-                                            se.id === subEpic.id ? { ...se, name: e.target.value } : se
+                                              se.id === subEpic.id ? { ...se, title: e.target.value } : se
                                           )
                                         };
                                       }
@@ -1840,49 +1712,20 @@ export default function ProjectDetailsUI() {
                                     });
                                     setBacklog({ ...backlog, epics: updatedEpics });
                                   }}
-                                  className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'} bg-transparent border-b-2 border-transparent hover:border-orange-300 focus:border-orange-500 focus:outline-none transition-colors flex-1`}
+                                  className="text-lg font-semibold text-gray-900 bg-transparent border-b-2 border-transparent hover:border-orange-300 focus:border-orange-500 focus:outline-none transition-colors flex-1"
                                 />
-                              </div>
-                              <button 
-                                onClick={() => deleteSubEpic(epic.id, subEpic.id)}
-                                className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900 p-2 rounded-lg transition-colors"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-=======
-                                {isEditingBacklog ? (
-                                  <input
-                                    type="text"
-                                    value={subEpic.title}
-                                    onChange={(e) => {
-                                      const updatedEpics = backlog.epics.map(ep => {
-                                        if (ep.id === epic.id) {
-                                          return {
-                                            ...ep,
-                                            subEpics: ep.subEpics.map(se =>
-                                              se.id === subEpic.id ? { ...se, title: e.target.value } : se
-                                            )
-                                          };
-                                        }
-                                        return ep;
-                                      });
-                                      setBacklog({ ...backlog, epics: updatedEpics });
-                                    }}
-                                    className="text-lg font-semibold text-gray-900 bg-transparent border-b-2 border-transparent hover:border-orange-300 focus:border-orange-500 focus:outline-none transition-colors flex-1"
-                                  />
                                 ) : (
                                   <span className="text-lg font-semibold text-gray-900">{subEpic.title}</span>
                                 )}
                               </div>
                               {isEditingBacklog && (
-                                <button 
+                              <button 
                                   onClick={() => handleDeleteClick('sub-epic', subEpic.id, subEpic.title)}
-                                  className="text-red-500 hover:text-red-700 hover:bg-red-50 p-2 rounded-lg transition-colors"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
+                                className="text-red-500 hover:text-red-700 hover:bg-red-50 p-2 rounded-lg transition-colors"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
                               )}
->>>>>>> Stashed changes
                             </div>
 
                             {/* User Stories */}
@@ -1894,10 +1737,10 @@ export default function ProjectDetailsUI() {
                                       <span className="px-3 py-1.5 bg-blue-500 text-white rounded-full text-sm font-semibold mr-3 shadow-sm">
                                         User Story
                                       </span>
-<<<<<<< Updated upstream
+                                      {isEditingBacklog ? (
                                       <input
                                         type="text"
-                                        value={story.story}
+                                          value={story.title}
                                         onChange={(e) => {
                                           const updatedEpics = backlog.epics.map(ep => {
                                             if (ep.id === epic.id) {
@@ -1908,7 +1751,7 @@ export default function ProjectDetailsUI() {
                                                     return {
                                                       ...se,
                                                       userStories: se.userStories.map(us =>
-                                                        us.id === story.id ? { ...us, story: e.target.value } : us
+                                                          us.id === story.id ? { ...us, title: e.target.value } : us
                                                       )
                                                     };
                                                   }
@@ -1920,76 +1763,34 @@ export default function ProjectDetailsUI() {
                                           });
                                           setBacklog({ ...backlog, epics: updatedEpics });
                                         }}
-                                        className={`flex-1 ${theme === 'dark' ? 'text-white' : 'text-gray-900'} bg-transparent border-b-2 border-transparent hover:border-blue-300 focus:border-blue-500 focus:outline-none transition-colors`}
+                                        className="flex-1 text-gray-900 bg-transparent border-b-2 border-transparent hover:border-blue-300 focus:border-blue-500 focus:outline-none transition-colors"
                                       />
-                                    </div>
-                                    <button 
-                                      onClick={() => deleteUserStory(epic.id, subEpic.id, story.id)}
-                                      className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900 p-2 rounded-lg transition-colors"
-                                    >
-                                      <Trash2 className="w-4 h-4" />
-                                    </button>
-=======
-                                      {isEditingBacklog ? (
-                                        <input
-                                          type="text"
-                                          value={story.title}
-                                          onChange={(e) => {
-                                            const updatedEpics = backlog.epics.map(ep => {
-                                              if (ep.id === epic.id) {
-                                                return {
-                                                  ...ep,
-                                                  subEpics: ep.subEpics.map(se => {
-                                                    if (se.id === subEpic.id) {
-                                                      return {
-                                                        ...se,
-                                                        userStories: se.userStories.map(us =>
-                                                          us.id === story.id ? { ...us, title: e.target.value } : us
-                                                        )
-                                                      };
-                                                    }
-                                                    return se;
-                                                  })
-                                                };
-                                              }
-                                              return ep;
-                                            });
-                                            setBacklog({ ...backlog, epics: updatedEpics });
-                                          }}
-                                          className="flex-1 text-gray-900 bg-transparent border-b-2 border-transparent hover:border-blue-300 focus:border-blue-500 focus:outline-none transition-colors"
-                                        />
                                       ) : (
                                         <span className="flex-1 text-gray-900">{story.title}</span>
                                       )}
                                     </div>
                                     {isEditingBacklog && (
-                                      <button 
+                                    <button 
                                         onClick={() => handleDeleteClick('user-story', story.id, story.title)}
-                                        className="text-red-500 hover:text-red-700 hover:bg-red-50 p-2 rounded-lg transition-colors"
-                                      >
-                                        <Trash2 className="w-4 h-4" />
-                                      </button>
+                                      className="text-red-500 hover:text-red-700 hover:bg-red-50 p-2 rounded-lg transition-colors"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
                                     )}
->>>>>>> Stashed changes
                                   </div>
 
                                   {/* Tasks */}
                                   <div className="space-y-2 ml-6">
-<<<<<<< Updated upstream
-                                    {story.tasks.map((task, taskIdx) => (
-                                      <div key={taskIdx} className={`flex items-center justify-between p-3 bg-gradient-to-r ${theme === 'dark' ? 'from-green-900 to-emerald-900 border-green-800' : 'from-green-50 to-emerald-50 border-green-200'} rounded-lg border hover:shadow-md transition-shadow`}>
-=======
                                     {(story.tasks || []).map((task) => (
                                       <div key={task.id} className="flex items-center justify-between p-3 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-200 hover:shadow-md transition-shadow">
->>>>>>> Stashed changes
                                         <div className="flex items-center flex-1">
                                           <span className="px-2.5 py-1 bg-green-600 text-white rounded-md text-xs font-semibold mr-3 shadow-sm">
                                             Task
                                           </span>
-<<<<<<< Updated upstream
+                                          {isEditingBacklog ? (
                                           <input
                                             type="text"
-                                            value={task}
+                                              value={task.title}
                                             onChange={(e) => {
                                               const updatedEpics = backlog.epics.map(ep => {
                                                 if (ep.id === epic.id) {
@@ -2001,9 +1802,12 @@ export default function ProjectDetailsUI() {
                                                           ...se,
                                                           userStories: se.userStories.map(us => {
                                                             if (us.id === story.id) {
-                                                              const newTasks = [...us.tasks];
-                                                              newTasks[taskIdx] = e.target.value;
-                                                              return { ...us, tasks: newTasks };
+                                                                return {
+                                                                  ...us,
+                                                                  tasks: us.tasks.map(t =>
+                                                                    t.id === task.id ? { ...t, title: e.target.value } : t
+                                                                  )
+                                                                };
                                                             }
                                                             return us;
                                                           })
@@ -2017,105 +1821,43 @@ export default function ProjectDetailsUI() {
                                               });
                                               setBacklog({ ...backlog, epics: updatedEpics });
                                             }}
-                                            className={`bg-transparent ${theme === 'dark' ? 'text-gray-200' : 'text-gray-700'} border-b-2 border-transparent hover:border-green-300 focus:border-green-500 focus:outline-none flex-1 transition-colors`}
+                                            className="bg-transparent text-gray-700 border-b-2 border-transparent hover:border-green-300 focus:border-green-500 focus:outline-none flex-1 transition-colors"
                                           />
-                                        </div>
-                                        <button 
-                                          onClick={() => deleteTask(epic.id, subEpic.id, story.id, taskIdx)}
-                                          className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900 p-1.5 rounded-lg transition-colors"
-                                        >
-                                          <Trash2 className="w-4 h-4" />
-                                        </button>
-                                      </div>
-                                    ))}
-                                    <button onClick={() => addTask(epic.id, subEpic.id, story.id)} className={`w-full p-3 border-2 border-dashed ${theme === 'dark' ? 'border-gray-600 text-gray-400 hover:border-green-500 hover:text-green-400 hover:bg-green-900' : 'border-gray-300 text-gray-500 hover:border-green-500 hover:text-green-500 hover:bg-green-50'} rounded-lg text-sm font-medium transition-all`}>
-                                      + Add Task
-                                    </button>
-                                  </div>
-                                </div>
-                              ))}
-                              <button onClick={() => addUserStory(epic.id, subEpic.id)} className={`px-4 py-2.5 border-2 border-dashed ${theme === 'dark' ? 'border-gray-600 text-gray-400 hover:border-blue-500 hover:text-blue-400 hover:bg-blue-900' : 'border-gray-300 text-gray-500 hover:border-blue-500 hover:text-blue-500 hover:bg-blue-50'} rounded-lg text-sm font-medium transition-all`}>
-                                + Add User Story
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                        <button onClick={() => addSubEpic(epic.id)} className={`px-4 py-2.5 border-2 border-dashed ${theme === 'dark' ? 'border-gray-600 text-gray-400 hover:border-orange-500 hover:text-orange-400 hover:bg-orange-900' : 'border-gray-300 text-gray-500 hover:border-orange-500 hover:text-orange-500 hover:bg-orange-50'} rounded-lg text-sm font-medium transition-all`}>
-                          + Add Sub-Epic
-                        </button>
-=======
-                                          {isEditingBacklog ? (
-                                            <input
-                                              type="text"
-                                              value={task.title}
-                                              onChange={(e) => {
-                                                const updatedEpics = backlog.epics.map(ep => {
-                                                  if (ep.id === epic.id) {
-                                                    return {
-                                                      ...ep,
-                                                      subEpics: ep.subEpics.map(se => {
-                                                        if (se.id === subEpic.id) {
-                                                          return {
-                                                            ...se,
-                                                            userStories: se.userStories.map(us => {
-                                                              if (us.id === story.id) {
-                                                                return {
-                                                                  ...us,
-                                                                  tasks: us.tasks.map(t =>
-                                                                    t.id === task.id ? { ...t, title: e.target.value } : t
-                                                                  )
-                                                                };
-                                                              }
-                                                              return us;
-                                                            })
-                                                          };
-                                                        }
-                                                        return se;
-                                                      })
-                                                    };
-                                                  }
-                                                  return ep;
-                                                });
-                                                setBacklog({ ...backlog, epics: updatedEpics });
-                                              }}
-                                              className="bg-transparent text-gray-700 border-b-2 border-transparent hover:border-green-300 focus:border-green-500 focus:outline-none flex-1 transition-colors"
-                                            />
                                           ) : (
                                             <span className="flex-1 text-gray-700">{task.title}</span>
                                           )}
                                         </div>
                                         {isEditingBacklog && (
-                                          <button 
+                                        <button 
                                             onClick={() => handleDeleteClick('task', task.id, task.title)}
-                                            className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1.5 rounded-lg transition-colors"
-                                          >
-                                            <Trash2 className="w-4 h-4" />
-                                          </button>
+                                          className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1.5 rounded-lg transition-colors"
+                                        >
+                                          <Trash2 className="w-4 h-4" />
+                                        </button>
                                         )}
                                       </div>
                                     ))}
                                     {isEditingBacklog && (
                                       <button onClick={() => openAddTaskModal(story.id)} className="w-full p-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-green-500 hover:text-green-500 hover:bg-green-50 text-sm font-medium transition-all">
-                                        + Add Task
-                                      </button>
+                                      + Add Task
+                                    </button>
                                     )}
                                   </div>
                                 </div>
                               ))}
                               {isEditingBacklog && (
                                 <button onClick={() => openAddUserStoryModal(subEpic.id)} className="px-4 py-2.5 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-blue-500 hover:text-blue-500 hover:bg-blue-50 text-sm font-medium transition-all">
-                                  + Add User Story
-                                </button>
+                                + Add User Story
+                              </button>
                               )}
                             </div>
                           </div>
                         ))}
                         {isEditingBacklog && (
                           <button onClick={() => openAddSubEpicModal(epic.id)} className="px-4 py-2.5 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-orange-500 hover:text-orange-500 hover:bg-orange-50 text-sm font-medium transition-all">
-                            + Add Sub-Epic
-                          </button>
+                          + Add Sub-Epic
+                        </button>
                         )}
->>>>>>> Stashed changes
                       </div>
                     </div>
                   </div>
@@ -2125,147 +1867,80 @@ export default function ProjectDetailsUI() {
 
             {/* Team Members Tab */}
             {activeTab === 'members' && (
-              <div className="space-y-8">
-                {/* Header */}
+              <div className="space-y-6">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                   <div>
-                    <h2 className={`text-2xl font-bold tracking-tight ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-                      Team Members
-                    </h2>
-                    <p
-                      className={`text-sm ${
-                        theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
-                      } mt-1`}
-                    >
-                      {members.length} member{members.length !== 1 ? 's' : ''} in total
-                    </p>
+                    <h2 className="text-2xl font-bold text-gray-900">Team Members</h2>
+                    <p className="text-sm text-gray-500 mt-1">{members.length} member{members.length !== 1 ? 's' : ''} in total</p>
                   </div>
                   <button
                     onClick={() => setShowInviteModal(true)}
-                    className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:opacity-90 transition-all shadow-md flex items-center justify-center gap-2"
+                    className="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center shadow-sm"
                   >
-                    <Send className="w-4 h-4" />
+                    <Send className="w-4 h-4 mr-2" />
                     Invite Member
                   </button>
                 </div>
 
-                {/* Members Table */}
-                <div
-                  className={`rounded-2xl border overflow-hidden backdrop-blur-md ${
-                    theme === 'dark'
-                      ? 'bg-gray-800/70 border-gray-700 shadow-xl'
-                      : 'bg-white/70 border-gray-200 shadow-md'
-                  }`}
-                >
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                   <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                      {/* Table Header */}
-                      <thead
-                        className={`bg-gradient-to-r ${
-                          theme === 'dark'
-                            ? 'from-gray-700 to-gray-800'
-                            : 'from-blue-50 to-indigo-50'
-                        }`}
-                      >
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
                         <tr>
-                          {['Member', 'Email', 'Position', 'Actions'].map((head) => (
-                            <th
-                              key={head}
-                              className={`px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider ${
-                                theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
-                              }`}
-                            >
-                              {head}
-                            </th>
-                          ))}
+                          <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                            Member
+                          </th>
+                          <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                            Email
+                          </th>
+                          <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                            Position
+                          </th>
+                          <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                            Actions
+                          </th>
                         </tr>
                       </thead>
-
-                      {/* Table Body */}
-                      <tbody
-                        className={`divide-y ${
-                          theme === 'dark'
-                            ? 'bg-gray-800 divide-gray-700'
-                            : 'bg-white divide-gray-200'
-                        }`}
-                      >
+                      <tbody className="bg-white divide-y divide-gray-200">
                         {members.map((member) => (
-                          <tr
-                            key={member.id}
-                            className={`transition-all duration-200 ${
-                              theme === 'dark'
-                                ? 'hover:bg-gray-700/70'
-                                : 'hover:bg-blue-50/50'
-                            }`}
-                          >
-                            {/* Member Info */}
+                          <tr key={member.id} className="hover:bg-gray-50 transition-colors">
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="flex items-center">
-                                <div
-                                  className={`w-11 h-11 rounded-full overflow-hidden mr-3 flex items-center justify-center shadow-md ring-2 ${
-                                    theme === 'dark'
-                                      ? 'bg-gray-700 ring-gray-600'
-                                      : 'bg-gray-100 ring-blue-100'
-                                  }`}
-                                >
-                                  {member.image ? (
-                                    <img
-                                      src={member.image}
-                                      alt={member.name}
-                                      className="w-full h-full object-cover"
-                                    />
-                                  ) : (
-                                    <span
-                                      className={`font-semibold text-base ${
-                                        theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
-                                      }`}
-                                    >
-                                      {member.name.charAt(0).toUpperCase()}
-                                    </span>
-                                  )}
-                                </div>
-                                <div
-                                  className={`text-sm font-semibold ${
-                                    theme === 'dark' ? 'text-gray-100' : 'text-gray-900'
-                                  }`}
-                                >
-                                  {member.name}
-                                </div>
+                              <div className="w-11 h-11 rounded-full overflow-hidden bg-gray-100 mr-3 shadow-md flex items-center justify-center">
+  {member.image ? (
+    <img
+      src={member.image}
+      alt={member.name}
+      className="w-full h-full object-cover"
+    />
+  ) : (
+    <span className="text-gray-600 font-bold text-base">
+      {member.name.charAt(0).toUpperCase()}
+    </span>
+  )}
+</div>
+                                <div className="text-sm font-semibold text-gray-900">{member.name}</div>
                               </div>
                             </td>
-
-                            {/* Email */}
                             <td className="px-6 py-4 whitespace-nowrap">
-                              <div
-                                className={`text-sm ${
-                                  theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
-                                }`}
-                              >
-                                {member.email}
-                              </div>
+                              <div className="text-sm text-gray-600">{member.email}</div>
                             </td>
-
-                            {/* Position */}
                             <td className="px-6 py-4 whitespace-nowrap">
-                              <span className="px-3 py-1.5 inline-flex text-xs font-semibold rounded-full bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-800 dark:from-blue-900 dark:to-indigo-900 dark:text-blue-200">
+                              <span className="px-3 py-1.5 inline-flex text-xs leading-5 font-semibold rounded-full bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-800">
                                 {member.position}
                               </span>
                             </td>
-
-                            {/* Actions */}
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                               <div className="flex items-center space-x-3">
-                                <button
+                                <button 
                                   onClick={() => openEditMember(member)}
-                                  className="p-2 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600 hover:text-blue-700 transition-all dark:bg-blue-900/40 dark:hover:bg-blue-800"
+                                  className="text-blue-600 hover:text-blue-800 hover:bg-blue-50 p-2 rounded-lg transition-colors"
                                 >
                                   <Edit2 className="w-4 h-4" />
                                 </button>
                                 <button
-                                  onClick={() =>
-                                    setMembers(members.filter((m) => m.id !== member.id))
-                                  }
-                                  className="p-2 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 hover:text-red-700 transition-all dark:bg-red-900/40 dark:hover:bg-red-800"
+                                  onClick={() => setMembers(members.filter(m => m.id !== member.id))}
+                                  className="text-red-600 hover:text-red-800 hover:bg-red-50 p-2 rounded-lg transition-colors"
                                 >
                                   <Trash2 className="w-4 h-4" />
                                 </button>
@@ -2280,18 +1955,13 @@ export default function ProjectDetailsUI() {
               </div>
             )}
 
-
             {/* Git Repositories Tab */}
             {activeTab === 'repository' && (
               <div className="space-y-6">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                   <div>
-                    <h2 className={`text-2xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-                      Git Repositories
-                    </h2>
-                    <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'} mt-1`}>
-                      Manage project repositories and assignments
-                    </p>
+                    <h2 className="text-2xl font-bold text-gray-900">Git Repositories</h2>
+                    <p className="text-sm text-gray-500 mt-1">Manage project repositories and assignments</p>
                   </div>
                   <button
                     onClick={() => {
@@ -2308,74 +1978,44 @@ export default function ProjectDetailsUI() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {repositories.map((repo) => (
-                    <div
-                      key={repo.id}
-                      className={`rounded-xl shadow-sm border p-6 transition-shadow hover:shadow-md ${
-                        theme === 'dark'
-                          ? 'bg-gray-800 border-gray-700'
-                          : 'bg-white border-gray-200'
-                      }`}
-                    >
+                    <div key={repo.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
                       <div className="flex items-start justify-between mb-4">
                         <div className="flex items-center">
                           <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg flex items-center justify-center mr-3 shadow-md">
                             <GitBranch className="w-6 h-6 text-white" />
                           </div>
                           <div>
-                            <h3 className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
-                              {repo.name}
-                            </h3>
-                            <p className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
-                              Branch: {repo.branch}
-                            </p>
+                            <h3 className="text-lg font-semibold text-gray-900">{repo.name}</h3>
+                            <p className="text-xs text-gray-500">Branch: {repo.branch}</p>
                           </div>
                         </div>
                         <div className="flex items-center space-x-2">
                           <button
                             onClick={() => openEditRepo(repo)}
-                            className="text-blue-600 hover:text-blue-800 hover:bg-blue-50 dark:hover:bg-blue-900 p-2 rounded-lg transition-colors"
+                            className="text-blue-600 hover:text-blue-800 hover:bg-blue-50 p-2 rounded-lg transition-colors"
                           >
                             <Edit2 className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => deleteRepo(repo.id)}
-                            className="text-red-600 hover:text-red-800 hover:bg-red-50 dark:hover:bg-red-900 p-2 rounded-lg transition-colors"
+                            className="text-red-600 hover:text-red-800 hover:bg-red-50 p-2 rounded-lg transition-colors"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
                       </div>
-
+                      
                       <div className="space-y-3">
-                        <div
-                          className={`flex items-center text-sm p-3 rounded-lg ${
-                            theme === 'dark'
-                              ? 'bg-gray-700 text-gray-300'
-                              : 'bg-gray-50 text-gray-600'
-                          }`}
-                        >
+                        <div className="flex items-center text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">
                           <span className="font-medium mr-2">URL:</span>
-                          <a
-                            href={repo.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-500 hover:underline truncate"
-                          >
+                          <a href={repo.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline truncate">
                             {repo.url}
                           </a>
                         </div>
-
+                        
                         <div className="flex items-center justify-between text-sm">
-                          <span className={`${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'} font-medium`}>
-                            Assigned to:
-                          </span>
-                          <span
-                            className={`px-3 py-1.5 rounded-full text-xs font-semibold ${
-                              theme === 'dark'
-                                ? 'bg-green-900 text-green-200'
-                                : 'bg-green-100 text-green-800'
-                            }`}
-                          >
+                          <span className="text-gray-600 font-medium">Assigned to:</span>
+                          <span className="px-3 py-1.5 bg-gradient-to-r from-green-100 to-emerald-100 text-green-800 rounded-full text-xs font-semibold">
                             {repo.assignedTo || 'Unassigned'}
                           </span>
                         </div>
@@ -2385,15 +2025,9 @@ export default function ProjectDetailsUI() {
                 </div>
 
                 {repositories.length === 0 && (
-                  <div
-                    className={`rounded-xl shadow-sm border p-12 text-center ${
-                      theme === 'dark'
-                        ? 'bg-gray-800 border-gray-700 text-gray-300'
-                        : 'bg-white border-gray-200 text-gray-700'
-                    }`}
-                  >
+                  <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
                     <GitBranch className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold mb-2">No repositories yet</h3>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">No repositories yet</h3>
                     <p className="text-gray-500 mb-6">Add your first repository to get started</p>
                     <button
                       onClick={() => {
@@ -2410,25 +2044,26 @@ export default function ProjectDetailsUI() {
                 )}
               </div>
             )}
-
           </div>
         </main>
       </div>
 
       {/* Invite Modal */}
       {showInviteModal && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-md flex items-center justify-center z-50 p-4">
-          <div className="bg-white/90 dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 w-full max-w-md transform transition-all scale-100">
-            <div className="bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-5 rounded-t-2xl flex justify-between items-center">
-              <h3 className="text-xl font-bold text-white">Invite Team Member</h3>
-              <button
-                onClick={() => setShowInviteModal(false)}
-                className="text-white/90 hover:text-white hover:bg-white/20 p-2 rounded-lg transition-all"
-              >
-                <X className="w-5 h-5" />
-              </button>
+        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md transform transition-all">
+            <div className="bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-5 rounded-t-2xl">
+              <div className="flex justify-between items-center">
+                <h3 className="text-xl font-bold text-white">Invite Team Member</h3>
+                <button
+                  onClick={() => setShowInviteModal(false)}
+                  className="text-white hover:bg-white hover:bg-opacity-20 p-2 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
-
+            
             <div className="p-6 space-y-5">
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -2439,10 +2074,10 @@ export default function ProjectDetailsUI() {
                   value={inviteForm.email}
                   onChange={(e) => setInviteForm({ ...inviteForm, email: e.target.value })}
                   placeholder="Enter email address"
-                  className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/70 transition-all shadow-sm"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow"
                 />
               </div>
-
+              
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Position
@@ -2450,7 +2085,7 @@ export default function ProjectDetailsUI() {
                 <select
                   value={inviteForm.position}
                   onChange={(e) => setInviteForm({ ...inviteForm, position: e.target.value })}
-                  className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 bg-white/70 transition-all shadow-sm"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow"
                 >
                   <option value="">Select a position</option>
                   <option value="Frontend Developer">Frontend Developer</option>
@@ -2463,17 +2098,17 @@ export default function ProjectDetailsUI() {
                   <option value="Scrum Master">Scrum Master</option>
                 </select>
               </div>
-
-              <div className="flex gap-3 pt-2">
+              
+              <div className="flex space-x-3 pt-2">
                 <button
                   onClick={() => setShowInviteModal(false)}
-                  className="flex-1 px-4 py-3 rounded-xl border border-gray-300 text-gray-700 hover:bg-gray-50 font-medium transition-all"
+                  className="flex-1 px-4 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleInvite}
-                  className="flex-1 px-4 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 font-medium shadow-lg transition-all flex items-center justify-center"
+                  className="flex-1 px-4 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 font-medium shadow-md transition-all flex items-center justify-center"
                 >
                   <Send className="w-4 h-4 mr-2" />
                   Send Invite
@@ -2486,23 +2121,27 @@ export default function ProjectDetailsUI() {
 
       {/* Edit Member Modal */}
       {showEditMemberModal && editingMember && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-md flex items-center justify-center z-50 p-4">
-          <div className="bg-white/90 dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 w-full max-w-md transform transition-all scale-100">
-            <div className="bg-gradient-to-r from-green-500 to-green-600 px-6 py-5 rounded-t-2xl flex justify-between items-center">
-              <h3 className="text-xl font-bold text-white">Edit Team Member</h3>
-              <button
-                onClick={() => {
-                  setShowEditMemberModal(false);
-                  setEditingMember(null);
-                }}
-                className="text-white/90 hover:text-white hover:bg-white/20 p-2 rounded-lg transition-all"
-              >
-                <X className="w-5 h-5" />
-              </button>
+        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md transform transition-all">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-green-500 to-green-600 px-6 py-5 rounded-t-2xl">
+              <div className="flex justify-between items-center">
+                <h3 className="text-xl font-bold text-white">Edit Team Member</h3>
+                <button
+                  onClick={() => {
+                    setShowEditMemberModal(false);
+                    setEditingMember(null);
+                  }}
+                  className="text-white hover:bg-white hover:bg-opacity-20 p-2 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
+            {/* Body */}
             <div className="p-6 space-y-5">
-              {/* Image Upload */}
+              {/* Image Upload Section */}
               <div className="flex flex-col items-center space-y-3">
                 <div className="relative">
                   <img
@@ -2546,9 +2185,11 @@ export default function ProjectDetailsUI() {
                 <input
                   type="text"
                   value={editingMember.name}
-                  onChange={(e) => setEditingMember({ ...editingMember, name: e.target.value })}
+                  onChange={(e) =>
+                    setEditingMember({ ...editingMember, name: e.target.value })
+                  }
                   placeholder="Enter name"
-                  className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-green-500 bg-white/70 transition-all shadow-sm"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-shadow"
                 />
               </div>
 
@@ -2560,9 +2201,11 @@ export default function ProjectDetailsUI() {
                 <input
                   type="email"
                   value={editingMember.email}
-                  onChange={(e) => setEditingMember({ ...editingMember, email: e.target.value })}
+                  onChange={(e) =>
+                    setEditingMember({ ...editingMember, email: e.target.value })
+                  }
                   placeholder="Enter email"
-                  className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-green-500 bg-white/70 transition-all shadow-sm"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-shadow"
                 />
               </div>
 
@@ -2573,8 +2216,10 @@ export default function ProjectDetailsUI() {
                 </label>
                 <select
                   value={editingMember.position}
-                  onChange={(e) => setEditingMember({ ...editingMember, position: e.target.value })}
-                  className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-green-500 bg-white/70 transition-all shadow-sm"
+                  onChange={(e) =>
+                    setEditingMember({ ...editingMember, position: e.target.value })
+                  }
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-shadow"
                 >
                   <option value="">Select a position</option>
                   <option value="Frontend Developer">Frontend Developer</option>
@@ -2588,19 +2233,20 @@ export default function ProjectDetailsUI() {
                 </select>
               </div>
 
-              <div className="flex gap-3 pt-2">
+              {/* Buttons */}
+              <div className="flex space-x-3 pt-2">
                 <button
                   onClick={() => {
                     setShowEditMemberModal(false);
                     setEditingMember(null);
                   }}
-                  className="flex-1 px-4 py-3 rounded-xl border border-gray-300 text-gray-700 hover:bg-gray-50 font-medium transition-all"
+                  className="flex-1 px-4 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={() => handleEditMember(editingMember)}
-                  className="flex-1 px-4 py-3 rounded-xl bg-gradient-to-r from-green-600 to-green-700 text-white hover:from-green-700 hover:to-green-800 font-medium shadow-lg transition-all flex items-center justify-center"
+                  className="flex-1 px-4 py-3 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg hover:from-green-700 hover:to-green-800 font-medium shadow-md transition-all flex items-center justify-center"
                 >
                   <Save className="w-4 h-4 mr-2" />
                   Save Changes
@@ -2611,26 +2257,29 @@ export default function ProjectDetailsUI() {
         </div>
       )}
 
+
       {/* Repository Modal */}
       {showRepoModal && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-md flex items-center justify-center z-50 p-4">
-          <div className="bg-white/90 dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 w-full max-w-md transform transition-all scale-100">
-            <div className="bg-gradient-to-r from-purple-500 to-purple-600 px-6 py-5 rounded-t-2xl flex justify-between items-center">
-              <h3 className="text-xl font-bold text-white">
-                {editingRepo ? "Edit Repository" : "Add Repository"}
-              </h3>
-              <button
-                onClick={() => {
-                  setShowRepoModal(false);
-                  setEditingRepo(null);
-                  setRepoForm({ name: "", url: "", branch: "main", assignedTo: "" });
-                }}
-                className="text-white/90 hover:text-white hover:bg-white/20 p-2 rounded-lg transition-all"
-              >
-                <X className="w-5 h-5" />
-              </button>
+        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md transform transition-all">
+            <div className="bg-gradient-to-r from-purple-500 to-purple-600 px-6 py-5 rounded-t-2xl">
+              <div className="flex justify-between items-center">
+                <h3 className="text-xl font-bold text-white">
+                  {editingRepo ? 'Edit Repository' : 'Add Repository'}
+                </h3>
+                <button
+                  onClick={() => {
+                    setShowRepoModal(false);
+                    setEditingRepo(null);
+                    setRepoForm({ name: '', url: '', branch: 'main', assignedTo: '' });
+                  }}
+                  className="text-white hover:bg-white hover:bg-opacity-20 p-2 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
-
+            
             <div className="p-6 space-y-5">
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -2641,7 +2290,7 @@ export default function ProjectDetailsUI() {
                   value={repoForm.name}
                   onChange={(e) => setRepoForm({ ...repoForm, name: e.target.value })}
                   placeholder="e.g., frontend-app"
-                  className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-purple-500 bg-white/70 transition-all shadow-sm"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-shadow"
                 />
               </div>
 
@@ -2654,10 +2303,10 @@ export default function ProjectDetailsUI() {
                   value={repoForm.url}
                   onChange={(e) => setRepoForm({ ...repoForm, url: e.target.value })}
                   placeholder="https://github.com/username/repo"
-                  className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-purple-500 bg-white/70 transition-all shadow-sm"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-shadow"
                 />
               </div>
-
+              
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Branch
@@ -2667,7 +2316,7 @@ export default function ProjectDetailsUI() {
                   value={repoForm.branch}
                   onChange={(e) => setRepoForm({ ...repoForm, branch: e.target.value })}
                   placeholder="main"
-                  className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-purple-500 bg-white/70 transition-all shadow-sm"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-shadow"
                 />
               </div>
 
@@ -2678,7 +2327,7 @@ export default function ProjectDetailsUI() {
                 <select
                   value={repoForm.assignedTo}
                   onChange={(e) => setRepoForm({ ...repoForm, assignedTo: e.target.value })}
-                  className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-purple-500 bg-white/70 transition-all shadow-sm"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-shadow"
                 >
                   <option value="">Select a team member</option>
                   {members.map((member) => (
@@ -2688,34 +2337,31 @@ export default function ProjectDetailsUI() {
                   ))}
                 </select>
               </div>
-
-              <div className="flex gap-3 pt-2">
+              
+              <div className="flex space-x-3 pt-2">
                 <button
                   onClick={() => {
                     setShowRepoModal(false);
                     setEditingRepo(null);
-                    setRepoForm({ name: "", url: "", branch: "main", assignedTo: "" });
+                    setRepoForm({ name: '', url: '', branch: 'main', assignedTo: '' });
                   }}
-                  className="flex-1 px-4 py-3 rounded-xl border border-gray-300 text-gray-700 hover:bg-gray-50 font-medium transition-all"
+                  className="flex-1 px-4 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors"
                 >
                   Cancel
                 </button>
                 <button
-<<<<<<< Updated upstream
-                  onClick={handleAddRepo}
-                  className="flex-1 px-4 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-purple-700 text-white hover:from-purple-700 hover:to-purple-800 font-medium shadow-lg transition-all flex items-center justify-center"
-=======
                   onClick={handleAddRepoLocal}
                   className="flex-1 px-4 py-3 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-lg hover:from-purple-700 hover:to-purple-800 font-medium shadow-md transition-all flex items-center justify-center"
->>>>>>> Stashed changes
                 >
                   {editingRepo ? (
                     <>
-                      <Save className="w-4 h-4 mr-2" /> Update
+                      <Save className="w-4 h-4 mr-2" />
+                      Update
                     </>
                   ) : (
                     <>
-                      <Plus className="w-4 h-4 mr-2" /> Add Repository
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Repository
                     </>
                   )}
                 </button>
