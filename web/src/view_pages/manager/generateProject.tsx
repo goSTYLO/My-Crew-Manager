@@ -3,6 +3,7 @@ import { Upload, Users, Target, FileText, Plus, X, Sparkles, Check, ArrowRight, 
 import TopNavbar from "../../components/topbarLayouot";
 import Sidebar from "../../components/sidebarLayout";
 import { useTheme } from "../../components/themeContext"; // <-- import ThemeContext
+import LoadingSpinner from "../../components/LoadingSpinner";
 
 // Types based on Django models
 interface Member {
@@ -1410,10 +1411,7 @@ const App: React.FC = () => {
                     className="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                   >
                     {isLoading ? (
-                      <>
-                        <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></div>
-                        Analyzing with AI...
-                      </>
+                      <LoadingSpinner className="text-white" />
                     ) : (
                       <>
                         <Sparkles size={20} />
@@ -1750,10 +1748,7 @@ const App: React.FC = () => {
                   className="px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
                   {isLoading ? (
-                    <>
-                      <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></div>
-                      Generating Backlog...
-                    </>
+                    <LoadingSpinner className="text-white" />
                   ) : (
                     <>
                       Generate Backlog

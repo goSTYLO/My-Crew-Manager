@@ -4,6 +4,7 @@ import TopNavbar from "../../components/topbarLayouot";
 import Sidebar from "../../components/sidebarLayout";
 import { useTheme } from "../../components/themeContext";
 import { useParams, useNavigate } from 'react-router-dom';
+import LoadingSpinner from '../../components/LoadingSpinner';
 
 export default function ProjectDetailsUI() {
   const { theme } = useTheme();
@@ -50,6 +51,7 @@ export default function ProjectDetailsUI() {
   const [editingMember, setEditingMember] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isAiOperation, setIsAiOperation] = useState(false);
   
   const { id: projectId } = useParams();
   const navigate = useNavigate();
@@ -82,6 +84,7 @@ export default function ProjectDetailsUI() {
   const regenerateOverview = async () => {
     try {
       setLoading(true);
+      setIsAiOperation(true);
       const response = await fetch(`${API_BASE_URL}/projects/${projectId}/generate-overview/`, {
         method: 'PUT',
         headers: getAuthHeaders(),
@@ -103,12 +106,14 @@ export default function ProjectDetailsUI() {
       handleApiError(error, 'regenerate overview');
     } finally {
       setLoading(false);
+      setIsAiOperation(false);
     }
   };
 
   const regenerateBacklog = async () => {
     try {
       setLoading(true);
+      setIsAiOperation(true);
       const response = await fetch(`${API_BASE_URL}/projects/${projectId}/generate-backlog/`, {
         method: 'PUT',
         headers: getAuthHeaders(),
@@ -130,6 +135,7 @@ export default function ProjectDetailsUI() {
       handleApiError(error, 'regenerate backlog');
     } finally {
       setLoading(false);
+      setIsAiOperation(false);
     }
   };
 
@@ -1159,12 +1165,16 @@ export default function ProjectDetailsUI() {
 
   // Show loading state
   if (loading) {
-  return (
+    return (
       <div className={`flex min-h-screen w-full ${theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'} items-center justify-center`}>
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className={`${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}>Loading project data...</p>
-        </div>
+        {isAiOperation ? (
+          <LoadingSpinner />
+        ) : (
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className={`${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}>Loading project data...</p>
+          </div>
+        )}
       </div>
     );
   }
@@ -1189,6 +1199,13 @@ export default function ProjectDetailsUI() {
   return (
     <div className={`flex min-h-screen w-full ${theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'}`}>
       <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+
+      {/* AI Operation Loading Overlay */}
+      {loading && isAiOperation && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+          <LoadingSpinner />
+        </div>
+      )}
 
       <div className="flex-1 flex flex-col">
         <TopNavbar onMenuClick={() => setSidebarOpen(true)} />

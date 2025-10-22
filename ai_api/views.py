@@ -181,24 +181,32 @@ class ProjectViewSet(ModelViewSet):
 
         # Create new features
         for feature in output.get('features', []):
+            feature_title = feature if isinstance(feature, str) else feature.get('title', '')
             ProjectFeature.objects.create(
                 project=project,
-                title=feature.get('title', '')[:512]
+                title=feature_title[:512]
             )
 
         # Create new roles
         for role in output.get('roles', []):
+            role_name = role if isinstance(role, str) else role.get('role', '')
             ProjectRole.objects.create(
                 project=project,
-                role=role.get('role', '')[:255]
+                role=role_name[:255]
             )
 
         # Create new goals
         for goal in output.get('goals', []):
+            if isinstance(goal, str):
+                goal_title = goal
+                goal_role = ''
+            else:
+                goal_title = goal.get('title', '')
+                goal_role = goal.get('role', '')
             ProjectGoal.objects.create(
                 project=project,
-                title=goal.get('title', '')[:512],
-                role=goal.get('role', '')[:255]
+                title=goal_title[:512],
+                role=goal_role[:255]
             )
 
         # Create new timeline
