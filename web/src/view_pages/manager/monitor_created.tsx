@@ -6,9 +6,11 @@ import { useTheme } from "../../components/themeContext";
 import { useParams, useNavigate } from 'react-router-dom';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import RegenerationSuccessModal from '../../components/RegenerationSuccessModal';
+import { useToast } from '../../components/ToastContext';
 
 export default function ProjectDetailsUI() {
   const { theme } = useTheme();
+  const { showSuccess, showError, showWarning } = useToast();
   const [activeTab, setActiveTab] = useState('monitoring');
   const [isEditingOverview, setIsEditingOverview] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
@@ -75,11 +77,11 @@ export default function ProjectDetailsUI() {
   const handleApiError = (error: any, operation: string) => {
     console.error(`Error ${operation}:`, error);
     if (error.status === 401) {
-      alert('Authentication failed. Please log in again.');
+      showError('Authentication Failed', 'Please log in again.');
       localStorage.removeItem('token');
       navigate('/sign-in');
     } else {
-      alert(`Failed to ${operation}. Please try again.`);
+      showError('Operation Failed', `Failed to ${operation}. Please try again.`);
     }
   };
 
@@ -464,13 +466,13 @@ export default function ProjectDetailsUI() {
 
   const handleInvite = async () => {
     if (!inviteForm.email || !inviteForm.position) {
-      alert('Please fill out both email and position fields.');
+      showWarning('Missing Information', 'Please fill out both email and position fields.');
       return;
     }
 
     const token = localStorage.getItem('token');
     if (!token) {
-      alert('Authentication required. Please log in again.');
+      showError('Authentication Required', 'Please log in again.');
       return;
     }
 
@@ -489,7 +491,7 @@ export default function ProjectDetailsUI() {
 
       if (!usersResponse.ok) {
         console.warn(`Failed to lookup user with email ${inviteForm.email}`);
-        alert(`User with email ${inviteForm.email} not found. Please make sure they have an account.`);
+        showError('User Not Found', `User with email ${inviteForm.email} not found. Please make sure they have an account.`);
         return;
       }
 
@@ -497,7 +499,7 @@ export default function ProjectDetailsUI() {
       
       if (users.length === 0) {
         console.warn(`User with email ${inviteForm.email} not found`);
-        alert(`User with email ${inviteForm.email} not found. Please make sure they have an account.`);
+        showError('User Not Found', `User with email ${inviteForm.email} not found. Please make sure they have an account.`);
         return;
       }
       
@@ -519,7 +521,7 @@ export default function ProjectDetailsUI() {
       });
 
       if (response.ok) {
-        alert('Invitation sent successfully!');
+        showSuccess('Invitation Sent!', 'Team member invitation sent successfully.');
         setInviteForm({ email: '', position: '' });
         setShowInviteModal(false);
         // Refresh members list to show any new members
@@ -527,7 +529,7 @@ export default function ProjectDetailsUI() {
       } else {
         const errorData = await response.json();
         console.error('Failed to send invitation:', errorData);
-        alert(`Failed to send invitation: ${errorData.message || 'Unknown error'}`);
+        showError('Invitation Failed', `Failed to send invitation: ${errorData.message || 'Unknown error'}`);
       }
     } catch (error) {
       console.error('Error sending invitation:', error);
@@ -571,7 +573,7 @@ export default function ProjectDetailsUI() {
         fetchBacklog(); // Refresh backlog
       } else {
         const errorData = await response.json();
-        alert(`Failed to create epic: ${errorData.message || 'Unknown error'}`);
+        showError('Epic Creation Failed', `Failed to create epic: ${errorData.message || 'Unknown error'}`);
       }
     } catch (error) {
       handleApiError(error, 'create epic');
@@ -596,7 +598,7 @@ export default function ProjectDetailsUI() {
         fetchBacklog(); // Refresh backlog
       } else {
         const errorData = await response.json();
-        alert(`Failed to create sub-epic: ${errorData.message || 'Unknown error'}`);
+        showError('Sub-Epic Creation Failed', `Failed to create sub-epic: ${errorData.message || 'Unknown error'}`);
       }
     } catch (error) {
       handleApiError(error, 'create sub-epic');
@@ -621,7 +623,7 @@ export default function ProjectDetailsUI() {
         fetchBacklog(); // Refresh backlog
       } else {
         const errorData = await response.json();
-        alert(`Failed to create user story: ${errorData.message || 'Unknown error'}`);
+        showError('User Story Creation Failed', `Failed to create user story: ${errorData.message || 'Unknown error'}`);
       }
     } catch (error) {
       handleApiError(error, 'create user story');
@@ -647,7 +649,7 @@ export default function ProjectDetailsUI() {
         fetchBacklog(); // Refresh backlog
       } else {
         const errorData = await response.json();
-        alert(`Failed to create task: ${errorData.message || 'Unknown error'}`);
+        showError('Task Creation Failed', `Failed to create task: ${errorData.message || 'Unknown error'}`);
       }
     } catch (error) {
       handleApiError(error, 'create task');
@@ -761,7 +763,7 @@ export default function ProjectDetailsUI() {
       console.log('✅ All backlog changes saved successfully');
     } catch (error) {
       console.error('❌ Error saving backlog changes:', error);
-      alert('Failed to save some changes. Please try again.');
+      showError('Save Failed', 'Failed to save some changes. Please try again.');
     }
   };
 
@@ -782,7 +784,7 @@ export default function ProjectDetailsUI() {
 
       if (!projectResponse.ok) {
         const errorData = await projectResponse.json();
-        alert(`Failed to update project: ${errorData.message || 'Unknown error'}`);
+        showError('Project Update Failed', `Failed to update project: ${errorData.message || 'Unknown error'}`);
         return;
       }
 
@@ -850,7 +852,7 @@ export default function ProjectDetailsUI() {
       // Refresh all data from the server
       await fetchProjectData();
 
-      alert('Project updated successfully!');
+      showSuccess('Project Updated!', 'Project has been updated successfully.');
       setIsEditingOverview(false);
     } catch (error) {
       handleApiError(error, 'update project');
@@ -877,7 +879,7 @@ export default function ProjectDetailsUI() {
         fetchProjectData(); // Refresh project data
       } else {
         const errorData = await response.json();
-        alert(`Failed to add feature: ${errorData.message || 'Unknown error'}`);
+        showError('Feature Creation Failed', `Failed to add feature: ${errorData.message || 'Unknown error'}`);
       }
     } catch (error) {
       handleApiError(error, 'add feature');
@@ -938,7 +940,7 @@ export default function ProjectDetailsUI() {
         fetchProjectData(); // Refresh project data
       } else {
         const errorData = await response.json();
-        alert(`Failed to delete ${deleteItem.type}: ${errorData.message || 'Unknown error'}`);
+        showError('Delete Failed', `Failed to delete ${deleteItem.type}: ${errorData.message || 'Unknown error'}`);
       }
     } catch (error) {
       handleApiError(error, `delete ${deleteItem.type}`);
@@ -965,7 +967,7 @@ export default function ProjectDetailsUI() {
         fetchProjectData(); // Refresh project data
       } else {
         const errorData = await response.json();
-        alert(`Failed to add role: ${errorData.message || 'Unknown error'}`);
+        showError('Role Creation Failed', `Failed to add role: ${errorData.message || 'Unknown error'}`);
       }
     } catch (error) {
       handleApiError(error, 'add role');
@@ -993,7 +995,7 @@ export default function ProjectDetailsUI() {
         fetchProjectData(); // Refresh project data
       } else {
         const errorData = await response.json();
-        alert(`Failed to add goal: ${errorData.message || 'Unknown error'}`);
+        showError('Goal Creation Failed', `Failed to add goal: ${errorData.message || 'Unknown error'}`);
       }
     } catch (error) {
       handleApiError(error, 'add goal');
@@ -1021,7 +1023,7 @@ export default function ProjectDetailsUI() {
         fetchRepositories(); // Refresh repositories
       } else {
         const errorData = await response.json();
-        alert(`Failed to add repository: ${errorData.message || 'Unknown error'}`);
+        showError('Repository Creation Failed', `Failed to add repository: ${errorData.message || 'Unknown error'}`);
       }
     } catch (error) {
       handleApiError(error, 'add repository');
@@ -1039,7 +1041,7 @@ export default function ProjectDetailsUI() {
       if (response.ok) {
         fetchRepositories(); // Refresh repositories
       } else {
-        alert('Failed to delete repository');
+        showError('Repository Delete Failed', 'Failed to delete repository');
       }
     } catch (error) {
       handleApiError(error, 'delete repository');
@@ -1129,13 +1131,13 @@ export default function ProjectDetailsUI() {
 
   const addWeek = async () => {
     if (!newWeekNumber.trim()) {
-      alert('Please enter a week number');
+      showWarning('Missing Information', 'Please enter a week number');
       return;
     }
     
     const weekNum = parseInt(newWeekNumber.trim());
     if (isNaN(weekNum) || weekNum < 1) {
-      alert('Please enter a valid week number (1 or higher)');
+      showWarning('Invalid Input', 'Please enter a valid week number (1 or higher)');
       return;
     }
     
@@ -1156,7 +1158,7 @@ export default function ProjectDetailsUI() {
         setNewWeekNumber('');
       } else {
         const errorData = await response.json();
-        alert(`Failed to add week: ${errorData.message || 'Unknown error'}`);
+        showError('Week Creation Failed', `Failed to add week: ${errorData.message || 'Unknown error'}`);
       }
     } catch (error) {
       handleApiError(error, 'add week');
@@ -1170,12 +1172,12 @@ export default function ProjectDetailsUI() {
 
   const addTimelineTask = async () => {
     if (!newTimelineTaskTitle.trim()) {
-      alert('Please enter a task title');
+      showWarning('Missing Information', 'Please enter a task title');
       return;
     }
     
     if (selectedWeekIndex === null) {
-      alert('No week selected');
+      showWarning('No Week Selected', 'Please select a week to add the task to');
       return;
     }
     
@@ -1183,7 +1185,7 @@ export default function ProjectDetailsUI() {
       // Get the week ID from the current timeline data
       const week = projectData.timeline[selectedWeekIndex];
       if (!week || !week.id) {
-        alert('Week not found. Please refresh and try again.');
+        showError('Week Not Found', 'Week not found. Please refresh and try again.');
         return;
       }
 
@@ -1204,7 +1206,7 @@ export default function ProjectDetailsUI() {
         setSelectedWeekIndex(null);
       } else {
         const errorData = await response.json();
-        alert(`Failed to add task: ${errorData.message || 'Unknown error'}`);
+        showError('Task Creation Failed', `Failed to add task: ${errorData.message || 'Unknown error'}`);
       }
     } catch (error) {
       handleApiError(error, 'add timeline task');

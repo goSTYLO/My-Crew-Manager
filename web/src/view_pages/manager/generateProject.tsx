@@ -4,6 +4,7 @@ import TopNavbar from "../../components/topbarLayouot";
 import Sidebar from "../../components/sidebarLayout";
 import { useTheme } from "../../components/themeContext"; // <-- import ThemeContext
 import LoadingSpinner from "../../components/LoadingSpinner";
+import { useToast } from "../../components/ToastContext";
 
 // Types based on Django models
 interface Member {
@@ -79,6 +80,7 @@ type Step = 'create' | 'upload' | 'analyze' | 'review' | 'backlog' | 'invite';
 
 const App: React.FC = () => {
   const { theme } = useTheme();
+  const { showSuccess, showError, showWarning } = useToast();
   const [currentStep, setCurrentStep] = useState<Step>('create');
   const [projectTitle, setProjectTitle] = useState('');
   const [projectSummary, setProjectSummary] = useState('');
@@ -198,7 +200,7 @@ const App: React.FC = () => {
     const file = e.target.files?.[0];
     if (file) {
       if (file.type !== 'application/pdf') {
-        alert('Only PDF files are allowed.');
+        showWarning('Invalid File Type', 'Only PDF files are allowed.');
         return;
       }
       setUploadedFile(file);
@@ -235,13 +237,13 @@ const App: React.FC = () => {
   // STEP 1: Create Project
   const createProject = async () => {
     if (!projectTitle) {
-      alert('Please fill in project title');
+      showWarning('Missing Information', 'Please fill in project title');
       return;
     }
 
     const token = getAuthToken();
     if (!token) {
-      alert('Authentication required. Please log in again.');
+      showError('Authentication Required', 'Please log in again.');
       return;
     }
 
@@ -269,7 +271,7 @@ const App: React.FC = () => {
       setCurrentStep('upload');
     } catch (error) {
       console.error('Error creating project:', error);
-      alert(`Failed to create project: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      showError('Project Creation Failed', `Failed to create project: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsLoading(false);
     }
@@ -278,7 +280,7 @@ const App: React.FC = () => {
   // Skip Create Project
   const skipCreateProject = () => {
     if (!projectTitle) {
-      alert('Project Title is required before skipping');
+      showWarning('Missing Information', 'Project Title is required before skipping');
       return;
     }
     // Create a minimal project and skip to upload
@@ -288,13 +290,13 @@ const App: React.FC = () => {
   // STEP 2: Upload Proposal
   const uploadProposal = async () => {
     if (!uploadedFile || !createdProjectId) {
-      alert('Please upload a proposal file');
+      showWarning('Missing File', 'Please upload a proposal file');
       return;
     }
 
     const token = getAuthToken();
     if (!token) {
-      alert('Authentication required. Please log in again.');
+      showError('Authentication Required', 'Please log in again.');
       return;
     }
 
@@ -319,7 +321,7 @@ const App: React.FC = () => {
       setCurrentStep('analyze');
     } catch (error) {
       console.error('Error uploading proposal:', error);
-      alert(`Failed to upload proposal: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      showError('Upload Failed', `Failed to upload proposal: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsLoading(false);
     }
@@ -333,13 +335,13 @@ const App: React.FC = () => {
   // STEP 3: Analyze with LLM (Ingest Proposal)
   const analyzeProposal = async () => {
     if (!createdProjectId || !uploadedProposalId) {
-      alert('Missing project or proposal data');
+      showError('Missing Data', 'Missing project or proposal data');
       return;
     }
 
     const token = getAuthToken();
     if (!token) {
-      alert('Authentication required. Please log in again.');
+      showError('Authentication Required', 'Please log in again.');
       return;
     }
 
@@ -430,7 +432,7 @@ const App: React.FC = () => {
       setCurrentStep('review');
     } catch (error) {
       console.error('Error analyzing proposal:', error);
-      alert(`Failed to analyze proposal: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      showError('Analysis Failed', `Failed to analyze proposal: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsLoading(false);
     }
@@ -520,13 +522,13 @@ const App: React.FC = () => {
   // STEP 4: Generate Backlog and Save
   const generateBacklogAndSave = async () => {
     if (!createdProjectId) {
-      alert('Missing project data');
+      showError('Missing Data', 'Missing project data');
       return;
     }
 
     const token = getAuthToken();
     if (!token) {
-      alert('Authentication required. Please log in again.');
+      showError('Authentication Required', 'Please log in again.');
       return;
     }
 
@@ -552,7 +554,7 @@ const App: React.FC = () => {
       setCurrentStep('backlog');
     } catch (error) {
       console.error('Error generating backlog:', error);
-      alert(`Failed to generate backlog: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      showError('Backlog Generation Failed', `Failed to generate backlog: ${error instanceof Error ? error.message : 'Unknown error'}`);
       // Generate mock backlog for demo
       generateMockBacklog();
       setCurrentStep('backlog');
@@ -571,7 +573,7 @@ const App: React.FC = () => {
 
     const token = getAuthToken();
     if (!token) {
-      alert('Authentication required. Please log in again.');
+      showError('Authentication Required', 'Please log in again.');
       return;
     }
 
@@ -636,7 +638,7 @@ const App: React.FC = () => {
 
     } catch (error) {
       console.error('Error fetching backlog:', error);
-      alert(`Failed to fetch backlog: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      showError('Fetch Failed', `Failed to fetch backlog: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -664,7 +666,7 @@ const App: React.FC = () => {
       await fetchBacklog(); // Refresh the backlog
     } catch (error) {
       console.error('Error creating epic:', error);
-      alert(`Failed to create epic: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      showError('Epic Creation Failed', `Failed to create epic: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -686,7 +688,7 @@ const App: React.FC = () => {
       await fetchBacklog(); // Refresh the backlog
     } catch (error) {
       console.error('Error updating epic:', error);
-      alert(`Failed to update epic: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      showError('Epic Update Failed', `Failed to update epic: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -704,7 +706,7 @@ const App: React.FC = () => {
       await fetchBacklog(); // Refresh the backlog
     } catch (error) {
       console.error('Error deleting epic:', error);
-      alert(`Failed to delete epic: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      showError('Epic Delete Failed', `Failed to delete epic: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -731,7 +733,7 @@ const App: React.FC = () => {
       await fetchBacklog(); // Refresh the backlog
     } catch (error) {
       console.error('Error creating sub-epic:', error);
-      alert(`Failed to create sub-epic: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      showError('Sub-Epic Creation Failed', `Failed to create sub-epic: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -753,7 +755,7 @@ const App: React.FC = () => {
       await fetchBacklog(); // Refresh the backlog
     } catch (error) {
       console.error('Error updating sub-epic:', error);
-      alert(`Failed to update sub-epic: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      showError('Sub-Epic Update Failed', `Failed to update sub-epic: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -771,7 +773,7 @@ const App: React.FC = () => {
       await fetchBacklog(); // Refresh the backlog
     } catch (error) {
       console.error('Error deleting sub-epic:', error);
-      alert(`Failed to delete sub-epic: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      showError('Sub-Epic Delete Failed', `Failed to delete sub-epic: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -798,7 +800,7 @@ const App: React.FC = () => {
       await fetchBacklog(); // Refresh the backlog
     } catch (error) {
       console.error('Error creating user story:', error);
-      alert(`Failed to create user story: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      showError('User Story Creation Failed', `Failed to create user story: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -820,7 +822,7 @@ const App: React.FC = () => {
       await fetchBacklog(); // Refresh the backlog
     } catch (error) {
       console.error('Error updating user story:', error);
-      alert(`Failed to update user story: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      showError('User Story Update Failed', `Failed to update user story: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -838,7 +840,7 @@ const App: React.FC = () => {
       await fetchBacklog(); // Refresh the backlog
     } catch (error) {
       console.error('Error deleting user story:', error);
-      alert(`Failed to delete user story: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      showError('User Story Delete Failed', `Failed to delete user story: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -867,7 +869,7 @@ const App: React.FC = () => {
       await fetchBacklog(); // Refresh the backlog
     } catch (error) {
       console.error('Error creating task:', error);
-      alert(`Failed to create task: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      showError('Task Creation Failed', `Failed to create task: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -892,7 +894,7 @@ const App: React.FC = () => {
       await fetchBacklog(); // Refresh the backlog
     } catch (error) {
       console.error('Error updating task:', error);
-      alert(`Failed to update task: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      showError('Task Update Failed', `Failed to update task: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -910,7 +912,7 @@ const App: React.FC = () => {
       await fetchBacklog(); // Refresh the backlog
     } catch (error) {
       console.error('Error deleting task:', error);
-      alert(`Failed to delete task: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      showError('Task Delete Failed', `Failed to delete task: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -932,7 +934,7 @@ const App: React.FC = () => {
       await fetchBacklog(); // Refresh the backlog
     } catch (error) {
       console.error('Error updating task assignment:', error);
-      alert(`Failed to update task assignment: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      showError('Assignment Update Failed', `Failed to update task assignment: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -969,13 +971,13 @@ const App: React.FC = () => {
   // Send Invitations
   const sendInvitations = async () => {
     if (invitations.length === 0) {
-      alert('Please add at least one invitation');
+      showWarning('Missing Invitations', 'Please add at least one invitation');
       return;
     }
 
     const token = getAuthToken();
     if (!token) {
-      alert('Authentication required. Please log in again.');
+      showError('Authentication Required', 'Please log in again.');
       return;
     }
 
@@ -1043,9 +1045,9 @@ const App: React.FC = () => {
       setInvitations(invitations.map(inv => ({ ...inv, sent: true })));
       
       if (successCount > 0) {
-        alert(`Successfully sent ${successCount} invitation(s)${errorCount > 0 ? `. ${errorCount} failed.` : '!'}`);
+        showSuccess('Invitations Sent!', `Successfully sent ${successCount} invitation(s)${errorCount > 0 ? `. ${errorCount} failed.` : '!'}`);
       } else {
-        alert('Failed to send any invitations. Please check the email addresses.');
+        showError('Invitations Failed', 'Failed to send any invitations. Please check the email addresses.');
       }
       
       // Reset after success
@@ -1056,7 +1058,7 @@ const App: React.FC = () => {
       }
     } catch (error) {
       console.error('Error sending invitations:', error);
-      alert(`Failed to send invitations: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      showError('Invitations Failed', `Failed to send invitations: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsLoading(false);
     }
@@ -2139,7 +2141,7 @@ const App: React.FC = () => {
               <div className={`flex justify-between pt-4 border-t ${theme === "dark" ? "border-gray-700" : ""}`}>
                 <button
                   onClick={() => {
-                    alert('Project created successfully!');
+                    showSuccess('Project Created!', 'Project created successfully!');
                     resetForm();
                   }}
                   className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"

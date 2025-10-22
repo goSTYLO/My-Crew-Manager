@@ -5,6 +5,7 @@ import { Search, Plus, Folder, FolderOpen } from 'lucide-react';
 import { PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import TopNavbar from "../../components/topbarLayouot";
 import { useTheme } from "../../components/themeContext";
+import { useToast } from "../../components/ToastContext";
 
 // Sample data for charts - TODO: Replace with real task statistics from backend
 const taskData = [
@@ -64,6 +65,7 @@ const ProjectTask = () => {
     const [projectsPerPage] = useState(9);
     const navigate = useNavigate();
     const { theme } = useTheme();
+    const { showError } = useToast();
 
     // API Configuration
     const API_BASE_URL = 'http://localhost:8000/api/ai';
@@ -76,7 +78,7 @@ const ProjectTask = () => {
             const token = localStorage.getItem('token');
             console.log('🔍 Token from localStorage:', token ? 'Found' : 'Not found');
             if (!token) {
-                alert('You are not authenticated. Please log in.');
+                showError('Authentication Required', 'You are not authenticated. Please log in.');
                 navigate('/sign-in');
                 return;
             }
@@ -91,7 +93,7 @@ const ProjectTask = () => {
 
             if (!response.ok) {
                 if (response.status === 401) {
-                    alert('Authentication failed. Please log in again.');
+                    showError('Authentication Failed', 'Authentication failed. Please log in again.');
                     localStorage.removeItem('token');
                     navigate('/sign-in');
                     return;

@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { ToastProvider } from './components/ToastContext';
 import SignIn from './view_pages/manager/signIn';
 import SignUp from './view_pages/manager/signUp'; 
 
@@ -37,7 +38,8 @@ import LandingPage from './components/landingpage';
 
 const App: React.FC = () => {
   return (
-    <Router>
+    <ToastProvider>
+      <Router>
       <Routes>
         {/* Root path shows Sign In */}
         <Route path="/" element={<LandingPage />} />
@@ -81,6 +83,7 @@ const App: React.FC = () => {
         <Route path="*" element={<Navigate to="/landing-page" replace />} />
       </Routes>
     </Router>
+    </ToastProvider>
   );
 };
 

@@ -3,10 +3,12 @@ import Sidebar from "../../components/sidebarLayout";
 import SettingsNavigation from "../../components/sidebarNavLayout";
 import TopNavbar from "../../components/topbarLayouot";
 import { useTheme } from "../../components/themeContext";
+import { useToast } from "../../components/ToastContext";
 
 const GeneralSettings = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { theme } = useTheme();
+  const { showSuccess } = useToast();
 
   const [projectName, setProjectName] = useState("MyCrewManager");
   const [description, setDescription] = useState("Project management and team collaboration platform");
@@ -25,7 +27,7 @@ const GeneralSettings = () => {
       dateFormat,
       workingHours,
     });
-    alert("General settings saved!");
+    showSuccess("Settings Saved!", "General settings saved successfully!");
   };
 
   return (
