@@ -463,34 +463,75 @@ export default function ProjectDetailsUI() {
   });
 
   const handleInvite = async () => {
-    if (inviteForm.email && inviteForm.position) {
-      try {
-        const response = await fetch(`${API_BASE_URL}/invitations/`, {
-          method: 'POST',
-          headers: getAuthHeaders(),
-          credentials: 'include',
-          body: JSON.stringify({
-            project: projectId,
-            invitee_email: inviteForm.email,
-            message: `You have been invited to join the project "${projectData.title}" as ${inviteForm.position}.`,
-          }),
-        });
-  
-        if (response.ok) {
-          alert('Invitation sent successfully!');
-          setInviteForm({ email: '', position: '' });
-          setShowInviteModal(false);
-          // Refresh members list to show any new members
-          fetchMembers();
-        } else {
-          const errorData = await response.json();
-          alert(`Failed to send invitation: ${errorData.message || 'Unknown error'}`);
-        }
-      } catch (error) {
-        handleApiError(error, 'send invitation');
-      }
-    } else {
+    if (!inviteForm.email || !inviteForm.position) {
       alert('Please fill out both email and position fields.');
+      return;
+    }
+
+    const token = localStorage.getItem('token');
+    if (!token) {
+      alert('Authentication required. Please log in again.');
+      return;
+    }
+
+    try {
+      // First, look up user by email
+      const usersResponse = await fetch(
+        `http://localhost:8000/api/user/?email=${encodeURIComponent(inviteForm.email)}`,
+        {
+          headers: { 
+            'Authorization': `Token ${token}`,
+            'Content-Type': 'application/json'
+          },
+          credentials: 'include',
+        }
+      );
+
+      if (!usersResponse.ok) {
+        console.warn(`Failed to lookup user with email ${inviteForm.email}`);
+        alert(`User with email ${inviteForm.email} not found. Please make sure they have an account.`);
+        return;
+      }
+
+      const users = await usersResponse.json();
+      
+      if (users.length === 0) {
+        console.warn(`User with email ${inviteForm.email} not found`);
+        alert(`User with email ${inviteForm.email} not found. Please make sure they have an account.`);
+        return;
+      }
+      
+      const user = users[0];
+      
+      // Create invitation with user ID
+      const response = await fetch(`${API_BASE_URL}/invitations/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Token ${token}`,
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          project: parseInt(projectId!),
+          invitee: parseInt(user.user_id),
+          message: `You have been invited to join the project "${projectData.title}" as ${inviteForm.position}.`
+        }),
+      });
+
+      if (response.ok) {
+        alert('Invitation sent successfully!');
+        setInviteForm({ email: '', position: '' });
+        setShowInviteModal(false);
+        // Refresh members list to show any new members
+        fetchMembers();
+      } else {
+        const errorData = await response.json();
+        console.error('Failed to send invitation:', errorData);
+        alert(`Failed to send invitation: ${errorData.message || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Error sending invitation:', error);
+      handleApiError(error, 'send invitation');
     }
   };
 
