@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Edit, Edit2, Trash2, Send, X, BarChart3, Users, FileText, Target, CheckCircle, Clock, RefreshCw, ArrowLeft, GitBranch, Save, Camera } from 'lucide-react';
+import { Plus, Edit, Edit2, Trash2, Send, X, BarChart3, Users, FileText, Target, CheckCircle, Clock, RefreshCw, ArrowLeft, GitBranch, Save, Camera, Upload } from 'lucide-react';
 import TopNavbar from "../../components/topbarLayouot";
 import Sidebar from "../../components/sidebarLayout";
 import { useTheme } from "../../components/themeContext";
@@ -7,6 +7,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import RegenerationSuccessModal from '../../components/RegenerationSuccessModal';
 import { useToast } from '../../components/ToastContext';
+import ProposalViewer from '../../components/ProposalViewer';
 
 export default function ProjectDetailsUI() {
   const { theme } = useTheme();
@@ -57,6 +58,12 @@ export default function ProjectDetailsUI() {
   const [isAiOperation, setIsAiOperation] = useState(false);
   const [showRegenerationModal, setShowRegenerationModal] = useState(false);
   const [regenerationType, setRegenerationType] = useState<'overview' | 'backlog'>('overview');
+  
+  // Proposal upload state
+  const [currentProposal, setCurrentProposal] = useState<any>(null);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [dragActive, setDragActive] = useState(false);
+  const [showProposalViewer, setShowProposalViewer] = useState(false);
   
   const { id: projectId } = useParams();
   const navigate = useNavigate();
@@ -298,7 +305,7 @@ export default function ProjectDetailsUI() {
         id: member.id,
         name: member.user_name,
         email: member.user_email,
-        position: member.role,
+        role: member.role,
         avatar: `bg-${['blue', 'green', 'purple', 'red', 'yellow'][member.id % 5]}-400`,
         image: `bg-${['blue', 'green', 'purple', 'red', 'yellow'][member.id % 5]}-400`
       }));
@@ -387,6 +394,26 @@ export default function ProjectDetailsUI() {
     }
   };
 
+  // Fetch Current Proposal
+  const fetchCurrentProposal = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/projects/${projectId}/current-proposal/`, {
+        headers: getAuthHeaders(),
+        credentials: 'include',
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setCurrentProposal(data);
+      } else if (response.status === 404) {
+        setCurrentProposal(null);
+      }
+    } catch (error) {
+      console.error('Error fetching proposal:', error);
+      setCurrentProposal(null);
+    }
+  };
+
   // Load all data on component mount
   useEffect(() => {
     if (projectId) {
@@ -400,7 +427,8 @@ export default function ProjectDetailsUI() {
             fetchProjectData(),
             fetchBacklog(),
             fetchMembers(),
-            fetchRepositories()
+            fetchRepositories(),
+            fetchCurrentProposal()
           ]);
           
           // Fetch pending invitations separately
@@ -496,19 +524,19 @@ export default function ProjectDetailsUI() {
   });
 
   const [members, setMembers] = useState([
-    { id: 1, name: 'Randal Phuta', email: 'randal@example.com', position: 'Project Manager', image: 'bg-blue-400' },
-    { id: 2, name: 'Sarah Chen', email: 'sarah@example.com', position: 'Frontend Developer', image: 'bg-green-400' }
+    { id: 1, name: 'Randal Phuta', email: 'randal@example.com', role: 'Project Manager', image: 'bg-blue-400' },
+    { id: 2, name: 'Sarah Chen', email: 'sarah@example.com', role: 'Frontend Developer', image: 'bg-green-400' }
   ]);
 
   const [pendingInvitations, setPendingInvitations] = useState<any[]>([]);
 
   const [repositories, setRepositories] = useState([
-    { id: 1, name: 'frontend-repo', url: 'https://github.com/company/frontend-repo', branch: 'main', assignedTo: 'Sarah Chen' },
-    { id: 2, name: 'backend-api', url: 'https://github.com/company/backend-api', branch: 'develop', assignedTo: 'Randal Phuta' }
+    { id: 1, name: 'frontend-repo', url: 'https://github.com/company/frontend-repo', branch: 'main' },
+    { id: 2, name: 'backend-api', url: 'https://github.com/company/backend-api', branch: 'develop' }
   ]);
 
-  const [inviteForm, setInviteForm] = useState({ email: '', position: '' });
-  const [repoForm, setRepoForm] = useState({ name: '', url: '', branch: 'main', assignedTo: '' });
+  const [inviteForm, setInviteForm] = useState({ email: '', role: '' });
+  const [repoForm, setRepoForm] = useState({ name: '', url: '', branch: 'main' });
   const [showRepoModal, setShowRepoModal] = useState(false);
   const [editingRepo, setEditingRepo] = useState(null);
 
@@ -520,8 +548,8 @@ export default function ProjectDetailsUI() {
   });
 
   const handleInvite = async () => {
-    if (!inviteForm.email || !inviteForm.position) {
-      showWarning('Missing Information', 'Please fill out both email and position fields.');
+    if (!inviteForm.email || !inviteForm.role) {
+      showWarning('Missing Information', 'Please fill out both email and role fields.');
       return;
     }
 
@@ -585,13 +613,14 @@ export default function ProjectDetailsUI() {
         body: JSON.stringify({
           project: parseInt(projectId!),
           invitee: parseInt(user.user_id),
-          message: `You have been invited to join the project "${projectData.title}" as ${inviteForm.position}.`
+          role: inviteForm.role,  // Send the role with the invitation
+          message: `You have been invited to join the project "${projectData.title}" as ${inviteForm.role}.`
         }),
       });
 
       if (response.ok) {
         showSuccess('Invitation Sent!', 'Team member invitation sent successfully.');
-        setInviteForm({ email: '', position: '' });
+        setInviteForm({ email: '', role: '' });
         setShowInviteModal(false);
         // Refresh members list and pending invitations
         fetchMembers();
@@ -624,21 +653,29 @@ export default function ProjectDetailsUI() {
     }
   };
 
-  const handleEditMember = (updatedMember: any) => {
-    setMembers((prevMembers) =>
-      prevMembers.map((m) =>
-        m.id === updatedMember.id
-          ? {
-              ...updatedMember,
-              image:
-                updatedMember.imagePreview || updatedMember.image || m.image,
-            }
-          : m
-      )
-    );
-  
-    setShowEditMemberModal(false);
-    setEditingMember(null);
+  const handleEditMember = async (updatedMember: any) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/project-members/${updatedMember.id}/`, {
+        method: 'PATCH',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+        body: JSON.stringify({
+          role: updatedMember.role
+        }),
+      });
+
+      if (response.ok) {
+        showSuccess('Member Updated!', 'Team member has been updated successfully.');
+        setShowEditMemberModal(false);
+        setEditingMember(null);
+        fetchMembers(); // Refresh members list
+      } else {
+        const errorData = await response.json();
+        showError('Update Failed', `Failed to update member: ${errorData.message || 'Unknown error'}`);
+      }
+    } catch (error) {
+      handleApiError(error, 'update member');
+    }
   };
 
   // Backlog CRUD Operations
@@ -1011,6 +1048,12 @@ export default function ProjectDetailsUI() {
         case 'task':
           endpoint = `${API_BASE_URL}/story-tasks/${deleteItem.id}/`;
           break;
+        case 'member':
+          endpoint = `${API_BASE_URL}/project-members/${deleteItem.id}/`;
+          break;
+        case 'repository':
+          endpoint = `${API_BASE_URL}/repositories/${deleteItem.id}/`;
+          break;
         default:
           return;
       }
@@ -1024,7 +1067,17 @@ export default function ProjectDetailsUI() {
       if (response.ok) {
         setShowDeleteModal(false);
         setDeleteItem(null);
-        fetchProjectData(); // Refresh project data
+        
+        // Refresh appropriate data based on what was deleted
+        if (deleteItem.type === 'member') {
+          fetchMembers(); // Refresh members list
+        } else if (deleteItem.type === 'repository') {
+          fetchRepositories(); // Refresh repositories list
+        } else {
+          fetchProjectData(); // Refresh project data for other items
+        }
+        
+        showSuccess('Delete Successful', `${deleteItem.type} has been deleted successfully.`);
       } else {
         const errorData = await response.json();
         showError('Delete Failed', `Failed to delete ${deleteItem.type}: ${errorData.message || 'Unknown error'}`);
@@ -1091,7 +1144,61 @@ export default function ProjectDetailsUI() {
 
 
   // Repository CRUD Operations
+  const validateRepositoryData = (repoData: any) => {
+    // Validate required fields
+    if (!repoData.name || !repoData.name.trim()) {
+      showWarning('Missing Information', 'Repository name is required.');
+      return false;
+    }
+
+    if (!repoData.url || !repoData.url.trim()) {
+      showWarning('Missing Information', 'Repository URL is required.');
+      return false;
+    }
+
+    // Validate URL format
+    try {
+      const url = new URL(repoData.url);
+      
+      // Check if it's a valid GitHub URL
+      if (!url.hostname.includes('github.com')) {
+        showWarning('Invalid Repository URL', 'Please provide a valid GitHub repository URL (e.g., https://github.com/username/repository)');
+        return false;
+      }
+
+      // Check if it has the proper GitHub repository path structure
+      const pathParts = url.pathname.split('/').filter(part => part.length > 0);
+      if (pathParts.length < 2) {
+        showWarning('Invalid Repository URL', 'GitHub repository URL must include username and repository name (e.g., https://github.com/username/repository)');
+        return false;
+      }
+
+      // Check if it's not just the GitHub homepage
+      if (pathParts.length === 1 && pathParts[0] === '') {
+        showWarning('Invalid Repository URL', 'Please provide a specific repository URL, not the GitHub homepage.');
+        return false;
+      }
+
+    } catch (error) {
+      showWarning('Invalid URL Format', 'Please provide a valid URL (e.g., https://github.com/username/repository)');
+      return false;
+    }
+
+    // Validate branch name
+    if (repoData.branch && !/^[a-zA-Z0-9._/-]+$/.test(repoData.branch)) {
+      showWarning('Invalid Branch Name', 'Branch name can only contain letters, numbers, dots, underscores, slashes, and hyphens.');
+      return false;
+    }
+
+    return true;
+  };
+
   const handleAddRepo = async (repoData: any) => {
+    // Validate data before sending to API
+    if (!validateRepositoryData(repoData)) {
+      return false; // Return false if validation fails
+    }
+
     try {
       const response = await fetch(`${API_BASE_URL}/repositories/`, {
         method: 'POST',
@@ -1099,41 +1206,27 @@ export default function ProjectDetailsUI() {
         credentials: 'include',
         body: JSON.stringify({
           project: projectId,
-          name: repoData.name,
-          url: repoData.url,
-          branch: repoData.branch || 'main',
-          assigned_to: repoData.assigned_to || null
+          name: repoData.name.trim(),
+          url: repoData.url.trim(),
+          branch: repoData.branch?.trim() || 'main'
         }),
       });
 
       if (response.ok) {
+        showSuccess('Repository Added!', 'Repository has been added successfully.');
         fetchRepositories(); // Refresh repositories
+        return true; // Return true if successful
       } else {
         const errorData = await response.json();
         showError('Repository Creation Failed', `Failed to add repository: ${errorData.message || 'Unknown error'}`);
+        return false; // Return false if API call failed
       }
     } catch (error) {
       handleApiError(error, 'add repository');
+      return false; // Return false if error occurred
     }
   };
 
-  const deleteRepo = async (repoId: any) => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/repositories/${repoId}/`, {
-        method: 'DELETE',
-        headers: getAuthHeaders(),
-        credentials: 'include',
-      });
-
-      if (response.ok) {
-        fetchRepositories(); // Refresh repositories
-      } else {
-        showError('Repository Delete Failed', 'Failed to delete repository');
-      }
-    } catch (error) {
-      handleApiError(error, 'delete repository');
-    }
-  };
 
   const openEditMember = (member: any) => {
     setEditingMember({ ...member });
@@ -1141,15 +1234,21 @@ export default function ProjectDetailsUI() {
   };
 
   // Updated handleAddRepo to use the API-based function
-  const handleAddRepoLocal = () => {
-    if (repoForm.name && repoForm.url) {
-      handleAddRepo({
-        name: repoForm.name,
-        url: repoForm.url,
-        branch: repoForm.branch,
-        assigned_to: repoForm.assignedTo
-      });
-      setRepoForm({ name: '', url: '', branch: 'main', assignedTo: '' });
+  const handleAddRepoLocal = async () => {
+    if (!repoForm.name || !repoForm.url) {
+      showWarning('Missing Information', 'Please fill out both repository name and URL fields.');
+      return;
+    }
+
+    const success = await handleAddRepo({
+      name: repoForm.name,
+      url: repoForm.url,
+      branch: repoForm.branch
+    });
+    
+    // Only clear form and close modal if repository was successfully added
+    if (success) {
+      setRepoForm({ name: '', url: '', branch: 'main' });
       setShowRepoModal(false);
       setEditingRepo(null);
     }
@@ -1157,7 +1256,7 @@ export default function ProjectDetailsUI() {
 
   const openEditRepo = (repo: any) => {
     setEditingRepo(repo);
-    setRepoForm({ name: repo.name, url: repo.url, branch: repo.branch, assignedTo: repo.assignedTo });
+    setRepoForm({ name: repo.name, url: repo.url, branch: repo.branch });
     setShowRepoModal(true);
   };
 
@@ -1300,7 +1399,84 @@ export default function ProjectDetailsUI() {
     }
   };
 
+  // File Upload Handlers
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.type !== 'application/pdf') {
+        showWarning('Invalid File Type', 'Only PDF files are allowed.');
+        return;
+      }
+      setUploadedFile(file);
+    }
+  };
 
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setDragActive(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setDragActive(false);
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setDragActive(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file && file.type === 'application/pdf') {
+      setUploadedFile(file);
+    } else {
+      showWarning('Invalid File Type', 'Only PDF files are allowed.');
+    }
+  };
+
+  const removeFile = () => {
+    setUploadedFile(null);
+  };
+
+  const uploadProposal = async () => {
+    if (!uploadedFile || !projectId) {
+      showWarning('Missing File', 'Please select a PDF file to upload');
+      return;
+    }
+
+    const token = localStorage.getItem('token');
+    if (!token) {
+      showError('Authentication Required', 'Please log in again.');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', uploadedFile);
+      formData.append('project_id', projectId);
+
+      const response = await fetch(`${API_BASE_URL}/proposals/`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Token ${token}`,
+        },
+        body: formData,
+      });
+
+      if (response.ok) {
+        showSuccess('Proposal Uploaded!', 'Proposal has been uploaded successfully. Click "Regenerate" to update project with new insights.');
+        setUploadedFile(null);
+        await fetchCurrentProposal();
+      } else {
+        const errorData = await response.json();
+        showError('Upload Failed', `Failed to upload proposal: ${errorData.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      handleApiError(error, 'upload proposal');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Show loading state
   if (loading) {
@@ -1582,7 +1758,10 @@ export default function ProjectDetailsUI() {
                       </button>
                       {isEditingOverview && (
                         <button
-                          onClick={() => setIsEditingOverview(false)}
+                          onClick={() => {
+                            setIsEditingOverview(false);
+                            setUploadedFile(null);
+                          }}
                           className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors flex items-center font-medium"
                         >
                           <X className="w-4 h-4 mr-2" />
@@ -1593,6 +1772,150 @@ export default function ProjectDetailsUI() {
                   </div>
 
                   <div className={`p-6 space-y-8 ${theme === 'dark' ? 'bg-gray-800' : 'bg-white'}`}>
+                    {/* Proposal Upload Section */}
+                    <div className="mb-6">
+                      <h3 className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'} mb-3 flex items-center`}>
+                        <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center mr-3">
+                          <FileText className="w-4 h-4 text-purple-600" />
+                        </div>
+                        Project Proposal
+                      </h3>
+                      
+                      {!currentProposal && !isEditingOverview && (
+                        <div className={`p-6 border-2 border-dashed rounded-lg text-center ${
+                          theme === 'dark' ? 'border-gray-600 bg-gray-800' : 'border-gray-300 bg-gray-50'
+                        }`}>
+                          <FileText className={`w-12 h-12 mx-auto mb-3 ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}`} />
+                          <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+                            No proposal found. Upload a PDF proposal in edit mode to enable AI analysis.
+                          </p>
+                        </div>
+                      )}
+                      
+                      {currentProposal && !isEditingOverview && (
+                        <div className={`p-4 rounded-lg border ${
+                          theme === 'dark' ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'
+                        }`}>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center">
+                              <FileText className="w-5 h-5 text-purple-600 mr-3" />
+                              <div>
+                                <p className={`font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                                  Proposal Uploaded
+                                </p>
+                                <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+                                  {new Date(currentProposal.uploaded_at).toLocaleDateString()}
+                                </p>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => setShowProposalViewer(true)}
+                              className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                            >
+                              View Proposal
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {isEditingOverview && (
+                        <div className="space-y-4">
+                          {currentProposal && (
+                            <div className={`p-4 rounded-lg border ${
+                              theme === 'dark' ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'
+                            }`}>
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center">
+                                  <FileText className="w-5 h-5 text-purple-600 mr-3" />
+                                  <div>
+                                    <p className={`font-medium ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                                      Current Proposal
+                                    </p>
+                                    <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+                                      {new Date(currentProposal.uploaded_at).toLocaleDateString()}
+                                    </p>
+                                  </div>
+                                </div>
+                                <button
+                                  onClick={() => setShowProposalViewer(true)}
+                                  className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                                >
+                                  View Proposal
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                          
+                          <div>
+                            <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-200' : 'text-gray-700'}`}>
+                              {currentProposal ? 'Upload New Proposal (Replace)' : 'Upload Proposal'}
+                            </label>
+                            <div
+                              onDragOver={handleDragOver}
+                              onDragLeave={handleDragLeave}
+                              onDrop={handleDrop}
+                              className={`border-2 border-dashed rounded-lg p-6 text-center transition-all ${
+                                dragActive ? 'border-blue-400 bg-blue-50' : theme === 'dark' ? 'border-gray-600 hover:border-gray-500' : 'border-gray-300 hover:border-gray-400'
+                              } cursor-pointer`}
+                              onClick={() => document.getElementById('proposalFileInput')?.click()}
+                            >
+                              <Upload size={32} className={`mx-auto mb-2 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-400'}`} />
+                              <p className={`text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}>
+                                {uploadedFile
+                                  ? `Selected: ${uploadedFile.name} (${(uploadedFile.size / 1024).toFixed(2)} KB)`
+                                  : 'Click to upload or drag and drop'}
+                              </p>
+                              <p className={`text-xs mt-1 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>PDF files only</p>
+
+                              <input
+                                id="proposalFileInput"
+                                type="file"
+                                accept="application/pdf"
+                                onChange={handleFileChange}
+                                className="hidden"
+                              />
+                            </div>
+
+                            {uploadedFile && (
+                              <div className={`mt-3 flex items-center justify-between border p-3 rounded-lg ${
+                                theme === 'dark' ? 'bg-gray-900 border-gray-700' : 'bg-gray-50 border-gray-200'
+                              }`}>
+                                <span className={`text-sm truncate ${theme === 'dark' ? 'text-gray-200' : 'text-gray-700'}`}>
+                                  {uploadedFile.name}
+                                </span>
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      uploadProposal();
+                                    }}
+                                    className="text-green-600 hover:text-green-800 text-sm font-medium px-3 py-1 rounded hover:bg-green-50"
+                                  >
+                                    Upload
+                                  </button>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      removeFile();
+                                    }}
+                                    className="text-red-500 hover:text-red-700 flex items-center gap-1 text-sm"
+                                  >
+                                    <X size={14} /> Remove
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                          
+                          {currentProposal && uploadedFile && (
+                            <p className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+                              Note: Uploading a new proposal will replace the current one. Click "Regenerate" after upload to update project insights.
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
                     {/* AI Summary */}
                     <div>
                       <h3 className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'} mb-3 flex items-center`}>
@@ -2160,7 +2483,7 @@ export default function ProjectDetailsUI() {
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <span className="px-3 py-1.5 inline-flex text-xs leading-5 font-semibold rounded-full bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-800">
-                                {member.position}
+                                {member.role}
                               </span>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -2172,7 +2495,7 @@ export default function ProjectDetailsUI() {
                                   <Edit2 className="w-4 h-4" />
                                 </button>
                                 <button
-                                  onClick={() => setMembers(members.filter(m => m.id !== member.id))}
+                                  onClick={() => handleDeleteClick('member', member.id, member.name)}
                                   className="text-red-600 hover:text-red-800 hover:bg-red-50 p-2 rounded-lg transition-colors"
                                 >
                                   <Trash2 className="w-4 h-4" />
@@ -2281,7 +2604,7 @@ export default function ProjectDetailsUI() {
                   <button
                     onClick={() => {
                       setEditingRepo(null);
-                      setRepoForm({ name: '', url: '', branch: 'main', assignedTo: '' });
+                      setRepoForm({ name: '', url: '', branch: 'main' });
                       setShowRepoModal(true);
                     }}
                     className="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center shadow-sm"
@@ -2312,7 +2635,7 @@ export default function ProjectDetailsUI() {
                             <Edit2 className="w-4 h-4" />
                           </button>
                           <button
-                            onClick={() => deleteRepo(repo.id)}
+                            onClick={() => handleDeleteClick('repository', repo.id, repo.name)}
                             className="text-red-600 hover:text-red-800 hover:bg-red-50 p-2 rounded-lg transition-colors"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -2328,12 +2651,6 @@ export default function ProjectDetailsUI() {
                           </a>
                         </div>
                         
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-gray-600 font-medium">Assigned to:</span>
-                          <span className="px-3 py-1.5 bg-gradient-to-r from-green-100 to-emerald-100 text-green-800 rounded-full text-xs font-semibold">
-                            {repo.assignedTo || 'Unassigned'}
-                          </span>
-                        </div>
                       </div>
                     </div>
                   ))}
@@ -2347,7 +2664,7 @@ export default function ProjectDetailsUI() {
                     <button
                       onClick={() => {
                         setEditingRepo(null);
-                        setRepoForm({ name: '', url: '', branch: 'main', assignedTo: '' });
+                        setRepoForm({ name: '', url: '', branch: 'main' });
                         setShowRepoModal(true);
                       }}
                       className="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors inline-flex items-center"
@@ -2395,14 +2712,14 @@ export default function ProjectDetailsUI() {
               
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Position
+                  Role
                 </label>
                 <select
-                  value={inviteForm.position}
-                  onChange={(e) => setInviteForm({ ...inviteForm, position: e.target.value })}
+                  value={inviteForm.role}
+                  onChange={(e) => setInviteForm({ ...inviteForm, role: e.target.value })}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow"
                 >
-                  <option value="">Select a position</option>
+                  <option value="">Select a role</option>
                   <option value="Frontend Developer">Frontend Developer</option>
                   <option value="Backend Developer">Backend Developer</option>
                   <option value="Full Stack Developer">Full Stack Developer</option>
@@ -2524,19 +2841,19 @@ export default function ProjectDetailsUI() {
                 />
               </div>
 
-              {/* Position */}
+              {/* Role */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Position
+                  Role
                 </label>
                 <select
-                  value={editingMember.position}
+                  value={editingMember.role}
                   onChange={(e) =>
-                    setEditingMember({ ...editingMember, position: e.target.value })
+                    setEditingMember({ ...editingMember, role: e.target.value })
                   }
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-shadow"
                 >
-                  <option value="">Select a position</option>
+                  <option value="">Select a role</option>
                   <option value="Frontend Developer">Frontend Developer</option>
                   <option value="Backend Developer">Backend Developer</option>
                   <option value="Full Stack Developer">Full Stack Developer</option>
@@ -2586,7 +2903,7 @@ export default function ProjectDetailsUI() {
                   onClick={() => {
                     setShowRepoModal(false);
                     setEditingRepo(null);
-                    setRepoForm({ name: '', url: '', branch: 'main', assignedTo: '' });
+                    setRepoForm({ name: '', url: '', branch: 'main' });
                   }}
                   className="text-white hover:bg-white hover:bg-opacity-20 p-2 rounded-lg transition-colors"
                 >
@@ -2617,9 +2934,12 @@ export default function ProjectDetailsUI() {
                   type="url"
                   value={repoForm.url}
                   onChange={(e) => setRepoForm({ ...repoForm, url: e.target.value })}
-                  placeholder="https://github.com/username/repo"
+                  placeholder="https://github.com/username/repository-name"
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-shadow"
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  Must be a valid GitHub repository URL (e.g., https://github.com/microsoft/vscode)
+                </p>
               </div>
               
               <div>
@@ -2635,30 +2955,13 @@ export default function ProjectDetailsUI() {
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Assign To
-                </label>
-                <select
-                  value={repoForm.assignedTo}
-                  onChange={(e) => setRepoForm({ ...repoForm, assignedTo: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-shadow"
-                >
-                  <option value="">Select a team member</option>
-                  {members.map((member) => (
-                    <option key={member.id} value={member.name}>
-                      {member.name} - {member.position}
-                    </option>
-                  ))}
-                </select>
-              </div>
               
               <div className="flex space-x-3 pt-2">
                 <button
                   onClick={() => {
                     setShowRepoModal(false);
                     setEditingRepo(null);
-                    setRepoForm({ name: '', url: '', branch: 'main', assignedTo: '' });
+                    setRepoForm({ name: '', url: '', branch: 'main' });
                   }}
                   className="flex-1 px-4 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors"
                 >
@@ -3055,6 +3358,15 @@ export default function ProjectDetailsUI() {
         }
         type={regenerationType}
       />
+
+      {/* Proposal Viewer Modal */}
+      {showProposalViewer && currentProposal && (
+        <ProposalViewer
+          isOpen={showProposalViewer}
+          onClose={() => setShowProposalViewer(false)}
+          proposalData={currentProposal}
+        />
+      )}
     </div>
   );
 }

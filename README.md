@@ -532,7 +532,52 @@ For support and questions:
 
 ## 🔄 Recent Updates
 
-### Backlog Editing & Database Integration (Latest)
+### Repository Management & Project Invitation System (Latest)
+- ✅ **Repository Backend Cleanup**: Simplified repository management by removing member assignment complexity
+  - **Model Simplification**: Removed `assigned_to` field from Repository model, added `updated_at` timestamp
+  - **API Streamlining**: Updated RepositorySerializer to remove assignment-related fields and methods
+  - **Frontend Integration**: Updated `monitor_created.tsx` to work with simplified repository structure
+  - **Database Migration**: Applied migration to add `updated_at` field to existing repository table
+  - **Clean Architecture**: Repository management now focuses on core functionality without assignment complexity
+- ✅ **Repository Validation & Error Handling**: Enhanced repository management with comprehensive validation
+  - **GitHub URL Validation**: Validates proper GitHub repository URLs with username and repository name
+  - **Required Field Validation**: Ensures repository name and URL are provided before submission
+  - **Branch Name Validation**: Validates branch names using regex pattern for proper Git branch format
+  - **Error Handling**: Graceful error handling with specific warning messages for different validation failures
+  - **Form Management**: Improved form clearing logic to only clear on successful repository addition
+  - **User Guidance**: Added helpful placeholder text and guidance in repository modal
+- ✅ **Repository CRUD Operations**: Fixed repository deletion and added confirmation modals
+  - **Delete Functionality**: Fixed 404 error in repository deletion by updating get_queryset method
+  - **Confirmation Modals**: Added confirmation modals for all delete operations (repositories, members, tasks)
+  - **API Integration**: Proper API calls for repository deletion with error handling
+  - **User Experience**: Professional confirmation dialogs prevent accidental deletions
+- ✅ **Project Invitation Role System**: Enhanced invitation system to preserve invited roles
+  - **Role Preservation**: Invited users now get the role they were invited with instead of default 'Member'
+  - **Model Enhancement**: Added `role` field to ProjectInvitation model to store invited role
+  - **Backend Integration**: Updated invitation acceptance logic to use invited role when creating ProjectMember
+  - **Frontend Updates**: Renamed "position" to "role" throughout the interface for consistency
+  - **Member Editing**: Fixed member role editing to use proper API calls with PATCH requests
+  - **Database Migration**: Applied migration to add role field to existing invitation table
+
+### Proposal Upload & Viewing System
+- ✅ **Proposal Upload Integration**: Added comprehensive PDF proposal upload functionality to project monitor page
+  - **Upload Interface**: Drag-and-drop file upload with PDF validation in edit mode
+  - **Current Proposal Display**: Shows existing proposal with upload date and view link
+  - **Replace Functionality**: New uploads replace existing proposals without auto-triggering AI analysis
+  - **Edit Mode Integration**: Upload/change functionality only available when editing project overview
+  - **Placeholder Display**: Shows "no proposal found" message when no proposal exists
+- ✅ **Proposal Viewer Component**: Created professional document viewer for parsed proposal text
+  - **Markdown Rendering**: Converts plain text to formatted markdown with headers, lists, and proper spacing
+  - **Full-Screen Modal**: Document-style viewer with theme support and responsive design
+  - **Text Formatting**: Automatic conversion of section titles to headers and bullet points to lists
+  - **Theme Integration**: Full dark/light theme compatibility with proper typography
+  - **User Experience**: Replaced external PDF links with integrated text viewer for better accessibility
+- ✅ **Backend API Enhancement**: Added current-proposal endpoint for fetching latest proposal data
+  - **New Endpoint**: `GET /api/ai/projects/{id}/current-proposal/` returns latest proposal or 404
+  - **Data Integration**: Seamlessly integrated with existing proposal upload and AI analysis workflow
+  - **Error Handling**: Graceful handling of missing proposals with appropriate user feedback
+
+### Backlog Editing & Database Integration
 - ✅ **Backlog Edit Mode Implementation**: Added comprehensive edit functionality for backlog section
   - **Edit Button**: Backlog now follows the same pattern as project overview with Edit/Cancel/Save Changes buttons
   - **Read-Only by Default**: All backlog content displays in read-only mode until Edit is clicked

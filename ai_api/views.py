@@ -97,6 +97,15 @@ class ProjectViewSet(ModelViewSet):
             "llm": output,
         }, status=status.HTTP_200_OK)
 
+    @action(detail=True, methods=["get"], url_path="current-proposal")
+    def current_proposal(self, request, pk=None):
+        project = self.get_object()
+        proposal = project.proposals.order_by('-uploaded_at').first()
+        if proposal:
+            serializer = ProposalSerializer(proposal)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response({"message": "No proposal found"}, status=status.HTTP_404_NOT_FOUND)
+
     @action(detail=True, methods=["put"], url_path="generate-backlog")
     def generate_backlog(self, request, pk=None):
         project = self.get_object()
@@ -798,7 +807,7 @@ class ProjectInvitationViewSet(ModelViewSet):
                     project=invitation.project,
                     user=invitation.invitee,
                     defaults={
-                        'role': 'Member'
+                        'role': invitation.role  # Use the role from the invitation
                     }
                 )
                 
@@ -923,7 +932,9 @@ class RepositoryViewSet(ModelViewSet):
         project_id = self.request.query_params.get('project_id')
         if project_id:
             return Repository.objects.filter(project_id=project_id)
-        return Repository.objects.none()
+        # Allow access to all repositories for project creators
+        # This is needed for DELETE operations that don't include project_id
+        return Repository.objects.filter(project__created_by=self.request.user)
 
     def perform_create(self, serializer):
         # Only allow project creators to create repositories

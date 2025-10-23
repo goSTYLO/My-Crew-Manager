@@ -209,17 +209,13 @@ class NotificationAdmin(admin.ModelAdmin):
 
 @admin.register(Repository)
 class RepositoryAdmin(admin.ModelAdmin):
-    list_display = ['id', 'name', 'project_name', 'branch', 'assigned_to_name', 'created_at']
-    list_filter = ['branch', 'created_at', 'project']
-    search_fields = ['name', 'url', 'project__title', 'assigned_to__user_name']
+    list_display = ['id', 'name', 'project_name', 'branch', 'created_at', 'updated_at']
+    list_filter = ['branch', 'created_at', 'updated_at', 'project']
+    search_fields = ['name', 'url', 'project__title']
     date_hierarchy = 'created_at'
+    readonly_fields = ['created_at', 'updated_at']
     
     def project_name(self, obj):
         return obj.project.title
     project_name.short_description = 'Project'
     project_name.admin_order_field = 'project__title'
-    
-    def assigned_to_name(self, obj):
-        return obj.assigned_to.user_name if obj.assigned_to else 'Unassigned'
-    assigned_to_name.short_description = 'Assigned To'
-    assigned_to_name.admin_order_field = 'assigned_to__user_name'

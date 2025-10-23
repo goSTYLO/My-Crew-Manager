@@ -75,13 +75,13 @@
     },
     {
       "name": "build_daemon",
-      "rootUri": "file:///C:/Users/Aaron/AppData/Local/Pub/Cache/hosted/pub.dev/build_daemon-4.0.4",
+      "rootUri": "file:///C:/Users/Aaron/AppData/Local/Pub/Cache/hosted/pub.dev/build_daemon-4.1.0",
       "packageUri": "lib/",
-      "languageVersion": "3.6"
+      "languageVersion": "3.7"
     },
     {
       "name": "build_runner",
-      "rootUri": "file:///C:/Users/Aaron/AppData/Local/Pub/Cache/hosted/pub.dev/build_runner-2.9.0",
+      "rootUri": "file:///C:/Users/Aaron/AppData/Local/Pub/Cache/hosted/pub.dev/build_runner-2.10.0",
       "packageUri": "lib/",
       "languageVersion": "3.7"
     },
@@ -1047,9 +1047,9 @@
     },
     {
       "name": "url_launcher_ios",
-      "rootUri": "file:///C:/Users/Aaron/AppData/Local/Pub/Cache/hosted/pub.dev/url_launcher_ios-6.3.4",
+      "rootUri": "file:///C:/Users/Aaron/AppData/Local/Pub/Cache/hosted/pub.dev/url_launcher_ios-6.3.5",
       "packageUri": "lib/",
-      "languageVersion": "3.7"
+      "languageVersion": "3.9"
     },
     {
       "name": "url_launcher_linux",
@@ -1059,9 +1059,9 @@
     },
     {
       "name": "url_launcher_macos",
-      "rootUri": "file:///C:/Users/Aaron/AppData/Local/Pub/Cache/hosted/pub.dev/url_launcher_macos-3.2.3",
+      "rootUri": "file:///C:/Users/Aaron/AppData/Local/Pub/Cache/hosted/pub.dev/url_launcher_macos-3.2.4",
       "packageUri": "lib/",
-      "languageVersion": "3.7"
+      "languageVersion": "3.9"
     },
     {
       "name": "url_launcher_platform_interface",

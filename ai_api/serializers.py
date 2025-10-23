@@ -126,7 +126,7 @@ class ProjectInvitationSerializer(serializers.ModelSerializer):
         model = ProjectInvitation
         fields = [
             'id', 'project', 'project_title', 'invitee', 'invitee_name', 'invitee_email',
-            'invited_by', 'invited_by_name', 'status', 'message', 'created_at', 'updated_at'
+            'invited_by', 'invited_by_name', 'status', 'role', 'message', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'status', 'created_at', 'updated_at', 'invited_by']
     
@@ -156,21 +156,10 @@ class ProjectInvitationActionSerializer(serializers.Serializer):
 
 
 class RepositorySerializer(serializers.ModelSerializer):
-    assigned_to_details = serializers.SerializerMethodField()
-    
     class Meta:
         model = Repository
-        fields = ['id', 'project', 'name', 'url', 'branch', 'assigned_to', 'assigned_to_details', 'created_at']
-        read_only_fields = ['id', 'created_at']
-    
-    def get_assigned_to_details(self, obj):
-        if obj.assigned_to:
-            return {
-                'id': obj.assigned_to.id,
-                'user_name': obj.assigned_to.user_name,
-                'user_email': obj.assigned_to.user_email,
-            }
-        return None
+        fields = ['id', 'project', 'name', 'url', 'branch', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at']
 
 
 class NotificationSerializer(serializers.ModelSerializer):
