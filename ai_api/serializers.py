@@ -117,18 +117,47 @@ class ProjectMemberSerializer(serializers.ModelSerializer):
 
 
 class ProjectInvitationSerializer(serializers.ModelSerializer):
-    project_title = serializers.CharField(source='project.title', read_only=True)
-    invitee_name = serializers.CharField(source='invitee.name', read_only=True)
-    invitee_email = serializers.CharField(source='invitee.email', read_only=True)
-    invited_by_name = serializers.CharField(source='invited_by.name', read_only=True)
+    project = serializers.SerializerMethodField()
+    invitee = serializers.SerializerMethodField()
+    invited_by = serializers.SerializerMethodField()
     
     class Meta:
         model = ProjectInvitation
         fields = [
-            'id', 'project', 'project_title', 'invitee', 'invitee_name', 'invitee_email',
-            'invited_by', 'invited_by_name', 'status', 'role', 'message', 'created_at', 'updated_at'
+            'id', 'project', 'invitee', 'invited_by', 'status', 'message', 'created_at', 'updated_at'
         ]
-        read_only_fields = ['id', 'status', 'created_at', 'updated_at', 'invited_by']
+        read_only_fields = ['id', 'created_at', 'updated_at']
+    
+    def get_project(self, obj):
+        return {
+            'id': obj.project.id,
+            'title': obj.project.title,
+            'summary': obj.project.summary or '',
+            'created_by': {
+                'id': obj.project.created_by.user_id,
+                'name': obj.project.created_by.name,
+                'email': obj.project.created_by.email,
+            },
+            'created_at': obj.project.created_at.isoformat() if obj.project.created_at else None,
+            'member_count': getattr(obj.project, 'member_count', 0),
+            'task_count': getattr(obj.project, 'task_count', 0),
+        }
+    
+    def get_invitee(self, obj):
+        return {
+            'id': obj.invitee.user_id,
+            'name': obj.invitee.name,
+            'email': obj.invitee.email,
+            'avatar': obj.invitee.name[:2].upper() if obj.invitee.name else 'U'
+        }
+    
+    def get_invited_by(self, obj):
+        return {
+            'id': obj.invited_by.user_id,
+            'name': obj.invited_by.name,
+            'email': obj.invited_by.email,
+            'avatar': obj.invited_by.name[:2].upper() if obj.invited_by.name else 'U'
+        }
     
     def validate(self, data):
         # Additional validation for creating invitations

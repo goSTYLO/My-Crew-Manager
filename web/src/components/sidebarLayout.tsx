@@ -3,10 +3,12 @@ import { useNavigate, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
   FolderOpen,
+  CheckSquare,
   Clock,
   TrendingUp,
   Settings,
   LogOut,
+  FolderPlus,
   MessageSquare
 } from "lucide-react";
 import { useTheme } from "./themeContext";
