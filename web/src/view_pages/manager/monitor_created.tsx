@@ -2100,7 +2100,7 @@ export default function ProjectDetailsUI() {
                             </h4>
                             <div className="space-y-2 ml-8">
                               {week.items?.map((task, taskIdx) => (
-                                <div key={task.id || taskIdx} className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200 hover:border-blue-300 transition-colors">
+                                <div key={task.id || taskIdx} className={`flex items-center justify-between p-3 ${theme === 'dark' ? 'bg-gray-700 border-gray-600 hover:border-blue-400' : 'bg-white border-gray-200 hover:border-blue-300'} rounded-lg border transition-colors`}>
                                   {isEditingOverview ? (
                                     <input
                                       type="text"
