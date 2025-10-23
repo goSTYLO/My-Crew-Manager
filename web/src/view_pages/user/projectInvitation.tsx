@@ -149,14 +149,16 @@ const App: React.FC = () => {
 
    const handleInvitationResponse = async (notificationId: number, invitationId: number, response: 'accepted' | 'declined') => {
       try {
-         // Call the API
          if (response === 'accepted') {
             await invitationAPI.acceptInvitation(invitationId);
+            
+            // ✅ Navigate to /projects-user after successful accept
+            navigate('/projects-user');
          } else {
             await invitationAPI.declineInvitation(invitationId);
          }
-         
-         // Update local state
+
+         // ✅ Update local state
          setInvitations(prev =>
             prev.map(inv => {
                if (inv.id === invitationId) {
@@ -169,12 +171,13 @@ const App: React.FC = () => {
                return inv;
             })
          );
-         
+
       } catch (err) {
          console.error('Error responding to invitation:', err);
          setError(err instanceof Error ? err.message : 'Failed to respond to invitation');
       }
    };
+
 
   const unreadCount = notifications.filter(n => !n.is_read).length;
   const invitationNotifications = notifications.filter(n => n.notification_type === 'project_invitation');

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from "react-router-dom";
-import { Clock, MessageSquareText, Lightbulb, File, Calendar } from 'lucide-react';
+import { Clock, MessageSquareText, Lightbulb, File, Calendar, ArrowLeft } from 'lucide-react';
 import Sidebar from "../../components/sidebarUser"; // <-- import Sidebar
 import TopNavbar from "../../components/topbarLayout_user";
 
@@ -355,7 +355,17 @@ const ProjectManager: React.FC = () => {
         {/* Header Section */}
         <header className="mb-8">
           <nav className="text-sm text-gray-500 mb-4">
-            <h2 className="mt-5 text-2xl font-semibold text-gray-800"><span>Projects</span> / <span>Addodle</span></h2>
+            <button
+               onClick={() => navigate('/projects-user')}
+               className="flex items-center gap-2 text-2xl font-semibold text-black "
+            >
+              <ArrowLeft
+                  className={`w-5 h-5 transition-colors duration-200 text-black hover:text-blue-600`}
+                  />
+                  <span>
+                  Project Invitations
+                  </span>
+            </button>
           </nav>
   
           <div className="flex items-center justify-between">
