@@ -31,3 +31,6 @@ __pycache__/
 
 # OS specific
 .DS_Store
+mobile/mycrewmanager/.dart_tool/package_config.json
+mobile/mycrewmanager/.dart_tool/package_graph.json
+mobile/mycrewmanager/android/local.properties
