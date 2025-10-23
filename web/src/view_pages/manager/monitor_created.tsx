@@ -309,6 +309,55 @@ export default function ProjectDetailsUI() {
     }
   };
 
+  // Fetch Pending Invitations Data
+  const fetchPendingInvitations = async () => {
+    try {
+      console.log('🔍 Fetching pending invitations for projectId:', projectId);
+      const response = await fetch(`${API_BASE_URL}/invitations/?project_id=${projectId}`, {
+        headers: getAuthHeaders(),
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        console.error('❌ Invitations fetch failed:', response.status);
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('✅ Pending invitations data fetched:', data);
+      
+      // Filter for pending invitations only
+      const pendingInvitations = data.filter((invitation: any) => invitation.status === 'pending');
+      return pendingInvitations;
+    } catch (error) {
+      console.error('❌ Error fetching invitations:', error);
+      return [];
+    }
+  };
+
+  // Cancel/Delete Pending Invitation
+  const cancelInvitation = async (invitationId: number) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/invitations/${invitationId}/`, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+      });
+
+      if (response.ok) {
+        showSuccess('Invitation Cancelled', 'The invitation has been cancelled successfully.');
+        // Refresh pending invitations
+        const updatedInvitations = await fetchPendingInvitations();
+        setPendingInvitations(updatedInvitations);
+      } else {
+        const errorData = await response.json();
+        showError('Cancellation Failed', `Failed to cancel invitation: ${errorData.message || 'Unknown error'}`);
+      }
+    } catch (error) {
+      handleApiError(error, 'cancel invitation');
+    }
+  };
+
   // Fetch Repositories Data
   const fetchRepositories = async () => {
     try {
@@ -353,6 +402,10 @@ export default function ProjectDetailsUI() {
             fetchMembers(),
             fetchRepositories()
           ]);
+          
+          // Fetch pending invitations separately
+          const invitations = await fetchPendingInvitations();
+          setPendingInvitations(invitations);
           console.log('✅ All data loaded successfully');
         } catch (error) {
           console.error('❌ Error loading data:', error);
@@ -447,6 +500,8 @@ export default function ProjectDetailsUI() {
     { id: 2, name: 'Sarah Chen', email: 'sarah@example.com', position: 'Frontend Developer', image: 'bg-green-400' }
   ]);
 
+  const [pendingInvitations, setPendingInvitations] = useState<any[]>([]);
+
   const [repositories, setRepositories] = useState([
     { id: 1, name: 'frontend-repo', url: 'https://github.com/company/frontend-repo', branch: 'main', assignedTo: 'Sarah Chen' },
     { id: 2, name: 'backend-api', url: 'https://github.com/company/backend-api', branch: 'develop', assignedTo: 'Randal Phuta' }
@@ -505,6 +560,20 @@ export default function ProjectDetailsUI() {
       
       const user = users[0];
       
+      // Check if there's already a pending invitation for this user
+      const existingInvitation = pendingInvitations.find(inv => inv.invitee === parseInt(user.user_id));
+      if (existingInvitation) {
+        showWarning('Invitation Already Sent', `An invitation has already been sent to ${inviteForm.email} for this project. Please wait for them to respond.`);
+        return;
+      }
+      
+      // Check if user is already a member
+      const isAlreadyMember = members.some(member => member.email === inviteForm.email);
+      if (isAlreadyMember) {
+        showWarning('User Already Member', `${inviteForm.email} is already a member of this project.`);
+        return;
+      }
+      
       // Create invitation with user ID
       const response = await fetch(`${API_BASE_URL}/invitations/`, {
         method: 'POST',
@@ -524,12 +593,30 @@ export default function ProjectDetailsUI() {
         showSuccess('Invitation Sent!', 'Team member invitation sent successfully.');
         setInviteForm({ email: '', position: '' });
         setShowInviteModal(false);
-        // Refresh members list to show any new members
+        // Refresh members list and pending invitations
         fetchMembers();
+        const updatedInvitations = await fetchPendingInvitations();
+        setPendingInvitations(updatedInvitations);
       } else {
         const errorData = await response.json();
         console.error('Failed to send invitation:', errorData);
-        showError('Invitation Failed', `Failed to send invitation: ${errorData.message || 'Unknown error'}`);
+        
+        // Handle specific error cases
+        if (response.status === 409) {
+          if (errorData.error && errorData.error.includes("pending invitation already exists")) {
+            showWarning('Invitation Already Sent', `An invitation has already been sent to ${inviteForm.email} for this project. Please wait for them to respond or check the invitation status.`);
+          } else if (errorData.error && errorData.error.includes("already a member")) {
+            showWarning('User Already Member', `${inviteForm.email} is already a member of this project.`);
+          } else {
+            showError('Invitation Conflict', `There's a conflict with sending the invitation: ${errorData.error || 'Unknown conflict'}`);
+          }
+        } else if (response.status === 403) {
+          showError('Permission Denied', 'You do not have permission to send invitations for this project.');
+        } else if (response.status === 404) {
+          showError('Project Not Found', 'The project could not be found. Please refresh and try again.');
+        } else {
+          showError('Invitation Failed', `Failed to send invitation: ${errorData.error || errorData.message || 'Unknown error'}`);
+        }
       }
     } catch (error) {
       console.error('Error sending invitation:', error);
@@ -2098,6 +2185,88 @@ export default function ProjectDetailsUI() {
                     </table>
                   </div>
                 </div>
+
+                {/* Pending Invitations Section */}
+                {pendingInvitations.length > 0 && (
+                  <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <div className="bg-gradient-to-r from-orange-50 to-yellow-50 px-6 py-4 border-b border-orange-100">
+                      <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                        <Clock className="w-5 h-5 mr-2 text-orange-600" />
+                        Pending Invitations ({pendingInvitations.length})
+                      </h3>
+                      <p className="text-sm text-gray-600 mt-1">Invitations waiting for response</p>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gradient-to-r from-orange-50 to-yellow-50">
+                          <tr>
+                            <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                              Invitee
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                              Email
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                              Invited By
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                              Sent Date
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                              Status
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                              Actions
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {pendingInvitations.map((invitation) => (
+                            <tr key={invitation.id} className="hover:bg-gray-50 transition-colors">
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="flex items-center">
+                                  <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center mr-3">
+                                    <span className="text-orange-600 font-bold text-sm">
+                                      {invitation.invitee_name?.charAt(0).toUpperCase() || '?'}
+                                    </span>
+                                  </div>
+                                  <div className="text-sm font-semibold text-gray-900">
+                                    {invitation.invitee_name || 'Unknown User'}
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="text-sm text-gray-600">{invitation.invitee_email || 'N/A'}</div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="text-sm text-gray-600">{invitation.invited_by_name || 'Unknown'}</div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="text-sm text-gray-600">
+                                  {new Date(invitation.created_at).toLocaleDateString()}
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <span className="px-3 py-1.5 inline-flex text-xs leading-5 font-semibold rounded-full bg-gradient-to-r from-orange-100 to-yellow-100 text-orange-800">
+                                  Pending
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                <button
+                                  onClick={() => cancelInvitation(invitation.id)}
+                                  className="text-red-600 hover:text-red-800 hover:bg-red-50 p-2 rounded-lg transition-colors"
+                                  title="Cancel invitation"
+                                >
+                                  <X className="w-4 h-4" />
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

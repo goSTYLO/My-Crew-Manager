@@ -666,7 +666,27 @@ class ProjectMemberViewSet(ModelViewSet):
                     status=status.HTTP_403_FORBIDDEN
                 )
             
-            return super().destroy(request, *args, **kwargs)
+            # Store user info before deletion for cleanup
+            removed_user = member.user
+            
+            # Delete the member
+            super().destroy(request, *args, **kwargs)
+            
+            # Clean up any existing invitations for this user to this project
+            # This allows them to be invited again in the future
+            deleted_invitations = ProjectInvitation.objects.filter(
+                project=project,
+                invitee=removed_user
+            ).delete()
+            
+            print(f"Removed member {removed_user.name} from project {project.title}")
+            print(f"Deleted {deleted_invitations[0]} related invitations")
+            
+            return Response({
+                "message": "Member removed successfully",
+                "deleted_invitations": deleted_invitations[0]
+            }, status=status.HTTP_200_OK)
+            
         except Exception as e:
             return Response(
                 {"error": str(e)},
@@ -781,6 +801,20 @@ class ProjectInvitationViewSet(ModelViewSet):
                         'role': 'Member'
                     }
                 )
+                
+                # Clean up any other pending invitations for this user to this project
+                # This prevents duplicate invitations and ensures clean state
+                other_invitations = ProjectInvitation.objects.filter(
+                    project=invitation.project,
+                    invitee=invitation.invitee,
+                    status='pending'
+                ).exclude(id=invitation.id)
+                
+                deleted_count = other_invitations.count()
+                other_invitations.delete()
+                
+                if deleted_count > 0:
+                    print(f"Cleaned up {deleted_count} duplicate pending invitations for {invitation.invitee.name} to project {invitation.project.title}")
                 
             
             return Response({
