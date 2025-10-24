@@ -7,6 +7,7 @@ import { PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tool
 import TopNavbar from "../../components/topbarLayouot";
 import { useTheme } from "../../components/themeContext";
 import { useToast } from "../../components/ToastContext";
+import { useRealtimeUpdates } from "../../hooks/useRealtimeUpdates";
 import { 
   calculateAggregatedTaskStats, 
   generateProjectCreationTrends, 
@@ -289,6 +290,29 @@ const ProjectTask = () => {
             setMonthlyTrends(trends);
         }
     }, [timeFilter, projectBacklogs, projects]);
+
+    // Real-time updates for project changes
+    useRealtimeUpdates({
+      callbacks: {
+        onProjectUpdate: (data) => {
+          console.log('📡 Real-time project update received:', data);
+          // Refresh projects list when any project is updated
+          fetchProjects();
+        },
+        onTaskUpdate: (data) => {
+          console.log('📡 Real-time task update received:', data);
+          // Refresh analytics when tasks are updated
+          if (projects.length > 0) {
+            fetchAnalyticsData();
+          }
+        },
+        onMemberUpdate: (data) => {
+          console.log('📡 Real-time member update received:', data);
+          // Refresh projects list when members are updated
+          fetchProjects();
+        }
+      }
+    });
 
     // Pagination logic
     const totalPages = Math.ceil(projects.length / projectsPerPage);

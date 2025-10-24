@@ -15,6 +15,7 @@ A comprehensive project management platform with AI-powered features, real-time 
 - **Project Invitations** - Invite users to join projects with acceptance workflow
 - **Real-time Notifications** - WebSocket-based notification system with instant delivery
 - **Real-time Chat** - WebSocket-based communication system
+- **Real-time Project Updates** - Live collaboration with instant updates across all project changes
 - **Team Member Management** - Add, remove, and manage project members
 - **Role-based Access** - Different permission levels for project management
 
@@ -29,6 +30,7 @@ A comprehensive project management platform with AI-powered features, real-time 
 
 ### User Experience
 - **Custom Toast Notifications** - Professional, themed toast notifications replacing browser alerts
+- **Real-time Toast Updates** - Live notifications for project changes with actor information
 - **Dark/Light Theme Support** - Comprehensive theme switching across all components
 - **Modal-Based Interactions** - Professional modal dialogs for all user interactions
 - **Real-time Feedback** - Instant visual feedback for all user actions
@@ -39,6 +41,7 @@ A comprehensive project management platform with AI-powered features, real-time 
 ### Backend (Django)
 - **Django REST Framework** - RESTful API endpoints
 - **WebSocket Support** - Real-time communication and notifications via Django Channels
+- **Real-time Broadcasting** - Live project updates with BroadcastService for instant collaboration
 - **AI API Module** - Core project management, AI integration, and notifications
 - **Project Management Module** - Traditional project management features
 - **Chat Module** - Real-time messaging system
@@ -46,7 +49,107 @@ A comprehensive project management platform with AI-powered features, real-time 
 
 ### Frontend
 - **React Web App** - Modern web interface with TypeScript
+- **Real-time WebSocket Client** - Global WebSocket connection with auto-reconnect and event subscription
 - **Flutter Mobile App** - Cross-platform mobile application
+
+## 🔔 Real-time WebSocket Integration
+
+The platform includes a comprehensive real-time collaboration system that enables instant updates across all project activities. **This feature requires testing to ensure proper functionality across multiple users and browser sessions.**
+
+### Features
+- **Live Project Updates** - All project changes are instantly broadcast to team members
+- **Real-time Notifications** - Instant delivery of important events via WebSocket
+- **Auto-reconnect** - Automatic reconnection on connection loss with exponential backoff
+- **Event Subscription System** - Components can subscribe to specific real-time events
+- **Actor Information** - See who made changes with user details in notifications
+- **Project-scoped Updates** - Events are filtered by project membership for security
+
+### Real-time Event Types
+- `project_update` - Project metadata changes (title, summary, features, roles, goals, timeline)
+- `epic_update` - Epic CRUD operations (create, update, delete, completion status)
+- `sub_epic_update` - Sub-epic changes
+- `user_story_update` - User story changes
+- `task_update` - Task changes (assignment, status, completion, commit info)
+- `member_update` - Member additions/removals
+- `repository_update` - Repository CRUD operations
+- `backlog_regenerated` - AI backlog regeneration notifications
+- `overview_regenerated` - AI project overview regeneration notifications
+- `notification` - General notifications (invitations, mentions, etc.)
+
+### WebSocket Connection
+```javascript
+// Automatic connection via WebSocketContext
+const { subscribe, isConnected } = useWebSocket();
+
+// Subscribe to specific events
+const unsubscribe = subscribe('project_update', (data) => {
+  console.log('Project updated:', data);
+  // Refresh project data
+});
+```
+
+### Testing Requirements
+**⚠️ IMPORTANT: This real-time system requires comprehensive testing before production use.**
+
+#### Backend Testing
+```bash
+# Test WebSocket connection authentication
+python manage.py test ai_api.tests.NotificationWebSocketTests
+
+# Test event broadcasting to multiple users
+python manage.py test ai_api.tests.BroadcastServiceTests
+
+# Test project member filtering
+python manage.py test ai_api.tests.ProjectMemberFilteringTests
+```
+
+#### Frontend Testing
+1. **WebSocket Connection Testing**:
+   - Open browser developer tools → Network tab
+   - Verify WebSocket connection to `ws://localhost:8000/ws/notifications/`
+   - Check connection status in browser console
+
+2. **Multi-User Testing**:
+   - Open project in multiple browser windows/tabs
+   - Use different user accounts in each window
+   - Make changes in one window and verify updates in others
+
+3. **Event Subscription Testing**:
+   - Verify toast notifications appear for important events
+   - Check that data refreshes automatically after changes
+   - Test auto-reconnect functionality by disconnecting network
+
+#### Integration Testing Checklist
+- [ ] **Project Updates**: Create/edit/delete projects and verify real-time updates
+- [ ] **Backlog Changes**: Add/edit/delete epics, stories, tasks and verify live updates
+- [ ] **Member Management**: Add/remove members and verify notifications
+- [ ] **Task Assignment**: Assign tasks and verify real-time status updates
+- [ ] **AI Regeneration**: Regenerate overview/backlog and verify notifications
+- [ ] **Cross-User Collaboration**: Multiple users working on same project simultaneously
+- [ ] **Connection Resilience**: Test reconnection after network interruption
+- [ ] **Performance**: Verify system handles multiple concurrent users
+
+#### Manual Testing Steps
+1. **Setup Multiple Sessions**:
+   ```bash
+   # Start Django server
+   python manage.py runserver
+   
+   # Open multiple browser windows with different user accounts
+   # Navigate to same project in each window
+   ```
+
+2. **Test Real-time Updates**:
+   - Make changes in Window 1 (User A)
+   - Verify updates appear instantly in Window 2 (User B)
+   - Check toast notifications show correct actor information
+   - Verify data refreshes without manual page reload
+
+3. **Test Connection Recovery**:
+   - Disconnect network in one window
+   - Reconnect network
+   - Verify WebSocket reconnects automatically
+   - Test that missed updates are handled gracefully
 
 ## 🔔 Notification System
 
@@ -533,6 +636,69 @@ The notification system includes a comprehensive test suite (`ai_api/tests.py`) 
 
 **Test Coverage**: 100% of notification-related code including models, services, API endpoints, and WebSocket consumers.
 
+### Real-time WebSocket Integration Testing
+**⚠️ CRITICAL: The real-time WebSocket system requires comprehensive testing before production use.**
+
+#### Automated Backend Tests
+```bash
+# Test WebSocket connection and authentication
+python manage.py test ai_api.tests.NotificationWebSocketTests
+
+# Test broadcast service functionality
+python manage.py test ai_api.tests.BroadcastServiceTests
+
+# Test project member filtering for events
+python manage.py test ai_api.tests.ProjectMemberFilteringTests
+
+# Test all real-time event types
+python manage.py test ai_api.tests.RealtimeEventTests
+```
+
+#### Manual Integration Testing
+**Required for production deployment:**
+
+1. **Multi-User Collaboration Testing**:
+   ```bash
+   # Setup test environment
+   python manage.py runserver
+   
+   # Open multiple browser windows with different user accounts
+   # Navigate to same project in each window
+   # Test real-time updates across all users
+   ```
+
+2. **Real-time Event Testing Checklist**:
+   - [ ] **Project Updates**: Create/edit/delete projects → verify instant updates
+   - [ ] **Backlog Changes**: Add/edit/delete epics, stories, tasks → verify live updates
+   - [ ] **Member Management**: Add/remove members → verify notifications
+   - [ ] **Task Assignment**: Assign tasks → verify real-time status updates
+   - [ ] **AI Regeneration**: Regenerate overview/backlog → verify notifications
+   - [ ] **Cross-User Collaboration**: Multiple users on same project simultaneously
+   - [ ] **Connection Resilience**: Test reconnection after network interruption
+   - [ ] **Performance**: Verify system handles multiple concurrent users
+
+3. **WebSocket Connection Testing**:
+   - Open browser developer tools → Network tab
+   - Verify WebSocket connection to `ws://localhost:8000/ws/notifications/`
+   - Check connection status and auto-reconnect functionality
+   - Test event subscription and unsubscription
+
+4. **Toast Notification Testing**:
+   - Verify real-time toast notifications appear for important events
+   - Check actor information displays correctly
+   - Test auto-dismiss and manual close functionality
+   - Verify theme compatibility (dark/light mode)
+
+#### Production Readiness Checklist
+- [ ] **Backend Tests**: All WebSocket and broadcast tests passing
+- [ ] **Frontend Tests**: WebSocket connection and event handling verified
+- [ ] **Multi-User Testing**: Real-time collaboration tested with 3+ users
+- [ ] **Performance Testing**: System handles expected concurrent user load
+- [ ] **Error Handling**: Graceful handling of connection failures and edge cases
+- [ ] **Security Testing**: Project member filtering and authentication verified
+- [ ] **Browser Compatibility**: Tested across Chrome, Firefox, Safari, Edge
+- [ ] **Mobile Testing**: WebSocket functionality verified on mobile devices
+
 ### Enforced Invitation Flow Testing
 The invitation system has been comprehensively tested with real API calls to ensure the enforced workflow functions correctly:
 
@@ -630,7 +796,31 @@ For support and questions:
 
 ## 🔄 Recent Updates
 
-### LLM Performance Optimization & Output Consistency (Latest)
+### Real-time WebSocket Integration (Latest)
+- ✅ **Comprehensive Real-time Collaboration System**: Implemented full WebSocket-based real-time updates for instant collaboration
+  - **Backend Broadcasting Service**: Created `BroadcastService` class for sending real-time events to project members
+  - **Extended NotificationConsumer**: Added event handlers for all project activities (project, epic, task, member, repository updates)
+  - **ViewSet Integration**: Added broadcast calls to all relevant ViewSets after successful operations
+  - **ASGI Routing Fix**: Properly configured WebSocket routing for both chat and AI API endpoints
+- ✅ **Frontend WebSocket Client**: Complete React integration with global WebSocket connection management
+  - **WebSocketContext Provider**: Global connection management with auto-reconnect and event subscription system
+  - **useRealtimeUpdates Hook**: Custom hook for subscribing to specific real-time events with automatic cleanup
+  - **Real-time Toast Notifications**: Enhanced toast system with actor information and real-time update styling
+  - **Component Integration**: Updated TopNavbar, ProjectDetailsUI, and projects list with real-time subscriptions
+- ✅ **Live Project Updates**: All project changes now broadcast instantly to team members
+  - **Project Updates**: Real-time notifications for project metadata changes, AI regenerations
+  - **Backlog Changes**: Live updates for epic, sub-epic, user story, and task modifications
+  - **Member Management**: Instant notifications for team member additions/removals
+  - **Task Assignment**: Real-time task assignment and status updates
+  - **Repository Changes**: Live updates for repository CRUD operations
+- ✅ **Enhanced User Experience**: Professional real-time collaboration with comprehensive feedback
+  - **Actor Information**: See who made changes with user details in notifications
+  - **Auto-reconnect**: Automatic reconnection on connection loss with exponential backoff
+  - **Project-scoped Events**: Events filtered by project membership for security
+  - **Connection Status**: Visual indicators for WebSocket connection state
+- ⚠️ **Testing Required**: Comprehensive testing needed for multi-user scenarios and production deployment
+
+### LLM Performance Optimization & Output Consistency
 - ✅ **Model Caching System**: Implemented singleton pattern for LLM model loading with 60-75% performance improvement
   - **Shared Cache Module**: Created `LLMs/llm_cache.py` with thread-safe lazy loading using `threading.Lock`
   - **Separate Model Instances**: Dedicated cached models for project analysis (`get_cached_llm()`) and backlog generation (`get_cached_backlog_llm()`)

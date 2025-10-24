@@ -28,6 +28,7 @@ from .serializers import (
 from LLMs.project_llm import run_pipeline_from_text, model_to_dict
 from LLMs.backlog_llm import run_backlog_pipeline
 from ai_api.tasks import task_manager, TaskCancelledException
+from .services.broadcast_service import BroadcastService
 
 import pdfplumber
 import threading
@@ -46,6 +47,8 @@ class ProjectViewSet(ModelViewSet):
             user=self.request.user,
             role='Owner'
         )
+        # Broadcast project creation
+        BroadcastService.broadcast_project_update(project, 'created', self.request.user)
 
     @action(detail=True, methods=["put"], url_path="ingest-proposal/(?P<proposal_id>[^/.]+)")
     def ingest_proposal(self, request, pk=None, proposal_id=None):
@@ -168,6 +171,9 @@ class ProjectViewSet(ModelViewSet):
                         for t in us.tasks[:50]:
                             StoryTask.objects.create(user_story=u, title=str(t.title)[:512])
 
+            # Broadcast backlog regeneration
+            BroadcastService.broadcast_backlog_regenerated(project, self.request.user)
+            
             return Response({
                 "message": "Backlog generated successfully",
                 "backlog": backlog_dict
@@ -253,6 +259,9 @@ class ProjectViewSet(ModelViewSet):
                     title=item_title[:512]
                 )
 
+        # Broadcast overview regeneration
+        BroadcastService.broadcast_overview_regenerated(project, self.request.user)
+        
         return Response({
             "message": "Project overview generated successfully",
             "overview": output,
@@ -351,6 +360,11 @@ class ProjectViewSet(ModelViewSet):
             'task_count': task_count,
             'sprint_count': sprint_count,
         }, status=status.HTTP_200_OK)
+
+    def perform_update(self, serializer):
+        project = serializer.save()
+        # Broadcast project update
+        BroadcastService.broadcast_project_update(project, 'updated', self.request.user)
 
 
 class ProposalViewSet(ModelViewSet):
@@ -464,6 +478,21 @@ class EpicViewSet(ModelViewSet):
             return self.queryset.filter(project_id=project_id)
         return self.queryset
 
+    def perform_create(self, serializer):
+        epic = serializer.save()
+        # Broadcast epic creation
+        BroadcastService.broadcast_epic_update(epic, 'created', self.request.user)
+
+    def perform_update(self, serializer):
+        epic = serializer.save()
+        # Broadcast epic update
+        BroadcastService.broadcast_epic_update(epic, 'updated', self.request.user)
+
+    def perform_destroy(self, instance):
+        # Broadcast epic deletion before destroying
+        BroadcastService.broadcast_epic_update(instance, 'deleted', self.request.user)
+        instance.delete()
+
 
 class SubEpicViewSet(ModelViewSet):
     queryset = SubEpic.objects.all()
@@ -476,6 +505,21 @@ class SubEpicViewSet(ModelViewSet):
             return self.queryset.filter(epic_id=epic_id)
         return self.queryset
 
+    def perform_create(self, serializer):
+        sub_epic = serializer.save()
+        # Broadcast sub-epic creation
+        BroadcastService.broadcast_sub_epic_update(sub_epic, 'created', self.request.user)
+
+    def perform_update(self, serializer):
+        sub_epic = serializer.save()
+        # Broadcast sub-epic update
+        BroadcastService.broadcast_sub_epic_update(sub_epic, 'updated', self.request.user)
+
+    def perform_destroy(self, instance):
+        # Broadcast sub-epic deletion before destroying
+        BroadcastService.broadcast_sub_epic_update(instance, 'deleted', self.request.user)
+        instance.delete()
+
 
 class UserStoryViewSet(ModelViewSet):
     queryset = UserStory.objects.all()
@@ -487,6 +531,21 @@ class UserStoryViewSet(ModelViewSet):
         if sub_epic_id:
             return self.queryset.filter(sub_epic_id=sub_epic_id)
         return self.queryset
+
+    def perform_create(self, serializer):
+        user_story = serializer.save()
+        # Broadcast user story creation
+        BroadcastService.broadcast_user_story_update(user_story, 'created', self.request.user)
+
+    def perform_update(self, serializer):
+        user_story = serializer.save()
+        # Broadcast user story update
+        BroadcastService.broadcast_user_story_update(user_story, 'updated', self.request.user)
+
+    def perform_destroy(self, instance):
+        # Broadcast user story deletion before destroying
+        BroadcastService.broadcast_user_story_update(instance, 'deleted', self.request.user)
+        instance.delete()
 
 
 class StoryTaskViewSet(ModelViewSet):
@@ -743,6 +802,21 @@ class StoryTaskViewSet(ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+    def perform_create(self, serializer):
+        task = serializer.save()
+        # Broadcast task creation
+        BroadcastService.broadcast_task_update(task, 'created', self.request.user)
+
+    def perform_update(self, serializer):
+        task = serializer.save()
+        # Broadcast task update
+        BroadcastService.broadcast_task_update(task, 'updated', self.request.user)
+
+    def perform_destroy(self, instance):
+        # Broadcast task deletion before destroying
+        BroadcastService.broadcast_task_update(instance, 'deleted', self.request.user)
+        instance.delete()
+
 
 class ProjectMemberViewSet(ModelViewSet):
     queryset = ProjectMember.objects.all()
@@ -792,6 +866,9 @@ class ProjectMemberViewSet(ModelViewSet):
             
             print(f"Removed member {removed_user.name} from project {project.title}")
             print(f"Deleted {deleted_invitations[0]} related invitations")
+            
+            # Broadcast member removal
+            BroadcastService.broadcast_member_update(member, 'removed', request.user)
             
             return Response({
                 "message": "Member removed successfully",
@@ -962,6 +1039,10 @@ class ProjectInvitationViewSet(ModelViewSet):
                 
                 updated_notifications = related_notifications.update(is_read=True, read_at=timezone.now())
                 print(f"Marked {updated_notifications} related notifications as read")
+                
+                # Broadcast member joined if membership was created
+                if created:
+                    BroadcastService.broadcast_member_update(project_member, 'joined', request.user)
             
             return Response({
                 "message": "Invitation accepted successfully",
@@ -1112,18 +1193,24 @@ class RepositoryViewSet(ModelViewSet):
         project = serializer.validated_data['project']
         if project.created_by != self.request.user:
             raise PermissionDenied("Only project creators can add repositories")
-        serializer.save()
+        repository = serializer.save()
+        # Broadcast repository creation
+        BroadcastService.broadcast_repository_update(repository, 'created', self.request.user)
 
     def perform_update(self, serializer):
         # Only allow project creators to update repositories
         repository = self.get_object()
         if repository.project.created_by != self.request.user:
             raise PermissionDenied("Only project creators can update repositories")
-        serializer.save()
+        repository = serializer.save()
+        # Broadcast repository update
+        BroadcastService.broadcast_repository_update(repository, 'updated', self.request.user)
 
     def perform_destroy(self, instance):
         # Only allow project creators to delete repositories
         if instance.project.created_by != self.request.user:
             raise PermissionDenied("Only project creators can delete repositories")
+        # Broadcast repository deletion before destroying
+        BroadcastService.broadcast_repository_update(instance, 'deleted', self.request.user)
         instance.delete()
 

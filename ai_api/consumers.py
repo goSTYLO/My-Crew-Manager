@@ -30,3 +30,67 @@ class NotificationConsumer(AsyncWebsocketConsumer):
             'type': 'notification',
             'notification': event['notification']
         }))
+    
+    # Real-time project update handlers
+    async def project_update(self, event):
+        """Send project update to WebSocket"""
+        await self.send(text_data=json.dumps({
+            'type': 'project_update',
+            'payload': event['payload']
+        }))
+    
+    async def epic_update(self, event):
+        """Send epic update to WebSocket"""
+        await self.send(text_data=json.dumps({
+            'type': 'epic_update',
+            'payload': event['payload']
+        }))
+    
+    async def sub_epic_update(self, event):
+        """Send sub-epic update to WebSocket"""
+        await self.send(text_data=json.dumps({
+            'type': 'sub_epic_update',
+            'payload': event['payload']
+        }))
+    
+    async def user_story_update(self, event):
+        """Send user story update to WebSocket"""
+        await self.send(text_data=json.dumps({
+            'type': 'user_story_update',
+            'payload': event['payload']
+        }))
+    
+    async def task_update(self, event):
+        """Send task update to WebSocket"""
+        await self.send(text_data=json.dumps({
+            'type': 'task_update',
+            'payload': event['payload']
+        }))
+    
+    async def member_update(self, event):
+        """Send member update to WebSocket"""
+        await self.send(text_data=json.dumps({
+            'type': 'member_update',
+            'payload': event['payload']
+        }))
+    
+    async def repository_update(self, event):
+        """Send repository update to WebSocket"""
+        await self.send(text_data=json.dumps({
+            'type': 'repository_update',
+            'payload': event['payload']
+        }))
+    
+    async def backlog_regenerated(self, event):
+        """Send backlog regeneration notification to WebSocket"""
+        await self.send(text_data=json.dumps({
+            'type': 'backlog_regenerated',
+            'payload': event['payload']
+        }))
+    
+    async def overview_regenerated(self, event):
+        """Send overview regeneration notification to WebSocket"""
+        await self.send(text_data=json.dumps({
+            'type': 'overview_regenerated',
+            'payload': event['payload']
+        }))

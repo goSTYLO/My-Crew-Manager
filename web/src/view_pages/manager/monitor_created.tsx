@@ -8,6 +8,7 @@ import { API_BASE_URL } from "../../config/api";
 import LoadingSpinner from '../../components/LoadingSpinner';
 import RegenerationSuccessModal from '../../components/RegenerationSuccessModal';
 import { useToast } from '../../components/ToastContext';
+import { useRealtimeUpdates } from '../../hooks/useRealtimeUpdates';
 import ProposalViewer from '../../components/ProposalViewer';
 import { 
   calculateTaskStats, 
@@ -22,7 +23,7 @@ import type {
 
 export default function ProjectDetailsUI() {
   const { theme } = useTheme();
-  const { showSuccess, showError, showWarning } = useToast();
+  const { showSuccess, showError, showWarning, showRealtimeUpdate } = useToast();
   const [activeTab, setActiveTab] = useState('monitoring');
   const [isEditingOverview, setIsEditingOverview] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
@@ -597,6 +598,67 @@ export default function ProjectDetailsUI() {
       console.log('❌ No projectId provided');
     }
   }, [projectId]);
+
+  // Real-time updates for project changes
+  useRealtimeUpdates({
+    projectId: projectId ? parseInt(projectId) : undefined,
+    callbacks: {
+      onProjectUpdate: (data) => {
+        console.log('📡 Real-time project update received:', data);
+        showRealtimeUpdate('Project Updated', `${data.action} project`, data.actor);
+        // Refresh project data
+        fetchProjectData();
+      },
+      onEpicUpdate: (data) => {
+        console.log('📡 Real-time epic update received:', data);
+        showRealtimeUpdate('Epic Updated', `Epic ${data.action}`, data.actor);
+        // Refresh backlog data
+        fetchBacklog();
+      },
+      onSubEpicUpdate: (data) => {
+        console.log('📡 Real-time sub-epic update received:', data);
+        showRealtimeUpdate('Sub-Epic Updated', `Sub-epic ${data.action}`, data.actor);
+        // Refresh backlog data
+        fetchBacklog();
+      },
+      onUserStoryUpdate: (data) => {
+        console.log('📡 Real-time user story update received:', data);
+        showRealtimeUpdate('User Story Updated', `User story ${data.action}`, data.actor);
+        // Refresh backlog data
+        fetchBacklog();
+      },
+      onTaskUpdate: (data) => {
+        console.log('📡 Real-time task update received:', data);
+        showRealtimeUpdate('Task Updated', `Task ${data.action}`, data.actor);
+        // Refresh backlog data
+        fetchBacklog();
+      },
+      onMemberUpdate: (data) => {
+        console.log('📡 Real-time member update received:', data);
+        showRealtimeUpdate('Team Updated', `Member ${data.action}`, data.actor);
+        // Refresh members data
+        fetchMembers();
+      },
+      onRepositoryUpdate: (data) => {
+        console.log('📡 Real-time repository update received:', data);
+        showRealtimeUpdate('Repository Updated', `Repository ${data.action}`, data.actor);
+        // Refresh repositories data
+        fetchRepositories();
+      },
+      onBacklogRegenerated: (data) => {
+        console.log('📡 Real-time backlog regeneration received:', data);
+        showRealtimeUpdate('Backlog Regenerated', 'Project backlog has been regenerated', data.actor);
+        // Refresh backlog data
+        fetchBacklog();
+      },
+      onOverviewRegenerated: (data) => {
+        console.log('📡 Real-time overview regeneration received:', data);
+        showRealtimeUpdate('Overview Regenerated', 'Project overview has been regenerated', data.actor);
+        // Refresh project data
+        fetchProjectData();
+      }
+    }
+  });
   
   const [projectData, setProjectData] = useState({
     id: 1, // Assuming project ID is available here

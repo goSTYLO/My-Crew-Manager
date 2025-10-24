@@ -16,6 +16,7 @@ interface ToastContextType {
   showError: (title: string, message?: string) => void;
   showWarning: (title: string, message?: string) => void;
   showInfo: (title: string, message?: string) => void;
+  showRealtimeUpdate: (title: string, message: string, actor?: { id: number; name: string }) => void;
 }
 
 const ToastContext = createContext<ToastContextType | undefined>(undefined);
@@ -64,6 +65,17 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
     showToast({ type: 'info', title, message });
   }, [showToast]);
 
+  const showRealtimeUpdate = useCallback((title: string, message: string, actor?: { id: number; name: string }) => {
+    const actorText = actor ? ` by ${actor.name}` : '';
+    const fullMessage = `${message}${actorText}`;
+    showToast({ 
+      type: 'info', 
+      title, 
+      message: fullMessage,
+      duration: 5000 // Auto-dismiss after 5 seconds
+    });
+  }, [showToast]);
+
   return (
     <ToastContext.Provider
       value={{
@@ -72,6 +84,7 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
         showError,
         showWarning,
         showInfo,
+        showRealtimeUpdate,
       }}
     >
       {children}

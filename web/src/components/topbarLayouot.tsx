@@ -4,6 +4,8 @@ import { useNavigate } from "react-router-dom";
 import logo from "../assets/logo.png";
 import { useTheme } from "./themeContext";
 import { API_BASE_URL } from "../config/api";
+import { useRealtimeUpdates } from "../hooks/useRealtimeUpdates";
+import { useToast } from "./ToastContext";
 
 interface TopNavbarProps {
   onMenuClick: () => void;
@@ -17,6 +19,16 @@ interface UserData {
   profile_picture?: string | null;
 }
 
+interface Notification {
+  id: number;
+  title: string;
+  message: string;
+  notification_type: string;
+  is_read: boolean;
+  created_at: string;
+  action_url?: string;
+}
+
 const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
   const navigate = useNavigate();
   const [showNotifications, setShowNotifications] = useState(false);
@@ -25,12 +37,103 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
   const profileDropdownRef = useRef<HTMLDivElement>(null);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [loadingNotifications, setLoadingNotifications] = useState(false);
+  const { showRealtimeUpdate } = useToast();
 
-  const [notifications, setNotifications] = useState([
-    { id: 1, text: "Need Better Notifications Design", read: false },
-    { id: 2, text: "Make the Website Responsive", read: false },
-    { id: 3, text: "Fix Bug of Able to go Back to a Page", read: false },
-  ]);
+  // Fetch notifications from API
+  const fetchNotifications = async () => {
+    try {
+      setLoadingNotifications(true);
+      const token = localStorage.getItem('token') || localStorage.getItem('access');
+      if (!token) return;
+
+      const response = await fetch(`${API_BASE_URL}/ai/notifications/`, {
+        headers: {
+          'Authorization': `Token ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setNotifications(data.results || data);
+      }
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+    } finally {
+      setLoadingNotifications(false);
+    }
+  };
+
+  // Mark notification as read
+  const markNotificationAsRead = async (notificationId: number) => {
+    try {
+      const token = localStorage.getItem('token') || localStorage.getItem('access');
+      if (!token) return;
+
+      const response = await fetch(`${API_BASE_URL}/ai/notifications/${notificationId}/mark_read/`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Token ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        setNotifications(prev => 
+          prev.map(notif => 
+            notif.id === notificationId ? { ...notif, is_read: true } : notif
+          )
+        );
+      }
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+    }
+  };
+
+  // Mark all notifications as read
+  const markAllAsRead = async () => {
+    try {
+      const token = localStorage.getItem('token') || localStorage.getItem('access');
+      if (!token) return;
+
+      const response = await fetch(`${API_BASE_URL}/ai/notifications/mark_all_read/`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Token ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        setNotifications(prev => 
+          prev.map(notif => ({ ...notif, is_read: true }))
+        );
+      }
+    } catch (error) {
+      console.error('Error marking all notifications as read:', error);
+    }
+  };
+
+  // Real-time notification updates
+  useRealtimeUpdates({
+    callbacks: {
+      onNotification: (notification) => {
+        // Add new notification to the list
+        setNotifications(prev => [notification, ...prev]);
+        
+        // Show toast for important notifications
+        if (['task_assigned', 'project_invitation', 'member_joined'].includes(notification.notification_type)) {
+          showRealtimeUpdate(
+            notification.title,
+            notification.message,
+            notification.actor
+          );
+        }
+      }
+    }
+  });
 
   // Listen for user updates dispatched from AccountSettings
   useEffect(() => {
@@ -47,6 +150,11 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
     return () => {
       window.removeEventListener("userDataUpdated", handleUserUpdate as EventListener);
     };
+  }, []);
+
+  // Fetch notifications on mount
+  useEffect(() => {
+    fetchNotifications();
   }, []);
 
   const handleLogout = async () => {
@@ -142,11 +250,6 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
     fetchUserData();
   }, [navigate]);  
 
-  const markAllAsRead = () => {
-    setNotifications((prev) =>
-      prev.map((note) => ({ ...note, read: true }))
-    );
-  };
 
   const dropdownRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -253,7 +356,7 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
               onClick={() => setShowNotifications((prev) => !prev)}
             >
               <Bell className="w-6 h-6" />
-              {notifications.some((note) => !note.read) && (
+              {notifications.some((note) => !note.is_read) && (
                 <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full"></span>
               )}
             </button>
@@ -275,7 +378,11 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
                   </button>
                 </div>
                 <ul className="max-h-80 overflow-y-auto divide-y divide-gray-200">
-                  {notifications.length === 0 ? (
+                  {loadingNotifications ? (
+                    <li className="px-4 py-6 text-center text-gray-400 text-sm">
+                      Loading notifications...
+                    </li>
+                  ) : notifications.length === 0 ? (
                     <li className="px-4 py-6 text-center text-gray-400 text-sm">
                       No new notifications
                     </li>
@@ -283,16 +390,30 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
                     notifications.map((note) => (
                       <li
                         key={note.id}
-                        className={`flex items-center px-4 py-4 text-sm transition ${
-                          note.read
+                        className={`flex items-start px-4 py-4 text-sm transition ${
+                          note.is_read
                             ? "text-gray-400"
                             : "text-gray-700 hover:bg-gray-50 cursor-pointer"
                         }`}
+                        onClick={() => {
+                          if (!note.is_read) {
+                            markNotificationAsRead(note.id);
+                          }
+                          if (note.action_url) {
+                            navigate(note.action_url);
+                          }
+                        }}
                       >
-                        {!note.read && (
-                          <span className="inline-block w-2 h-2 bg-blue-500 rounded-full mr-3"></span>
+                        {!note.is_read && (
+                          <span className="inline-block w-2 h-2 bg-blue-500 rounded-full mr-3 mt-2 flex-shrink-0"></span>
                         )}
-                        <span>{note.text}</span>
+                        <div className="flex-1">
+                          <div className="font-medium text-gray-900">{note.title}</div>
+                          <div className="text-gray-600 mt-1">{note.message}</div>
+                          <div className="text-xs text-gray-400 mt-1">
+                            {new Date(note.created_at).toLocaleString()}
+                          </div>
+                        </div>
                       </li>
                     ))
                   )}
