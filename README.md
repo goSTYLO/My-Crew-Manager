@@ -352,17 +352,109 @@ My-Crew-Manager/
 Create a `.env` file in the root directory:
 
 ```env
+# API Configuration (Centralized IP Management)
+VITE_API_BASE_URL=http://localhost:8000
+DEVICE_IP=localhost
+DJANGO_HOST=0.0.0.0
+DJANGO_PORT=8000
+
+# Mobile Configuration
+MOBILE_API_BASE_URL=http://localhost:8000
+
 # Database
 DATABASE_URL=sqlite:///db.sqlite3
-
-# AI API Keys (optional)
-OPENAI_API_KEY=your_openai_key
-ANTHROPIC_API_KEY=your_anthropic_key
 
 # Django Settings
 SECRET_KEY=your_secret_key
 DEBUG=True
+
+# AI API Keys (optional)
+OPENAI_API_KEY=your_openai_key
+ANTHROPIC_API_KEY=your_anthropic_key
 ```
+
+#### IP Configuration Variables Explained:
+- **`VITE_API_BASE_URL`**: Base URL for React web app API calls
+- **`DEVICE_IP`**: Your device's IP address for network access
+- **`DJANGO_HOST`**: Django server host (0.0.0.0 for network access)
+- **`DJANGO_PORT`**: Django server port (default: 8000)
+- **`MOBILE_API_BASE_URL`**: Base URL for Flutter mobile app API calls
+
+### Multi-Device Network Access
+
+The centralized IP configuration system allows you to access the application from multiple devices on your network by updating a single `.env` file.
+
+#### Quick Setup (Recommended)
+
+1. **Find Your Device IP**:
+   ```bash
+   # Windows
+   ipconfig
+   
+   # macOS/Linux
+   ifconfig
+   ```
+
+2. **Update Root .env File**:
+   ```env
+   # Change these lines in your .env file
+   DEVICE_IP=192.168.1.100  # Your actual device IP
+   VITE_API_BASE_URL=http://192.168.1.100:8000
+   MOBILE_API_BASE_URL=http://192.168.1.100:8000
+   ```
+
+3. **Sync Mobile Configuration**:
+   ```bash
+   python scripts/sync_mobile_config.py
+   ```
+
+4. **Start Django with Network Access**:
+   ```bash
+   python manage.py runserver 0.0.0.0:8000
+   ```
+
+5. **Access from Any Device on Network**:
+   - **Web App**: http://192.168.1.100:5173
+   - **Django Admin**: http://192.168.1.100:8000/admin/
+   - **API Endpoints**: http://192.168.1.100:8000/api/
+   - **Mobile App**: Automatically uses synced configuration
+
+#### Alternative: Quick Setup Script
+
+Use the interactive setup script for easier configuration:
+
+```bash
+bash scripts/setup_network_access.sh
+```
+
+#### Switching Back to Localhost
+
+To switch back to localhost-only access:
+
+1. **Update .env**:
+   ```env
+   DEVICE_IP=localhost
+   VITE_API_BASE_URL=http://localhost:8000
+   MOBILE_API_BASE_URL=http://localhost:8000
+   ```
+
+2. **Sync Mobile Config**:
+   ```bash
+   python scripts/sync_mobile_config.py
+   ```
+
+3. **Start Django Locally**:
+   ```bash
+   python manage.py runserver
+   ```
+
+#### Important Notes
+
+- **Database Security**: PostgreSQL runs locally and is never exposed to the network
+- **Network Requirements**: All devices must be on the same WiFi/LAN network
+- **Firewall**: Ensure port 8000 is not blocked by firewall
+- **IP Changes**: If your device IP changes, update the `.env` file and run the sync script
+- **Security**: Network access makes Django accessible to any device on your network
 
 ## 📚 API Documentation
 
@@ -532,7 +624,30 @@ For support and questions:
 
 ## 🔄 Recent Updates
 
-### Functional Analytics Implementation (Latest)
+### Backend System Overhaul & Security Enhancements (Latest)
+- ✅ **Notification System Fixes**: Resolved critical backend issues affecting real-time notifications
+  - **500 Server Error Resolution**: Fixed NotificationSerializer syntax errors causing server crashes
+  - **Model Validation Conflicts**: Bypassed validation conflicts during invitation acceptance using `update()` instead of `save()`
+  - **Permission Security**: Added proper user filtering to prevent access to wrong invitations and notifications
+  - **Notification Cleanup**: Automatic marking of related notifications as read after invitation actions
+  - **Unread Filtering**: Backend now only returns unread notifications by default for cleaner mobile app UI
+- ✅ **Project Security & Access Control**: Implemented user-specific project filtering and security measures
+  - **User-Specific Projects**: Added `/api/ai/projects/my-projects/` endpoint returning only projects where user is a member
+  - **Permission Filtering**: Enhanced invitation and notification access controls with proper user validation
+  - **Data Integrity**: Transactional invitation acceptance with atomic operations and automatic cleanup
+  - **Performance Optimization**: Reduced data transfer by filtering projects and notifications at backend level
+- ✅ **API Endpoint Enhancements**: New and improved endpoints for better mobile app integration
+  - **Project Statistics**: Added `/api/ai/projects/{id}/statistics/` endpoint for accurate member, task, and sprint counts
+  - **Enhanced Notification Endpoints**: Improved notification management with read/unread status tracking
+  - **Invitation Workflow**: Streamlined invitation acceptance/decline with automatic notification cleanup
+  - **Backward Compatibility**: Maintained existing API contracts while adding new secure endpoints
+- ✅ **Database & Performance Optimizations**: Improved system efficiency and data handling
+  - **Query Optimization**: Using `values_list()` and proper indexing for better database performance
+  - **Reduced Payload Size**: Filtering notifications and projects to minimize data transfer
+  - **Enhanced Debugging**: Comprehensive logging for invitation acceptance and notification cleanup tracking
+  - **Security Improvements**: Users can only access their own data with proper permission validation
+
+### Functional Analytics Implementation
 - ✅ **Project Analytics Dashboard**: Implemented comprehensive analytics functionality for project monitoring
   - **Real-time Task Statistics**: Dynamic calculation of completed, in-progress, and pending tasks across all owned projects
   - **Project Creation Trends**: Time-based analytics showing project creation patterns (daily, weekly, monthly, all-time)
@@ -557,22 +672,27 @@ For support and questions:
   - **Backlog Data Processing**: Efficient processing of nested backlog structures (epics → sub-epics → user stories → tasks)
   - **Performance Optimization**: Parallel API calls and efficient data aggregation for responsive analytics
 
-### Base URL Centralization & Configuration Management
-- ✅ **Centralized API Configuration**: Implemented centralized base URL management for the web application
-  - **Root .env Configuration**: Created root-level `.env` file with `VITE_API_BASE_URL` for single source of truth
+### Centralized IP Configuration & Multi-Device Access (Latest)
+- ✅ **Centralized IP Configuration System**: Implemented comprehensive multi-device access with single source of truth
+  - **Root .env Configuration**: Enhanced root-level `.env` file with `DEVICE_IP`, `VITE_API_BASE_URL`, and `MOBILE_API_BASE_URL` variables
+  - **Django Settings Integration**: Updated `my_crew_manager/settings.py` to read device IP from environment variables with dynamic `ALLOWED_HOSTS`
+  - **Mobile Config Sync**: Created `scripts/sync_mobile_config.py` to automatically update mobile app configuration from root `.env`
+  - **Quick Setup Script**: Added `scripts/setup_network_access.sh` for interactive IP configuration and mobile sync
+- ✅ **Multi-Device Network Access**: Complete solution for accessing application from multiple devices on network
+  - **Single IP Change**: Update one `.env` file to change IP for all components (Web, Django, Mobile)
+  - **Automatic Mobile Sync**: Mobile app configuration automatically updated via sync script
+  - **Django Network Access**: Dynamic `ALLOWED_HOSTS` configuration based on device IP
+  - **Database Security**: PostgreSQL remains local-only, no network configuration required
+- ✅ **Developer Experience & Documentation**: Enhanced setup process with comprehensive documentation
+  - **Django Server Commands**: Created `docs/DJANGO_SERVER_COMMANDS.md` with local vs network access instructions
+  - **README Integration**: Added multi-device access section with step-by-step setup instructions
+  - **Environment Dependencies**: Added `python-dotenv` to requirements.txt for environment variable support
+  - **Quick Start Guide**: Clear instructions for switching between localhost and device IP configurations
+- ✅ **Base URL Centralization**: Implemented centralized base URL management for the web application
   - **Vite Configuration Update**: Modified `web/vite.config.ts` to read environment variables from project root
   - **Centralized API Module**: Created `web/src/config/api.ts` to export `API_BASE_URL` from environment variables
   - **TypeScript Integration**: Updated `web/src/vite-env.d.ts` with proper type definitions for environment variables
-- ✅ **Comprehensive URL Replacement**: Updated all web components to use centralized configuration
-  - **Files Updated**: 10+ React components including sign-in, sign-up, project management, and monitoring pages
-  - **Pattern Standardization**: Replaced hardcoded URLs (`localhost:8000`, `127.0.0.1:8000`) with dynamic `${API_BASE_URL}` references
-  - **Circular Dependency Fixes**: Resolved critical circular dependency errors in `monitor_created.tsx` and `monitorProjects.tsx`
-  - **API Endpoint Consistency**: All API calls now use the same base URL configuration for easy IP address changes
-- ✅ **Developer Experience Improvements**: Enhanced configuration management for development and deployment
-  - **Single Point of Change**: Developers can now change the API base URL by editing one file (root `.env`)
-  - **IP Address Flexibility**: Easy switching between localhost and device IP addresses for testing
-  - **Environment Variable Support**: Proper Vite environment variable integration with fallback defaults
-  - **Type Safety**: Full TypeScript support for environment variables with proper type definitions
+  - **Comprehensive URL Replacement**: Updated 10+ React components to use centralized configuration
 - ✅ **Confirmation Modal System**: Implemented professional confirmation dialogs for AI regeneration operations
   - **Modal Pattern**: Added confirmation modal system matching `generateProject.tsx` pattern
   - **Regeneration Safety**: Both overview and backlog regeneration now require user confirmation

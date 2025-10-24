@@ -414,7 +414,7 @@ const ProjectTask = () => {
                                 ? "bg-gray-700 border-gray-600 hover:bg-gray-600" 
                                 : "bg-gray-50 border-gray-200 hover:bg-white"
                             }`}
-                            onClick={() => navigate(`/manager/projects/${project.id}`)}
+                            onClick={() => navigate(`/project-details/${project.id}`)}
                           >
                             <div className="flex items-center justify-between">
                               <div className="flex items-center space-x-3">
