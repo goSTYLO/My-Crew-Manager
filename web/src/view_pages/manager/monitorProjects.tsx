@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Sidebar from "../../components/sidebarLayout";
 import TopNavbar from '../../components/topbarLayouot';
 import { useTheme } from "../../components/themeContext"; // <-- import ThemeContext
+import { API_BASE_URL } from "../../config/api";
 
 
 // Types for project data
@@ -45,7 +46,7 @@ const EditProjectModal: React.FC<EditProjectModalProps> = ({
   const [error, setError] = useState<string | null>(null);
 
   // API Configuration
-  const API_BASE_URL = 'http://localhost:8000/api/project-management';
+  const PROJECT_MANAGEMENT_API_BASE_URL = `${API_BASE_URL}/api/project-management`;
 
   // Update form data when project changes
   useEffect(() => {
@@ -92,7 +93,7 @@ const EditProjectModal: React.FC<EditProjectModalProps> = ({
     setError(null);
 
     try {
-      const response = await axios.patch(`${API_BASE_URL}/projects/${project.project_id}/`, {
+      const response = await axios.patch(`${PROJECT_MANAGEMENT_API_BASE_URL}/projects/${project.project_id}/`, {
         title: formData.name,  // Maps to 'name' in database
         type: formData.project_type,  // Maps to 'project_type' in database
         description: formData.description,
@@ -302,14 +303,14 @@ const Projects = () => {
   const { theme } = useTheme(); // <-- use theme
 
   // API Configuration
-  const API_BASE_URL = 'http://localhost:8000/api/project-management';
+  const PROJECT_MANAGEMENT_API_BASE_URL = `${API_BASE_URL}/api/project-management`;
 
   // Fetch projects from database
   const fetchProjects = async () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await axios.get(`${API_BASE_URL}/projects/`);
+      const response = await axios.get(`${PROJECT_MANAGEMENT_API_BASE_URL}/projects/`);
       setProjects(response.data);
       console.log('Fetched projects:', response.data);
     } catch (error) {

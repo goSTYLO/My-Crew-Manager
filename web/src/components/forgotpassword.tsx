@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Mail, ArrowLeft, Shield, Users, BarChart3, CheckCircle } from 'lucide-react';
 import logo from "./../assets/logo2.png";
+import { API_BASE_URL } from "../config/api";
 
 export default function ForgotPasswordPage() {
   const navigate = useNavigate();
@@ -67,7 +68,7 @@ export default function ForgotPasswordPage() {
       console.log("🔄 Sending password reset request for:", email);
 
       // TODO: Replace with your actual API endpoint
-      const response = await fetch("http://127.0.0.1:8000/api/user/forgot-password/", {
+      const response = await fetch(`${API_BASE_URL}/api/user/forgot-password/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

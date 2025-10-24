@@ -1,6 +1,7 @@
 // pages/signIn.tsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { API_BASE_URL } from "../../config/api";
 import { Eye, EyeOff, Lock, Mail, Chrome, Github, Apple, CheckCircle, Users, BarChart3, ArrowLeft } from 'lucide-react';
 import logo from "../../assets/logo2.png";
 
@@ -40,7 +41,7 @@ class LoginController {
 
     console.log("🔄 Sending login request with:", { email: user.email });
 
-    const response = await fetch("http://127.0.0.1:8000/api/user/login/", {
+    const response = await fetch(`${API_BASE_URL}/api/user/login/`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
