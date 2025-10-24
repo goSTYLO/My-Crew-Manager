@@ -1,0 +1,68 @@
+[
+  {
+    "test": "Create user Test User 1",
+    "status": "PASS",
+    "details": "User created successfully",
+    "timestamp": "2025-10-25T06:21:18.760228"
+  },
+  {
+    "test": "Create user Test User 2",
+    "status": "PASS",
+    "details": "User created successfully",
+    "timestamp": "2025-10-25T06:21:19.428484"
+  },
+  {
+    "test": "Authenticate testuser1@example.com",
+    "status": "PASS",
+    "details": "Token obtained",
+    "timestamp": "2025-10-25T06:21:20.077323"
+  },
+  {
+    "test": "Authenticate testuser2@example.com",
+    "status": "PASS",
+    "details": "Token obtained",
+    "timestamp": "2025-10-25T06:21:20.814841"
+  },
+  {
+    "test": "Get notifications",
+    "status": "FAIL",
+    "details": "Status: 401",
+    "timestamp": "2025-10-25T06:21:20.897580"
+  },
+  {
+    "test": "Get unread count",
+    "status": "FAIL",
+    "details": "Status: 401",
+    "timestamp": "2025-10-25T06:21:20.900889"
+  },
+  {
+    "test": "Create project",
+    "status": "FAIL",
+    "details": "Status: 401, Response: {\"detail\":\"Given token not valid for any token type\",\"code\":\"token_not_valid\",\"messages\":[{\"token_class\":\"AccessToken\",\"token_type\":\"access\",\"message\":\"Token is invalid\"}]}",
+    "timestamp": "2025-10-25T06:21:20.905136"
+  },
+  {
+    "test": "WebSocket connection testuser1@example.com",
+    "status": "FAIL",
+    "details": "Error: BaseEventLoop.create_connection() got an unexpected keyword argument 'extra_headers'",
+    "timestamp": "2025-10-25T06:21:20.998993"
+  },
+  {
+    "test": "WebSocket connection testuser2@example.com",
+    "status": "FAIL",
+    "details": "Error: BaseEventLoop.create_connection() got an unexpected keyword argument 'extra_headers'",
+    "timestamp": "2025-10-25T06:21:20.999626"
+  },
+  {
+    "test": "Real-time updates",
+    "status": "FAIL",
+    "details": "Need at least 2 WebSocket connections",
+    "timestamp": "2025-10-25T06:21:20.999909"
+  },
+  {
+    "test": "Frontend accessibility",
+    "status": "PASS",
+    "details": "React app is accessible",
+    "timestamp": "2025-10-25T06:21:21.007145"
+  }
+]

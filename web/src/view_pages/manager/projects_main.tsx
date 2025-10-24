@@ -77,7 +77,7 @@ const ProjectTask = () => {
                 return;
             }
 
-            const response = await fetch(`${AI_API_BASE_URL}/projects/`, {
+            const response = await fetch(`${AI_API_BASE_URL}/projects/my-projects/`, {
                 headers: {
                     'Authorization': `Token ${token}`,
                     'Content-Type': 'application/json',

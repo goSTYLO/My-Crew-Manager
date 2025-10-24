@@ -74,6 +74,18 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ children }
         try {
           const message: WebSocketMessage = JSON.parse(event.data);
           
+          // Handle authentication success
+          if (message.type === 'auth_success') {
+            console.log('WebSocket authentication successful:', message.message);
+            return;
+          }
+          
+          // Handle error messages
+          if (message.type === 'error') {
+            console.error('WebSocket error:', message.message);
+            return;
+          }
+          
           // Handle different message types
           if (message.type === 'notification') {
             // Handle notification messages

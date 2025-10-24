@@ -48,7 +48,7 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
       const token = localStorage.getItem('token') || localStorage.getItem('access');
       if (!token) return;
 
-      const response = await fetch(`${API_BASE_URL}/ai/notifications/`, {
+      const response = await fetch(`${API_BASE_URL}/api/ai/notifications/`, {
         headers: {
           'Authorization': `Token ${token}`,
           'Content-Type': 'application/json',
@@ -72,7 +72,7 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
       const token = localStorage.getItem('token') || localStorage.getItem('access');
       if (!token) return;
 
-      const response = await fetch(`${API_BASE_URL}/ai/notifications/${notificationId}/mark_read/`, {
+      const response = await fetch(`${API_BASE_URL}/api/ai/notifications/${notificationId}/mark_read/`, {
         method: 'POST',
         headers: {
           'Authorization': `Token ${token}`,
@@ -98,7 +98,7 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
       const token = localStorage.getItem('token') || localStorage.getItem('access');
       if (!token) return;
 
-      const response = await fetch(`${API_BASE_URL}/ai/notifications/mark_all_read/`, {
+      const response = await fetch(`${API_BASE_URL}/api/ai/notifications/mark_all_read/`, {
         method: 'POST',
         headers: {
           'Authorization': `Token ${token}`,

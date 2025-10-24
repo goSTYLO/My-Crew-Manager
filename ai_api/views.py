@@ -326,14 +326,18 @@ class ProjectViewSet(ModelViewSet):
 
     @action(detail=False, methods=["get"], url_path="my-projects")
     def my_projects(self, request):
-        """Return only projects where the current user is a member"""
+        """Return projects where the current user is the creator OR a member"""
+        from django.db.models import Q
+        
         # Get project IDs where the user is a member
-        user_project_ids = ProjectMember.objects.filter(
+        member_project_ids = ProjectMember.objects.filter(
             user=request.user
         ).values_list('project_id', flat=True)
         
-        # Get the actual projects
-        projects = Project.objects.filter(id__in=user_project_ids).order_by('-created_at')
+        # Get projects where user is creator OR member
+        projects = Project.objects.filter(
+            Q(id__in=member_project_ids) | Q(created_by=request.user)
+        ).distinct().order_by('-created_at')
         
         # Serialize and return
         serializer = self.get_serializer(projects, many=True)
