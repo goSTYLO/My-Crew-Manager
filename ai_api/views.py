@@ -7,6 +7,11 @@ from rest_framework import status
 from django.shortcuts import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import PermissionDenied
+from django.db import models
+from django.http import HttpResponse, Http404
+from django.core.exceptions import PermissionDenied as DjangoPermissionDenied
+import os
+import mimetypes
 
 from .models import (
     Project, Proposal,
@@ -36,6 +41,18 @@ class ProjectViewSet(ModelViewSet):
     serializer_class = ProjectSerializer
     permission_classes = [IsAuthenticated]
 
+    def get_queryset(self):
+        """
+        Return projects where the user is either:
+        1. The creator of the project
+        2. A member of the project (through accepted invitations)
+        """
+        user = self.request.user
+        return Project.objects.filter(
+            models.Q(created_by=user) |  # Projects created by the user
+            models.Q(members__user=user)  # Projects where user is a member
+        ).distinct()
+
     def perform_create(self, serializer):
         project = serializer.save(created_by=self.request.user)
         # Automatically add creator as a project member with Owner role
@@ -44,6 +61,12 @@ class ProjectViewSet(ModelViewSet):
             user=self.request.user,
             role='Owner'
         )
+
+    def get_serializer_context(self):
+        """Add request to serializer context for URL generation"""
+        context = super().get_serializer_context()
+        context['request'] = self.request
+        return context
 
     @action(detail=True, methods=["put"], url_path="ingest-proposal/(?P<proposal_id>[^/.]+)")
     def ingest_proposal(self, request, pk=None, proposal_id=None):
@@ -292,12 +315,72 @@ class ProjectViewSet(ModelViewSet):
 
         return Response({'project_id': project.id, 'epics': result}, status=status.HTTP_200_OK)
 
+    @action(detail=True, methods=['get'], url_path='download-file')
+    def download_project_file(self, request, pk=None):
+        """Download the project file"""
+        try:
+            project = self.get_object()
+            
+            # Check if user has access to this project
+            user = request.user
+            
+            # Allow access if user is:
+            # 1. Project creator
+            # 2. Project member
+            has_access = (
+                project.created_by == user or
+                project.members.filter(user=user).exists()
+            )
+            
+            if not has_access:
+                raise DjangoPermissionDenied("You don't have permission to download this file")
+            
+            # Check if file exists
+            if not project.project_file or not project.project_file.name:
+                raise Http404("File not found")
+            
+            file_path = project.project_file.path
+            if not os.path.exists(file_path):
+                raise Http404("File not found on disk")
+            
+            # Determine file type
+            content_type, _ = mimetypes.guess_type(file_path)
+            if not content_type:
+                content_type = 'application/octet-stream'
+            
+            # Read and return the file
+            with open(file_path, 'rb') as file:
+                response = HttpResponse(file.read(), content_type=content_type)
+                filename = os.path.basename(project.project_file.name)
+                response['Content-Disposition'] = f'attachment; filename="{filename}"'
+                response['Content-Length'] = os.path.getsize(file_path)
+                return response
+                
+        except Project.DoesNotExist:
+            raise Http404("Project not found")
+        except DjangoPermissionDenied as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        except Exception as e:
+            return Response(
+                {"error": f"Download failed: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
 
 class ProposalViewSet(ModelViewSet):
     queryset = Proposal.objects.all()
     serializer_class = ProposalSerializer
     permission_classes = [IsAuthenticated]
     parser_classes = [MultiPartParser]
+
+    def get_serializer_context(self):
+        """Add request to serializer context for download URL generation"""
+        context = super().get_serializer_context()
+        context['request'] = self.request
+        return context
 
     def create(self, request, *args, **kwargs):
         file = request.FILES.get("file")
@@ -330,6 +413,61 @@ class ProposalViewSet(ModelViewSet):
             "project_id": project.id,
             "parsed_text_preview": text[:300] + "..." if len(text) > 300 else text
         }, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['get'], url_path='download')
+    def download_proposal(self, request, pk=None):
+        """Download the proposal PDF file"""
+        try:
+            proposal = self.get_object()
+            
+            # Check if user has access to this proposal's project
+            user = request.user
+            project = proposal.project
+            
+            # Allow access if user is:
+            # 1. Project creator
+            # 2. Project member
+            has_access = (
+                project.created_by == user or
+                project.members.filter(user=user).exists()
+            )
+            
+            if not has_access:
+                raise DjangoPermissionDenied("You don't have permission to download this file")
+            
+            # Check if file exists
+            if not proposal.file or not proposal.file.name:
+                raise Http404("File not found")
+            
+            file_path = proposal.file.path
+            if not os.path.exists(file_path):
+                raise Http404("File not found on disk")
+            
+            # Determine file type
+            content_type, _ = mimetypes.guess_type(file_path)
+            if not content_type:
+                content_type = 'application/pdf'
+            
+            # Read and return the file
+            with open(file_path, 'rb') as file:
+                response = HttpResponse(file.read(), content_type=content_type)
+                filename = os.path.basename(proposal.file.name)
+                response['Content-Disposition'] = f'attachment; filename="{filename}"'
+                response['Content-Length'] = os.path.getsize(file_path)
+                return response
+                
+        except Proposal.DoesNotExist:
+            raise Http404("Proposal not found")
+        except DjangoPermissionDenied as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        except Exception as e:
+            return Response(
+                {"error": f"Download failed: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 
 

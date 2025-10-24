@@ -4,10 +4,16 @@ from .models import Project, Proposal, ProjectFeature, ProjectGoal, ProjectRole,
 
 @admin.register(Project)
 class ProjectAdmin(admin.ModelAdmin):
-    list_display = ['id', 'title', 'summary', 'created_at', 'created_by']
+    list_display = ['id', 'title', 'summary', 'has_file', 'created_at', 'created_by']
     list_filter = ['created_at', 'created_by']
     search_fields = ['title', 'summary', 'created_by__name']
     date_hierarchy = 'created_at'
+    fields = ['title', 'summary', 'project_file', 'created_by']
+    
+    def has_file(self, obj):
+        return bool(obj.project_file)
+    has_file.boolean = True
+    has_file.short_description = 'Has File'
 
 @admin.register(Proposal)
 class ProposalAdmin(admin.ModelAdmin):

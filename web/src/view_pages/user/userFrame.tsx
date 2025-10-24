@@ -1,9 +1,10 @@
 // userFrame.tsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Sidebar from "../../components/sidebarUser"; // user-side sidebar
 import TopNavbarUser from "../../components/topbarLayout_user"; // user-side navbar
-import { FolderOpen, Folder } from "lucide-react";
+import { FolderOpen, Folder, Users, Calendar, Download } from "lucide-react";
 import { useTheme } from "../../components/themeContext";
+import { useNavigate } from "react-router-dom";
 import {
   PieChart,
   Pie,
@@ -42,9 +43,126 @@ const performanceData = [
   { month: 'Mar 2022', achieved: 6, target: 4 }
 ];
 
+// API Configuration
+const API_BASE_URL = 'http://localhost:8000/api/ai';
+
+// Project interface
+interface Project {
+  id: number;
+  title: string;
+  summary?: string;
+  created_by: number;
+  created_by_name: string;
+  created_at: string;
+  project_file?: string;
+  project_file_url?: string;
+  project_file_download_url?: string;
+}
+
 const UserDashboard = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const { theme } = useTheme();
+  const navigate = useNavigate();
+
+  // Fetch projects from backend
+  const fetchProjects = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      
+      if (!token) {
+        setError('Authentication required');
+        return;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/projects/`, {
+        headers: {
+          'Authorization': `Token ${token}`,
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          setError('Authentication failed');
+          return;
+        }
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      setProjects(data.slice(0, 4)); // Show only first 4 projects in dashboard
+    } catch (error) {
+      console.error('Error fetching projects:', error);
+      setError('Failed to load projects');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load projects on component mount
+  useEffect(() => {
+    fetchProjects();
+  }, []);
+
+  // Handle project click
+  const handleProjectClick = (projectId: number) => {
+    navigate(`/project-details/${projectId}`);
+  };
+
+  // Handle project file download
+  const handleProjectFileDownload = async (project: Project, event: React.MouseEvent) => {
+    event.stopPropagation(); // Prevent card click
+    
+    if (!project.project_file_download_url) {
+      console.error('No download URL available');
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      
+      const response = await fetch(project.project_file_download_url, {
+        headers: {
+          'Authorization': `Token ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Download failed: ${response.statusText}`);
+      }
+
+      // Get filename from content-disposition header or use a default
+      const contentDisposition = response.headers.get('content-disposition');
+      let filename = 'project-file';
+      
+      if (contentDisposition) {
+        const match = contentDisposition.match(/filename="(.+)"/);
+        if (match) {
+          filename = match[1];
+        }
+      }
+
+      // Create blob and download
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      
+    } catch (error) {
+      console.error('Error downloading file:', error);
+    }
+  };
 
   return (
     <div className={`flex h-screen ${theme === "dark" ? "bg-gray-900" : "bg-gray-50"}`}>
@@ -70,24 +188,116 @@ const UserDashboard = () => {
                 <h2 className={`text-lg font-semibold ${theme === "dark" ? "text-white" : "text-gray-800"}`}>Projects</h2>
                 <div className={`flex items-center space-x-2 text-sm ${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}>
                   <Folder className="w-4 h-4" />
-                  <span>52 files</span>
+                  <span>{projects.length} projects</span>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                {[1, 2, 3, 4].map((project) => (
-                  <div key={project} className={`border rounded-lg p-4 hover:shadow-md transition-shadow ${theme === "dark" ? "border-gray-700 bg-gray-900" : "border-gray-200 bg-white"}`}>
-                    <div className={`w-full h-32 bg-gradient-to-br from-blue-100 to-purple-100 rounded-lg mb-3 flex items-center justify-center`}>
-                      <div className="text-center">
-                        <div className={`w-8 h-8 bg-white rounded-lg mx-auto mb-2 flex items-center justify-center ${theme === "dark" ? "bg-gray-800" : ""}`}>
-                          <FolderOpen className={`w-4 h-4 ${theme === "dark" ? "text-gray-300" : "text-gray-600"}`} />
+              
+              {loading ? (
+                <div className="grid grid-cols-2 gap-4">
+                  {[1, 2, 3, 4].map((i) => (
+                    <div key={i} className={`border rounded-lg p-4 animate-pulse h-48 w-full overflow-hidden ${theme === "dark" ? "border-gray-700 bg-gray-900" : "border-gray-200 bg-gray-50"}`}>
+                      <div className={`w-full h-24 bg-gradient-to-br ${theme === "dark" ? "from-gray-700 to-gray-800" : "from-gray-200 to-gray-300"} rounded-lg mb-2`}></div>
+                      <div className="h-20 flex flex-col justify-between overflow-hidden">
+                        <div>
+                          <div className={`h-4 ${theme === "dark" ? "bg-gray-700" : "bg-gray-300"} rounded mb-2`}></div>
+                          <div className={`h-3 ${theme === "dark" ? "bg-gray-800" : "bg-gray-200"} rounded w-2/3 mb-1`}></div>
+                          <div className={`h-3 ${theme === "dark" ? "bg-gray-800" : "bg-gray-200"} rounded w-1/2`}></div>
                         </div>
-                        <p className={`text-xs ${theme === "dark" ? "text-gray-400" : "text-gray-600"}`}>Project {project}</p>
+                        <div className="flex justify-between items-center mt-auto">
+                          <div className={`h-3 ${theme === "dark" ? "bg-gray-800" : "bg-gray-200"} rounded w-16`}></div>
+                          <div className={`h-3 ${theme === "dark" ? "bg-gray-800" : "bg-gray-200"} rounded w-12`}></div>
+                        </div>
                       </div>
                     </div>
-                    <h3 className={`font-medium ${theme === "dark" ? "text-white" : "text-gray-800"} text-sm`}>Mobile App Design</h3>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ) : error ? (
+                <div className={`text-center py-8 ${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}>
+                  <p>{error}</p>
+                </div>
+              ) : projects.length === 0 ? (
+                <div className={`text-center py-8 ${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}>
+                  <FolderOpen className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                  <p>No projects found</p>
+                  <p className="text-sm mt-2">You haven't been assigned to any projects yet.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-4">
+                  {projects.map((project, index) => (
+                    <div 
+                      key={project.id} 
+                      onClick={() => handleProjectClick(project.id)}
+                      className={`border rounded-lg p-4 hover:shadow-md transition-all cursor-pointer hover:scale-105 h-48 w-full ${theme === "dark" ? "border-gray-700 bg-gray-900 hover:bg-gray-800" : "border-gray-200 bg-white hover:bg-gray-50"}`}
+                    >
+                      <div className={`w-full h-24 bg-gradient-to-br ${
+                        index % 4 === 0 ? "from-blue-100 to-purple-100" :
+                        index % 4 === 1 ? "from-green-100 to-blue-100" :
+                        index % 4 === 2 ? "from-purple-100 to-pink-100" :
+                        "from-orange-100 to-red-100"
+                      } rounded-lg mb-2 flex items-center justify-center relative overflow-hidden`}>
+                        <div className="text-center z-10 px-2 w-full max-w-full">
+                          <div className={`w-8 h-8 bg-white bg-opacity-80 rounded-lg mx-auto mb-1 flex items-center justify-center ${theme === "dark" ? "bg-gray-800 bg-opacity-80" : ""}`}>
+                            <FolderOpen className={`w-4 h-4 ${theme === "dark" ? "text-gray-300" : "text-gray-600"}`} />
+                          </div>
+                          <p className={`text-xs ${theme === "dark" ? "text-gray-300" : "text-gray-700"} font-medium overflow-hidden text-ellipsis whitespace-nowrap px-1`} title={project.title}>
+                            {project.title}
+                          </p>
+                        </div>
+                        {/* Decorative elements */}
+                        <div className="absolute top-2 right-2 opacity-20">
+                          <Users className="w-4 h-4" />
+                        </div>
+                        <div className="absolute bottom-2 left-2 opacity-20">
+                          <Calendar className="w-4 h-4" />
+                        </div>
+                        {/* Download button if file exists */}
+                        {project.project_file && (
+                          <div className="absolute bottom-2 right-2">
+                            <button
+                              onClick={(e) => handleProjectFileDownload(project, e)}
+                              className={`p-1 rounded-full bg-white bg-opacity-90 hover:bg-opacity-100 transition-all ${theme === "dark" ? "bg-gray-800 bg-opacity-90 hover:bg-opacity-100" : ""}`}
+                              title="Download project file"
+                            >
+                              <Download className={`w-3 h-3 ${theme === "dark" ? "text-gray-300" : "text-gray-600"}`} />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex flex-col h-20 justify-between overflow-hidden">
+                        <div className="overflow-hidden flex-1 min-h-0">
+                          <h3 className={`font-medium ${theme === "dark" ? "text-white" : "text-gray-800"} text-sm leading-tight mb-1 overflow-hidden text-ellipsis whitespace-nowrap`} title={project.title}>
+                            {project.title}
+                          </h3>
+                          <div className={`text-xs ${theme === "dark" ? "text-gray-400" : "text-gray-500"} leading-tight h-8 overflow-hidden`}>
+                            <div 
+                              className="break-words" 
+                              style={{
+                                display: '-webkit-box',
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: 'vertical',
+                                overflow: 'hidden',
+                                lineHeight: '1rem',
+                                maxHeight: '2rem'
+                              }}
+                              title={project.summary || 'No description'}
+                            >
+                              {project.summary || 'No description available'}
+                            </div>
+                          </div>
+                        </div>
+                        <div className={`flex items-center justify-between text-xs ${theme === "dark" ? "text-gray-500" : "text-gray-400"} h-4 flex-shrink-0 mt-1`}>
+                          <span className="overflow-hidden text-ellipsis whitespace-nowrap flex-1 mr-2" title={`By ${project.created_by_name}`}>
+                            By {project.created_by_name}
+                          </span>
+                          <span className="flex-shrink-0 text-right whitespace-nowrap">
+                            {new Date(project.created_at).toLocaleDateString()}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Tasks Card */}
@@ -105,11 +315,11 @@ const UserDashboard = () => {
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie data={taskData} cx="25%" cy="50%" outerRadius={120} dataKey="value" labelLine={false} 
-                        label={({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
-                          const radius = innerRadius + (outerRadius - innerRadius) / 2;
-                          const x = cx + radius * Math.cos(-(midAngle ?? 0) * (Math.PI / 180));
-                          const y = cy + radius * Math.sin(-(midAngle ?? 0) * (Math.PI / 180));
-                          return <text x={x} y={y} fill="white" textAnchor="middle" dominantBaseline="central" fontSize={13} fontWeight="bold">{`${((percent ?? 0) * 100).toFixed(0)}%`}</text>;
+                        label={({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
+                          const radius = (innerRadius as number) + ((outerRadius as number) - (innerRadius as number)) / 2;
+                          const x = (cx as number) + radius * Math.cos(-((midAngle ?? 0) as number) * (Math.PI / 180));
+                          const y = (cy as number) + radius * Math.sin(-((midAngle ?? 0) as number) * (Math.PI / 180));
+                          return <text x={x} y={y} fill="white" textAnchor="middle" dominantBaseline="central" fontSize={13} fontWeight="bold">{`${(((percent ?? 0) as number) * 100).toFixed(0)}%`}</text>;
                         }}
                       >
                         {taskData.map((entry, index) => <Cell key={index} fill={entry.color} />)}

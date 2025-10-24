@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, FileText, Calendar } from 'lucide-react';
+import { X, FileText, Calendar, Download } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { useTheme } from './themeContext';
 
@@ -7,8 +7,10 @@ interface ProposalViewerProps {
   isOpen: boolean;
   onClose: () => void;
   proposalData: {
+    id?: number;
     parsed_text: string;
     uploaded_at: string;
+    download_url?: string;
   };
 }
 
@@ -24,6 +26,53 @@ const ProposalViewer: React.FC<ProposalViewerProps> = ({
   // Debug logging
   console.log('ProposalViewer - proposalData:', proposalData);
   console.log('ProposalViewer - parsed_text:', proposalData?.parsed_text);
+
+  // Download function
+  const handleDownload = async () => {
+    if (!proposalData?.download_url) {
+      alert('Download URL not available');
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      const response = await fetch(proposalData.download_url, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Token ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      // Get filename from Content-Disposition header or use default
+      const contentDisposition = response.headers.get('Content-Disposition');
+      let filename = 'proposal.pdf';
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+        if (filenameMatch) {
+          filename = filenameMatch[1];
+        }
+      }
+
+      // Create blob and download
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('Download failed:', error);
+      alert('Failed to download file. Please try again.');
+    }
+  };
 
   // Convert plain text to markdown format
   const formatTextAsMarkdown = (text: string): string => {
@@ -97,14 +146,29 @@ const ProposalViewer: React.FC<ProposalViewerProps> = ({
               </div>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className={`p-2 rounded-lg hover:bg-gray-100 ${
-              theme === 'dark' ? 'hover:bg-gray-800 text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-700'
-            } transition-colors`}
-          >
-            <X className="w-6 h-6" />
-          </button>
+          <div className="flex items-center space-x-2">
+            {/* Download Button */}
+            {proposalData?.download_url && (
+              <button
+                onClick={handleDownload}
+                className={`p-2 rounded-lg hover:bg-gray-100 ${
+                  theme === 'dark' ? 'hover:bg-gray-800 text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-700'
+                } transition-colors`}
+                title="Download PDF"
+              >
+                <Download className="w-6 h-6" />
+              </button>
+            )}
+            {/* Close Button */}
+            <button
+              onClick={onClose}
+              className={`p-2 rounded-lg hover:bg-gray-100 ${
+                theme === 'dark' ? 'hover:bg-gray-800 text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-700'
+              } transition-colors`}
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
         </div>
 
         {/* Content */}

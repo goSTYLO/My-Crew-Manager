@@ -12,7 +12,8 @@ import {
   Sparkles,
   CheckCircle,
   GitBranch,
-  AlertCircle
+  AlertCircle,
+  Download
 } from 'lucide-react';
 import Sidebar from "../../components/sidebarUser";
 import TopNavbar from "../../components/topbarLayout_user";
@@ -141,6 +142,9 @@ interface Project {
   task_count?: number;
   has_proposal?: boolean;
   has_backlog?: boolean;
+  project_file?: string;
+  project_file_url?: string;
+  project_file_download_url?: string;
 }
 
 interface ProjectDetails extends Project {
@@ -321,6 +325,49 @@ const ProjectDetails: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'tasks' | 'team' | 'timeline'>('overview');
 
+  // Handle project file download
+  const handleProjectFileDownload = async () => {
+    if (!projectDetails?.project_file_download_url) {
+      console.error('No download URL available');
+      return;
+    }
+
+    try {
+      const response = await fetch(projectDetails.project_file_download_url, {
+        headers: apiHeaders(),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Download failed: ${response.statusText}`);
+      }
+
+      // Get filename from content-disposition header or use a default
+      const contentDisposition = response.headers.get('content-disposition');
+      let filename = `${projectDetails.title}-file`;
+      
+      if (contentDisposition) {
+        const match = contentDisposition.match(/filename="(.+)"/);
+        if (match) {
+          filename = match[1];
+        }
+      }
+
+      // Create blob and download
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      
+    } catch (error) {
+      console.error('Error downloading project file:', error);
+    }
+  };
+
   useEffect(() => {
     const fetchProjectDetails = async () => {
       if (!projectId) {
@@ -342,6 +389,7 @@ const ProjectDetails: React.FC = () => {
         }
         
         const project = await projectResponse.json();
+        console.log('Project details fetched:', project);
 
         // Fetch proposal
         let proposal = null;
@@ -519,8 +567,17 @@ const ProjectDetails: React.FC = () => {
                     <span className="text-sm font-medium">Proposal Uploaded</span>
                   </div>
                 )}
+                {projectDetails.project_file && (
+                  <button
+                    onClick={handleProjectFileDownload}
+                    className="flex items-center gap-2 px-3 py-1.5 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
+                  >
+                    <Download className="w-4 h-4" />
+                    <span className="text-sm font-medium">Download Project File</span>
+                  </button>
+                )}
                 {projectDetails.backlog.length > 0 && (
-                  <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-100 text-blue-700 rounded-lg">
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-100 text-purple-700 rounded-lg">
                     <Sparkles className="w-4 h-4" />
                     <span className="text-sm font-medium">Backlog Generated</span>
                   </div>
@@ -629,6 +686,81 @@ const ProjectDetails: React.FC = () => {
           <div>
             {activeTab === 'overview' && (
               <div className="space-y-6">
+                {/* Files Section */}
+                <div className={`p-6 rounded-lg border ${
+                  theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+                }`}>
+                  <h3 className={`text-lg font-semibold mb-4 ${theme === 'dark' ? 'text-gray-100' : 'text-gray-900'}`}>
+                    Project Files
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Proposal Status */}
+                    <div className={`p-4 rounded-lg border ${
+                      projectDetails.proposal 
+                        ? 'bg-green-50 border-green-200' 
+                        : theme === 'dark' ? 'bg-gray-750 border-gray-600' : 'bg-gray-50 border-gray-200'
+                    }`}>
+                      <div className="flex items-center gap-3">
+                        <FileText className={`w-5 h-5 ${projectDetails.proposal ? 'text-green-600' : 'text-gray-400'}`} />
+                        <div>
+                          <p className={`font-medium text-sm ${
+                            projectDetails.proposal 
+                              ? 'text-green-700' 
+                              : theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                          }`}>
+                            PDF Proposal
+                          </p>
+                          <p className={`text-xs ${
+                            projectDetails.proposal 
+                              ? 'text-green-600' 
+                              : theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                          }`}>
+                            {projectDetails.proposal ? 'Uploaded and ready for AI analysis' : 'No proposal uploaded yet'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Project File Status */}
+                    <div className={`p-4 rounded-lg border ${
+                      projectDetails.project_file 
+                        ? 'bg-blue-50 border-blue-200' 
+                        : theme === 'dark' ? 'bg-gray-750 border-gray-600' : 'bg-gray-50 border-gray-200'
+                    }`}>
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-1">
+                          <Download className={`w-5 h-5 ${projectDetails.project_file ? 'text-blue-600' : 'text-gray-400'}`} />
+                          <FileText className={`w-4 h-4 ${projectDetails.project_file ? 'text-blue-500' : 'text-gray-400'}`} />
+                        </div>
+                        <div className="flex-1">
+                          <p className={`font-medium text-sm ${
+                            projectDetails.project_file 
+                              ? 'text-blue-700' 
+                              : theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                          }`}>
+                            Project File
+                          </p>
+                          <p className={`text-xs ${
+                            projectDetails.project_file 
+                              ? 'text-blue-600' 
+                              : theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                          }`}>
+                            {projectDetails.project_file ? 'File available for download' : 'No project file uploaded'}
+                          </p>
+                        </div>
+                        {projectDetails.project_file && (
+                          <button
+                            onClick={handleProjectFileDownload}
+                            className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors"
+                          >
+                            Download
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 {/* Features */}
                 {projectDetails.features.length > 0 && (
                   <div className={`p-6 rounded-lg border ${

@@ -11,18 +11,47 @@ from .models import (
 
 class ProjectSerializer(serializers.ModelSerializer):
     created_by_name = serializers.CharField(source='created_by.name', read_only=True)
+    project_file_url = serializers.SerializerMethodField()
+    project_file_download_url = serializers.SerializerMethodField()
     
     class Meta:
         model = Project
-        fields = ['id', 'title', 'summary', 'created_by', 'created_by_name', 'created_at']
-        read_only_fields = ['id', 'created_at', 'created_by', 'created_by_name']
+        fields = ['id', 'title', 'summary', 'created_by', 'created_by_name', 'created_at', 'project_file', 'project_file_url', 'project_file_download_url']
+        read_only_fields = ['id', 'created_at', 'created_by', 'created_by_name', 'project_file_url', 'project_file_download_url']
+    
+    def get_project_file_url(self, obj):
+        """Generate URL for the project file"""
+        if obj.project_file:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.project_file.url)
+        return None
+    
+    def get_project_file_download_url(self, obj):
+        """Generate download URL for the project file"""
+        if obj.project_file:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(f'/api/ai/projects/{obj.id}/download-file/')
+        return None
 
 
 class ProposalSerializer(serializers.ModelSerializer):
+    download_url = serializers.SerializerMethodField()
+    uploaded_by_name = serializers.CharField(source='uploaded_by.name', read_only=True)
+    
     class Meta:
         model = Proposal
-        fields = ['id', 'project', 'file', 'parsed_text', 'uploaded_by', 'uploaded_at']
-        read_only_fields = ['id', 'parsed_text', 'uploaded_by', 'uploaded_at']
+        fields = ['id', 'project', 'file', 'parsed_text', 'uploaded_by', 'uploaded_by_name', 'uploaded_at', 'download_url']
+        read_only_fields = ['id', 'parsed_text', 'uploaded_by', 'uploaded_by_name', 'uploaded_at', 'download_url']
+    
+    def get_download_url(self, obj):
+        """Generate download URL for the proposal file"""
+        if obj.file:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(f'/api/ai/proposals/{obj.id}/download/')
+        return None
 
 
 class ProjectFeatureSerializer(serializers.ModelSerializer):

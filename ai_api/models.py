@@ -11,6 +11,11 @@ class Project(models.Model):
     summary = models.TextField(blank=True, null=True)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='ai_projects')
     created_at = models.DateTimeField(auto_now_add=True)
+    # Optional file upload field
+    project_file = models.FileField(upload_to='projects/', blank=True, null=True, help_text="Upload a project-related file (optional)")
+    
+    def __str__(self):
+        return self.title
 
 
 class Proposal(models.Model):

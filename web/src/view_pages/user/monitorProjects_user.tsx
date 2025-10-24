@@ -1,9 +1,9 @@
 // monitorProjects_user.tsx
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import Sidebar from "../../components/sidebarUser";
 import TopNavbar from "../../components/topbarLayout_user";
-import { Search, Mail, FileText, Sparkles, Users, CheckCircle, Clock, AlertCircle, GitBranch } from "lucide-react";
+import { Search, Mail, FileText, Sparkles, Users, CheckCircle, Clock, AlertCircle, GitBranch, Download } from "lucide-react";
 import { useTheme } from "../../components/themeContext";
 
 // ✅ Types
@@ -51,6 +51,9 @@ interface Project {
   proposal?: Proposal;
   members?: ProjectMember[];
   repositories?: Repository[];
+  project_file?: string;
+  project_file_url?: string;
+  project_file_download_url?: string;
 }
 
 // API Configuration
@@ -99,6 +102,7 @@ const projectAPI = {
             headers: apiHeaders()
           });
           const project = await projectResponse.json();
+          console.log(`Project ${projectId} data:`, project);
 
           // Fetch proposal
           let proposal = null;
@@ -107,11 +111,15 @@ const projectAPI = {
               `${API_BASE_URL}/ai/projects/${projectId}/current-proposal/`,
               { headers: apiHeaders() }
             );
+            console.log(`Proposal response for project ${projectId}:`, proposalResponse.status);
             if (proposalResponse.ok) {
               proposal = await proposalResponse.json();
+              console.log(`Proposal data for project ${projectId}:`, proposal);
+            } else {
+              console.log(`No proposal response for project ${projectId}:`, await proposalResponse.text());
             }
           } catch (e) {
-            console.log('No proposal found for project', projectId);
+            console.log('No proposal found for project', projectId, 'Error:', e);
           }
 
           // Fetch backlog to check if it exists and count tasks
@@ -167,7 +175,10 @@ const projectAPI = {
             has_backlog: hasBacklog,
             proposal: proposal,
             members: Array.isArray(members) ? members : [],
-            repositories: Array.isArray(repositories) ? repositories : []
+            repositories: Array.isArray(repositories) ? repositories : [],
+            project_file: project.project_file,
+            project_file_url: project.project_file_url,
+            project_file_download_url: project.project_file_download_url
           };
         } catch (error) {
           console.error(`Error fetching details for project ${projectId}:`, error);
@@ -211,7 +222,11 @@ const StatusBadge = ({ hasProposal, hasBacklog, theme }: {
 };
 
 // ✅ Project Card Component
-const ProjectCard = ({ project, theme }: { project: Project; theme: string }) => {
+const ProjectCard = ({ project, theme, onDownloadFile }: { 
+  project: Project; 
+  theme: string; 
+  onDownloadFile?: (project: Project, event: React.MouseEvent) => void; 
+}) => {
   const navigate = useNavigate();
   const createdDate = new Date(project.created_at).toLocaleDateString();
 
@@ -240,15 +255,42 @@ const ProjectCard = ({ project, theme }: { project: Project; theme: string }) =>
 
       {/* Progress Indicators */}
       <div className="grid grid-cols-2 gap-3 mb-4">
-        <div className={`flex items-center gap-2 p-3 rounded-lg ${
-          project.has_proposal 
-            ? 'bg-green-50 border border-green-200' 
-            : 'bg-gray-50 border border-gray-200'
-        }`}>
-          <FileText className={`w-4 h-4 ${project.has_proposal ? 'text-green-600' : 'text-gray-400'}`} />
-          <span className={`text-xs font-medium ${project.has_proposal ? 'text-green-700' : 'text-gray-500'}`}>
-            {project.has_proposal ? 'Proposal Uploaded' : 'No Proposal'}
-          </span>
+        {/* File Status Box - Combined Proposal and Project File */}
+        <div 
+          className={`flex items-center gap-2 p-3 rounded-lg cursor-pointer transition-all hover:scale-105 ${
+            project.has_proposal 
+              ? 'bg-green-50 border border-green-200 hover:bg-green-100' 
+              : project.project_file
+              ? 'bg-blue-50 border border-blue-200 hover:bg-blue-100'
+              : 'bg-gray-50 border border-gray-200'
+          }`}
+          onClick={project.project_file && !project.has_proposal && onDownloadFile ? (e) => onDownloadFile(project, e) : undefined}
+        >
+          {project.has_proposal ? (
+            <>
+              <FileText className="w-4 h-4 text-green-600" />
+              <span className="text-xs font-medium text-green-700">
+                Proposal Uploaded
+              </span>
+            </>
+          ) : project.project_file ? (
+            <>
+              <div className="flex items-center gap-1">
+                <Download className="w-4 h-4 text-blue-600" />
+                <FileText className="w-3 h-3 text-blue-500" />
+              </div>
+              <span className="text-xs font-medium text-blue-700">
+                Project File
+              </span>
+            </>
+          ) : (
+            <>
+              <FileText className="w-4 h-4 text-gray-400" />
+              <span className="text-xs font-medium text-gray-500">
+                No Files
+              </span>
+            </>
+          )}
         </div>
 
         <div className={`flex items-center gap-2 p-3 rounded-lg ${
@@ -367,6 +409,74 @@ const MonitorProjectsUser = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [pendingInvitationsCount, setPendingInvitationsCount] = useState(0);
+
+  // Function to fetch pending invitations count
+  const fetchPendingInvitations = useCallback(async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/ai/invitations/my-invitations/`, {
+        headers: apiHeaders(),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch invitations: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      const pendingInvitations = data.invitations.filter(
+        (invitation: any) => invitation.status === 'pending'
+      );
+      setPendingInvitationsCount(pendingInvitations.length);
+    } catch (error) {
+      console.error('Error fetching pending invitations:', error);
+      // Don't set error state for invitations, just log it
+    }
+  }, []);
+
+  // Handle project file download
+  const handleProjectFileDownload = async (project: Project, event: React.MouseEvent) => {
+    event.stopPropagation(); // Prevent card click navigation
+    
+    if (!project.project_file_download_url) {
+      console.error('No download URL available for project', project.id);
+      return;
+    }
+
+    try {
+      const response = await fetch(project.project_file_download_url, {
+        headers: apiHeaders(),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Download failed: ${response.statusText}`);
+      }
+
+      // Get filename from content-disposition header or use a default
+      const contentDisposition = response.headers.get('content-disposition');
+      let filename = `${project.title}-file`;
+      
+      if (contentDisposition) {
+        const match = contentDisposition.match(/filename="(.+)"/);
+        if (match) {
+          filename = match[1];
+        }
+      }
+
+      // Create blob and download
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      
+    } catch (error) {
+      console.error('Error downloading project file:', error);
+    }
+  };
 
   useEffect(() => {
     const loadProjects = async () => {
@@ -381,8 +491,34 @@ const MonitorProjectsUser = () => {
       }
     };
 
-    loadProjects();
-  }, []);
+    const loadData = async () => {
+      await Promise.all([
+        loadProjects(),
+        fetchPendingInvitations()
+      ]);
+    };
+
+    loadData();
+
+    // Refresh invitation count when the page becomes visible (user returns from invitation page)
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        fetchPendingInvitations();
+      }
+    };
+
+    const handleFocus = () => {
+      fetchPendingInvitations();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [fetchPendingInvitations]);
 
   const filteredProjects = projects.filter(project =>
     project.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -418,7 +554,7 @@ const MonitorProjectsUser = () => {
               {/* Project Invitation Button */}
               <button
                 onClick={() => navigate('/project-invitation')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+                className={`relative flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
                   theme === 'dark'
                     ? 'bg-blue-600 hover:bg-blue-700 text-white'
                     : 'bg-blue-500 hover:bg-blue-600 text-white'
@@ -426,6 +562,12 @@ const MonitorProjectsUser = () => {
               >
                 <Mail className="w-5 h-5" />
                 <span>Project Invitations</span>
+                {/* Red Badge for Pending Invitations */}
+                {pendingInvitationsCount > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center min-w-[20px] animate-pulse">
+                    {pendingInvitationsCount > 99 ? '99+' : pendingInvitationsCount}
+                  </span>
+                )}
               </button>
             </div>
           </div>
@@ -497,7 +639,12 @@ const MonitorProjectsUser = () => {
                 </div>
               ) : (
                 filteredProjects.map((project) => (
-                  <ProjectCard key={project.id} project={project} theme={theme} />
+                  <ProjectCard 
+                    key={project.id} 
+                    project={project} 
+                    theme={theme} 
+                    onDownloadFile={handleProjectFileDownload}
+                  />
                 ))
               )}
             </div>
