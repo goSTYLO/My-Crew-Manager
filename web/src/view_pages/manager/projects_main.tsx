@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import Sidebar from "../../components/sidebarLayout";
 import { useNavigate } from "react-router-dom";
+import { API_BASE_URL } from "../../config/api";
 import { Search, Plus, Folder, FolderOpen } from 'lucide-react';
 import { PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import TopNavbar from "../../components/topbarLayouot";
@@ -68,7 +69,7 @@ const ProjectTask = () => {
     const { showError } = useToast();
 
     // API Configuration
-    const API_BASE_URL = 'http://localhost:8000/api/ai';
+    const AI_API_BASE_URL = `${API_BASE_URL}/api/ai`;
 
     // Fetch projects from backend
     const fetchProjects = async () => {
@@ -83,7 +84,7 @@ const ProjectTask = () => {
                 return;
             }
 
-            const response = await fetch(`${API_BASE_URL}/projects/`, {
+            const response = await fetch(`${AI_API_BASE_URL}/projects/`, {
                 headers: {
                     'Authorization': `Token ${token}`,
                     'Content-Type': 'application/json',

@@ -532,7 +532,29 @@ For support and questions:
 
 ## 🔄 Recent Updates
 
-### Task Assignment & Commit Tracking System (Latest)
+### Base URL Centralization & Configuration Management (Latest)
+- ✅ **Centralized API Configuration**: Implemented centralized base URL management for the web application
+  - **Root .env Configuration**: Created root-level `.env` file with `VITE_API_BASE_URL` for single source of truth
+  - **Vite Configuration Update**: Modified `web/vite.config.ts` to read environment variables from project root
+  - **Centralized API Module**: Created `web/src/config/api.ts` to export `API_BASE_URL` from environment variables
+  - **TypeScript Integration**: Updated `web/src/vite-env.d.ts` with proper type definitions for environment variables
+- ✅ **Comprehensive URL Replacement**: Updated all web components to use centralized configuration
+  - **Files Updated**: 10+ React components including sign-in, sign-up, project management, and monitoring pages
+  - **Pattern Standardization**: Replaced hardcoded URLs (`localhost:8000`, `127.0.0.1:8000`) with dynamic `${API_BASE_URL}` references
+  - **Circular Dependency Fixes**: Resolved critical circular dependency errors in `monitor_created.tsx` and `monitorProjects.tsx`
+  - **API Endpoint Consistency**: All API calls now use the same base URL configuration for easy IP address changes
+- ✅ **Developer Experience Improvements**: Enhanced configuration management for development and deployment
+  - **Single Point of Change**: Developers can now change the API base URL by editing one file (root `.env`)
+  - **IP Address Flexibility**: Easy switching between localhost and device IP addresses for testing
+  - **Environment Variable Support**: Proper Vite environment variable integration with fallback defaults
+  - **Type Safety**: Full TypeScript support for environment variables with proper type definitions
+- ✅ **Confirmation Modal System**: Implemented professional confirmation dialogs for AI regeneration operations
+  - **Modal Pattern**: Added confirmation modal system matching `generateProject.tsx` pattern
+  - **Regeneration Safety**: Both overview and backlog regeneration now require user confirmation
+  - **User Experience**: Clear warnings about data replacement and process duration before proceeding
+  - **Consistent UI**: Professional modal dialogs with theme support and proper button styling
+
+### Task Assignment & Commit Tracking System
 - ✅ **Task Assignment System**: Implemented comprehensive task assignment functionality for story tasks
   - **Assignment Restrictions**: Only project members can be assigned to tasks with proper validation
   - **UI Integration**: Added assignee dropdown selector in task rows with project member filtering

@@ -9,6 +9,7 @@ import {
   LogOut,
   MessageSquare
 } from "lucide-react";
+import { API_BASE_URL } from "../config/api";
 import { useTheme } from "./themeContext";
 
 interface SidebarProps {
@@ -32,7 +33,7 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
       const token = localStorage.getItem("token");
   
       // Call the logout API endpoint
-      await fetch("http://localhost:8000/api/user/logout/", {
+      await fetch(`${API_BASE_URL}/api/user/logout/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
