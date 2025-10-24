@@ -69,6 +69,7 @@ const App: React.FC = () => {
         <Route path="/create-project" element={<GenerateProject/> }/>
         <Route path="/chat" element={<Chat/> }/>
         <Route path="/projects" element={<CreatedProject/> }/>
+        <Route path="/project-manager/:projectId" element={<CreatedProject />} />
 
         {/* Components */}
         <Route path="/forgot-password" element={<ForgotPassword/> }/>

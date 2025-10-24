@@ -1,5 +1,7 @@
 #serializers.py
 from rest_framework import serializers
+from django.urls import reverse
+from django.conf import settings
 from .models import (
     Project, Proposal,
     ProjectFeature, ProjectRole, ProjectGoal,
@@ -158,19 +160,151 @@ class ProjectInvitationSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'created_at', 'updated_at']
     
     def get_project(self, obj):
-        return {
-            'id': obj.project.id,
-            'title': obj.project.title,
-            'summary': obj.project.summary or '',
+        project = obj.project
+        
+        # Get basic project info
+        project_data = {
+            'id': project.id,
+            'title': project.title,
+            'summary': project.summary or '',
             'created_by': {
-                'id': obj.project.created_by.user_id,
-                'name': obj.project.created_by.name,
-                'email': obj.project.created_by.email,
+                'id': project.created_by.user_id,
+                'name': project.created_by.name,
+                'email': project.created_by.email,
             },
-            'created_at': obj.project.created_at.isoformat() if obj.project.created_at else None,
-            'member_count': getattr(obj.project, 'member_count', 0),
-            'task_count': getattr(obj.project, 'task_count', 0),
+            'created_at': project.created_at.isoformat() if project.created_at else None,
+            'member_count': project.members.count(),
+            'task_count': StoryTask.objects.filter(user_story__sub_epic__epic__project=project).count(),
+            
+            # Get project file information
+            'project_file': project.project_file.url if project.project_file else None,
+            'project_file_download_url': f'/api/ai/projects/{project.id}/download-file/' if project.project_file else None,
         }
+
+        # Get project features
+        features = ProjectFeature.objects.filter(project=project)
+        project_data['features'] = [
+            {'id': f.id, 'title': f.title}
+            for f in features
+        ]
+
+        # Get project roles
+        roles = ProjectRole.objects.filter(project=project)
+        project_data['roles'] = [
+            {'id': r.id, 'role': r.role}
+            for r in roles
+        ]
+
+        # Get project goals
+        goals = ProjectGoal.objects.filter(project=project)
+        project_data['goals'] = [
+            {'id': g.id, 'title': g.title, 'role': g.role}
+            for g in goals
+        ]
+
+        # Get timeline
+        timeline_weeks = TimelineWeek.objects.filter(project=project).prefetch_related('items')
+        project_data['timeline'] = [
+            {
+                'id': w.id,
+                'week_number': w.week_number,
+                'timeline_items': [
+                    {'id': i.id, 'title': i.title}
+                    for i in w.items.all()
+                ]
+            }
+            for w in timeline_weeks
+        ]
+
+        # Get members
+        members = ProjectMember.objects.filter(project=project)
+        project_data['members'] = [
+            {
+                'id': m.id,
+                'user_name': m.user_name,
+                'user_email': m.user_email,
+                'role': m.role,
+                'joined_at': m.joined_at.isoformat() if m.joined_at else None
+            }
+            for m in members
+        ]
+
+        # Get current proposal if any
+        proposal = Proposal.objects.filter(project=project).order_by('-uploaded_at').first()
+        if proposal:
+            project_data['proposal'] = {
+                'id': proposal.id,
+                'file': proposal.file.url if proposal.file else None,
+                'uploaded_by': proposal.uploaded_by.name if proposal.uploaded_by else None,
+                'uploaded_at': proposal.uploaded_at.isoformat() if proposal.uploaded_at else None,
+                'download_url': f'/api/ai/proposals/{proposal.id}/download/'
+            }
+        else:
+            project_data['proposal'] = None
+
+        # Get repositories
+        repositories = Repository.objects.filter(project=project)
+        project_data['repositories'] = [
+            {
+                'id': r.id,
+                'name': r.name,
+                'url': r.url,
+                'branch': r.branch,
+                'created_at': r.created_at.isoformat() if r.created_at else None
+            }
+            for r in repositories
+        ]
+
+        # Get backlog (epics, sub-epics, user stories, tasks)
+        epics = Epic.objects.filter(project=project).prefetch_related(
+            'sub_epics',
+            'sub_epics__user_stories',
+            'sub_epics__user_stories__tasks'
+        )
+        
+        project_data['backlog'] = {
+            'epics': [
+                {
+                    'id': epic.id,
+                    'title': epic.title,
+                    'description': epic.description,
+                    'ai': epic.ai,
+                    'sub_epics': [
+                        {
+                            'id': sub_epic.id,
+                            'title': sub_epic.title,
+                            'ai': sub_epic.ai,
+                            'user_stories': [
+                                {
+                                    'id': story.id,
+                                    'title': story.title,
+                                    'ai': story.ai,
+                                    'tasks': [
+                                        {
+                                            'id': task.id,
+                                            'title': task.title,
+                                            'status': task.status,
+                                            'ai': task.ai,
+                                            'assignee': {
+                                                'id': task.assignee.id,
+                                                'user_name': task.assignee.user_name,
+                                                'user_email': task.assignee.user_email
+                                            } if task.assignee else None
+                                        }
+                                        for task in story.tasks.all()
+                                    ]
+                                }
+                                for story in sub_epic.user_stories.all()
+                            ]
+                        }
+                        for sub_epic in epic.sub_epics.all()
+                    ]
+                }
+                for epic in epics
+            ]
+        }
+
+        return project_data
     
     def get_invitee(self, obj):
         return {

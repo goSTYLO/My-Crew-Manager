@@ -347,7 +347,7 @@ const ProjectTask = () => {
                         currentProjects.map((project: any) => (
                           <button
                             key={project.id}
-                            onClick={() => navigate(`/project-details/${project.id}`)} 
+                            onClick={() => navigate(`/project-manager/${project.id}`)} 
                             className={`w-full flex items-center space-x-3 text-left p-2 rounded-md transition-shadow hover:shadow-md
                               ${theme === "dark" ? "bg-gray-900 border border-gray-700" : "bg-white border border-gray-100"}`}
                             style={{ minHeight: 56 }}
