@@ -1,12 +1,15 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:mycrewmanager/features/authentication/presentation/bloc/auth_bloc.dart';
 import 'package:mycrewmanager/features/project/domain/entities/task.dart';
 import 'package:mycrewmanager/features/project/domain/usecases/get_user_assigned_tasks.dart';
 import 'package:mycrewmanager/core/usecase/usercase.dart';
 import 'package:mycrewmanager/features/dashboard/presentation/pages/tasks_page.dart';
 import 'package:mycrewmanager/init_dependencies.dart';
+import 'package:mycrewmanager/features/dashboard/utils/task_cache_manager.dart';
+import 'package:mycrewmanager/features/dashboard/widgets/skeleton_loader.dart';
 
 class IncomingTaskWidget extends StatefulWidget {
   final VoidCallback? onViewAll;
@@ -20,6 +23,7 @@ class IncomingTaskWidget extends StatefulWidget {
 class _IncomingTaskWidgetState extends State<IncomingTaskWidget> {
   List<ProjectTask> upcomingTasks = [];
   bool isLoading = true;
+  bool isFirstLoad = true;
   String? error;
   final GetUserAssignedTasks _getUserAssignedTasks = serviceLocator<GetUserAssignedTasks>();
   Timer? _refreshTimer;
@@ -27,7 +31,7 @@ class _IncomingTaskWidgetState extends State<IncomingTaskWidget> {
   @override
   void initState() {
     super.initState();
-    _loadUpcomingTasks();
+    _initializeData();
     _startAutoRefresh();
   }
 
@@ -39,18 +43,40 @@ class _IncomingTaskWidgetState extends State<IncomingTaskWidget> {
 
   void _startAutoRefresh() {
     // Auto-refresh every 60 seconds
-    _refreshTimer = Timer.periodic(const Duration(seconds: 60), (timer) {
+    _refreshTimer = Timer.periodic(const Duration(seconds: 60), (timer) async {
       if (mounted && !isLoading) {
-        _loadUpcomingTasks();
+        // Check connectivity before attempting refresh
+        final connectivityResult = await Connectivity().checkConnectivity();
+        if (connectivityResult != ConnectivityResult.none) {
+          _loadUpcomingTasks();
+        }
       }
     });
   }
 
+  Future<void> _initializeData() async {
+    // Load cached data first
+    final cachedTasks = await TaskCacheManager.loadUpcomingTasks();
+    if (cachedTasks.isNotEmpty) {
+      setState(() {
+        upcomingTasks = cachedTasks;
+        isLoading = false;
+        isFirstLoad = false;
+      });
+    }
+    
+    // Then fetch fresh data
+    await _loadUpcomingTasks();
+  }
+
   Future<void> _loadUpcomingTasks() async {
-    setState(() {
-      isLoading = true;
-      error = null;
-    });
+    // Only show loading if this is the first load and no cached data
+    if (isFirstLoad && upcomingTasks.isEmpty) {
+      setState(() {
+        isLoading = true;
+        error = null;
+      });
+    }
 
     try {
       // Get tasks assigned to the current user from the database
@@ -61,8 +87,10 @@ class _IncomingTaskWidgetState extends State<IncomingTaskWidget> {
           setState(() {
             isLoading = false;
             error = failure.message;
-            // Use mock data as fallback
-            _loadMockTasks();
+            // Keep existing data if API fails
+            if (upcomingTasks.isEmpty) {
+              _loadMockTasks();
+            }
           });
         },
         (tasksList) {
@@ -73,14 +101,20 @@ class _IncomingTaskWidgetState extends State<IncomingTaskWidget> {
                 .where((task) => task.status == 'pending' || task.status == 'in_progress')
                 .take(3)
                 .toList();
+            isFirstLoad = false;
           });
+          // Save to cache
+          TaskCacheManager.saveUpcomingTasks(upcomingTasks);
         },
       );
     } catch (e) {
       setState(() {
         isLoading = false;
         error = e.toString();
-        _loadMockTasks();
+        // Keep existing data if API fails
+        if (upcomingTasks.isEmpty) {
+          _loadMockTasks();
+        }
       });
     }
   }
@@ -116,6 +150,8 @@ class _IncomingTaskWidgetState extends State<IncomingTaskWidget> {
         assigneeName: "admin@example.com",
       ),
     ].take(3).toList();
+    // Save mock data to cache
+    TaskCacheManager.saveUpcomingTasks(upcomingTasks);
   }
 
   IconData _getTaskIcon(String title) {
@@ -220,45 +256,16 @@ class _IncomingTaskWidgetState extends State<IncomingTaskWidget> {
 
               // Tasks List
               if (isLoading)
-                const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(20),
-                    child: CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF6C63FF)),
-                    ),
-                  ),
-                )
-              else if (error != null)
-                Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      children: [
-                        const Icon(
-                          Icons.error_outline,
-                          color: Colors.red,
-                          size: 32,
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Error loading tasks',
-                          style: const TextStyle(
-                            color: Color(0xFF181929),
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          error!,
-                          style: const TextStyle(
-                            color: Color(0xFF7B7F9E),
-                            fontSize: 12,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
-                    ),
+                const Padding(
+                  padding: EdgeInsets.all(20),
+                  child: Column(
+                    children: [
+                      IncomingTaskRowSkeleton(),
+                      SizedBox(height: 12),
+                      IncomingTaskRowSkeleton(),
+                      SizedBox(height: 12),
+                      IncomingTaskRowSkeleton(),
+                    ],
                   ),
                 )
               else if (upcomingTasks.isEmpty)
@@ -310,6 +317,7 @@ class _IncomingTaskWidgetState extends State<IncomingTaskWidget> {
                     ],
                   );
                 }).toList(),
+              // Show offline indicator if there's an error but we have cached data
             ],
           ),
         );

@@ -11,7 +11,8 @@ abstract interface class AuthRepository {
   Future<Either<Failure, User>> signupUser({
     required String name,
     required String email,
-    required String password
+    required String password,
+    String? role,
   });
 
   Future<Either<Failure, User>> getCredentials();

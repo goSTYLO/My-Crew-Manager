@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:get_it/get_it.dart';
+
 import 'package:mycrewmanager/features/authentication/presentation/bloc/auth_bloc.dart';
 import 'package:mycrewmanager/features/authentication/presentation/pages/login_page.dart';
 import 'package:mycrewmanager/features/dashboard/presentation/pages/dashboard_page.dart';
@@ -8,31 +10,34 @@ import 'package:mycrewmanager/features/dashboard/presentation/pages/settings_pag
 import 'package:mycrewmanager/features/dashboard/presentation/pages/tasks_page.dart';
 import 'package:mycrewmanager/features/dashboard/presentation/pages/projects_page.dart';
 import 'package:mycrewmanager/features/dashboard/presentation/pages/notifications_page.dart';
-import 'package:mycrewmanager/features/dashboard/presentation/pages/chats_page.dart'; 
-import 'package:get_it/get_it.dart';
+import 'package:mycrewmanager/features/dashboard/presentation/pages/chats_page.dart';
 import 'package:mycrewmanager/features/chat/data/repositories/chat_repository_impl.dart';
 import 'package:mycrewmanager/features/chat/data/models/room_model.dart';
 import 'package:mycrewmanager/features/chat/data/services/chat_ws_service.dart';
+import 'package:mycrewmanager/core/utils/role_formatter.dart';
+import 'package:mycrewmanager/features/dashboard/widgets/skeleton_loader.dart';
 
 class MessagesScreen extends StatefulWidget {
   const MessagesScreen({super.key});
 
-  @override
-  State<MessagesScreen> createState() => _MessagesScreenState();
-
   static Route<Object?> route() {
     return MaterialPageRoute(builder: (_) => const MessagesScreen());
   }
+
+  @override
+  State<MessagesScreen> createState() => _MessagesScreenState();
 }
 
 class _MessagesScreenState extends State<MessagesScreen> {
   final _repo = GetIt.I<ChatRepositoryImpl>();
+  final _ws = GetIt.I<ChatWsService>();
+
   List<RoomModel> _rooms = [];
   bool _loading = true;
   String _error = '';
-  String search = '';
-  final _ws = GetIt.I<ChatWsService>();
+  String _search = '';
   bool _wsConnected = false;
+  bool _showFabMenu = false;
 
   @override
   void initState() {
@@ -48,18 +53,14 @@ class _MessagesScreenState extends State<MessagesScreen> {
     });
     try {
       final rooms = await _repo.listRooms();
-      setState(() {
-        _rooms = rooms;
-      });
-    } catch (e) {
-      setState(() {
-        _error = 'Failed to load rooms';
-      });
+      if (!mounted) return;
+      setState(() => _rooms = rooms);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _error = 'Failed to load rooms');
     } finally {
       if (mounted) {
-        setState(() {
-          _loading = false;
-        });
+        setState(() => _loading = false);
       }
     }
   }
@@ -84,18 +85,119 @@ class _MessagesScreenState extends State<MessagesScreen> {
     final controller = TextEditingController();
     final created = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Create Group'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(hintText: 'Group name'),
+      barrierDismissible: true,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 20,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Title
+                const Text(
+                  'Create Group',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF181929),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                // Input field
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: const Color(0xFFE8ECF4),
+                      width: 1,
+                    ),
+                  ),
+                  child: TextField(
+                    controller: controller,
+                    decoration: const InputDecoration(
+                      hintText: 'Group name',
+                      hintStyle: TextStyle(
+                        color: Color(0xFF7B7F9E),
+                        fontSize: 16,
+                      ),
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 16,
+                      ),
+                    ),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      color: Color(0xFF181929),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                // Action buttons
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () => Navigator.pop(ctx, false),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                        child: const Text(
+                          'Cancel',
+                          style: TextStyle(
+                            color: Color(0xFF6C63FF),
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () => Navigator.pop(ctx, true),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF6C63FF),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: const Text(
+                          'Create',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Create')),
-        ],
       ),
     );
+
     if (created == true) {
       final name = controller.text.trim();
       if (name.isEmpty) return;
@@ -110,19 +212,120 @@ class _MessagesScreenState extends State<MessagesScreen> {
     final controller = TextEditingController();
     final created = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Direct Chat'),
-        content: TextField(
-          controller: controller,
-          keyboardType: TextInputType.emailAddress,
-          decoration: const InputDecoration(hintText: 'User email'),
+      barrierDismissible: true,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 20,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Title
+                const Text(
+                  'Direct Chat',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF181929),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                // Input field
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: const Color(0xFFE8ECF4),
+                      width: 1,
+                    ),
+                  ),
+                  child: TextField(
+                    controller: controller,
+                    keyboardType: TextInputType.emailAddress,
+                    decoration: const InputDecoration(
+                      hintText: 'User email',
+                      hintStyle: TextStyle(
+                        color: Color(0xFF7B7F9E),
+                        fontSize: 16,
+                      ),
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 16,
+                      ),
+                    ),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      color: Color(0xFF181929),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                // Action buttons
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () => Navigator.pop(ctx, false),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                        child: const Text(
+                          'Cancel',
+                          style: TextStyle(
+                            color: Color(0xFF6C63FF),
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () => Navigator.pop(ctx, true),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF6C63FF),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: const Text(
+                          'Start',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Start')),
-        ],
       ),
     );
+
     if (created == true) {
       final email = controller.text.trim();
       if (email.isEmpty) return;
@@ -133,15 +336,309 @@ class _MessagesScreenState extends State<MessagesScreen> {
     }
   }
 
+  Widget _buildChatItem(RoomModel room) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: ListTile(
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        leading: CircleAvatar(
+          radius: 24,
+          backgroundColor: const Color(0xFF6C63FF).withOpacity(0.1),
+          child: Icon(
+            room.name != null ? Icons.group : Icons.person,
+            color: const Color(0xFF6C63FF),
+            size: 24,
+          ),
+        ),
+        title: Text(
+          room.name ?? 'Direct',
+          style: const TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 16,
+            color: Color(0xFF181929),
+          ),
+        ),
+        subtitle: Text(
+          'Members: ${room.membersCount}',
+          style: const TextStyle(
+            color: Color(0xFF7B7F9E),
+            fontSize: 14,
+          ),
+        ),
+        onTap: () {
+          Navigator.of(context).push(
+            ChatsPage.route(
+              name: room.name ?? 'Direct',
+              avatarUrl:
+                  'https://ui-avatars.com/api/?name=${Uri.encodeComponent(room.name ?? 'D')}',
+              roomId: room.roomId,
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildFabMenuItem({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        child: Row(
+          children: [
+            Icon(icon, color: const Color(0xFF6C63FF), size: 24),
+            const SizedBox(width: 16),
+            Text(
+              label,
+              style: const TextStyle(
+                color: Color(0xFF181929),
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+      statusBarColor: Color(0xFFF8F6FF),
+      statusBarIconBrightness: Brightness.dark,
+    ));
+
+    final filtered = _rooms
+        .where((r) =>
+            (r.name ?? 'Direct').toLowerCase().contains(_search.toLowerCase()))
+        .toList();
+
+    return Scaffold(
+      drawer: _buildAppDrawer(context),
+      backgroundColor: const Color(0xFFF8F6FF),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => setState(() => _showFabMenu = !_showFabMenu),
+        backgroundColor: const Color(0xFF6C63FF),
+        child: Icon(
+          _showFabMenu ? Icons.close : Icons.add,
+          color: Colors.white,
+        ),
+      ),
+      body: Stack(
+        children: [
+          SafeArea(
+            child: Column(
+              children: [
+                // Top bar
+                Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Row(
+                    children: [
+                      Builder(
+                        builder: (context) => IconButton(
+                          icon: const Icon(Icons.menu, color: Color(0xFF181929)),
+                          onPressed: () => Scaffold.of(context).openDrawer(),
+                        ),
+                      ),
+                      const Spacer(),
+                    ],
+                  ),
+                ),
+
+                // Header + Search
+                Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Messages',
+                        style: TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF181929)),
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        'Connect with your mentors and peers.',
+                        style: TextStyle(
+                            fontSize: 16,
+                            color: Color(0xFF7B7F9E),
+                            fontWeight: FontWeight.w400),
+                      ),
+                      const SizedBox(height: 24),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 10,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: TextField(
+                          onChanged: (value) =>
+                              setState(() => _search = value),
+                          decoration: const InputDecoration(
+                            hintText: 'Search mentors or groups',
+                            hintStyle: TextStyle(
+                                color: Color(0xFF7B7F9E), fontSize: 16),
+                            prefixIcon: Icon(Icons.search,
+                                color: Color(0xFF7B7F9E), size: 20),
+                            border: InputBorder.none,
+                            contentPadding: EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 16),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Chat list
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                    child: _loading
+                        ? ListView.separated(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            itemCount: 5,
+                            separatorBuilder: (_, __) => const SizedBox(height: 12),
+                            itemBuilder: (_, __) => const ChatListSkeleton(),
+                          )
+                        : _error.isNotEmpty
+                            ? Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(_error,
+                                        style:
+                                            const TextStyle(color: Colors.red)),
+                                    const SizedBox(height: 8),
+                                    ElevatedButton(
+                                        onPressed: _loadRooms,
+                                        child: const Text('Retry')),
+                                  ],
+                                ),
+                              )
+                            : filtered.isEmpty
+                                ? const Center(
+                                    child: Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.chat_bubble_outline,
+                                            size: 64,
+                                            color: Color(0xFF7B7F9E)),
+                                        SizedBox(height: 16),
+                                        Text('No conversations yet',
+                                            style: TextStyle(
+                                                fontSize: 18,
+                                                fontWeight: FontWeight.w600,
+                                                color: Color(0xFF181929))),
+                                        SizedBox(height: 8),
+                                        Text(
+                                          'Start a conversation with your team',
+                                          style: TextStyle(
+                                              fontSize: 14,
+                                              color: Color(0xFF7B7F9E)),
+                                        ),
+                                      ],
+                                    ),
+                                  )
+                                : ListView.separated(
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 16),
+                                    itemCount: filtered.length,
+                                    separatorBuilder: (_, __) =>
+                                        const SizedBox(height: 12),
+                                    itemBuilder: (context, i) =>
+                                        _buildChatItem(filtered[i]),
+                                  ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+           // FAB Popup Menu
+           if (_showFabMenu)
+             Positioned(
+               bottom: 100,
+               right: 16,
+               child: Container(
+                 width: 200,
+                 decoration: BoxDecoration(
+                   color: Colors.white,
+                   borderRadius: BorderRadius.circular(16),
+                   boxShadow: [
+                     BoxShadow(
+                       color: Colors.black.withOpacity(0.15),
+                       blurRadius: 25,
+                       offset: const Offset(0, 6),
+                     ),
+                   ],
+                 ),
+                 child: Column(
+                   mainAxisSize: MainAxisSize.min,
+                   children: [
+                     _buildFabMenuItem(
+                       icon: Icons.group,
+                       label: 'Create Group',
+                       onTap: () {
+                         setState(() => _showFabMenu = false);
+                         _showCreateGroupDialog();
+                       },
+                     ),
+                     _buildFabMenuItem(
+                       icon: Icons.person,
+                       label: 'Direct Chat',
+                       onTap: () {
+                         setState(() => _showFabMenu = false);
+                         _showCreateDirectDialog();
+                       },
+                     ),
+                   ],
+                 ),
+               ),
+             ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildAppDrawer(BuildContext context) {
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, state) {
         String userName = 'User';
         String userRole = 'User';
-        
+
         if (state is AuthSuccess) {
           userName = state.user.name;
-          userRole = state.user.role ?? 'User';
+          userRole = RoleFormatter.formatRole(state.user.role);
         }
 
         return Drawer(
@@ -149,128 +646,97 @@ class _MessagesScreenState extends State<MessagesScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Header
                 DrawerHeader(
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFF7F8FA),
-                  ),
+                  decoration: const BoxDecoration(color: Color(0xFFF7F8FA)),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Profile picture
                       const CircleAvatar(
                         radius: 28,
-                        backgroundImage: AssetImage(
-                          'lib/core/assets/images/app_logo.png',
-                        ),
+                        backgroundImage:
+                            AssetImage('lib/core/assets/images/app_logo.png'),
                       ),
                       const SizedBox(height: 10),
-                      // Name
                       Text(
                         userName,
                         style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 18,
-                          color: Colors.black,
-                        ),
+                            fontWeight: FontWeight.bold, fontSize: 18),
                       ),
-                      // Title/Role
-                      Text(
-                        userRole,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: Colors.black54,
-                        ),
-                      ),
+                      Text(userRole,
+                          style: const TextStyle(fontSize: 14)),
                     ],
                   ),
                 ),
-            // Menu Items
-            _DrawerItem(
-              icon: Icons.home_outlined,
-              label: 'Home',
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(context, DashboardPage.route());
-              },
-            ),
-            _DrawerItem(
-              icon: Icons.folder_open,
-              label: 'Projects',
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(context, ProjectsPage.route());
-              },
-            ),
-            // Hide Tasks menu item for developers
-            if (userRole.toLowerCase() != 'developer')
-              _DrawerItem(
-                icon: Icons.description_outlined,
-                label: 'Tasks',
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.push(context, TasksPage.route());
-                },
-              ),
-            _DrawerItem(
-              icon: Icons.chat_bubble_outline,
-              label: 'Messages',
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(context, MessagesScreen.route());
-              },
-            ),
-            _DrawerItem(
-              icon: Icons.notifications_none,
-              label: 'Notifications',
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(context, NotificationsPage.route());
-              },
-            ),
-            _DrawerItem(
-              icon: Icons.settings_outlined,
-              label: 'Settings',
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(context, SettingsPage.route());
-              },
-            ),
-            _DrawerItem(
-              icon: Icons.logout,
-              label: 'Logout',
-              onTap: () {
-                showDialog(
-                  context: context,
-                  builder: (BuildContext context) {
-                    return AlertDialog(
-                      title: const Text('Logout'),
-                      content: const Text('Are you sure you want to logout?'),
-                      actions: [
-                        TextButton(
-                          style: TextButton.styleFrom(
-                            foregroundColor: Colors.black,
-                          ),
-                          onPressed: () => Navigator.pop(context),
-                          child: const Text('Cancel'),
+                _DrawerItem(
+                    icon: Icons.home_outlined,
+                    label: 'Home',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(context, DashboardPage.route());
+                    }),
+                _DrawerItem(
+                    icon: Icons.folder_open,
+                    label: 'Projects',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(context, ProjectsPage.route());
+                    }),
+                if (RoleFormatter.getRoleForComparison(
+                        state is AuthSuccess ? state.user.role : null) !=
+                    'developer')
+                  _DrawerItem(
+                      icon: Icons.description_outlined,
+                      label: 'Tasks',
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.push(context, TasksPage.route());
+                      }),
+                _DrawerItem(
+                    icon: Icons.chat_bubble_outline,
+                    label: 'Messages',
+                    onTap: () {
+                      Navigator.pop(context);
+                    }),
+                _DrawerItem(
+                    icon: Icons.notifications_none,
+                    label: 'Notifications',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(context, NotificationsPage.route());
+                    }),
+                _DrawerItem(
+                    icon: Icons.settings_outlined,
+                    label: 'Settings',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(context, SettingsPage.route());
+                    }),
+                _DrawerItem(
+                    icon: Icons.logout,
+                    label: 'Logout',
+                    onTap: () {
+                      showDialog(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          title: const Text('Logout'),
+                          content:
+                              const Text('Are you sure you want to logout?'),
+                          actions: [
+                            TextButton(
+                                onPressed: () => Navigator.pop(ctx),
+                                child: const Text('Cancel')),
+                            TextButton(
+                              onPressed: () {
+                                Navigator.pop(ctx);
+                                Navigator.pushReplacement(
+                                    context, LoginPage.route());
+                              },
+                              child: const Text('Logout'),
+                            ),
+                          ],
                         ),
-                        TextButton(
-                          style: TextButton.styleFrom(
-                            foregroundColor: Colors.black,
-                          ),
-                          onPressed: () {
-                            Navigator.pop(context); // Close dialog
-                            Navigator.pushReplacement(context, LoginPage.route());
-                          },
-                          child: const Text('Logout'),
-                        ),
-                      ],
-                    );
-                  },
-                );
-              },
-            ),
-                const Spacer(),
+                      );
+                    }),
               ],
             ),
           ),
@@ -278,181 +744,8 @@ class _MessagesScreenState extends State<MessagesScreen> {
       },
     );
   }
-
-  @override
-  Widget build(BuildContext context) {
-    // Set status bar color to white and icons to dark
-    SystemChrome.setSystemUIOverlayStyle(
-      const SystemUiOverlayStyle(
-        statusBarColor: Colors.white, // Remove green, set to white
-        statusBarIconBrightness: Brightness.dark,
-        statusBarBrightness: Brightness.light,
-      ),
-    );
-
-    final filtered = _rooms
-        .where((r) => (r.name ?? 'Direct').toLowerCase().contains(search.toLowerCase()))
-        .toList();
-
-    return Scaffold(
-      drawer: _buildAppDrawer(context),
-      backgroundColor: Colors.white, // Set scaffold background to white
-      body: Container(
-        color: Colors.white,
-        padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
-        child: Column(
-          children: [
-            // Top bar
-            Padding(
-              padding: const EdgeInsets.only(
-                  left: 16, right: 16, top: 24, bottom: 8),
-              child: Row(
-                children: [
-                  Builder(
-                    builder: (context) => IconButton(
-                      icon: const Icon(Icons.menu),
-                      onPressed: () {
-                        Scaffold.of(context).openDrawer();
-                      },
-                    ),
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    icon: const Icon(Icons.notifications_none_outlined),
-                    onPressed: () {},
-                  ),
-                ],
-              ),
-            ),
-            // Title
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 24.0, vertical: 4),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'Message',
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF181929),
-                  ),
-                ),
-              ),
-            ),
-            // Search bar and filter
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      decoration: InputDecoration(
-                        hintText: 'Search Mentors',
-                        prefixIcon: const Icon(Icons.search),
-                        contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(
-                            color: Color(0xFFE8ECF4),
-                          ),
-                        ),
-                        filled: true,
-                        fillColor: const Color(0xFFF7F7FA),
-                        isDense: true,
-                      ),
-                      onChanged: (val) => setState(() => search = val),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            // Message list
-            if (_loading)
-              const Expanded(child: Center(child: CircularProgressIndicator()))
-            else if (_error.isNotEmpty)
-              Expanded(
-                child: Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(_error),
-                      const SizedBox(height: 8),
-                      ElevatedButton(onPressed: _loadRooms, child: const Text('Retry')),
-                    ],
-                  ),
-                ),
-              )
-            else
-              Expanded(
-              child: ListView.separated(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                itemCount: filtered.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 2),
-                itemBuilder: (context, i) {
-                  final room = filtered[i];
-                  return ListTile(
-                    leading: const CircleAvatar(radius: 24, child: Icon(Icons.group)),
-                    title: Text(
-                      room.name ?? 'Direct chat #${room.roomId}',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 15,
-                      ),
-                    ),
-                    subtitle: Text(
-                      'Members: ${room.membersCount}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: const Color(0xFF181929),
-                        fontWeight: FontWeight.w400,
-                      ),
-                    ),
-                    trailing: Text(room.createdAt.split('T').first, style: const TextStyle(fontSize: 11, color: Colors.black45)),
-                    onTap: () {
-                      // Navigate to chat detail with room info
-                      Navigator.of(context).push(
-                        ChatsPage.route(
-                          name: room.name ?? 'Direct',
-                          avatarUrl: 'https://ui-avatars.com/api/?name=${Uri.encodeComponent(room.name ?? 'D')}',
-                          roomId: room.roomId,
-                        ),
-                      );
-                    },
-                  );
-                },
-              ),
-            ),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: _showCreateGroupDialog,
-                    icon: const Icon(Icons.group_add),
-                    label: const Text('Create Group'),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: _showCreateDirectDialog,
-                    icon: const Icon(Icons.person_add),
-                    label: const Text('Direct Chat'),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          ],
-        ),
-      ),
-    );
-  }
 }
 
-// Drawer item widget
 class _DrawerItem extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -473,4 +766,3 @@ class _DrawerItem extends StatelessWidget {
     );
   }
 }
-

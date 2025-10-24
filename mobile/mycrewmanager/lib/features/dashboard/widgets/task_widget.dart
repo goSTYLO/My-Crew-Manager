@@ -1,11 +1,14 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:mycrewmanager/features/authentication/presentation/bloc/auth_bloc.dart';
 import 'package:mycrewmanager/features/project/domain/entities/task.dart';
 import 'package:mycrewmanager/features/project/domain/usecases/get_user_assigned_tasks.dart';
 import 'package:mycrewmanager/core/usecase/usercase.dart';
 import 'package:mycrewmanager/init_dependencies.dart';
+import 'package:mycrewmanager/features/dashboard/utils/task_cache_manager.dart';
+import 'package:mycrewmanager/features/dashboard/widgets/skeleton_loader.dart';
 
 class TaskWidget extends StatefulWidget {
   const TaskWidget({super.key});
@@ -18,12 +21,11 @@ class _TaskWidgetState extends State<TaskWidget> with TickerProviderStateMixin {
   List<ProjectTask> allTasks = [];
   List<ProjectTask> userTasks = [];
   bool isLoading = true;
+  bool isFirstLoad = true;
   String? error;
   final GetUserAssignedTasks _getUserAssignedTasks = serviceLocator<GetUserAssignedTasks>();
   Timer? _refreshTimer;
-  DateTime? _lastUpdated;
   late AnimationController _pulseController;
-  late Animation<double> _pulseAnimation;
 
   @override
   void initState() {
@@ -32,14 +34,7 @@ class _TaskWidgetState extends State<TaskWidget> with TickerProviderStateMixin {
       duration: const Duration(seconds: 2),
       vsync: this,
     );
-    _pulseAnimation = Tween<double>(
-      begin: 0.5,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _pulseController,
-      curve: Curves.easeInOut,
-    ));
-    _loadTasks();
+    _initializeData();
     _startAutoRefresh();
   }
 
@@ -52,19 +47,42 @@ class _TaskWidgetState extends State<TaskWidget> with TickerProviderStateMixin {
 
   void _startAutoRefresh() {
     // Auto-refresh every 30 seconds
-    _refreshTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
+    _refreshTimer = Timer.periodic(const Duration(seconds: 30), (timer) async {
       if (mounted && !isLoading) {
-        _pulseController.repeat(reverse: true);
-        _loadTasks();
+        // Check connectivity before attempting refresh
+        final connectivityResult = await Connectivity().checkConnectivity();
+        if (connectivityResult != ConnectivityResult.none) {
+          _pulseController.repeat(reverse: true);
+          _loadTasks();
+        }
       }
     });
   }
 
+  Future<void> _initializeData() async {
+    // Load cached data first
+    final cachedTasks = await TaskCacheManager.loadAllTasks();
+    if (cachedTasks.isNotEmpty) {
+      setState(() {
+        allTasks = cachedTasks;
+        userTasks = cachedTasks;
+        isLoading = false;
+        isFirstLoad = false;
+      });
+    }
+    
+    // Then fetch fresh data
+    await _loadTasks();
+  }
+
   Future<void> _loadTasks() async {
-    setState(() {
-      isLoading = true;
-      error = null;
-    });
+    // Only show loading if this is the first load and no cached data
+    if (isFirstLoad && allTasks.isEmpty) {
+      setState(() {
+        isLoading = true;
+        error = null;
+      });
+    }
 
     try {
       // Get tasks assigned to the current user from the database
@@ -75,8 +93,10 @@ class _TaskWidgetState extends State<TaskWidget> with TickerProviderStateMixin {
           setState(() {
             isLoading = false;
             error = failure.message;
-            // Use mock data as fallback
-            _loadMockTasks();
+            // Keep existing data if API fails
+            if (allTasks.isEmpty) {
+              _loadMockTasks();
+            }
           });
         },
         (tasksList) {
@@ -84,8 +104,10 @@ class _TaskWidgetState extends State<TaskWidget> with TickerProviderStateMixin {
             isLoading = false;
             allTasks = tasksList;
             userTasks = tasksList; // These are already filtered for the current user
-            _lastUpdated = DateTime.now();
+            isFirstLoad = false;
           });
+          // Save to cache
+          TaskCacheManager.saveAllTasks(tasksList);
           _pulseController.stop();
         },
       );
@@ -93,7 +115,10 @@ class _TaskWidgetState extends State<TaskWidget> with TickerProviderStateMixin {
       setState(() {
         isLoading = false;
         error = e.toString();
-        _loadMockTasks();
+        // Keep existing data if API fails
+        if (allTasks.isEmpty) {
+          _loadMockTasks();
+        }
       });
     }
   }
@@ -139,7 +164,8 @@ class _TaskWidgetState extends State<TaskWidget> with TickerProviderStateMixin {
       ),
     ];
     userTasks = allTasks;
-    _lastUpdated = DateTime.now();
+    // Save mock data to cache
+    TaskCacheManager.saveAllTasks(allTasks);
   }
 
 
@@ -164,7 +190,7 @@ class _TaskWidgetState extends State<TaskWidget> with TickerProviderStateMixin {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Hi, $userName',
+                'Hi, $userName!',
                 style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.w700,
@@ -196,23 +222,6 @@ class _TaskWidgetState extends State<TaskWidget> with TickerProviderStateMixin {
                       color: Color(0xFF181929),
                     ),
                   ),
-                  if (_lastUpdated != null && !isLoading)
-                    AnimatedBuilder(
-                      animation: _pulseAnimation,
-                      builder: (context, child) {
-                        return Opacity(
-                          opacity: _pulseAnimation.value,
-                          child: Text(
-                            'Updated ${_formatLastUpdated(_lastUpdated!)}',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: Color(0xFF7B7F9E),
-                              fontWeight: FontWeight.w400,
-                            ),
-                          ),
-                        );
-                      },
-                    ),
                 ],
               ),
               const SizedBox(height: 8),
@@ -224,39 +233,10 @@ class _TaskWidgetState extends State<TaskWidget> with TickerProviderStateMixin {
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: isLoading
-                    ? const Center(
-                        child: CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                        ),
-                      )
-                    : error != null
-                        ? Column(
-                            children: [
-                              const Icon(
-                                Icons.error_outline,
-                                color: Colors.red,
-                                size: 32,
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                'Error loading tasks',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 14,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                error!,
-                                style: const TextStyle(
-                                  color: Color(0xFFB3B6C7),
-                                  fontSize: 12,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ],
-                          )
-                        : Row(
+                    ? const TaskStatsSkeleton()
+                    : Column(
+                        children: [
+                          Row(
                             children: [
                               // Left: Running Task count
                               Column(
@@ -339,6 +319,8 @@ class _TaskWidgetState extends State<TaskWidget> with TickerProviderStateMixin {
                               ),
                             ],
                           ),
+                        ],
+                      ),
               ),
             ],
           ),
@@ -347,18 +329,4 @@ class _TaskWidgetState extends State<TaskWidget> with TickerProviderStateMixin {
     );
   }
 
-  String _formatLastUpdated(DateTime lastUpdated) {
-    final now = DateTime.now();
-    final difference = now.difference(lastUpdated);
-    
-    if (difference.inSeconds < 60) {
-      return 'just now';
-    } else if (difference.inMinutes < 60) {
-      return '${difference.inMinutes}m ago';
-    } else if (difference.inHours < 24) {
-      return '${difference.inHours}h ago';
-    } else {
-      return '${difference.inDays}d ago';
-    }
-  }
 }

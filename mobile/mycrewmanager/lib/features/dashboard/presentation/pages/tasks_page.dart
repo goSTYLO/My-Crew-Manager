@@ -12,7 +12,9 @@ import 'package:mycrewmanager/features/dashboard/widgets/addtask_widget.dart';
 import 'package:mycrewmanager/features/project/domain/entities/project.dart';
 import 'package:mycrewmanager/features/project/domain/entities/task.dart';
 import 'package:mycrewmanager/features/project/domain/usecases/get_project_tasks.dart';
+import 'package:mycrewmanager/features/dashboard/widgets/skeleton_loader.dart';
 import 'package:mycrewmanager/init_dependencies.dart';
+import 'package:mycrewmanager/core/utils/role_formatter.dart';
 
 class TasksPage extends StatefulWidget {
   final Project? project;
@@ -32,6 +34,8 @@ class _TasksPageState extends State<TasksPage> with SingleTickerProviderStateMix
   List<ProjectTask> tasks = [];
   bool isLoading = true;
   String? error;
+  String searchQuery = '';
+  bool isSearching = false;
 
   final GetProjectTasks _getProjectTasks = serviceLocator<GetProjectTasks>();
 
@@ -182,14 +186,25 @@ class _TasksPageState extends State<TasksPage> with SingleTickerProviderStateMix
   }
 
   List<ProjectTask> getFilteredTasks(String status, String? currentUserEmail, String? currentUserName) {
-    if (status == "All") return tasks;
+    List<ProjectTask> filteredTasks = tasks;
+    
+    // Apply search filter first
+    if (searchQuery.isNotEmpty) {
+      filteredTasks = tasks.where((task) {
+        return task.title.toLowerCase().contains(searchQuery.toLowerCase()) ||
+               (task.assigneeName?.toLowerCase().contains(searchQuery.toLowerCase()) ?? false);
+      }).toList();
+    }
+    
+    // Then apply status filter
+    if (status == "All") return filteredTasks;
     
     // For "To Do" tab, show only pending tasks assigned to the current user
     if (status == "To Do") {
       print('🔍 Filtering To Do tasks for user: $currentUserEmail ($currentUserName)');
       print('📋 Total tasks: ${tasks.length}');
       
-      final filteredTasks = tasks.where((t) {
+      final toDoTasks = filteredTasks.where((t) {
         print('   Task: ${t.title}');
         print('     Status: ${t.status}');
         print('     Assignee: ${t.assigneeName}');
@@ -230,11 +245,11 @@ class _TasksPageState extends State<TasksPage> with SingleTickerProviderStateMix
         return isAssignedToUser;
       }).toList();
       
-      print('✅ Filtered To Do tasks: ${filteredTasks.length}');
-      return filteredTasks;
+      print('✅ Filtered To Do tasks: ${toDoTasks.length}');
+      return toDoTasks;
     }
     
-    return tasks.where((t) => t.status.toLowerCase() == status.toLowerCase()).toList();
+    return filteredTasks.where((t) => t.status.toLowerCase() == status.toLowerCase()).toList();
   }
 
 
@@ -246,7 +261,7 @@ class _TasksPageState extends State<TasksPage> with SingleTickerProviderStateMix
         
         if (state is AuthSuccess) {
           userName = state.user.name;
-          userRole = state.user.role ?? 'User';
+          userRole = RoleFormatter.formatRole(state.user.role);
         }
 
         return Drawer(
@@ -304,7 +319,7 @@ class _TasksPageState extends State<TasksPage> with SingleTickerProviderStateMix
               },
             ),
             // Hide Tasks menu item for developers
-            if (userRole.toLowerCase() != 'developer')
+            if (RoleFormatter.getRoleForComparison(state is AuthSuccess ? state.user.role : null) != 'developer')
               _DrawerItem(
                 icon: Icons.description_outlined,
                 label: 'Tasks',
@@ -420,14 +435,44 @@ class _TasksPageState extends State<TasksPage> with SingleTickerProviderStateMix
         ),
         centerTitle: true,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.search, color: Colors.black87),
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Search tapped')),
-              );
-            },
-          ),
+          if (isSearching)
+            Expanded(
+              child: Container(
+                margin: const EdgeInsets.only(right: 16),
+                child: TextField(
+                  autofocus: true,
+                  decoration: const InputDecoration(
+                    hintText: 'Search tasks...',
+                    border: InputBorder.none,
+                    contentPadding: EdgeInsets.symmetric(vertical: 8),
+                  ),
+                  onChanged: (value) {
+                    setState(() {
+                      searchQuery = value;
+                    });
+                  },
+                ),
+              ),
+            )
+          else
+            IconButton(
+              icon: const Icon(Icons.search, color: Colors.black87),
+              onPressed: () {
+                setState(() {
+                  isSearching = true;
+                });
+              },
+            ),
+          if (isSearching)
+            IconButton(
+              icon: const Icon(Icons.close, color: Colors.black87),
+              onPressed: () {
+                setState(() {
+                  isSearching = false;
+                  searchQuery = '';
+                });
+              },
+            ),
         ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(48),
@@ -447,7 +492,12 @@ class _TasksPageState extends State<TasksPage> with SingleTickerProviderStateMix
       body: Container(
         color: const Color(0xFFF7F8FA),
         child: isLoading
-            ? const Center(child: CircularProgressIndicator())
+            ? ListView.separated(
+                padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+                itemCount: 5,
+                separatorBuilder: (_, __) => const SizedBox(height: 12),
+                itemBuilder: (_, __) => const TaskListSkeleton(),
+              )
             : error != null
                 ? Center(
                     child: Column(

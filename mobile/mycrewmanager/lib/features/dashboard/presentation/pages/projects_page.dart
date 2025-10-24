@@ -16,6 +16,8 @@ import 'package:mycrewmanager/features/project/presentation/bloc/project_bloc.da
 import 'package:mycrewmanager/features/project/domain/entities/project.dart';
 import 'package:mycrewmanager/core/utils/show_snackbar.dart';
 import 'package:mycrewmanager/features/project/presentation/pages/edit_project_page.dart';
+import 'package:mycrewmanager/core/utils/role_formatter.dart';
+import 'package:mycrewmanager/features/dashboard/widgets/skeleton_loader.dart';
 
 class ProjectsPage extends StatefulWidget {
   const ProjectsPage({super.key});
@@ -72,11 +74,18 @@ class _ProjectsPageState extends State<ProjectsPage> {
     );
 
     return Scaffold(
-      backgroundColor: Colors.white, // Set scaffold background to white
+      backgroundColor: const Color(0xFFF8F6FF), // Light purple background
       drawer: _buildAppDrawer(context),
-      body: SafeArea(
-        child: Container(
-          color: Colors.white,
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0xFFF8F6FF), Color(0xFFFFFFFF)],
+            stops: [0.0, 0.3],
+          ),
+        ),
+        child: SafeArea(
           child: Column(
             children: [
               // Top bar
@@ -86,80 +95,125 @@ class _ProjectsPageState extends State<ProjectsPage> {
                   children: [
                     Builder(
                       builder: (context) => IconButton(
-                        icon: const Icon(Icons.menu, size: 28, color: Colors.black87),
+                        icon: const Icon(Icons.menu, size: 28, color: Color(0xFF181929)),
                         onPressed: () => Scaffold.of(context).openDrawer(),
                       ),
                     ),
                     const Spacer(),
-                    IconButton(
-                      icon: const Icon(Icons.notifications_none, color: Colors.black54),
-                      onPressed: () {
-                        Navigator.of(context).push(NotificationsPage.route());
-                      },
-                    ),
                   ],
                 ),
               ),
-              // Projects title
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 24, vertical: 0),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    "Projects",
-                    style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 24,
-                      color: Colors.black,
-                    ),
-                  ),
-                ),
-              ),
-              // Search bar and filter button
+              // Header Section
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
-                child: Row(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: TextField(
-                        decoration: InputDecoration(
-                          prefixIcon: const Icon(Icons.search, color: Colors.black38),
-                          hintText: "Search Projects",
-                          contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 0),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: Colors.black12),
-                          ),
-                          filled: true,
-                          fillColor: Colors.white,
-                          isDense: true,
-                        ),
+                    const Text(
+                      "Projects",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 28,
+                        color: Color(0xFF181929),
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    Container(
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.black12),
-                        borderRadius: BorderRadius.circular(12),
-                        color: Colors.white,
+                    const SizedBox(height: 4),
+                    const Text(
+                      "Manage and track your projects",
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Color(0xFF7B7F9E),
+                        fontWeight: FontWeight.w400,
                       ),
-                      child: IconButton(
-                        icon: const Icon(Icons.tune, color: Colors.black54),
-                        onPressed: () async {
-                          final result = await showModalBottomSheet<Map<String, String>>(
-                            context: context,
-                            isScrollControlled: true,
-                            shape: const RoundedRectangleBorder(
-                              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                    ),
+                    const SizedBox(height: 24),
+                    // Search bar and filter button
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: const Color(0xFF6C63FF).withOpacity(0.2),
+                                width: 1.5,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFF6C63FF).withOpacity(0.1),
+                                  blurRadius: 15,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
                             ),
-                            builder: (_) => FilterBottomSheet(),
-                          );
+                            child: TextField(
+                              decoration: const InputDecoration(
+                                prefixIcon: Icon(
+                                  Icons.search_rounded,
+                                  color: Color(0xFF6C63FF),
+                                  size: 22,
+                                ),
+                                hintText: "Search projects...",
+                                hintStyle: TextStyle(
+                                  color: Color(0xFF7B7F9E),
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w400,
+                                ),
+                                border: InputBorder.none,
+                                contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 20,
+                                  vertical: 18,
+                                ),
+                              ),
+                              style: const TextStyle(
+                                fontSize: 16,
+                                color: Color(0xFF181929),
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: const Color(0xFF6C63FF).withOpacity(0.2),
+                              width: 1.5,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF6C63FF).withOpacity(0.1),
+                                blurRadius: 15,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: IconButton(
+                            icon: const Icon(
+                              Icons.tune_rounded,
+                              color: Color(0xFF6C63FF),
+                              size: 22,
+                            ),
+                            onPressed: () async {
+                              final result = await showModalBottomSheet<Map<String, String>>(
+                                context: context,
+                                isScrollControlled: true,
+                                shape: const RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                                ),
+                                builder: (_) => FilterBottomSheet(),
+                              );
 
-                          if (result != null) {
-                            print("Selected filters: $result");
-                          }
-                        },
-                      ),
+                              if (result != null) {
+                                print("Selected filters: $result");
+                              }
+                            },
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -184,62 +238,79 @@ class _ProjectsPageState extends State<ProjectsPage> {
                   },
                   builder: (context, state) {
                     if (state is ProjectLoading) {
-                      return const Center(child: CircularProgressIndicator());
+                      return ListView.separated(
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                        itemCount: 3,
+                        separatorBuilder: (_, __) => const SizedBox(height: 24),
+                        itemBuilder: (_, __) => const ProjectCardSkeleton(),
+                      );
                     } else if (state is ProjectSuccess) {
                       final projects = state.projects;
                       if (projects.isEmpty) {
                         return const Center(
-                          child: Text(
-                            'No projects found.\nCreate your first project!',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: Colors.grey,
-                            ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.folder_open,
+                                size: 64,
+                                color: Color(0xFF7B7F9E),
+                              ),
+                              SizedBox(height: 16),
+                              Text(
+                                'No projects yet',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF181929),
+                                ),
+                              ),
+                              SizedBox(height: 8),
+                              Text(
+                                'Create your first project to get started',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Color(0xFF7B7F9E),
+                                ),
+                              ),
+                            ],
                           ),
                         );
                       }
-                      return ListView.builder(
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                      return ListView.separated(
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
                         itemCount: projects.length,
+                        separatorBuilder: (context, index) => const SizedBox(height: 24),
                         itemBuilder: (context, index) {
                           final project = projects[index];
-                          return Column(
-                            children: [
-                              _ProjectListTile(
-                                image: 'assets/images/profile.png',
-                                title: project.title,
-                                subtitle: project.summary,
-                                onMore: () {
-                                  showModalBottomSheet(
-                                    context: context,
-                                    shape: const RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-                                    ),
-                                    builder: (_) => ModifyProjectBottomSheet(
-                                      onEdit: () {
-                                        Navigator.pop(context);
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) => EditProjectPage(project: project),
-                                          ),
-                                        );
-                                      },
-                                      onDelete: () {
-                                        Navigator.pop(context);
-                                        _showDeleteConfirmation(context, project);
-                                      },
-                                    ),
-                                  );
-                                },
-                                onTap: () {
-                                  Navigator.of(context).push(ProjectOverviewPage.route(project));
-                                },
-                              ),
-                              if (index < projects.length - 1)
-                                const Divider(height: 1, thickness: 1, indent: 70, endIndent: 8),
-                            ],
+                          return _ProjectCard(
+                            project: project,
+                            onMore: () {
+                              showModalBottomSheet(
+                                context: context,
+                                shape: const RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                                ),
+                                builder: (_) => ModifyProjectBottomSheet(
+                                  onEdit: () {
+                                    Navigator.pop(context);
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => EditProjectPage(project: project),
+                                      ),
+                                    );
+                                  },
+                                  onDelete: () {
+                                    Navigator.pop(context);
+                                    _showDeleteConfirmation(context, project);
+                                  },
+                                ),
+                              );
+                            },
+                            onTap: () {
+                              Navigator.of(context).push(ProjectOverviewPage.route(project));
+                            },
                           );
                         },
                       );
@@ -294,8 +365,8 @@ class _ProjectsPageState extends State<ProjectsPage> {
                     child: Align(
                       alignment: Alignment.bottomRight,
                       child: FloatingActionButton(
-                        backgroundColor: Colors.blue,
-                        child: const Icon(Icons.add, color: Colors.white, size: 32),
+                        backgroundColor: const Color(0xFF6C63FF),
+                        child: const Icon(Icons.add, color: Colors.white, size: 28),
                         onPressed: () {
                           Navigator.push(context, CreateProjectSimplePage.route());
                         },
@@ -312,67 +383,129 @@ class _ProjectsPageState extends State<ProjectsPage> {
   }
 }
 
-class _ProjectListTile extends StatelessWidget {
-  final String image;
-  final String title;
-  final String? subtitle;
+class _ProjectCard extends StatelessWidget {
+  final Project project;
   final VoidCallback? onMore;
   final VoidCallback? onTap;
 
-  const _ProjectListTile({
-    required this.image,
-    required this.title,
-    this.subtitle,
+  const _ProjectCard({
+    required this.project,
     this.onMore,
     this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      leading: CircleAvatar(
-        radius: 28,
-        backgroundImage: AssetImage(image),
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: const Color(0xFF6C63FF).withOpacity(0.08),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 15,
+            offset: const Offset(0, 4),
+          ),
+          BoxShadow(
+            color: const Color(0xFF6C63FF).withOpacity(0.05),
+            blurRadius: 20,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
-      title: Text(
-        title,
-        style: const TextStyle(
-          fontWeight: FontWeight.w600,
-          fontSize: 17,
-          color: Colors.black,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF6C63FF).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.folder,
+                        color: Color(0xFF6C63FF),
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            project.title,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 18,
+                              color: Color(0xFF181929),
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.only(top: 4),
+                            child: Text(
+                              project.summary,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                color: Color(0xFF7B7F9E),
+                                height: 1.4,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    BlocBuilder<AuthBloc, AuthState>(
+                      builder: (context, authState) {
+                        bool isDeveloper = false;
+                        if (authState is AuthSuccess) {
+                          isDeveloper = RoleFormatter.getRoleForComparison(authState.user.role) == 'developer';
+                        }
+
+                        if (isDeveloper) {
+                          return const SizedBox.shrink();
+                        }
+
+                        return IconButton(
+                          icon: const Icon(Icons.more_horiz, color: Color(0xFF7B7F9E)),
+                          onPressed: onMore,
+                        );
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    const Spacer(),
+                    const Icon(
+                      Icons.arrow_forward_ios,
+                      color: Color(0xFF7B7F9E),
+                      size: 16,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
         ),
       ),
-      subtitle: subtitle != null && subtitle!.isNotEmpty
-          ? Text(
-              subtitle!,
-              style: const TextStyle(
-                fontSize: 14,
-                color: Colors.grey,
-              ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            )
-          : null,
-      trailing: BlocBuilder<AuthBloc, AuthState>(
-        builder: (context, authState) {
-          // Hide options (edit/delete/archive/share) for developer role (case-insensitive)
-          bool isDeveloper = false;
-          if (authState is AuthSuccess) {
-            isDeveloper = authState.user.role?.toLowerCase() == 'developer';
-          }
-
-          if (isDeveloper) {
-            return const SizedBox.shrink();
-          }
-
-          return IconButton(
-            icon: const Icon(Icons.more_horiz, color: Colors.black87),
-            onPressed: onMore,
-          );
-        },
-      ),
-      contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-      onTap: onTap,
     );
   }
 }
@@ -408,7 +541,7 @@ Widget _buildAppDrawer(BuildContext context) {
       
       if (state is AuthSuccess) {
         userName = state.user.name;
-        userRole = state.user.role ?? 'User';
+        userRole = RoleFormatter.formatRole(state.user.role);
       }
 
       return Drawer(
@@ -470,7 +603,7 @@ Widget _buildAppDrawer(BuildContext context) {
             },
           ),
           // Hide Tasks menu item for developers
-          if (userRole.toLowerCase() != 'developer')
+          if (RoleFormatter.getRoleForComparison(state is AuthSuccess ? state.user.role : null) != 'developer')
             _DrawerItem(
               icon: Icons.description_outlined,
               label: 'Tasks',

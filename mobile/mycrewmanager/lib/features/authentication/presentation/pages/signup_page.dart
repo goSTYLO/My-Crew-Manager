@@ -9,11 +9,16 @@ import 'package:mycrewmanager/features/authentication/presentation/widgets/custo
 import 'package:mycrewmanager/features/authentication/presentation/widgets/photo_picker.dart';
 import 'package:mycrewmanager/features/authentication/presentation/widgets/custom_checkbox.dart';
 import 'package:mycrewmanager/features/authentication/presentation/pages/login_page.dart';
+import 'package:mycrewmanager/features/authentication/presentation/pages/signup_role_selection_page.dart';
 
 class SignUpPage extends StatefulWidget {
-  static route() => MaterialPageRoute(builder: (context) => const SignUpPage());
+  static route({String? selectedRole}) => MaterialPageRoute(
+    builder: (context) => SignUpPage(selectedRole: selectedRole),
+  );
 
-  const SignUpPage({super.key});
+  final String? selectedRole;
+
+  const SignUpPage({super.key, this.selectedRole});
 
   @override
   State<SignUpPage> createState() => _SignUpPageState();
@@ -60,11 +65,22 @@ class _SignUpPageState extends State<SignUpPage> {
 
   void _onCreateAccountPressed() {
     if (_formKey.currentState!.validate() && _acceptedTerms) {
+      if (widget.selectedRole == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please select a role first'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+      
       context.read<AuthBloc>().add(
         AuthSignUp(
           name: _fullNameController.text,
           email: _emailController.text, 
-          password: _passwordController.text
+          password: _passwordController.text,
+          role: widget.selectedRole,
           )
       );
     } else if (!_acceptedTerms) {
@@ -81,6 +97,109 @@ class _SignUpPageState extends State<SignUpPage> {
     Navigator.pushReplacement(context, LoginPage.route());
   }
 
+  void _showEmailExistsDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: Colors.red.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Icon(
+                  Icons.email,
+                  color: Colors.red,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text(
+                  'Email Already Exists',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'The email address you entered is already registered with an account.',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.black54,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'What would you like to do?',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black87,
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                // Clear the email field
+                _emailController.clear();
+                // Focus on email field
+                FocusScope.of(context).requestFocus(FocusNode());
+              },
+              child: const Text(
+                'Try Different Email',
+                style: TextStyle(
+                  color: Colors.grey,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                Navigator.pushReplacement(context, LoginPage.route());
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF6C63FF),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              ),
+              child: const Text(
+                'Sign In Instead',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -90,14 +209,23 @@ class _SignUpPageState extends State<SignUpPage> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => Navigator.pushReplacement(context, SignupRoleSelectionPage.route()),
         ),
       ),
       body: BlocConsumer<AuthBloc, AuthState>(
         listener: (context, state) {
           if(state is AuthFailure) {
             logger.d(state.message);
-            showSnackBar(context, "Something went wrong. Try Again!", Colors.red);
+            
+            // Check if the error is about email already existing
+            if (state.message.toLowerCase().contains('email') && 
+                (state.message.toLowerCase().contains('already exists') || 
+                 state.message.toLowerCase().contains('already been used') ||
+                 state.message.toLowerCase().contains('user with this email'))) {
+              _showEmailExistsDialog(context);
+            } else {
+              showSnackBar(context, "Something went wrong. Try Again!", Colors.red);
+            }
           } else if (state is AuthSuccess) {
             if (ModalRoute.of(context)?.isCurrent ?? false) {
               showSnackBar(context, "Account created successfully!", Colors.green);

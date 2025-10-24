@@ -1,11 +1,14 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:mycrewmanager/features/authentication/presentation/bloc/auth_bloc.dart';
 import 'package:mycrewmanager/features/project/domain/entities/task.dart';
 import 'package:mycrewmanager/features/project/domain/usecases/get_user_assigned_tasks.dart';
 import 'package:mycrewmanager/core/usecase/usercase.dart';
 import 'package:mycrewmanager/init_dependencies.dart';
+import 'package:mycrewmanager/features/dashboard/utils/task_cache_manager.dart';
+import 'package:mycrewmanager/features/dashboard/widgets/skeleton_loader.dart';
 
 class TaskCarouselWidget extends StatefulWidget {
   const TaskCarouselWidget({super.key});
@@ -17,10 +20,10 @@ class TaskCarouselWidget extends StatefulWidget {
 class _TaskCarouselWidgetState extends State<TaskCarouselWidget> with TickerProviderStateMixin {
   List<ProjectTask> pendingTasks = [];
   bool isLoading = true;
+  bool isFirstLoad = true;
   String? error;
   final GetUserAssignedTasks _getUserAssignedTasks = serviceLocator<GetUserAssignedTasks>();
   Timer? _refreshTimer;
-  DateTime? _lastUpdated;
   late PageController _pageController;
   int _currentIndex = 0;
 
@@ -28,7 +31,7 @@ class _TaskCarouselWidgetState extends State<TaskCarouselWidget> with TickerProv
   void initState() {
     super.initState();
     _pageController = PageController();
-    _loadPendingTasks();
+    _initializeData();
     _startAutoRefresh();
   }
 
@@ -41,18 +44,40 @@ class _TaskCarouselWidgetState extends State<TaskCarouselWidget> with TickerProv
 
   void _startAutoRefresh() {
     // Auto-refresh every 45 seconds
-    _refreshTimer = Timer.periodic(const Duration(seconds: 45), (timer) {
+    _refreshTimer = Timer.periodic(const Duration(seconds: 45), (timer) async {
       if (mounted && !isLoading) {
-        _loadPendingTasks();
+        // Check connectivity before attempting refresh
+        final connectivityResult = await Connectivity().checkConnectivity();
+        if (connectivityResult != ConnectivityResult.none) {
+          _loadPendingTasks();
+        }
       }
     });
   }
 
+  Future<void> _initializeData() async {
+    // Load cached data first
+    final cachedTasks = await TaskCacheManager.loadPendingTasks();
+    if (cachedTasks.isNotEmpty) {
+      setState(() {
+        pendingTasks = cachedTasks;
+        isLoading = false;
+        isFirstLoad = false;
+      });
+    }
+    
+    // Then fetch fresh data
+    await _loadPendingTasks();
+  }
+
   Future<void> _loadPendingTasks() async {
-    setState(() {
-      isLoading = true;
-      error = null;
-    });
+    // Only show loading if this is the first load and no cached data
+    if (isFirstLoad && pendingTasks.isEmpty) {
+      setState(() {
+        isLoading = true;
+        error = null;
+      });
+    }
 
     try {
       // Get tasks assigned to the current user from the database
@@ -63,8 +88,10 @@ class _TaskCarouselWidgetState extends State<TaskCarouselWidget> with TickerProv
           setState(() {
             isLoading = false;
             error = failure.message;
-            // Use mock data as fallback
-            _loadMockTasks();
+            // Keep existing data if API fails
+            if (pendingTasks.isEmpty) {
+              _loadMockTasks();
+            }
           });
         },
         (tasksList) {
@@ -75,15 +102,20 @@ class _TaskCarouselWidgetState extends State<TaskCarouselWidget> with TickerProv
                 .where((task) => task.status == 'pending')
                 .take(5)
                 .toList();
-            _lastUpdated = DateTime.now();
+            isFirstLoad = false;
           });
+          // Save to cache
+          TaskCacheManager.savePendingTasks(pendingTasks);
         },
       );
     } catch (e) {
       setState(() {
         isLoading = false;
         error = e.toString();
-        _loadMockTasks();
+        // Keep existing data if API fails
+        if (pendingTasks.isEmpty) {
+          _loadMockTasks();
+        }
       });
     }
   }
@@ -137,7 +169,8 @@ class _TaskCarouselWidgetState extends State<TaskCarouselWidget> with TickerProv
         assigneeName: "user@example.com",
       ),
     ].take(5).toList(); // Ensure we only take 5 tasks
-    _lastUpdated = DateTime.now();
+    // Save mock data to cache
+    TaskCacheManager.savePendingTasks(pendingTasks);
   }
 
   void _onTaskTap(ProjectTask task) {
@@ -229,16 +262,6 @@ class _TaskCarouselWidgetState extends State<TaskCarouselWidget> with TickerProv
                     ],
                   ),
                   const Spacer(),
-                  if (_lastUpdated != null && !isLoading)
-                    Text(
-                      'Updated ${_formatLastUpdated(_lastUpdated!)}',
-                      style: const TextStyle(
-                        fontSize: 10,
-                        color: Color(0xFF7B7F9E),
-                        fontWeight: FontWeight.w400,
-                      ),
-                    ),
-                  const SizedBox(width: 8),
                   if (pendingTasks.isNotEmpty) ...[
                     IconButton(
                       icon: const Icon(Icons.arrow_back_ios_new,
@@ -275,56 +298,7 @@ class _TaskCarouselWidgetState extends State<TaskCarouselWidget> with TickerProv
 
               // Task Carousel
               if (isLoading)
-                Container(
-                  height: 220, // Increased height to match carousel
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(14),
-                    color: const Color(0xFFF7F8FA),
-                  ),
-                  child: const Center(
-                    child: CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF6C63FF)),
-                    ),
-                  ),
-                )
-              else if (error != null)
-                Container(
-                  height: 220, // Increased height to match carousel
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(14),
-                    color: const Color(0xFFF7F8FA),
-                  ),
-                  child: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(
-                          Icons.error_outline,
-                          color: Colors.red,
-                          size: 32,
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Error loading tasks',
-                          style: const TextStyle(
-                            color: Color(0xFF181929),
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          error!,
-                          style: const TextStyle(
-                            color: Color(0xFF7B7F9E),
-                            fontSize: 12,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
-                    ),
-                  ),
-                )
+                const TaskCarouselContainerSkeleton()
               else if (pendingTasks.isEmpty)
                 Container(
                   height: 220, // Increased height to match carousel
@@ -552,18 +526,4 @@ class _TaskCarouselWidgetState extends State<TaskCarouselWidget> with TickerProv
     );
   }
 
-  String _formatLastUpdated(DateTime lastUpdated) {
-    final now = DateTime.now();
-    final difference = now.difference(lastUpdated);
-    
-    if (difference.inSeconds < 60) {
-      return 'just now';
-    } else if (difference.inMinutes < 60) {
-      return '${difference.inMinutes}m ago';
-    } else if (difference.inHours < 24) {
-      return '${difference.inHours}h ago';
-    } else {
-      return '${difference.inDays}d ago';
-    }
-  }
 }

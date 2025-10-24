@@ -7,10 +7,10 @@ import 'package:mycrewmanager/features/dashboard/presentation/pages/messages_scr
 import 'package:mycrewmanager/features/dashboard/widgets/task_widget.dart';
 import 'package:mycrewmanager/features/dashboard/widgets/task_carousel_widget.dart';
 import 'package:mycrewmanager/features/dashboard/widgets/incomingtask_widget.dart';
-import 'package:mycrewmanager/features/dashboard/widgets/recentactivity_widget.dart';
 import 'package:mycrewmanager/features/dashboard/presentation/pages/tasks_page.dart';
 import 'package:mycrewmanager/features/dashboard/presentation/pages/notifications_page.dart';
 import 'package:mycrewmanager/features/dashboard/presentation/pages/projects_page.dart';
+import 'package:mycrewmanager/core/utils/role_formatter.dart';
 
 
 class DashboardPage extends StatefulWidget {
@@ -62,12 +62,7 @@ class _DashboardPageState extends State<DashboardPage> {
                     // Implement your "View All" logic here
                   },
                 ),
-              ),
-              SizedBox(
-                width: 450,
-                child: RecentActivityWidget(),
-              ),
-              // Add more widgets below if needed
+              )
             ],
           ),
         ),
@@ -83,7 +78,7 @@ class _DashboardPageState extends State<DashboardPage> {
         
         if (state is AuthSuccess) {
           userName = state.user.name;
-          userRole = state.user.role ?? 'User';
+          userRole = RoleFormatter.formatRole(state.user.role);
         }
 
         return Drawer(
@@ -109,7 +104,7 @@ class _DashboardPageState extends State<DashboardPage> {
                       const SizedBox(height: 10),
                       // Name
                       Text(
-                        userName,
+                        '$userName!',
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 18,
@@ -146,7 +141,7 @@ class _DashboardPageState extends State<DashboardPage> {
                   },
                 ),
                 // Hide Tasks menu item for developers
-                if (userRole.toLowerCase() != 'developer')
+                if (RoleFormatter.getRoleForComparison(state is AuthSuccess ? state.user.role : null) != 'developer')
                   _DrawerItem(
                     icon: Icons.description_outlined,
                     label: 'Tasks',

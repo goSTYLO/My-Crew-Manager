@@ -21,3 +21,8 @@ final class AuthFailure extends AuthState {
     this.message,
   );
 }
+
+final class AuthRoleUpdated extends AuthState {
+  final User user;
+  const AuthRoleUpdated(this.user);
+}

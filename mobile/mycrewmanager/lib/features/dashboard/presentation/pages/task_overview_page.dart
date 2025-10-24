@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mycrewmanager/features/authentication/presentation/bloc/auth_bloc.dart';
 import 'package:mycrewmanager/features/project/domain/entities/task.dart';
 import 'package:mycrewmanager/features/project/domain/usecases/update_task_status.dart';
+import 'package:mycrewmanager/features/dashboard/widgets/skeleton_loader.dart';
 import 'package:mycrewmanager/init_dependencies.dart';
 
 class TaskOverviewPage extends StatefulWidget {
@@ -19,14 +20,25 @@ class TaskOverviewPage extends StatefulWidget {
 }
 
 class _TaskOverviewPageState extends State<TaskOverviewPage> {
-  String search = '';
   late ProjectTask currentTask;
   final UpdateTaskStatus _updateTaskStatus = serviceLocator<UpdateTaskStatus>();
+  bool isLoading = true;
 
   @override
   void initState() {
     super.initState();
     currentTask = widget.task;
+    _simulateLoading();
+  }
+
+  Future<void> _simulateLoading() async {
+    // Simulate loading time for skeleton effect
+    await Future.delayed(const Duration(milliseconds: 800));
+    if (mounted) {
+      setState(() {
+        isLoading = false;
+      });
+    }
   }
 
   bool _isCurrentUserAssignee(String? currentUserEmail, String? currentUserName) {
@@ -73,6 +85,7 @@ class _TaskOverviewPageState extends State<TaskOverviewPage> {
     );
   }
 
+
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<AuthBloc, AuthState>(
@@ -95,22 +108,16 @@ class _TaskOverviewPageState extends State<TaskOverviewPage> {
             children: [
               // Top bar with back button instead of menu
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                padding: const EdgeInsets.only(left: 8, right: 20, top: 18, bottom: 18),
                 child: Row(
                   children: [
                     IconButton(
                       icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.black87),
                       onPressed: () => Navigator.pop(context),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
                     ),
                     const Spacer(),
-                    IconButton(
-                      icon: const Icon(Icons.notifications_none, color: Colors.black54),
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Notifications tapped')),
-                        );
-                      },
-                    ),
                   ],
                 ),
               ),
@@ -129,52 +136,13 @@ class _TaskOverviewPageState extends State<TaskOverviewPage> {
                   ),
                 ),
               ),
-              // Search bar and filter button
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        decoration: InputDecoration(
-                          prefixIcon: const Icon(Icons.search, color: Colors.black38),
-                          hintText: "Search Task",
-                          contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 0),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: Colors.black12),
-                          ),
-                          filled: true,
-                          fillColor: Colors.white,
-                          isDense: true,
-                        ),
-                        onChanged: (val) => setState(() => search = val),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Container(
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.black12),
-                        borderRadius: BorderRadius.circular(12),
-                        color: Colors.white,
-                      ),
-                      child: IconButton(
-                        icon: const Icon(Icons.tune, color: Colors.black54),
-                        onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Filter tapped')),
-                          );
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ),
               // Task Card
               Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 0),
-                  child: Column(
+                child: isLoading 
+                    ? const TaskOverviewSkeleton()
+                    : SingleChildScrollView(
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 0),
+                        child: Column(
                     children: [
                       Container(
                         width: double.infinity,
@@ -224,27 +192,9 @@ class _TaskOverviewPageState extends State<TaskOverviewPage> {
                                 ),
                               ),
                               const SizedBox(height: 18),
-                              // Members and Due date
+                              // Due date only
                               Row(
                                 children: [
-                                  const Icon(Icons.groups_outlined, size: 18, color: Colors.black54),
-                                  const SizedBox(width: 6),
-                                  const Text(
-                                    "Members",
-                                    style: TextStyle(fontSize: 14, color: Colors.black54),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  // Avatars
-                                  ...[
-                                    'https://randomuser.me/api/portraits/women/22.jpg',
-                                    'https://randomuser.me/api/portraits/men/2.jpg'
-                                  ].map((url) => Padding(
-                                        padding: const EdgeInsets.only(right: 4),
-                                        child: CircleAvatar(
-                                          radius: 14,
-                                          backgroundImage: NetworkImage(url),
-                                        ),
-                                      )),
                                   const Spacer(),
                                   const Icon(Icons.calendar_today_outlined, size: 18, color: Colors.black54),
                                   const SizedBox(width: 4),
@@ -398,23 +348,27 @@ class _TaskOverviewPageState extends State<TaskOverviewPage> {
                                 // Show completion status for completed tasks
                                 Container(
                                   width: double.infinity,
-                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                  padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
                                   decoration: BoxDecoration(
                                     color: Colors.green.withOpacity(0.1),
                                     borderRadius: BorderRadius.circular(10),
                                     border: Border.all(color: Colors.green.withOpacity(0.3)),
                                   ),
-                                  child: const Row(
+                                  child: Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
-                                      Icon(Icons.check_circle, color: Colors.green, size: 20),
-                                      SizedBox(width: 8),
-                                      Text(
-                                        "Task Completed",
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.w600,
-                                          fontSize: 16,
-                                          color: Colors.green,
+                                      const Icon(Icons.check_circle, color: Colors.green, size: 20),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          "Task Completed",
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 16,
+                                            color: Colors.green,
+                                          ),
+                                          textAlign: TextAlign.center,
+                                          overflow: TextOverflow.visible,
                                         ),
                                       ),
                                     ],
@@ -424,23 +378,27 @@ class _TaskOverviewPageState extends State<TaskOverviewPage> {
                                 // Show message for non-assignees viewing pending tasks
                                 Container(
                                   width: double.infinity,
-                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                  padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
                                   decoration: BoxDecoration(
                                     color: Colors.grey.withOpacity(0.1),
                                     borderRadius: BorderRadius.circular(10),
                                     border: Border.all(color: Colors.grey.withOpacity(0.3)),
                                   ),
-                                  child: const Row(
+                                  child: Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
-                                      Icon(Icons.person_outline, color: Colors.grey, size: 20),
-                                      SizedBox(width: 8),
-                                      Text(
-                                        "Only the assignee can mark this task as complete",
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.w600,
-                                          fontSize: 16,
-                                          color: Colors.grey,
+                                      const Icon(Icons.person_outline, color: Colors.grey, size: 20),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          "Only the assignee can mark this task as complete",
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 16,
+                                            color: Colors.grey,
+                                          ),
+                                          textAlign: TextAlign.center,
+                                          overflow: TextOverflow.visible,
                                         ),
                                       ),
                                     ],

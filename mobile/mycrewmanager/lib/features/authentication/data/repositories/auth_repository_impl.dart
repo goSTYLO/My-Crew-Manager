@@ -75,7 +75,8 @@ class AuthRepositoryImpl implements AuthRepository {
   Future<Either<Failure, User>> signupUser({
     required String name, required 
     String email, 
-    required String password
+    required String password,
+    String? role,
     }) async {
     logger.d("🌐 Making API call to signup endpoint for: $email");
     try {
@@ -87,7 +88,8 @@ class AuthRepositoryImpl implements AuthRepository {
       final message = await remoteDataSource.signup({
         'name': name,
         'email': email,
-        'password': password
+        'password': password,
+        if (role != null) 'role': role,
         }
       );
       logger.d("✅ Signup API call successful, received user data");

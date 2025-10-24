@@ -5,6 +5,8 @@ import 'package:mycrewmanager/features/chat/data/repositories/chat_repository_im
 import 'package:mycrewmanager/features/chat/data/services/chat_ws_service.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mycrewmanager/features/authentication/presentation/bloc/auth_bloc.dart';
+import 'package:mycrewmanager/core/utils/date_formatter.dart';
+import 'package:mycrewmanager/features/dashboard/widgets/skeleton_loader.dart';
 
 class ChatsPage extends StatefulWidget {
   final String name;
@@ -142,23 +144,15 @@ class _ChatsPageState extends State<ChatsPage> {
                 ),
               ),
               const SizedBox(height: 8),
-              // "Today" label
-              Container(
-                margin: const EdgeInsets.symmetric(vertical: 8),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.black,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Text(
-                  "Today",
-                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
-                ),
-              ),
               // Chat messages
               Expanded(
                 child: _loading
-                    ? const Center(child: CircularProgressIndicator())
+                    ? ListView.separated(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        itemCount: 5,
+                        separatorBuilder: (_, __) => const SizedBox(height: 8),
+                        itemBuilder: (_, __) => const ChatMessageSkeleton(),
+                      )
                     : ListView.builder(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   itemCount: _messages.length,
@@ -166,80 +160,105 @@ class _ChatsPageState extends State<ChatsPage> {
                     final msg = _messages[i];
                     final isMe = currentUserId != null && msg.senderId.toString() == currentUserId;
                     final isImage = msg.messageType == 'image';
-                    return Align(
-                      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 4),
-                        child: Column(
-                          crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-                          children: [
-                            if (isImage)
-                              Container(
-                                constraints: const BoxConstraints(maxWidth: 220),
-                                decoration: BoxDecoration(
-                                  color: isMe ? const Color(0xFF2563EB) : Colors.white,
-                                  borderRadius: BorderRadius.circular(14),
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    ClipRRect(
-                                      borderRadius: const BorderRadius.only(
-                                        topLeft: Radius.circular(14),
-                                        topRight: Radius.circular(14),
-                                      ),
-                                      child: Image.network(
-                                        '',
-                                        width: 220,
-                                        height: 120,
-                                        fit: BoxFit.cover,
-                                      ),
+                    
+                    // Check if we need to show a date separator
+                    final bool showDateSeparator = i == 0 || 
+                        DateFormatter.formatChatDate(_messages[i-1].createdAt) != 
+                        DateFormatter.formatChatDate(msg.createdAt);
+                    
+                    return Column(
+                      children: [
+                        // Date separator
+                        if (showDateSeparator)
+                          Container(
+                            margin: const EdgeInsets.symmetric(vertical: 8),
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.black,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              DateFormatter.formatChatDate(msg.createdAt),
+                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                        // Message
+                        Align(
+                          alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 4),
+                            child: Column(
+                              crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                              children: [
+                                if (isImage)
+                                  Container(
+                                    constraints: const BoxConstraints(maxWidth: 220),
+                                    decoration: BoxDecoration(
+                                      color: isMe ? const Color(0xFF2563EB) : Colors.white,
+                                      borderRadius: BorderRadius.circular(14),
                                     ),
-                                    Padding(
-                                      padding: const EdgeInsets.all(10),
-                                      child: Text(
-                                        msg.content,
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.w500,
-                                          fontSize: 14,
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        ClipRRect(
+                                          borderRadius: const BorderRadius.only(
+                                            topLeft: Radius.circular(14),
+                                            topRight: Radius.circular(14),
+                                          ),
+                                          child: Image.network(
+                                            '',
+                                            width: 220,
+                                            height: 120,
+                                            fit: BoxFit.cover,
+                                          ),
                                         ),
+                                        Padding(
+                                          padding: const EdgeInsets.all(10),
+                                          child: Text(
+                                            msg.content,
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.w500,
+                                              fontSize: 14,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  )
+                                else
+                                  Container(
+                                    constraints: const BoxConstraints(maxWidth: 220),
+                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                    decoration: BoxDecoration(
+                                      color: isMe ? const Color(0xFF2563EB) : Colors.white,
+                                      borderRadius: BorderRadius.circular(14),
+                                      border: isMe
+                                          ? null
+                                          : Border.all(color: Colors.black12),
+                                    ),
+                                    child: Text(
+                                      msg.content,
+                                      style: TextStyle(
+                                        color: isMe ? Colors.white : Colors.black87,
+                                        fontWeight: FontWeight.w500,
+                                        fontSize: 15,
                                       ),
                                     ),
-                                  ],
-                                ),
-                              )
-                            else
-                              Container(
-                                constraints: const BoxConstraints(maxWidth: 220),
-                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                                decoration: BoxDecoration(
-                                  color: isMe ? const Color(0xFF2563EB) : Colors.white,
-                                  borderRadius: BorderRadius.circular(14),
-                                  border: isMe
-                                      ? null
-                                      : Border.all(color: Colors.black12),
-                                ),
-                                child: Text(
-                                  msg.content,
-                                  style: TextStyle(
-                                    color: isMe ? Colors.white : Colors.black87,
-                                    fontWeight: FontWeight.w500,
-                                    fontSize: 15,
+                                  ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  '${msg.senderUsername} • ${DateFormatter.formatChatDate(msg.createdAt)}',
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.black54,
                                   ),
                                 ),
-                              ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '${msg.senderUsername} • ${msg.createdAt}',
-                              style: const TextStyle(
-                                fontSize: 11,
-                                color: Colors.black54,
-                              ),
+                              ],
                             ),
-                          ],
+                          ),
                         ),
-                      ),
+                      ],
                     );
                   },
                 ),
@@ -300,17 +319,117 @@ class _ChatsPageState extends State<ChatsPage> {
     final controller = TextEditingController();
     final created = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Invite User'),
-        content: TextField(
-          controller: controller,
-          keyboardType: TextInputType.emailAddress,
-          decoration: const InputDecoration(hintText: 'User email'),
+      barrierDismissible: true,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 20,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Title
+                const Text(
+                  'Invite User',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF181929),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                // Input field
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: const Color(0xFFE8ECF4),
+                      width: 1,
+                    ),
+                  ),
+                  child: TextField(
+                    controller: controller,
+                    keyboardType: TextInputType.emailAddress,
+                    decoration: const InputDecoration(
+                      hintText: 'User email',
+                      hintStyle: TextStyle(
+                        color: Color(0xFF7B7F9E),
+                        fontSize: 16,
+                      ),
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 16,
+                      ),
+                    ),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      color: Color(0xFF181929),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                // Action buttons
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () => Navigator.pop(ctx, false),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                        child: const Text(
+                          'Cancel',
+                          style: TextStyle(
+                            color: Color(0xFF6C63FF),
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () => Navigator.pop(ctx, true),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF6C63FF),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: const Text(
+                          'Invite',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Invite')),
-        ],
       ),
     );
     if (created == true) {

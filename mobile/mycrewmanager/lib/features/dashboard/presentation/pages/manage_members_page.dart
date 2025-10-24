@@ -9,6 +9,7 @@ import 'package:mycrewmanager/features/project/domain/usecases/create_member.dar
 import 'package:mycrewmanager/features/project/domain/usecases/delete_member.dart';
 import 'package:mycrewmanager/core/utils/show_snackbar.dart';
 import 'package:mycrewmanager/init_dependencies.dart';
+import 'package:mycrewmanager/features/dashboard/widgets/skeleton_loader.dart';
 
 class ManageMembersPage extends StatefulWidget {
   final Project? project;
@@ -271,7 +272,12 @@ class _ManageMembersPageState extends State<ManageMembersPage> {
               // Members list
               Expanded(
                 child: isLoading
-                    ? const Center(child: CircularProgressIndicator())
+                    ? ListView.separated(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: 4,
+                        separatorBuilder: (_, __) => const SizedBox(height: 12),
+                        itemBuilder: (_, __) => const MemberCardSkeleton(),
+                      )
                     : error != null
                         ? Center(
                             child: Column(

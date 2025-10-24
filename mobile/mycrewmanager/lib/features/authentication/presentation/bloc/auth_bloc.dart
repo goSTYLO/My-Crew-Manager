@@ -22,6 +22,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<AuthEvent>((_, emit) => emit(AuthLoading()));
     on<AuthLogin>(_onAuthLogin);
     on<AuthSignUp>(_onAuthSignup);
+    on<UpdateUserRole>(_onUpdateUserRole);
   }
 
   void _onAuthLogin(AuthLogin event, Emitter<AuthState> emit) async {
@@ -48,7 +49,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     logger.d("🔐 Starting signup process for: ${event.email}");
     
     final res = await _userSignup(
-      UserSignupParams(name: event.name, email: event.email, password: event.password)
+      UserSignupParams(name: event.name, email: event.email, password: event.password, role: event.role)
     );
 
     await res.fold(
@@ -62,6 +63,22 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         emit(AuthSuccess(user));
       }
     );
+  }
+
+  void _onUpdateUserRole(UpdateUserRole event, Emitter<AuthState> emit) {
+    // Get the current user from the state
+    final currentState = state;
+    if (currentState is AuthSuccess) {
+      // Create a new user with updated role
+      final updatedUser = User(
+        id: currentState.user.id,
+        email: currentState.user.email,
+        name: currentState.user.name,
+        token: currentState.user.token,
+        role: event.role,
+      );
+      emit(AuthRoleUpdated(updatedUser));
+    }
   }
 
 }

@@ -5,7 +5,8 @@ import 'package:mycrewmanager/core/theme/pallete.dart';
 import 'package:mycrewmanager/core/utils/show_snackbar.dart';
 import 'package:mycrewmanager/features/authentication/presentation/bloc/auth_bloc.dart';
 import 'package:mycrewmanager/features/authentication/presentation/pages/forgot_password.dart';
-import 'package:mycrewmanager/features/authentication/presentation/pages/signup_page.dart';
+import 'package:mycrewmanager/features/authentication/presentation/pages/signup_role_selection_page.dart';
+import 'package:mycrewmanager/features/authentication/presentation/pages/role_selection_page.dart';
 import 'package:mycrewmanager/features/dashboard/presentation/pages/dashboard_page.dart';
 import 'package:mycrewmanager/core/tokenhandlers/token_storage.dart';
 import 'package:mycrewmanager/init_dependencies.dart';
@@ -67,7 +68,12 @@ Widget build(BuildContext context) {
           showSnackBar(context, state.message, Colors.red);
         } else if (state is AuthSuccess && ModalRoute.of(context)?.isCurrent == true) {
           showSnackBar(context, "Login Success: ${state.user.token}", Colors.green);
-          Navigator.pushReplacement(context, DashboardPage.route());
+          // Navigate to role selection if user doesn't have a role, otherwise go to dashboard
+          if (state.user.role == null || state.user.role!.isEmpty) {
+            Navigator.pushReplacement(context, RoleSelectionPage.route());
+          } else {
+            Navigator.pushReplacement(context, DashboardPage.route());
+          }
         }
       },
       builder: (context, state) {
@@ -214,7 +220,7 @@ Widget build(BuildContext context) {
                               style: TextStyle(fontSize: 14, color: AppPallete.black),
                             ),
                             TextButton(
-                              onPressed: () => Navigator.push(context, SignUpPage.route()),
+                              onPressed: () => Navigator.push(context, SignupRoleSelectionPage.route()),
                               child: const Text(
                                 "Sign up for free",
                                 style: TextStyle(
