@@ -1,139 +1,199 @@
-import React, { useState } from 'react';
-import { useNavigate } from "react-router-dom";
-import { Clock, MessageSquareText, Lightbulb, File, Calendar } from 'lucide-react';
-import Sidebar from "../../components/sidebarUser"; // <-- import Sidebar
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation, useParams } from "react-router-dom";
+import { 
+  Clock, 
+  MessageSquareText, 
+  Lightbulb, 
+  File, 
+  Calendar, 
+  ArrowLeft, 
+  Users, 
+  FileText,
+  Sparkles,
+  CheckCircle,
+  GitBranch,
+  AlertCircle,
+  Download
+} from 'lucide-react';
+import Sidebar from "../../components/sidebarUser";
 import TopNavbar from "../../components/topbarLayout_user";
+import { useTheme } from "../../components/themeContext";
 
-// Type definitions for better type safety
-interface TeamMember {
-  id: string;
-  name: string;
-  avatar: string;
-  isOnline?: boolean;
-}
+// API configuration
+const API_BASE_URL = 'http://localhost:8000/api';
 
-interface Task {
-  id: string;
-  title: string;
-  taskNumber: string;
-  openedDays: number;
-  assignee: string;
-  status: 'Canceled' | 'Completed';
-  stats: 'Canceled' | 'Completed';
-  timeSpent: string;
-  avatar: string;
-  start_date: Date;
-  end_date: Date;
-}
-
-interface ProjectStats {
-  totalTasks: number;
-  totalFiles: number;
-}
-
-// Sample data - in a real app, this would come from an API or state management
-const SAMPLE_TEAM_MEMBERS: TeamMember[] = [
-  { id: '1', name: 'John Doe', avatar: '👨‍💼', isOnline: true },
-  { id: '2', name: 'Jane Smith', avatar: '👩‍💼', isOnline: true },
-  { id: '3', name: 'Mike Johnson', avatar: '👨‍💻', isOnline: false },
-  { id: '4', name: 'Sarah Wilson', avatar: '👩‍💻', isOnline: true },
-  { id: '5', name: 'Alex Brown', avatar: '👨‍🎨', isOnline: false }
-];
-
-const SAMPLE_TASKS: Task[] = [
-  {
-    id: '1',
-    title: 'Make an Automatic Payment System that enable the design',
-    taskNumber: '#402235',
-    openedDays: 10,
-    assignee: 'Yaoh Ghori',
-    status: 'Canceled',
-    stats: 'Completed',
-    timeSpent: '00:30:00',
-    avatar: '👨‍💼',
-    start_date: new Date('2025-09-01'),
-    end_date: new Date('2025-09-15')
-  },
-  {
-    id: '2',
-    title: 'Make an Automatic Payment System that enable the design',
-    taskNumber: '#402235',
-    openedDays: 10,
-    assignee: 'Yaoh Ghori',
-    status: 'Canceled',
-    stats: 'Completed',
-    timeSpent: '00:30:00',
-    avatar: '👨‍💼',
-    start_date: new Date('2025-09-01'),
-    end_date: new Date('2025-09-15')
-  },
-  {
-    id: '3',
-    title: 'Make an Automatic Payment System that enable the design',
-    taskNumber: '#402235',
-    openedDays: 10,
-    assignee: 'Yaoh Ghori',
-    status: 'Completed',
-    stats: 'Canceled',
-    timeSpent: '00:30:00',
-    avatar: '👨‍💼',
-    start_date: new Date('2025-09-01'),
-    end_date: new Date('2025-09-15')
-  },
-  {
-    id: '4',
-    title: 'Make an Automatic Payment System that enable the design',
-    taskNumber: '#402235',
-    openedDays: 10,
-    assignee: 'Yaoh Ghori',
-    status: 'Completed',
-    stats: 'Completed',
-    timeSpent: '00:30:00',
-    avatar: '👨‍💼',
-    start_date: new Date('2025-09-01'),
-    end_date: new Date('2025-09-15')
-  }
-];
-
-const SAMPLE_STATS: ProjectStats = {
-  totalTasks: 50,
-  totalFiles: 15
+const getAuthToken = () => {
+  return localStorage.getItem('token') || sessionStorage.getItem('token');
 };
 
+const apiHeaders = () => {
+  const token = getAuthToken();
+  if (!token) {
+    throw new Error('No authentication token found. Please log in again.');
+  }
+  return {
+    'Content-Type': 'application/json',
+    'Authorization': `Token ${token}`
+  };
+};
+
+// Type definitions
+interface User {
+  id: number;
+  name: string;
+  email: string;
+}
+
+interface ProjectMember {
+  id: number;
+  user_name: string;
+  user_email: string;
+  role: string;
+  joined_at: string;
+  user: number;
+}
+
+interface TaskAssignee {
+  id: number;
+  user_name: string;
+  user_email: string;
+}
+
+interface StoryTask {
+  id: number;
+  title: string;
+  status: string;
+  ai: boolean;
+  assignee: TaskAssignee | null;
+  assignee_details?: {
+    id: number;
+    user_name: string;
+    user_email: string;
+  };
+}
+
+interface UserStory {
+  id: number;
+  title: string;
+  ai: boolean;
+  tasks: StoryTask[];
+}
+
+interface SubEpic {
+  id: number;
+  title: string;
+  ai: boolean;
+  user_stories: UserStory[];
+}
+
+interface Epic {
+  id: number;
+  title: string;
+  description: string;
+  ai: boolean;
+  sub_epics: SubEpic[];
+}
+
+interface Proposal {
+  id: number;
+  file: string;
+  parsed_text: string;
+  uploaded_by: number;
+  uploaded_at: string;
+}
+
+interface Repository {
+  id: number;
+  name: string;
+  url: string;
+  branch: string;
+  created_at: string;
+}
+
+interface ProjectFeature {
+  id: number;
+  title: string;
+}
+
+interface ProjectGoal {
+  id: number;
+  title: string;
+  role: string;
+}
+
+interface TimelineItem {
+  id: number;
+  title: string;
+}
+
+interface TimelineWeek {
+  id: number;
+  week_number: number;
+  timeline_items: TimelineItem[];
+}
+
+interface Project {
+  id: number;
+  title: string;
+  summary: string;
+  created_by: User;
+  created_at: string;
+  member_count?: number;
+  task_count?: number;
+  has_proposal?: boolean;
+  has_backlog?: boolean;
+  project_file?: string;
+  project_file_url?: string;
+  project_file_download_url?: string;
+}
+
+interface ProjectDetails extends Project {
+  members: ProjectMember[];
+  repositories: Repository[];
+  proposal: Proposal | null;
+  backlog: Epic[];
+  features: ProjectFeature[];
+  goals: ProjectGoal[];
+  timeline: TimelineWeek[];
+}
+
 // Avatar Component
-const Avatar: React.FC<{ member: TeamMember; size?: 'sm' | 'md' }> = ({ 
-  member, 
-  size = 'md' 
-}) => {
+const Avatar: React.FC<{ 
+  member: ProjectMember; 
+  size?: 'sm' | 'md';
+  theme: string;
+}> = ({ member, size = 'md', theme }) => {
   const sizeClasses = size === 'sm' ? 'w-8 h-8 text-sm' : 'w-10 h-10';
+  const initials = member.user_name.substring(0, 2).toUpperCase();
   
   return (
     <div className="relative">
-      <div className={`${sizeClasses} bg-gray-200 rounded-full flex items-center justify-center font-medium border-2 border-white shadow-sm`}>
-        {member.avatar}
+      <div className={`${sizeClasses} bg-blue-500 text-white rounded-full flex items-center justify-center font-medium border-2 ${theme === 'dark' ? 'border-gray-700' : 'border-white'} shadow-sm`}>
+        {initials}
       </div>
-      {member.isOnline && (
-        <div className="absolute -bottom-0 -right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
-      )}
     </div>
   );
 };
 
 // Team Avatars Component
-const TeamAvatars: React.FC<{ members: TeamMember[] }> = ({ members }) => {
+const TeamAvatars: React.FC<{ members: ProjectMember[]; theme: string }> = ({ members, theme }) => {
   const displayMembers = members.slice(0, 4);
   const remainingCount = Math.max(0, members.length - 4);
 
   return (
     <div className="flex items-center">
       {displayMembers.map((member, index) => (
-        <div key={member.id} className={`relative ${index > 0 ? '-ml-2' : ''}`}>
-          <Avatar member={member} size="sm" />
+        <div key={member.id} className={`relative ${index > 0 ? '-ml-2' : ''}`} title={member.user_name}>
+          <Avatar member={member} size="sm" theme={theme} />
         </div>
       ))}
       {remainingCount > 0 && (
         <div className="relative -ml-2">
-          <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-xs font-medium border-2 border-white shadow-sm">
+          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium border-2 shadow-sm ${
+            theme === 'dark' 
+              ? 'bg-gray-700 text-gray-200 border-gray-600' 
+              : 'bg-gray-300 text-gray-700 border-white'
+          }`}>
             +{remainingCount}
           </div>
         </div>
@@ -143,275 +203,876 @@ const TeamAvatars: React.FC<{ members: TeamMember[] }> = ({ members }) => {
 };
 
 // Status Badge Component
-const StatusBadge: React.FC<{ status: 'Canceled' | 'Completed' }> = ({ status }) => {
-  const isCompleted = status === 'Completed';
+const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
+  const statusConfig = {
+    completed: { bg: 'bg-green-100', text: 'text-green-700', label: 'Completed' },
+    pending: { bg: 'bg-yellow-100', text: 'text-yellow-700', label: 'Pending' },
+    in_progress: { bg: 'bg-blue-100', text: 'text-blue-700', label: 'In Progress' },
+    canceled: { bg: 'bg-red-100', text: 'text-red-700', label: 'Canceled' }
+  };
+  
+  const config = statusConfig[status.toLowerCase() as keyof typeof statusConfig] || statusConfig.pending;
   
   return (
-    <span className={`px-2 py-1 text-xs font-medium rounded ${
-      isCompleted 
-        ? 'bg-green-100 text-green-700' 
-        : 'bg-red-100 text-red-700'
-    }`}>
-      {status}
-    </span>
-  );
-};
-const StatusBadges: React.FC<{ stats: 'Canceled' | 'Completed' }> = ({ stats }) => {
-  const isCompleted = stats === 'Completed';
-  
-  return (
-    <span className={`px-2 py-1 text-xs font-medium rounded ${
-      isCompleted 
-        ? 'bg-green-100 text-green-700' 
-        : 'bg-red-100 text-red-700'
-    }`}>
-      {stats}
+    <span className={`px-2 py-1 text-xs font-medium rounded ${config.bg} ${config.text}`}>
+      {config.label}
     </span>
   );
 };
 
 // Task Row Component
 const TaskRow: React.FC<{ 
-  task: Task; 
-  onTaskClick?: (taskId: string) => void;
-}> = ({ task, onTaskClick }) => {
-
+  task: StoryTask;
+  userStoryTitle: string;
+  epicTitle: string;
+  theme: string;
+  onTaskClick?: (taskId: number) => void;
+}> = ({ task, userStoryTitle, epicTitle, theme, onTaskClick }) => {
+  const assignee = task.assignee_details || task.assignee;
+  
   return (
     <div 
-       className="w-full flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg hover:shadow-sm transition-shadow cursor-pointer"
+      className={`w-full flex items-center justify-between p-4 border rounded-lg hover:shadow-sm transition-shadow cursor-pointer ${
+        theme === 'dark' 
+          ? 'bg-gray-800 border-gray-700 hover:bg-gray-750' 
+          : 'bg-white border-gray-200 hover:bg-gray-50'
+      }`}
       onClick={() => onTaskClick?.(task.id)}
     >
-      {/* Left section */}
-    <div className="flex items-center gap-3 flex-1">
-        {/* Left section */}
+      <div className="flex items-center gap-3 flex-1">
         <div className="w-8 h-8 flex items-center justify-center">
-          <Lightbulb className="w-6 h-6 text-gray-500" />
+          <Lightbulb className={`w-6 h-6 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`} />
         </div>
 
         <div className="flex-1">
-          {/* Task Title */}
-          <h3 className="font-medium text-gray-900 text-sm mb-1">
+          <h3 className={`font-medium text-sm mb-1 ${theme === 'dark' ? 'text-gray-100' : 'text-gray-900'}`}>
             {task.title}
           </h3>
 
-          {/* Task Details */}
-          <div className="flex items-center gap-4 text-xs text-gray-500">
-            <span>{task.taskNumber}</span>
-            <span>
-              Opened {task.openedDays} days ago by {task.assignee}
-            </span>
+          <div className={`flex items-center gap-4 text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+            <span>Epic: {epicTitle}</span>
+            <span>Story: {userStoryTitle}</span>
             <StatusBadge status={task.status} />
-            <StatusBadges stats={task.stats} />
+            {task.ai && (
+              <span className="flex items-center gap-1 px-2 py-0.5 bg-purple-100 text-purple-700 rounded text-xs">
+                <Sparkles className="w-3 h-3" />
+                AI Generated
+              </span>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Center section for Dates */}
-      <div className="flex-1 flex">
-        <div className="flex items-center gap-12">
-          {/* Start Date */}
-          <div className="flex flex-col items-center text-gray-700">
-            <span className="text-sm font-medium">Start Date</span>
-            <div className="flex items-center gap-2 text-sm">
-              <Calendar className="w-4 h-4 text-gray-500" />
-              <span>{task.start_date.toLocaleDateString('en-GB')}</span>
+      <div className="flex items-center gap-4">
+        {assignee ? (
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-medium">
+              {assignee.user_name.substring(0, 2).toUpperCase()}
             </div>
-          </div>
-
-          {/* End Date */}
-          <div className="flex flex-col items-center text-gray-700">
-            <span className="text-sm font-medium">End Date</span>
-            <div className="flex items-center gap-2 text-sm">
-              <Calendar className="w-4 h-4 text-gray-500" />
-              <span>{task.end_date.toLocaleDateString('en-GB')}</span>
-            </div>
-          </div>
-        </div>  
-      </div>
-
-
-      {/* Right section */}
-      <div className="flex items-center gap-4 relative">
-        {(() => {
-              // Convert HH:MM:SS to total seconds
-              const [h, m, s] = task.timeSpent.split(":").map(Number);
-              const totalSeconds = h * 3600 + m * 60 + s;
-
-              // Choose color
-              const isLow = totalSeconds <= 600; // 10 minutes
-              const bgClass = isLow ? "bg-red-100 text-red-600" : "bg-green-100 text-green-600";
-
-              return (
-                <span
-                  className={`flex items-center gap-2 px-7 py-2 text-sm font-semibold rounded-lg ${bgClass}`}
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="lucide lucide-clock3-icon lucide-clock-3"
-                  >
-                    <path d="M12 6v6h4" />
-                    <circle cx="12" cy="12" r="10" />
-                  </svg>
-                  {task.timeSpent}
-                </span>
-              );
-            })()}
-
-        <Avatar 
-          member={{ 
-            id: task.assignee, 
-            name: task.assignee, 
-            avatar: task.avatar 
-          }} 
-          size="sm" 
-        />
-        <button className="bg-transparent flex items-center space-x-1">
-            <MessageSquareText className="w-5 h-5 text-gray-500 cursor-pointer hover:text-gray-700" />
-        </button>
-        <div className="relative group">
-          
-          {/* The 3-dot SVG */}
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={1.5}
-            stroke="currentColor"
-            className="w-6 h-6 text-gray-600 cursor-pointer hover:text-gray-800"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M12 6.75a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5ZM12 12.75a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5ZM12 18.75a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5Z"
-            />
-          </svg>
-
-        {/* 📌 Hidden by default → shows on hover */}
-          <div className="absolute right-0 mt-2 w-auto max-w-xs bg-gray-700 border border-gray-200 rounded-lg shadow-lg p-4 opacity-0 scale-95 group-hover:opacity-100 group-hover:scale-100 transition-all duration-200 z-50">
-            <div className="flex flex-col gap-2 text-gray-700">
-              <div className="text-center mb-2">
-                <span className="text-white text-sm font-semibold">
-                  TITTLE(X-AXIS)
-                </span>
+            <div className="text-sm">
+              <div className={`font-medium ${theme === 'dark' ? 'text-gray-200' : 'text-gray-700'}`}>
+                {assignee.user_name}
               </div>
-
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-purple-500 rounded-sm"></div>
-                <span className="text-white text-sm whitespace-nowrap">
-                  Data-point name:
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-blue-500 rounded-sm"></div>
-                <span className="text-white text-sm whitespace-nowrap">
-                  Data-point name:
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-green-500 rounded-sm"></div>
-                <span className="text-white text-sm whitespace-nowrap">
-                  Data-point name:
-                </span>
+              <div className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+                {assignee.user_email}
               </div>
             </div>
           </div>
-
-        </div>
+        ) : (
+          <span className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+            Unassigned
+          </span>
+        )}
       </div>
     </div>
   );
 };
 
-// Main Project Management Component
-const AddodleProjectManager: React.FC = () => {
-  const [tasks] = useState<Task[]>(SAMPLE_TASKS);
-  const [teamMembers] = useState<TeamMember[]>(SAMPLE_TEAM_MEMBERS);
-  const [stats] = useState<ProjectStats>(SAMPLE_STATS);
+// Team Member Card Component
+const TeamMemberCard: React.FC<{ member: ProjectMember; theme: string }> = ({ member, theme }) => {
+  return (
+    <div className={`flex items-center gap-3 p-4 rounded-lg border ${
+      theme === 'dark' 
+        ? 'bg-gray-800 border-gray-700' 
+        : 'bg-white border-gray-200'
+    }`}>
+      <Avatar member={member} theme={theme} />
+      <div className="flex-1">
+        <div className={`font-medium ${theme === 'dark' ? 'text-gray-100' : 'text-gray-900'}`}>
+          {member.user_name}
+        </div>
+        <div className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+          {member.user_email}
+        </div>
+      </div>
+      <div className="px-3 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded-full">
+        {member.role}
+      </div>
+    </div>
+  );
+};
+
+// Main Component
+const ProjectDetails: React.FC = () => {
+  const { theme } = useTheme();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+  const { projectId } = useParams<{ projectId: string }>();
+  
+  const [projectDetails, setProjectDetails] = useState<ProjectDetails | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'overview' | 'tasks' | 'team' | 'timeline'>('overview');
 
+  // Handle project file download
+  const handleProjectFileDownload = async () => {
+    if (!projectDetails?.project_file_download_url) {
+      console.error('No download URL available');
+      return;
+    }
 
-  const handleTaskClick = (taskId: string) => {
-    console.log('Task clicked:', taskId);
+    try {
+      const response = await fetch(projectDetails.project_file_download_url, {
+        headers: apiHeaders(),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Download failed: ${response.statusText}`);
+      }
+
+      // Get filename from content-disposition header or use a default
+      const contentDisposition = response.headers.get('content-disposition');
+      let filename = `${projectDetails.title}-file`;
+      
+      if (contentDisposition) {
+        const match = contentDisposition.match(/filename="(.+)"/);
+        if (match) {
+          filename = match[1];
+        }
+      }
+
+      // Create blob and download
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      
+    } catch (error) {
+      console.error('Error downloading project file:', error);
+    }
   };
 
+  useEffect(() => {
+    const fetchProjectDetails = async () => {
+      if (!projectId) {
+        setError('No project ID provided');
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        
+        // Fetch project basic info
+        const projectResponse = await fetch(`${API_BASE_URL}/ai/projects/${projectId}/`, {
+          headers: apiHeaders()
+        });
+        
+        if (!projectResponse.ok) {
+          throw new Error('Failed to fetch project details');
+        }
+        
+        const project = await projectResponse.json();
+        console.log('Project details fetched:', project);
+
+        // Fetch proposal
+        let proposal = null;
+        try {
+          const proposalResponse = await fetch(
+            `${API_BASE_URL}/ai/projects/${projectId}/current-proposal/`,
+            { headers: apiHeaders() }
+          );
+          if (proposalResponse.ok) {
+            proposal = await proposalResponse.json();
+          }
+        } catch (e) {
+          console.log('No proposal found');
+        }
+
+        // Fetch backlog
+        let backlog: Epic[] = [];
+        try {
+          const backlogResponse = await fetch(
+            `${API_BASE_URL}/ai/projects/${projectId}/backlog/`,
+            { headers: apiHeaders() }
+          );
+          if (backlogResponse.ok) {
+            const backlogData = await backlogResponse.json();
+            backlog = backlogData.epics || [];
+          }
+        } catch (e) {
+          console.log('No backlog found');
+        }
+
+        // Fetch project members
+        const membersResponse = await fetch(
+          `${API_BASE_URL}/ai/project-members/?project_id=${projectId}`,
+          { headers: apiHeaders() }
+        );
+        const members = membersResponse.ok ? await membersResponse.json() : [];
+
+        // Fetch repositories
+        const reposResponse = await fetch(
+          `${API_BASE_URL}/ai/repositories/?project_id=${projectId}`,
+          { headers: apiHeaders() }
+        );
+        const repositories = reposResponse.ok ? await reposResponse.json() : [];
+
+        // Fetch features
+        const featuresResponse = await fetch(
+          `${API_BASE_URL}/ai/project-features/?project_id=${projectId}`,
+          { headers: apiHeaders() }
+        );
+        const features = featuresResponse.ok ? await featuresResponse.json() : [];
+
+        // Fetch goals
+        const goalsResponse = await fetch(
+          `${API_BASE_URL}/ai/project-goals/?project_id=${projectId}`,
+          { headers: apiHeaders() }
+        );
+        const goals = goalsResponse.ok ? await goalsResponse.json() : [];
+
+        // Fetch timeline
+        const timelineResponse = await fetch(
+          `${API_BASE_URL}/ai/timeline-weeks/?project_id=${projectId}`,
+          { headers: apiHeaders() }
+        );
+        const timeline = timelineResponse.ok ? await timelineResponse.json() : [];
+
+        setProjectDetails({
+          ...project,
+          members: Array.isArray(members) ? members : [],
+          repositories: Array.isArray(repositories) ? repositories : [],
+          proposal,
+          backlog,
+          features: Array.isArray(features) ? features : [],
+          goals: Array.isArray(goals) ? goals : [],
+          timeline: Array.isArray(timeline) ? timeline : []
+        });
+
+      } catch (err) {
+        console.error('Error fetching project details:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load project details');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProjectDetails();
+  }, [projectId]);
+
+  // Calculate stats
+  const totalTasks = projectDetails?.backlog.reduce((acc, epic) => 
+    acc + epic.sub_epics.reduce((acc2, subEpic) => 
+      acc2 + subEpic.user_stories.reduce((acc3, story) => 
+        acc3 + story.tasks.length, 0), 0), 0) || 0;
+
+  const completedTasks = projectDetails?.backlog.reduce((acc, epic) => 
+    acc + epic.sub_epics.reduce((acc2, subEpic) => 
+      acc2 + subEpic.user_stories.reduce((acc3, story) => 
+        acc3 + story.tasks.filter(t => t.status === 'completed').length, 0), 0), 0) || 0;
+
+  if (loading) {
+    return (
+      <div className={`flex h-screen ${theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'}`}>
+        <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+        <div className="flex-1 flex flex-col min-w-0">
+          <TopNavbar onMenuClick={() => setSidebarOpen(true)} />
+          <main className="flex-1 p-4 lg:p-[100px] overflow-auto space-y-[40px]">
+            <div className="text-center">
+              <div className="w-12 h-12 mx-auto mb-4 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+              <p className={theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}>Loading project details...</p>
+            </div>
+          </main>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !projectDetails) {
+    return (
+      <div className={`flex h-screen ${theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'}`}>
+        <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+        <div className="flex-1 flex flex-col min-w-0">
+          <TopNavbar onMenuClick={() => setSidebarOpen(true)} />
+          <main className="flex-1 flex items-center justify-center">
+            <div className={`text-center p-8 rounded-lg ${theme === 'dark' ? 'bg-gray-800' : 'bg-white'}`}>
+              <AlertCircle className="w-12 h-12 mx-auto mb-4 text-red-500" />
+              <h3 className={`text-lg font-semibold mb-2 ${theme === 'dark' ? 'text-gray-100' : 'text-gray-900'}`}>
+                Error Loading Project
+              </h3>
+              <p className={`mb-4 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+                {error || 'Project not found'}
+              </p>
+              <button
+                onClick={() => navigate('/projects-user')}
+                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+              >
+                Back to Projects
+              </button>
+            </div>
+          </main>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex h-screen bg-gray-50">
-      {/* Sidebar */}
+    <div className={`flex h-screen ${theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'}`}>
       <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
-  
-      {/* Top Navbar and content */}
       <div className="flex-1 flex flex-col min-w-0">
         <TopNavbar onMenuClick={() => setSidebarOpen(true)} />
-        <main className="flex-1 p-6 overflow-auto">
-        {/* Header Section */}
-        <header className="mb-8">
-          <nav className="text-sm text-gray-500 mb-4">
-            <h2 className="mt-5 text-2xl font-semibold text-gray-800"><span>Projects</span> / <span>Addodle</span></h2>
-          </nav>
-  
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <h1 className="text-2xl font-semibold text-gray-900">Addodle</h1>
-              <TeamAvatars members={teamMembers} />
-              <span className="px-3 py-1 bg-green-100 text-green-700 text-sm font-medium rounded-full">
-                OnTrack
-              </span>
-            </div>
-  
-            <div className="flex items-center gap-6">
+        
+        <main className="flex-1 p-4 lg:p-[100px] overflow-auto space-y-[40px]">
+          {/* Header */}
+          <header className="mb-8">
+            <button
+              onClick={() => navigate('/projects-user')}
+              className={`flex items-center gap-2 mb-4 text-sm ${
+                theme === 'dark' ? 'text-gray-300 hover:text-gray-100' : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to Projects
+            </button>
+
+            <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-600">Time spent</span>
-                  <div className="flex items-center gap-1 text-sm text-green-700 bg-green-100 px-3 py-1 rounded-md">
-                    <Clock className="w-4 h-4 text-green-600" />
-                    <span>2M : 0W : 0D</span>
+                <h1 className={`text-3xl font-bold ${theme === 'dark' ? 'text-gray-100' : 'text-gray-900'}`}>
+                  {projectDetails.title}
+                </h1>
+                <TeamAvatars members={projectDetails.members} theme={theme} />
+              </div>
+
+              <div className="flex items-center gap-4">
+                {projectDetails.proposal && (
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-green-100 text-green-700 rounded-lg">
+                    <CheckCircle className="w-4 h-4" />
+                    <span className="text-sm font-medium">Proposal Uploaded</span>
+                  </div>
+                )}
+                {projectDetails.project_file && (
+                  <button
+                    onClick={handleProjectFileDownload}
+                    className="flex items-center gap-2 px-3 py-1.5 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
+                  >
+                    <Download className="w-4 h-4" />
+                    <span className="text-sm font-medium">Download Project File</span>
+                  </button>
+                )}
+                {projectDetails.backlog.length > 0 && (
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-100 text-purple-700 rounded-lg">
+                    <Sparkles className="w-4 h-4" />
+                    <span className="text-sm font-medium">Backlog Generated</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {projectDetails.summary && (
+              <p className={`mt-4 text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}>
+                {projectDetails.summary}
+              </p>
+            )}
+          </header>
+
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+            <div className={`p-4 rounded-lg border ${
+              theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+            }`}>
+              <div className="flex items-center gap-3">
+                <Users className="w-8 h-8 text-blue-500" />
+                <div>
+                  <div className={`text-2xl font-bold ${theme === 'dark' ? 'text-gray-100' : 'text-gray-900'}`}>
+                    {projectDetails.members.length}
+                  </div>
+                  <div className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+                    Team Members
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-600">Deadline</span>
-                  <div className="flex items-center gap-1 text-sm text-green-700 bg-green-100 px-3 py-1 rounded-md">
-                    <Clock className="w-4 h-4 text-green-600" />
-                    <span>6M : 0W : 0D</span>
+              </div>
+            </div>
+
+            <div className={`p-4 rounded-lg border ${
+              theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+            }`}>
+              <div className="flex items-center gap-3">
+                <CheckCircle className="w-8 h-8 text-green-500" />
+                <div>
+                  <div className={`text-2xl font-bold ${theme === 'dark' ? 'text-gray-100' : 'text-gray-900'}`}>
+                    {completedTasks}/{totalTasks}
+                  </div>
+                  <div className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+                    Tasks Completed
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className={`p-4 rounded-lg border ${
+              theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+            }`}>
+              <div className="flex items-center gap-3">
+                <GitBranch className="w-8 h-8 text-purple-500" />
+                <div>
+                  <div className={`text-2xl font-bold ${theme === 'dark' ? 'text-gray-100' : 'text-gray-900'}`}>
+                    {projectDetails.repositories.length}
+                  </div>
+                  <div className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+                    Repositories
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className={`p-4 rounded-lg border ${
+              theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+            }`}>
+              <div className="flex items-center gap-3">
+                <FileText className="w-8 h-8 text-orange-500" />
+                <div>
+                  <div className={`text-2xl font-bold ${theme === 'dark' ? 'text-gray-100' : 'text-gray-900'}`}>
+                    {projectDetails.backlog.length}
+                  </div>
+                  <div className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+                    Epics
                   </div>
                 </div>
               </div>
             </div>
           </div>
-        </header>
-  
-        {/* Tasks List */}
-        <div>
-          <div className="w-full space-y-3"> 
-            {tasks.map((task) => (
-              <TaskRow key={task.id} task={task} onTaskClick={handleTaskClick} />
-            ))}
+
+          {/* Tabs */}
+          <div className={`border-b mb-6 ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'}`}>
+            <div className="flex gap-6">
+              {(['overview', 'tasks', 'team', 'timeline'] as const).map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`pb-3 px-1 font-medium text-sm capitalize transition-colors border-b-2 ${
+                    activeTab === tab
+                      ? theme === 'dark'
+                        ? 'border-blue-500 text-blue-400'
+                        : 'border-blue-500 text-blue-600'
+                      : theme === 'dark'
+                      ? 'border-transparent text-gray-400 hover:text-gray-200'
+                      : 'border-transparent text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  {tab}
+                </button>
+              ))}
+            </div>
           </div>
-  
-          {/* Footer Stats */}
-          <footer className="mt-8 flex items-center justify-end gap-6 text-sm text-gray-500">
-            <div className="flex items-center gap-2">
-              <MessageSquareText className="w-4 h-4" />
-              <span>{stats.totalTasks} tasks</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <File className="w-4 h-4 text-gray-500" />
-              <span>{stats.totalFiles} files</span>
-            </div>
-          </footer>
-        </div>
-      </main>
+
+          {/* Tab Content */}
+          <div>
+            {activeTab === 'overview' && (
+              <div className="space-y-6">
+                {/* Files Section */}
+                <div className={`p-6 rounded-lg border ${
+                  theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+                }`}>
+                  <h3 className={`text-lg font-semibold mb-4 ${theme === 'dark' ? 'text-gray-100' : 'text-gray-900'}`}>
+                    Project Files
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Proposal Status */}
+                    <div className={`p-4 rounded-lg border ${
+                      projectDetails.proposal 
+                        ? 'bg-green-50 border-green-200' 
+                        : theme === 'dark' ? 'bg-gray-750 border-gray-600' : 'bg-gray-50 border-gray-200'
+                    }`}>
+                      <div className="flex items-center gap-3">
+                        <FileText className={`w-5 h-5 ${projectDetails.proposal ? 'text-green-600' : 'text-gray-400'}`} />
+                        <div>
+                          <p className={`font-medium text-sm ${
+                            projectDetails.proposal 
+                              ? 'text-green-700' 
+                              : theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                          }`}>
+                            PDF Proposal
+                          </p>
+                          <p className={`text-xs ${
+                            projectDetails.proposal 
+                              ? 'text-green-600' 
+                              : theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                          }`}>
+                            {projectDetails.proposal ? 'Uploaded and ready for AI analysis' : 'No proposal uploaded yet'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Project File Status */}
+                    <div className={`p-4 rounded-lg border ${
+                      projectDetails.project_file 
+                        ? 'bg-blue-50 border-blue-200' 
+                        : theme === 'dark' ? 'bg-gray-750 border-gray-600' : 'bg-gray-50 border-gray-200'
+                    }`}>
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-1">
+                          <Download className={`w-5 h-5 ${projectDetails.project_file ? 'text-blue-600' : 'text-gray-400'}`} />
+                          <FileText className={`w-4 h-4 ${projectDetails.project_file ? 'text-blue-500' : 'text-gray-400'}`} />
+                        </div>
+                        <div className="flex-1">
+                          <p className={`font-medium text-sm ${
+                            projectDetails.project_file 
+                              ? 'text-blue-700' 
+                              : theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                          }`}>
+                            Project File
+                          </p>
+                          <p className={`text-xs ${
+                            projectDetails.project_file 
+                              ? 'text-blue-600' 
+                              : theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                          }`}>
+                            {projectDetails.project_file ? 'File available for download' : 'No project file uploaded'}
+                          </p>
+                        </div>
+                        {projectDetails.project_file && (
+                          <button
+                            onClick={handleProjectFileDownload}
+                            className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 transition-colors"
+                          >
+                            Download
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Features */}
+                {projectDetails.features.length > 0 && (
+                  <div className={`p-6 rounded-lg border ${
+                    theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+                  }`}>
+                    <h3 className={`text-lg font-semibold mb-4 ${theme === 'dark' ? 'text-gray-100' : 'text-gray-900'}`}>
+                      Project Features
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {projectDetails.features.map((feature) => (
+                        <div key={feature.id} className={`flex items-start gap-2 p-3 rounded border ${
+                          theme === 'dark' ? 'bg-gray-750 border-gray-600' : 'bg-gray-50 border-gray-200'
+                        }`}>
+                          <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                          <span className={`text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                            {feature.title}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Goals */}
+                {projectDetails.goals.length > 0 && (
+                  <div className={`p-6 rounded-lg border ${
+                    theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+                  }`}>
+                    <h3 className={`text-lg font-semibold mb-4 ${theme === 'dark' ? 'text-gray-100' : 'text-gray-900'}`}>
+                      Project Goals
+                    </h3>
+                    <div className="space-y-3">
+                      {projectDetails.goals.map((goal) => (
+                        <div key={goal.id} className={`p-4 rounded border ${
+                          theme === 'dark' ? 'bg-gray-750 border-gray-600' : 'bg-gray-50 border-gray-200'
+                        }`}>
+                          <div className={`font-medium mb-1 ${theme === 'dark' ? 'text-gray-200' : 'text-gray-800'}`}>
+                            {goal.title}
+                          </div>
+                          {goal.role && (
+                            <div className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+                              Role: {goal.role}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Repositories */}
+                {projectDetails.repositories.length > 0 && (
+                  <div className={`p-6 rounded-lg border ${
+                    theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+                  }`}>
+                    <h3 className={`text-lg font-semibold mb-4 ${theme === 'dark' ? 'text-gray-100' : 'text-gray-900'}`}>
+                      Connected Repositories
+                    </h3>
+                    <div className="space-y-3">
+                      {projectDetails.repositories.map((repo) => (
+                        <div key={repo.id} className={`flex items-center gap-3 p-4 rounded border ${
+                          theme === 'dark' ? 'bg-gray-750 border-gray-600' : 'bg-gray-50 border-gray-200'
+                        }`}>
+                          <GitBranch className="w-5 h-5 text-purple-500" />
+                          <div className="flex-1">
+                            <div className={`font-medium ${theme === 'dark' ? 'text-gray-200' : 'text-gray-800'}`}>
+                              {repo.name}
+                            </div>
+                            <a 
+                              href={repo.url} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="text-sm text-blue-500 hover:underline"
+                            >
+                              {repo.url}
+                            </a>
+                          </div>
+                          <div className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded">
+                            {repo.branch}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {activeTab === 'tasks' && (
+              <div className="space-y-4">
+                {projectDetails.backlog.length === 0 ? (
+                  <div className={`p-12 text-center rounded-lg border ${
+                    theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+                  }`}>
+                    <AlertCircle className={`w-12 h-12 mx-auto mb-4 ${theme === 'dark' ? 'text-gray-600' : 'text-gray-400'}`} />
+                    <h3 className={`text-lg font-semibold mb-2 ${theme === 'dark' ? 'text-gray-200' : 'text-gray-700'}`}>
+                      No Tasks Yet
+                    </h3>
+                    <p className={`${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+                      Generate a backlog to see tasks and assignments
+                    </p>
+                  </div>
+                ) : (
+                  projectDetails.backlog.map((epic) => (
+                    <div key={epic.id} className={`rounded-lg border ${
+                      theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+                    }`}>
+                      <div className="p-4 border-b border-gray-200">
+                        <div className="flex items-center gap-3">
+                          <h3 className={`text-lg font-semibold ${theme === 'dark' ? 'text-gray-100' : 'text-gray-900'}`}>
+                            {epic.title}
+                          </h3>
+                          {epic.ai && (
+                            <span className="flex items-center gap-1 px-2 py-0.5 bg-purple-100 text-purple-700 rounded text-xs">
+                              <Sparkles className="w-3 h-3" />
+                              AI Generated
+                            </span>
+                          )}
+                        </div>
+                        {epic.description && (
+                          <p className={`mt-2 text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+                            {epic.description}
+                          </p>
+                        )}
+                      </div>
+                      
+                      <div className="p-4 space-y-4">
+                        {epic.sub_epics.map((subEpic) => (
+                          <div key={subEpic.id}>
+                            <h4 className={`text-md font-medium mb-3 ${theme === 'dark' ? 'text-gray-200' : 'text-gray-800'}`}>
+                              {subEpic.title}
+                            </h4>
+                            
+                            {subEpic.user_stories.map((story) => (
+                              <div key={story.id} className="mb-4">
+                                <h5 className={`text-sm font-medium mb-2 pl-4 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                                  {story.title}
+                                </h5>
+                                
+                                <div className="space-y-2 pl-4">
+                                  {story.tasks.map((task) => (
+                                    <TaskRow
+                                      key={task.id}
+                                      task={task}
+                                      userStoryTitle={story.title}
+                                      epicTitle={epic.title}
+                                      theme={theme}
+                                    />
+                                  ))}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+
+            {activeTab === 'team' && (
+              <div className="space-y-6">
+                <div className={`p-6 rounded-lg border ${
+                  theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+                }`}>
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className={`text-lg font-semibold ${theme === 'dark' ? 'text-gray-100' : 'text-gray-900'}`}>
+                      Team Members ({projectDetails.members.length})
+                    </h3>
+                  </div>
+
+                  {projectDetails.members.length === 0 ? (
+                    <div className="text-center py-8">
+                      <Users className={`w-12 h-12 mx-auto mb-4 ${theme === 'dark' ? 'text-gray-600' : 'text-gray-400'}`} />
+                      <p className={`${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+                        No team members yet
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {projectDetails.members.map((member) => (
+                        <TeamMemberCard key={member.id} member={member} theme={theme} />
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Member Task Distribution */}
+                <div className={`p-6 rounded-lg border ${
+                  theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+                }`}>
+                  <h3 className={`text-lg font-semibold mb-6 ${theme === 'dark' ? 'text-gray-100' : 'text-gray-900'}`}>
+                    Task Distribution
+                  </h3>
+                  
+                  <div className="space-y-4">
+                    {projectDetails.members.map((member) => {
+                      const memberTasks = projectDetails.backlog.flatMap(epic =>
+                        epic.sub_epics.flatMap(subEpic =>
+                          subEpic.user_stories.flatMap(story =>
+                            story.tasks.filter(task => 
+                              task.assignee_details?.user_email === member.user_email ||
+                              task.assignee?.user_email === member.user_email
+                            )
+                          )
+                        )
+                      );
+
+                      const completedCount = memberTasks.filter(t => t.status === 'completed').length;
+                      const totalCount = memberTasks.length;
+                      const percentage = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
+
+                      return (
+                        <div key={member.id} className={`p-4 rounded-lg border ${
+                          theme === 'dark' ? 'bg-gray-750 border-gray-600' : 'bg-gray-50 border-gray-200'
+                        }`}>
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-3">
+                              <Avatar member={member} size="sm" theme={theme} />
+                              <div>
+                                <div className={`font-medium ${theme === 'dark' ? 'text-gray-200' : 'text-gray-800'}`}>
+                                  {member.user_name}
+                                </div>
+                                <div className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+                                  {member.role}
+                                </div>
+                              </div>
+                            </div>
+                            <div className={`text-sm font-medium ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                              {completedCount}/{totalCount} tasks
+                            </div>
+                          </div>
+                          
+                          <div className={`w-full h-2 rounded-full overflow-hidden ${
+                            theme === 'dark' ? 'bg-gray-700' : 'bg-gray-200'
+                          }`}>
+                            <div 
+                              className="h-full bg-blue-500 transition-all duration-300"
+                              style={{ width: `${percentage}%` }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'timeline' && (
+              <div className="space-y-4">
+                {projectDetails.timeline.length === 0 ? (
+                  <div className={`p-12 text-center rounded-lg border ${
+                    theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+                  }`}>
+                    <Calendar className={`w-12 h-12 mx-auto mb-4 ${theme === 'dark' ? 'text-gray-600' : 'text-gray-400'}`} />
+                    <h3 className={`text-lg font-semibold mb-2 ${theme === 'dark' ? 'text-gray-200' : 'text-gray-700'}`}>
+                      No Timeline Yet
+                    </h3>
+                    <p className={`${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+                      Generate project overview to see the timeline
+                    </p>
+                  </div>
+                ) : (
+                  <div className={`p-6 rounded-lg border ${
+                    theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+                  }`}>
+                    <h3 className={`text-lg font-semibold mb-6 ${theme === 'dark' ? 'text-gray-100' : 'text-gray-900'}`}>
+                      Project Timeline
+                    </h3>
+                    
+                    <div className="space-y-6">
+                      {projectDetails.timeline
+                        .sort((a, b) => a.week_number - b.week_number)
+                        .map((week) => (
+                          <div key={week.id} className={`border-l-4 border-blue-500 pl-6 pb-6 relative ${
+                            theme === 'dark' ? 'border-opacity-70' : ''
+                          }`}>
+                            <div className="absolute -left-3 top-0 w-6 h-6 bg-blue-500 rounded-full border-4 border-white"></div>
+                            
+                            <div className={`font-semibold mb-3 ${theme === 'dark' ? 'text-gray-200' : 'text-gray-800'}`}>
+                              Week {week.week_number}
+                            </div>
+                            
+                            <div className="space-y-2">
+                              {week.timeline_items.map((item) => (
+                                <div 
+                                  key={item.id} 
+                                  className={`flex items-start gap-2 p-3 rounded ${
+                                    theme === 'dark' ? 'bg-gray-750' : 'bg-gray-50'
+                                  }`}
+                                >
+                                  <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                                  <span className={`text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                                    {item.title}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </main>
       </div>
     </div>
   );
 };
 
-export default AddodleProjectManager
+export default ProjectDetails;

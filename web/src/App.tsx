@@ -9,11 +9,13 @@ import MainProjects from './view_pages/manager/projects_main';
 import Projects from './view_pages/manager/monitorProjects'; 
 import CreateTask from './view_pages/manager/createTask'; 
 import Performance from './view_pages/manager/performance'; 
+import Leader from './view_pages/user/leader'; 
 import Settings from './view_pages/manager/settings';
 import AccountSettings from './view_pages/manager/settings_account'; 
 import Notifications from './view_pages/manager/settings_notification'; 
 import GenerateProject from './view_pages/manager/generateProject'; 
 import Chat from './view_pages/manager/chat'; 
+import Chat2 from './view_pages/user/chat2.0'; 
 import CreatedProject from './view_pages/manager/monitor_created'; 
 
 {/* User Web Connections */}
@@ -27,6 +29,7 @@ import AppearanceSettings from './view_pages/manager/settings_appearance';
 import TeamSettings from './view_pages/manager/settings_team';
 import GeneralSettings from './view_pages/manager/settings';
 import ProjectDetails from './view_pages/user/projectsDetails'; 
+import ProjectInvitation from './view_pages/user/projectInvitation'; 
 import SubTask from './view_pages/user/subTaskUser';
 import WorklogsUser from './view_pages/user/worklogsUser';
 
@@ -63,6 +66,7 @@ const App: React.FC = () => {
         <Route path="/general" element={<GeneralSettings/> }/>
         <Route path="/create-project" element={<GenerateProject/> }/>
         <Route path="/chat" element={<Chat/> }/>
+        <Route path="/user-chat" element={<Chat2/> }/>
         <Route path="/projects" element={<CreatedProject/> }/>
 
         {/* Components */}
@@ -72,12 +76,14 @@ const App: React.FC = () => {
          <Route path="/user" element={<UserFrame />} />
         <Route path="/projects-user" element={<ProjectUser />} />
         <Route path="/project-details/:id" element={<CreatedProject />} />
-        <Route path="/project-details" element={<ProjectDetails />} />
+        <Route path="/user-project" element={<ProjectDetails />} />
+        <Route path="/project-invitation" element={<ProjectInvitation />} />
         <Route path="/performance-user" element={<PerformanceUser />} />
         <Route path="/task-user" element={<TaskUser />} />
         <Route path="/subtask-user" element={<SubTask/>}/>
         <Route path="/kanban-user" element={<KanbanUser />} />
-        <Route path="/worklogs-user" element={<WorklogsUser/>}/> 
+        <Route path="/worklogs-user" element={<WorklogsUser/>}/>
+        <Route path="/user-leaderboards" element={<Leader/>}/> 
         
         <Route path="*" element={<Navigate to="/landing-page" replace />} />
       </Routes>

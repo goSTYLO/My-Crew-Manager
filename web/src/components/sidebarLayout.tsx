@@ -132,7 +132,7 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
             const active =
               anyActive
                 ? checkIsActive(item.path)
-                : item.name === "Settings";
+                : item.name === "Project";
 
             return (
               <button
