@@ -4,10 +4,21 @@ import TopNavbar from "../../components/topbarLayouot";
 import Sidebar from "../../components/sidebarLayout";
 import { useTheme } from "../../components/themeContext";
 import { useParams, useNavigate } from 'react-router-dom';
+import { API_BASE_URL } from "../../config/api";
 import LoadingSpinner from '../../components/LoadingSpinner';
 import RegenerationSuccessModal from '../../components/RegenerationSuccessModal';
 import { useToast } from '../../components/ToastContext';
 import ProposalViewer from '../../components/ProposalViewer';
+import { 
+  calculateTaskStats, 
+  generateWeeklyData, 
+  getDefaultAnalyticsConfig 
+} from '../../utils/analyticsUtils';
+import type { 
+  AnalyticsConfig, 
+  TaskStats, 
+  WeeklyData 
+} from '../../utils/analyticsUtils';
 
 export default function ProjectDetailsUI() {
   const { theme } = useTheme();
@@ -61,9 +72,19 @@ export default function ProjectDetailsUI() {
   const [editingMember, setEditingMember] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isAiOperation, setIsAiOperation] = useState(false);
+  const [loadingState, setLoadingState] = useState<'regenerating-overview' | 'regenerating-backlog' | null>(null);
   const [showRegenerationModal, setShowRegenerationModal] = useState(false);
   const [regenerationType, setRegenerationType] = useState<'overview' | 'backlog'>('overview');
+  
+  // Confirmation modal state
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [confirmModalData, setConfirmModalData] = useState<{
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    confirmText?: string;
+    cancelText?: string;
+  } | null>(null);
   
   // Proposal upload state
   const [currentProposal, setCurrentProposal] = useState<any>(null);
@@ -75,7 +96,7 @@ export default function ProjectDetailsUI() {
   const navigate = useNavigate();
   
   // API Configuration
-  const API_BASE_URL = 'http://localhost:8000/api/ai';
+  const AI_API_BASE_URL = `${API_BASE_URL}/api/ai`;
 
   // API Utility Functions
   const getAuthHeaders = () => {
@@ -98,12 +119,36 @@ export default function ProjectDetailsUI() {
     }
   };
 
+  // Confirmation modal helper
+  const showConfirmation = (title: string, message: string, onConfirm: () => void, confirmText = 'Confirm', cancelText = 'Cancel') => {
+    setConfirmModalData({
+      title,
+      message,
+      onConfirm,
+      confirmText,
+      cancelText
+    });
+    setShowConfirmModal(true);
+  };
+
+  const handleConfirm = () => {
+    if (confirmModalData) {
+      confirmModalData.onConfirm();
+      setShowConfirmModal(false);
+      setConfirmModalData(null);
+    }
+  };
+
+  const handleCancelConfirm = () => {
+    setShowConfirmModal(false);
+    setConfirmModalData(null);
+  };
+
   // Regenerate functions
-  const regenerateOverview = async () => {
+  const performRegenerateOverview = async () => {
     try {
-      setLoading(true);
-      setIsAiOperation(true);
-      const response = await fetch(`${API_BASE_URL}/projects/${projectId}/generate-overview/`, {
+      setLoadingState('regenerating-overview');
+      const response = await fetch(`${AI_API_BASE_URL}/projects/${projectId}/generate-overview/`, {
         method: 'PUT',
         headers: getAuthHeaders(),
         credentials: 'include',
@@ -126,16 +171,24 @@ export default function ProjectDetailsUI() {
       console.error('❌ Error regenerating overview:', error);
       handleApiError(error, 'regenerate overview');
     } finally {
-      setLoading(false);
-      setIsAiOperation(false);
+      setLoadingState(null);
     }
   };
 
-  const regenerateBacklog = async () => {
+  const regenerateOverview = () => {
+    showConfirmation(
+      'Regenerate Project Overview',
+      'This will regenerate your project overview using AI, including features, roles, goals, and timeline.\n\n⚠️ This process cannot be canceled once started and may take several minutes to complete.\n\nAll existing project overview data will be replaced with new AI-generated content.\n\nDo you want to continue?',
+      performRegenerateOverview,
+      'Regenerate Overview',
+      'Cancel'
+    );
+  };
+
+  const performRegenerateBacklog = async () => {
     try {
-      setLoading(true);
-      setIsAiOperation(true);
-      const response = await fetch(`${API_BASE_URL}/projects/${projectId}/generate-backlog/`, {
+      setLoadingState('regenerating-backlog');
+      const response = await fetch(`${AI_API_BASE_URL}/projects/${projectId}/generate-backlog/`, {
         method: 'PUT',
         headers: getAuthHeaders(),
         credentials: 'include',
@@ -158,9 +211,18 @@ export default function ProjectDetailsUI() {
       console.error('❌ Error regenerating backlog:', error);
       handleApiError(error, 'regenerate backlog');
     } finally {
-      setLoading(false);
-      setIsAiOperation(false);
+      setLoadingState(null);
     }
+  };
+
+  const regenerateBacklog = () => {
+    showConfirmation(
+      'Regenerate Project Backlog',
+      'This will regenerate your project backlog using AI, including epics, sub-epics, user stories, and tasks.\n\n⚠️ This process cannot be canceled once started and may take several minutes to complete.\n\nAll existing backlog data will be replaced with new AI-generated content.\n\nDo you want to continue?',
+      performRegenerateBacklog,
+      'Regenerate Backlog',
+      'Cancel'
+    );
   };
 
   // Fetch Project Overview Data
@@ -169,7 +231,7 @@ export default function ProjectDetailsUI() {
       console.log('🔍 Fetching project data for projectId:', projectId);
       
       // First, fetch the main project data
-      const projectRes = await fetch(`${API_BASE_URL}/projects/${projectId}/`, {
+      const projectRes = await fetch(`${AI_API_BASE_URL}/projects/${projectId}/`, {
         headers: getAuthHeaders(),
         credentials: 'include',
       });
@@ -184,19 +246,19 @@ export default function ProjectDetailsUI() {
 
       // Then fetch related data in parallel, but handle each one individually
       const [featuresRes, rolesRes, goalsRes, timelineRes] = await Promise.allSettled([
-        fetch(`${API_BASE_URL}/project-features/?project_id=${projectId}`, {
+        fetch(`${AI_API_BASE_URL}/project-features/?project_id=${projectId}`, {
           headers: getAuthHeaders(),
           credentials: 'include',
         }),
-        fetch(`${API_BASE_URL}/project-roles/?project_id=${projectId}`, {
+        fetch(`${AI_API_BASE_URL}/project-roles/?project_id=${projectId}`, {
           headers: getAuthHeaders(),
           credentials: 'include',
         }),
-        fetch(`${API_BASE_URL}/project-goals/?project_id=${projectId}`, {
+        fetch(`${AI_API_BASE_URL}/project-goals/?project_id=${projectId}`, {
           headers: getAuthHeaders(),
           credentials: 'include',
         }),
-        fetch(`${API_BASE_URL}/timeline-weeks/?project_id=${projectId}`, {
+        fetch(`${AI_API_BASE_URL}/timeline-weeks/?project_id=${projectId}`, {
           headers: getAuthHeaders(),
           credentials: 'include',
         }),
@@ -243,7 +305,7 @@ export default function ProjectDetailsUI() {
   const fetchBacklog = async () => {
     try {
       console.log('🔍 Fetching backlog for projectId:', projectId);
-      const response = await fetch(`${API_BASE_URL}/projects/${projectId}/backlog/`, {
+      const response = await fetch(`${AI_API_BASE_URL}/projects/${projectId}/backlog/`, {
         headers: getAuthHeaders(),
         credentials: 'include',
       });
@@ -314,7 +376,7 @@ export default function ProjectDetailsUI() {
   const fetchMembers = async () => {
     try {
       console.log('🔍 Fetching members for projectId:', projectId);
-      const response = await fetch(`${API_BASE_URL}/project-members/?project_id=${projectId}`, {
+      const response = await fetch(`${AI_API_BASE_URL}/project-members/?project_id=${projectId}`, {
         headers: getAuthHeaders(),
         credentials: 'include',
       });
@@ -347,7 +409,7 @@ export default function ProjectDetailsUI() {
   const fetchPendingInvitations = async () => {
     try {
       console.log('🔍 Fetching pending invitations for projectId:', projectId);
-      const response = await fetch(`${API_BASE_URL}/invitations/?project_id=${projectId}`, {
+      const response = await fetch(`${AI_API_BASE_URL}/invitations/?project_id=${projectId}`, {
         headers: getAuthHeaders(),
         credentials: 'include',
       });
@@ -372,7 +434,7 @@ export default function ProjectDetailsUI() {
   // Cancel/Delete Pending Invitation
   const cancelInvitation = async (invitationId: number) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/invitations/${invitationId}/`, {
+      const response = await fetch(`${AI_API_BASE_URL}/invitations/${invitationId}/`, {
         method: 'DELETE',
         headers: getAuthHeaders(),
         credentials: 'include',
@@ -396,7 +458,7 @@ export default function ProjectDetailsUI() {
   const fetchRepositories = async () => {
     try {
       console.log('🔍 Fetching repositories for projectId:', projectId);
-      const response = await fetch(`${API_BASE_URL}/repositories/?project_id=${projectId}`, {
+      const response = await fetch(`${AI_API_BASE_URL}/repositories/?project_id=${projectId}`, {
         headers: getAuthHeaders(),
         credentials: 'include',
       });
@@ -424,7 +486,7 @@ export default function ProjectDetailsUI() {
   // Fetch Current Proposal
   const fetchCurrentProposal = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/projects/${projectId}/current-proposal/`, {
+      const response = await fetch(`${AI_API_BASE_URL}/projects/${projectId}/current-proposal/`, {
         headers: getAuthHeaders(),
         credentials: 'include',
       });
@@ -444,7 +506,7 @@ export default function ProjectDetailsUI() {
   // Task Assignment Functions
   const assignTask = async (taskId: number, assigneeId: number | null) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/story-tasks/${taskId}/`, {
+      const response = await fetch(`${AI_API_BASE_URL}/story-tasks/${taskId}/`, {
         method: 'PATCH',
         headers: getAuthHeaders(),
         credentials: 'include',
@@ -467,7 +529,7 @@ export default function ProjectDetailsUI() {
 
   const completeTask = async (taskId: number, commitTitle: string, commitBranch?: string) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/story-tasks/${taskId}/`, {
+      const response = await fetch(`${AI_API_BASE_URL}/story-tasks/${taskId}/`, {
         method: 'PATCH',
         headers: getAuthHeaders(),
         credentials: 'include',
@@ -627,12 +689,34 @@ export default function ProjectDetailsUI() {
   const [showRepoModal, setShowRepoModal] = useState(false);
   const [editingRepo, setEditingRepo] = useState(null);
 
-  const [monitoringData] = useState({
-    weeks: ['Week 1', 'Week 2', 'Week 3', 'Week 4', 'Week 5', 'Week 6'],
-    completed: [12, 18, 25, 32, 38, 45],
-    inProgress: [5, 8, 6, 9, 7, 10],
-    pending: [8, 6, 4, 3, 5, 2]
+  // Analytics state
+  const [analyticsConfig, setAnalyticsConfig] = useState<AnalyticsConfig>(getDefaultAnalyticsConfig());
+  const [taskStats, setTaskStats] = useState<TaskStats>({
+    completed: 0,
+    inProgress: 0,
+    pending: 0,
+    total: 0
   });
+  const [weeklyData, setWeeklyData] = useState<WeeklyData>({
+    weeks: [],
+    completed: [],
+    inProgress: [],
+    pending: []
+  });
+
+  // Calculate analytics when backlog data changes
+  useEffect(() => {
+    if (backlog) {
+      console.log('📊 Calculating analytics for backlog:', backlog);
+      const stats = calculateTaskStats(backlog, analyticsConfig);
+      setTaskStats(stats);
+      
+      const weekly = generateWeeklyData(backlog, analyticsConfig);
+      setWeeklyData(weekly);
+      
+      console.log('📈 Analytics calculated:', { stats, weekly });
+    }
+  }, [backlog, analyticsConfig]);
 
   const handleInvite = async () => {
     if (!inviteForm.email || !inviteForm.role) {
@@ -649,7 +733,7 @@ export default function ProjectDetailsUI() {
     try {
       // First, look up user by email
       const usersResponse = await fetch(
-        `http://localhost:8000/api/user/?email=${encodeURIComponent(inviteForm.email)}`,
+        `${API_BASE_URL}/api/user/?email=${encodeURIComponent(inviteForm.email)}`,
         {
           headers: { 
             'Authorization': `Token ${token}`,
@@ -690,7 +774,7 @@ export default function ProjectDetailsUI() {
       }
       
       // Create invitation with user ID
-      const response = await fetch(`${API_BASE_URL}/invitations/`, {
+      const response = await fetch(`${AI_API_BASE_URL}/invitations/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -742,7 +826,7 @@ export default function ProjectDetailsUI() {
 
   const handleEditMember = async (updatedMember: any) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/project-members/${updatedMember.id}/`, {
+      const response = await fetch(`${AI_API_BASE_URL}/project-members/${updatedMember.id}/`, {
         method: 'PATCH',
         headers: getAuthHeaders(),
         credentials: 'include',
@@ -768,7 +852,7 @@ export default function ProjectDetailsUI() {
   // Backlog CRUD Operations
   const addNewEpic = async (epicData: any) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/epics/`, {
+      const response = await fetch(`${AI_API_BASE_URL}/epics/`, {
         method: 'POST',
         headers: getAuthHeaders(),
         credentials: 'include',
@@ -794,7 +878,7 @@ export default function ProjectDetailsUI() {
 
   const addNewSubEpic = async (subEpicData: any, epicId: any) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/sub-epics/`, {
+      const response = await fetch(`${AI_API_BASE_URL}/sub-epics/`, {
         method: 'POST',
         headers: getAuthHeaders(),
         credentials: 'include',
@@ -819,7 +903,7 @@ export default function ProjectDetailsUI() {
 
   const addNewUserStory = async (storyData: any, subEpicId: any) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/user-stories/`, {
+      const response = await fetch(`${AI_API_BASE_URL}/user-stories/`, {
         method: 'POST',
         headers: getAuthHeaders(),
         credentials: 'include',
@@ -844,7 +928,7 @@ export default function ProjectDetailsUI() {
 
   const addNewTask = async (taskData: any, userStoryId: any) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/story-tasks/`, {
+      const response = await fetch(`${AI_API_BASE_URL}/story-tasks/`, {
         method: 'POST',
         headers: getAuthHeaders(),
         credentials: 'include',
@@ -870,7 +954,7 @@ export default function ProjectDetailsUI() {
   // Backlog Update Functions
   const updateEpicTitle = async (epicId: number, newTitle: string) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/epics/${epicId}/`, {
+      const response = await fetch(`${AI_API_BASE_URL}/epics/${epicId}/`, {
         method: 'PATCH',
         headers: getAuthHeaders(),
         credentials: 'include',
@@ -887,7 +971,7 @@ export default function ProjectDetailsUI() {
 
   const updateSubEpicTitle = async (subEpicId: number, newTitle: string) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/sub-epics/${subEpicId}/`, {
+      const response = await fetch(`${AI_API_BASE_URL}/sub-epics/${subEpicId}/`, {
         method: 'PATCH',
         headers: getAuthHeaders(),
         credentials: 'include',
@@ -904,7 +988,7 @@ export default function ProjectDetailsUI() {
 
   const updateUserStoryTitle = async (storyId: number, newTitle: string) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/user-stories/${storyId}/`, {
+      const response = await fetch(`${AI_API_BASE_URL}/user-stories/${storyId}/`, {
         method: 'PATCH',
         headers: getAuthHeaders(),
         credentials: 'include',
@@ -921,7 +1005,7 @@ export default function ProjectDetailsUI() {
 
   const updateTaskTitle = async (taskId: number, newTitle: string) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/story-tasks/${taskId}/`, {
+      const response = await fetch(`${AI_API_BASE_URL}/story-tasks/${taskId}/`, {
         method: 'PATCH',
         headers: getAuthHeaders(),
         credentials: 'include',
@@ -983,7 +1067,7 @@ export default function ProjectDetailsUI() {
   const updateProject = async () => {
     try {
       // Update project title and summary
-      const projectResponse = await fetch(`${API_BASE_URL}/projects/${projectId}/`, {
+      const projectResponse = await fetch(`${AI_API_BASE_URL}/projects/${projectId}/`, {
         method: 'PATCH',
         headers: getAuthHeaders(),
         credentials: 'include',
@@ -1002,7 +1086,7 @@ export default function ProjectDetailsUI() {
       // Update features
       const featuresPromises = projectData.features.map(async (feature) => {
         if (feature.id) {
-          const response = await fetch(`${API_BASE_URL}/project-features/${feature.id}/`, {
+          const response = await fetch(`${AI_API_BASE_URL}/project-features/${feature.id}/`, {
             method: 'PATCH',
             headers: getAuthHeaders(),
             credentials: 'include',
@@ -1016,7 +1100,7 @@ export default function ProjectDetailsUI() {
       // Update roles
       const rolesPromises = projectData.roles.map(async (role) => {
         if (role.id) {
-          const response = await fetch(`${API_BASE_URL}/project-roles/${role.id}/`, {
+          const response = await fetch(`${AI_API_BASE_URL}/project-roles/${role.id}/`, {
             method: 'PATCH',
             headers: getAuthHeaders(),
             credentials: 'include',
@@ -1030,7 +1114,7 @@ export default function ProjectDetailsUI() {
       // Update goals
       const goalsPromises = projectData.goals.map(async (goal) => {
         if (goal.id) {
-          const response = await fetch(`${API_BASE_URL}/project-goals/${goal.id}/`, {
+          const response = await fetch(`${AI_API_BASE_URL}/project-goals/${goal.id}/`, {
             method: 'PATCH',
             headers: getAuthHeaders(),
             credentials: 'include',
@@ -1045,7 +1129,7 @@ export default function ProjectDetailsUI() {
       const timelinePromises = projectData.timeline.flatMap(week => 
         week.items.map(async (item) => {
           if (item.id) {
-            const response = await fetch(`${API_BASE_URL}/timeline-items/${item.id}/`, {
+            const response = await fetch(`${AI_API_BASE_URL}/timeline-items/${item.id}/`, {
               method: 'PATCH',
               headers: getAuthHeaders(),
               credentials: 'include',
@@ -1074,7 +1158,7 @@ export default function ProjectDetailsUI() {
     if (!newFeatureTitle.trim()) return;
     
     try {
-      const response = await fetch(`${API_BASE_URL}/project-features/`, {
+      const response = await fetch(`${AI_API_BASE_URL}/project-features/`, {
         method: 'POST',
         headers: getAuthHeaders(),
         credentials: 'include',
@@ -1109,37 +1193,37 @@ export default function ProjectDetailsUI() {
       let endpoint = '';
       switch (deleteItem.type) {
         case 'feature':
-          endpoint = `${API_BASE_URL}/project-features/${deleteItem.id}/`;
+          endpoint = `${AI_API_BASE_URL}/project-features/${deleteItem.id}/`;
           break;
         case 'role':
-          endpoint = `${API_BASE_URL}/project-roles/${deleteItem.id}/`;
+          endpoint = `${AI_API_BASE_URL}/project-roles/${deleteItem.id}/`;
           break;
         case 'goal':
-          endpoint = `${API_BASE_URL}/project-goals/${deleteItem.id}/`;
+          endpoint = `${AI_API_BASE_URL}/project-goals/${deleteItem.id}/`;
           break;
         case 'timeline':
-          endpoint = `${API_BASE_URL}/timeline-items/${deleteItem.id}/`;
+          endpoint = `${AI_API_BASE_URL}/timeline-items/${deleteItem.id}/`;
           break;
         case 'timeline-week':
-          endpoint = `${API_BASE_URL}/timeline-weeks/${deleteItem.id}/`;
+          endpoint = `${AI_API_BASE_URL}/timeline-weeks/${deleteItem.id}/`;
           break;
         case 'epic':
-          endpoint = `${API_BASE_URL}/epics/${deleteItem.id}/`;
+          endpoint = `${AI_API_BASE_URL}/epics/${deleteItem.id}/`;
           break;
         case 'sub-epic':
-          endpoint = `${API_BASE_URL}/sub-epics/${deleteItem.id}/`;
+          endpoint = `${AI_API_BASE_URL}/sub-epics/${deleteItem.id}/`;
           break;
         case 'user-story':
-          endpoint = `${API_BASE_URL}/user-stories/${deleteItem.id}/`;
+          endpoint = `${AI_API_BASE_URL}/user-stories/${deleteItem.id}/`;
           break;
         case 'task':
-          endpoint = `${API_BASE_URL}/story-tasks/${deleteItem.id}/`;
+          endpoint = `${AI_API_BASE_URL}/story-tasks/${deleteItem.id}/`;
           break;
         case 'member':
-          endpoint = `${API_BASE_URL}/project-members/${deleteItem.id}/`;
+          endpoint = `${AI_API_BASE_URL}/project-members/${deleteItem.id}/`;
           break;
         case 'repository':
-          endpoint = `${API_BASE_URL}/repositories/${deleteItem.id}/`;
+          endpoint = `${AI_API_BASE_URL}/repositories/${deleteItem.id}/`;
           break;
         default:
           return;
@@ -1178,7 +1262,7 @@ export default function ProjectDetailsUI() {
     if (!newRoleTitle.trim()) return;
     
     try {
-      const response = await fetch(`${API_BASE_URL}/project-roles/`, {
+      const response = await fetch(`${AI_API_BASE_URL}/project-roles/`, {
         method: 'POST',
         headers: getAuthHeaders(),
         credentials: 'include',
@@ -1206,7 +1290,7 @@ export default function ProjectDetailsUI() {
     if (!newGoalTitle.trim()) return;
     
     try {
-      const response = await fetch(`${API_BASE_URL}/project-goals/`, {
+      const response = await fetch(`${AI_API_BASE_URL}/project-goals/`, {
         method: 'POST',
         headers: getAuthHeaders(),
         credentials: 'include',
@@ -1287,7 +1371,7 @@ export default function ProjectDetailsUI() {
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/repositories/`, {
+      const response = await fetch(`${AI_API_BASE_URL}/repositories/`, {
         method: 'POST',
         headers: getAuthHeaders(),
         credentials: 'include',
@@ -1415,7 +1499,7 @@ export default function ProjectDetailsUI() {
     }
     
     try {
-      const response = await fetch(`${API_BASE_URL}/timeline-weeks/`, {
+      const response = await fetch(`${AI_API_BASE_URL}/timeline-weeks/`, {
         method: 'POST',
         headers: getAuthHeaders(),
         credentials: 'include',
@@ -1462,7 +1546,7 @@ export default function ProjectDetailsUI() {
         return;
       }
 
-      const response = await fetch(`${API_BASE_URL}/timeline-items/`, {
+      const response = await fetch(`${AI_API_BASE_URL}/timeline-items/`, {
         method: 'POST',
         headers: getAuthHeaders(),
         credentials: 'include',
@@ -1542,7 +1626,7 @@ export default function ProjectDetailsUI() {
       formData.append('file', uploadedFile);
       formData.append('project_id', projectId);
 
-      const response = await fetch(`${API_BASE_URL}/proposals/`, {
+      const response = await fetch(`${AI_API_BASE_URL}/proposals/`, {
         method: 'POST',
         headers: {
           'Authorization': `Token ${token}`,
@@ -1569,14 +1653,10 @@ export default function ProjectDetailsUI() {
   if (loading) {
     return (
       <div className={`flex min-h-screen w-full ${theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'} items-center justify-center`}>
-        {isAiOperation ? (
-          <LoadingSpinner />
-        ) : (
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className={`${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}>Loading project data...</p>
-          </div>
-        )}
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className={`${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}>Loading project data...</p>
+        </div>
       </div>
     );
   }
@@ -1603,11 +1683,31 @@ export default function ProjectDetailsUI() {
       <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
       {/* AI Operation Loading Overlay */}
-      {loading && isAiOperation && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
-          <LoadingSpinner />
-        </div>
-      )}
+      {/* AI Operation Loading Modal */}
+      <LoadingSpinner 
+        isOpen={loadingState !== null}
+        customMessages={
+          loadingState === 'regenerating-overview' 
+            ? [
+                "Regenerating project overview...",
+                "Analyzing project requirements...",
+                "Updating features and roles...",
+                "Refining project goals...",
+                "Optimizing timeline...",
+                "Almost complete..."
+              ]
+            : loadingState === 'regenerating-backlog'
+            ? [
+                "Regenerating project backlog...",
+                "Creating new epics...",
+                "Generating user stories...",
+                "Organizing tasks...",
+                "Assigning priorities...",
+                "Finalizing backlog..."
+              ]
+            : undefined
+        }
+      />
 
       <div className="flex-1 flex flex-col">
         <TopNavbar onMenuClick={() => setSidebarOpen(true)} />
@@ -1672,8 +1772,8 @@ export default function ProjectDetailsUI() {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className={`text-sm font-medium ${theme === 'dark' ? 'text-green-300' : 'text-green-600'} mb-1`}>Total Completed</p>
-                        <p className={`text-4xl font-bold ${theme === 'dark' ? 'text-green-200' : 'text-green-700'}`}>45</p>
-                        <p className={`text-xs ${theme === 'dark' ? 'text-green-400' : 'text-green-600'} mt-1`}>+8 from last week</p>
+                        <p className={`text-4xl font-bold ${theme === 'dark' ? 'text-green-200' : 'text-green-700'}`}>{taskStats.completed}</p>
+                        <p className={`text-xs ${theme === 'dark' ? 'text-green-400' : 'text-green-600'} mt-1`}>+{taskStats.completed > 0 ? Math.floor(taskStats.completed * 0.2) : 0} from last period</p>
                       </div>
                       <div className="w-14 h-14 bg-green-500 rounded-full flex items-center justify-center shadow-lg">
                         <CheckCircle className="w-7 h-7 text-white" />
@@ -1685,7 +1785,7 @@ export default function ProjectDetailsUI() {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className={`text-sm font-medium ${theme === 'dark' ? 'text-blue-300' : 'text-blue-600'} mb-1`}>In Progress</p>
-                        <p className={`text-4xl font-bold ${theme === 'dark' ? 'text-blue-200' : 'text-blue-700'}`}>10</p>
+                        <p className={`text-4xl font-bold ${theme === 'dark' ? 'text-blue-200' : 'text-blue-700'}`}>{taskStats.inProgress}</p>
                         <p className={`text-xs ${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'} mt-1`}>Active tasks</p>
                       </div>
                       <div className="w-14 h-14 bg-blue-500 rounded-full flex items-center justify-center shadow-lg">
@@ -1698,13 +1798,56 @@ export default function ProjectDetailsUI() {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className={`text-sm font-medium ${theme === 'dark' ? 'text-orange-300' : 'text-orange-600'} mb-1`}>Pending</p>
-                        <p className={`text-4xl font-bold ${theme === 'dark' ? 'text-orange-200' : 'text-orange-700'}`}>2</p>
+                        <p className={`text-4xl font-bold ${theme === 'dark' ? 'text-orange-200' : 'text-orange-700'}`}>{taskStats.pending}</p>
                         <p className={`text-xs ${theme === 'dark' ? 'text-orange-400' : 'text-orange-600'} mt-1`}>Awaiting start</p>
                       </div>
                       <div className="w-14 h-14 bg-orange-500 rounded-full flex items-center justify-center shadow-lg">
                         <Clock className="w-7 h-7 text-white" />
                       </div>
                     </div>
+                  </div>
+                </div>
+
+                {/* Analytics Configuration */}
+                <div className={`${theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} rounded-xl shadow-sm p-6 border`}>
+                  <h3 className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'} mb-4`}>Analytics Configuration</h3>
+                  <div className="flex items-center gap-6 flex-wrap">
+                    <label className="flex items-center">
+                      <input 
+                        type="checkbox" 
+                        checked={analyticsConfig.includeTasks} 
+                        onChange={(e) => setAnalyticsConfig({...analyticsConfig, includeTasks: e.target.checked})}
+                        className="mr-2"
+                      />
+                      <span className={`text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}>Tasks</span>
+                    </label>
+                    <label className="flex items-center">
+                      <input 
+                        type="checkbox" 
+                        checked={analyticsConfig.includeUserStories}
+                        onChange={(e) => setAnalyticsConfig({...analyticsConfig, includeUserStories: e.target.checked})}
+                        className="mr-2"
+                      />
+                      <span className={`text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}>User Stories</span>
+                    </label>
+                    <label className="flex items-center">
+                      <input 
+                        type="checkbox" 
+                        checked={analyticsConfig.includeSubEpics}
+                        onChange={(e) => setAnalyticsConfig({...analyticsConfig, includeSubEpics: e.target.checked})}
+                        className="mr-2"
+                      />
+                      <span className={`text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}>Sub-Epics</span>
+                    </label>
+                    <label className="flex items-center">
+                      <input 
+                        type="checkbox" 
+                        checked={analyticsConfig.includeEpics}
+                        onChange={(e) => setAnalyticsConfig({...analyticsConfig, includeEpics: e.target.checked})}
+                        className="mr-2"
+                      />
+                      <span className={`text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}>Epics</span>
+                    </label>
                   </div>
                 </div>
 
@@ -1756,12 +1899,12 @@ export default function ProjectDetailsUI() {
                         </g>
                       ))}
                       
-                      {monitoringData.weeks.map((week, i) => {
+                      {weeklyData.weeks.map((week, i) => {
                         const x = 80 + (i * 110);
                         const barWidth = 25;
-                        const completed = monitoringData.completed[i];
-                        const inProgress = monitoringData.inProgress[i];
-                        const pending = monitoringData.pending[i];
+                        const completed = weeklyData.completed[i];
+                        const inProgress = weeklyData.inProgress[i];
+                        const pending = weeklyData.pending[i];
                         const scale = 4.8;
                         
                         return (
@@ -1830,15 +1973,26 @@ export default function ProjectDetailsUI() {
                     <div className="flex space-x-2">
                       <button
                         onClick={regenerateOverview}
-                        className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors flex items-center font-medium"
+                        disabled={loadingState !== null}
+                        className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors flex items-center font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                         title="Regenerate project overview using AI"
                       >
-                        <RefreshCw className="w-4 h-4 mr-2" />
-                        Regenerate
+                        {loadingState === 'regenerating-overview' ? (
+                          <>
+                            <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2"></div>
+                            Regenerating...
+                          </>
+                        ) : (
+                          <>
+                            <RefreshCw className="w-4 h-4 mr-2" />
+                            Regenerate
+                          </>
+                        )}
                       </button>
                       <button
                         onClick={() => isEditingOverview ? updateProject() : setIsEditingOverview(true)}
-                        className="px-4 py-2 bg-white text-blue-600 rounded-lg hover:bg-blue-50 transition-colors flex items-center font-medium"
+                        disabled={loadingState !== null}
+                        className="px-4 py-2 bg-white text-blue-600 rounded-lg hover:bg-blue-50 transition-colors flex items-center font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <Edit2 className="w-4 h-4 mr-2" />
                         {isEditingOverview ? 'Save Changes' : 'Edit'}
@@ -2250,16 +2404,27 @@ export default function ProjectDetailsUI() {
                   <div className="flex items-center gap-3">
                     <button
                       onClick={regenerateBacklog}
-                      className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors flex items-center shadow-sm"
+                      disabled={loadingState !== null}
+                      className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors flex items-center shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                       title="Regenerate backlog using AI"
                     >
-                      <RefreshCw className="w-4 h-4 mr-2" />
-                      Regenerate
+                      {loadingState === 'regenerating-backlog' ? (
+                        <>
+                          <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2"></div>
+                          Regenerating...
+                        </>
+                      ) : (
+                        <>
+                          <RefreshCw className="w-4 h-4 mr-2" />
+                          Regenerate
+                        </>
+                      )}
                     </button>
                     {!isEditingBacklog ? (
                   <button
                         onClick={() => setIsEditingBacklog(true)}
-                        className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors flex items-center shadow-sm"
+                        disabled={loadingState !== null}
+                        className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors flex items-center shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <Edit className="w-4 h-4 mr-2" />
                         Edit
@@ -3606,6 +3771,50 @@ export default function ProjectDetailsUI() {
           onClose={() => setShowProposalViewer(false)}
           proposalData={currentProposal}
         />
+      )}
+
+      {/* Confirmation Modal */}
+      {showConfirmModal && confirmModalData && (
+        <div className={`fixed inset-0 flex items-center justify-center z-50 ${
+          theme === 'dark' ? 'bg-black bg-opacity-70' : 'bg-black bg-opacity-50'
+        }`}>
+          <div className={`rounded-xl p-6 w-full max-w-md mx-4 shadow-xl ${
+            theme === 'dark' ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'
+          }`}>
+            <h3 className={`text-lg font-semibold mb-4 ${
+              theme === 'dark' ? 'text-white' : 'text-gray-900'
+            }`}>
+              {confirmModalData.title}
+            </h3>
+            <p className={`mb-6 whitespace-pre-line ${
+              theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+            }`}>
+              {confirmModalData.message}
+            </p>
+            <div className="flex space-x-3">
+              <button
+                onClick={handleCancelConfirm}
+                className={`flex-1 px-4 py-2 rounded-lg transition-colors ${
+                  theme === 'dark' 
+                    ? 'bg-gray-600 text-white hover:bg-gray-700 border border-gray-600' 
+                    : 'bg-gray-500 text-white hover:bg-gray-600 border border-gray-400'
+                }`}
+              >
+                {confirmModalData.cancelText || 'Cancel'}
+              </button>
+              <button
+                onClick={handleConfirm}
+                className={`flex-1 px-4 py-2 rounded-lg transition-colors ${
+                  theme === 'dark' 
+                    ? 'bg-blue-600 text-white hover:bg-blue-700 border border-blue-600' 
+                    : 'bg-blue-600 text-white hover:bg-blue-700 border border-blue-600'
+                }`}
+              >
+                {confirmModalData.confirmText || 'Confirm'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

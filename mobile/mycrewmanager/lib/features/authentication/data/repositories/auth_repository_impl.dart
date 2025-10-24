@@ -102,4 +102,25 @@ class AuthRepositoryImpl implements AuthRepository {
       return left(Failure(e.message));
     }
   }
+
+  @override
+  Future<Either<Failure, void>> logout() async {
+    logger.d("🌐 Making API call to logout endpoint");
+    try {
+      if(!await (connectionChecker.isConnected)) {
+        logger.d("❌ No internet connection");
+        return left(Failure(Constants.noConnectionErrorMessage));
+      }
+      logger.d("✅ Internet connection available, making logout API call...");
+      await remoteDataSource.logout();
+      logger.d("✅ Logout API call successful");
+      return right(null);
+    } on DioException catch(e) {
+      logger.d("❌ Logout DioException: ${e.message} - Status: ${e.response?.statusCode}");
+      return left(Failure("Logout failed. Try Again!"));
+    } on ServerException catch (e) {
+      logger.d("❌ Logout ServerException: ${e.message}");
+      return left(Failure(e.message));
+    }
+  }
 }

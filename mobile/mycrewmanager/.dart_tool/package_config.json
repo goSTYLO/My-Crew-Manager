@@ -78,6 +78,7 @@
       "rootUri": "file:///C:/Users/Ralph%20Mamaril/AppData/Local/Pub/Cache/hosted/pub.dev/build_daemon-4.0.4",
       "packageUri": "lib/",
       "languageVersion": "3.6"
+      "languageVersion": "3.6"
     },
     {
       "name": "build_runner",
@@ -132,11 +133,13 @@
       "rootUri": "file:///C:/Users/Ralph%20Mamaril/AppData/Local/Pub/Cache/hosted/pub.dev/camera_avfoundation-0.9.22",
       "packageUri": "lib/",
       "languageVersion": "3.9"
+      "languageVersion": "3.9"
     },
     {
       "name": "camera_platform_interface",
       "rootUri": "file:///C:/Users/Ralph%20Mamaril/AppData/Local/Pub/Cache/hosted/pub.dev/camera_platform_interface-2.11.0",
       "packageUri": "lib/",
+      "languageVersion": "3.7"
       "languageVersion": "3.7"
     },
     {
@@ -840,6 +843,7 @@
       "rootUri": "file:///C:/Users/Ralph%20Mamaril/AppData/Local/Pub/Cache/hosted/pub.dev/shared_preferences_android-2.4.14",
       "packageUri": "lib/",
       "languageVersion": "3.9"
+      "languageVersion": "3.9"
     },
     {
       "name": "shared_preferences_foundation",
@@ -1050,6 +1054,7 @@
       "rootUri": "file:///C:/Users/Ralph%20Mamaril/AppData/Local/Pub/Cache/hosted/pub.dev/url_launcher_ios-6.3.4",
       "packageUri": "lib/",
       "languageVersion": "3.7"
+      "languageVersion": "3.7"
     },
     {
       "name": "url_launcher_linux",
@@ -1061,6 +1066,7 @@
       "name": "url_launcher_macos",
       "rootUri": "file:///C:/Users/Ralph%20Mamaril/AppData/Local/Pub/Cache/hosted/pub.dev/url_launcher_macos-3.2.3",
       "packageUri": "lib/",
+      "languageVersion": "3.7"
       "languageVersion": "3.7"
     },
     {

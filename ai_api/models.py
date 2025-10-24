@@ -203,9 +203,11 @@ class ProjectInvitation(models.Model):
         if self.invitee == self.invited_by:
             raise ValidationError("Cannot invite yourself to a project")
         
-        # Check if user is already a member
-        if ProjectMember.objects.filter(project=self.project, user=self.invitee).exists():
-            raise ValidationError("User is already a member of this project")
+        # Only check for existing membership if we're not accepting the invitation
+        # When accepting, we're creating the membership, so this check would fail
+        if self.status != 'accepted':
+            if ProjectMember.objects.filter(project=self.project, user=self.invitee).exists():
+                raise ValidationError("User is already a member of this project")
         
         # Check for existing pending invitation
         if self.status == 'pending':

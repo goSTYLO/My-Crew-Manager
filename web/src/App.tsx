@@ -4,13 +4,11 @@ import { ToastProvider } from './components/ToastContext';
 import SignIn from './view_pages/manager/signIn';
 import SignUp from './view_pages/manager/signUp'; 
 
-import MainFrame from './view_pages/manager/mainFrame'; 
 import MainProjects from './view_pages/manager/projects_main'; 
 import Projects from './view_pages/manager/monitorProjects'; 
 import CreateTask from './view_pages/manager/createTask'; 
 import Performance from './view_pages/manager/performance'; 
 import Settings from './view_pages/manager/settings';
-import WorkLogs from './view_pages/manager/workLogs';
 import AccountSettings from './view_pages/manager/settings_account'; 
 import Notifications from './view_pages/manager/settings_notification'; 
 import GenerateProject from './view_pages/manager/generateProject'; 
@@ -48,12 +46,11 @@ const App: React.FC = () => {
         <Route path="/landing-page" element={<LandingPage/> }/>
         
         {/* Fallback: redirect unknown paths to root */}
-        <Route path="/main" element={<MainFrame />} />
+        <Route path="/main" element={<Navigate to="/main-projects" replace />} />
         <Route path="/signUp" element={<SignUp />} />
         <Route path="/create" element={<CreateTask />} />
         <Route path="/main-projects" element={<MainProjects />} />
         <Route path="/cprojects" element={<Projects />} />
-        <Route path="/work-logs" element={<WorkLogs/>}/>
         <Route path="/leaderboard" element={<Performance />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/account-settings" element={<AccountSettings />} />

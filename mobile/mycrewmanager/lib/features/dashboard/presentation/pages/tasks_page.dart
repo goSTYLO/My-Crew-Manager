@@ -13,8 +13,12 @@ import 'package:mycrewmanager/features/project/domain/entities/project.dart';
 import 'package:mycrewmanager/features/project/domain/entities/task.dart';
 import 'package:mycrewmanager/features/project/domain/usecases/get_project_tasks.dart';
 import 'package:mycrewmanager/features/dashboard/widgets/skeleton_loader.dart';
+import 'package:mycrewmanager/features/notification/presentation/bloc/notification_bloc.dart';
+import 'package:mycrewmanager/features/notification/presentation/bloc/notification_event.dart';
+import 'package:mycrewmanager/features/notification/presentation/bloc/notification_state.dart';
 import 'package:mycrewmanager/init_dependencies.dart';
 import 'package:mycrewmanager/core/utils/role_formatter.dart';
+import 'package:mycrewmanager/core/constants/constants.dart';
 
 class TasksPage extends StatefulWidget {
   final Project? project;
@@ -44,6 +48,8 @@ class _TasksPageState extends State<TasksPage> with SingleTickerProviderStateMix
     super.initState();
     _tabController = TabController(length: 3, vsync: this); // Changed from 4 to 3 tabs
     _loadTasks();
+    // Load unread count when the page opens
+    context.read<NotificationBloc>().add(const LoadUnreadCount());
   }
 
   Future<void> _loadTasks() async {
@@ -276,11 +282,13 @@ class _TasksPageState extends State<TasksPage> with SingleTickerProviderStateMix
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const CircleAvatar(
+                      CircleAvatar(
                         radius: 28,
-                        backgroundImage: AssetImage(
-                          'lib/core/assets/images/app_logo.png',
-                        ),
+                        backgroundImage: (state is AuthSuccess && state.user.profilePicture != null)
+                            ? NetworkImage('${Constants.baseUrl.replaceAll('/api/', '')}${state.user.profilePicture!}')
+                            : const AssetImage(
+                                'lib/core/assets/images/app_logo.png',
+                              ) as ImageProvider,
                       ),
                       const SizedBox(height: 10),
                       Text(
@@ -376,7 +384,7 @@ class _TasksPageState extends State<TasksPage> with SingleTickerProviderStateMix
                           ),
                           onPressed: () {
                             Navigator.pop(context); 
-                            Navigator.pushReplacement(context, LoginPage.route());
+                            context.read<AuthBloc>().add(AuthLogout());
                           },
                           child: const Text('Logout'),
                         ),
@@ -398,7 +406,17 @@ class _TasksPageState extends State<TasksPage> with SingleTickerProviderStateMix
   @override
   Widget build(BuildContext context) {
     final tabLabels = ["All", "To Do", "Completed"]; // Removed "In Progress" tab
-    return BlocBuilder<AuthBloc, AuthState>(
+    return BlocListener<AuthBloc, AuthState>(
+      listener: (context, state) {
+        if (state is AuthLoggedOut) {
+          Navigator.pushAndRemoveUntil(
+            context,
+            LoginPage.route(),
+            (route) => false,
+          );
+        }
+      },
+      child: BlocBuilder<AuthBloc, AuthState>(
       builder: (context, authState) {
         String? currentUserEmail;
         String? currentUserName;
@@ -455,7 +473,51 @@ class _TasksPageState extends State<TasksPage> with SingleTickerProviderStateMix
               ),
             )
           else
-            IconButton(
+            BlocBuilder<NotificationBloc, NotificationState>(
+            builder: (context, state) {
+              int unreadCount = 0;
+              if (state is UnreadCountLoaded) {
+                unreadCount = state.unreadCount;
+              }
+              
+              return Stack(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.notifications_outlined, color: Colors.black87),
+                    onPressed: () {
+                      Navigator.push(context, NotificationsPage.route());
+                    },
+                  ),
+                  if (unreadCount > 0)
+                    Positioned(
+                      right: 8,
+                      top: 8,
+                      child: Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: BoxDecoration(
+                          color: Colors.red,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        constraints: const BoxConstraints(
+                          minWidth: 16,
+                          minHeight: 16,
+                        ),
+                        child: Text(
+                          unreadCount > 99 ? '99+' : unreadCount.toString(),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
+          IconButton(
               icon: const Icon(Icons.search, color: Colors.black87),
               onPressed: () {
                 setState(() {
@@ -581,8 +643,9 @@ class _TasksPageState extends State<TasksPage> with SingleTickerProviderStateMix
             );
           },
         ),
-    );
+        );
       },
+      ),
     );
   }
 }

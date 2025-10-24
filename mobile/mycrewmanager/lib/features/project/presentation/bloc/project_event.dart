@@ -9,6 +9,8 @@ abstract class ProjectEvent extends Equatable {
 
 class ProjectGetProjects extends ProjectEvent {}
 
+class ProjectGetMyProjects extends ProjectEvent {}
+
 class ProjectCreateProject extends ProjectEvent {
   final String title;
   final String summary;

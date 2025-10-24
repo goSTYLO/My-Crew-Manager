@@ -3,6 +3,7 @@ import {Menu,Search,Bell,MessageSquare,ChevronDown,ChevronUp,User,LogOut,Sun, Mo
 import { useNavigate } from "react-router-dom";
 import logo from "../assets/logo.png";
 import { useTheme } from "./themeContext";
+import { API_BASE_URL } from "../config/api";
 
 interface TopNavbarProps {
   onMenuClick: () => void;
@@ -55,7 +56,7 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
     try {
       const token = localStorage.getItem("token");
 
-      await fetch("http://localhost:8000/api/user/logout/", {
+      await fetch(`${API_BASE_URL}/api/user/logout/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -106,7 +107,7 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
       }
   
       try {
-        const response = await fetch("http://localhost:8000/api/user/me/", {
+        const response = await fetch(`${API_BASE_URL}/api/user/me/`, {
           headers: {
             Authorization: `Token ${token}`,
             "Content-Type": "application/json",
@@ -123,7 +124,7 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
             profile_picture: data.profile_picture
               ? data.profile_picture.startsWith("http")
                 ? data.profile_picture
-                : `http://localhost:8000${data.profile_picture}`
+                : `${API_BASE_URL}${data.profile_picture}`
               : null,
           };
   
@@ -175,7 +176,7 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
 
   return (
     <header
-      className={`fixed top-0 left-0 w-full shadow-sm border-b px-4 lg:px-6 py-4 ${
+      className={`fixed top-0 left-0 w-full shadow-sm border-b px-4 lg:px-6 py-4 z-50 ${
         theme === "dark"
           ? "bg-gray-800 border-gray-700"
           : "bg-white border-gray-200"

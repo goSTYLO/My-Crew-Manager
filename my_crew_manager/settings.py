@@ -13,9 +13,14 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 from decouple import config
+import os
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Load root .env
+load_dotenv(os.path.join(BASE_DIR, '.env'))
 
 
 # Quick-start development settings - unsuitable for production
@@ -27,15 +32,9 @@ SECRET_KEY = config("SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config("DEBUG", default=False, cast=bool)
 
-ALLOWED_HOSTS = [
-    "127.0.0.1",
-
-    "localhost",
-
-    "10.0.2.2",          # Android Emulator**
-
-    "192.168.1.100",  
-]
+# Update ALLOWED_HOSTS section
+DEVICE_IP = os.getenv('DEVICE_IP', 'localhost')
+ALLOWED_HOSTS = ['*', DEVICE_IP, 'localhost', '127.0.0.1', '10.0.2.2']
 
 
 # Application definition

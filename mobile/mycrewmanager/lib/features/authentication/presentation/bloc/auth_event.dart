@@ -36,3 +36,6 @@ final class UpdateUserRole extends AuthEvent {
 
   UpdateUserRole(this.role);
 }
+final class AuthLogout extends AuthEvent {
+
+}
