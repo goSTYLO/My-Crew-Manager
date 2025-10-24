@@ -124,7 +124,14 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
         setNotifications(prev => [notification, ...prev]);
         
         // Show toast for important notifications
-        if (['task_assigned', 'project_invitation', 'member_joined'].includes(notification.notification_type)) {
+        const importantTypes = [
+          'task_assigned', 
+          'task_completed',
+          'project_invitation', 
+          'member_joined'
+        ];
+        
+        if (importantTypes.includes(notification.notification_type)) {
           showRealtimeUpdate(
             notification.title,
             notification.message,

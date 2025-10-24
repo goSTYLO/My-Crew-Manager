@@ -796,7 +796,24 @@ For support and questions:
 
 ## 🔄 Recent Updates
 
-### Real-time WebSocket Integration (Latest)
+### Notification System Expansion (Latest)
+- ✅ **Enhanced Notification Coverage**: Implemented 5 missing notification types for comprehensive user engagement
+  - **Task Notifications**: `task_assigned`, `task_updated`, `task_completed` with smart recipient logic (assignee + creator)
+  - **Member Notifications**: `member_joined`, `member_left` for team awareness across all project members
+  - **Smart Recipient Logic**: Uses `set()` to avoid duplicate notifications and excludes actors from receiving their own notifications
+  - **Action URLs**: All notifications link to relevant project details page for quick navigation
+- ✅ **Backend Integration**: Enhanced ViewSets with notification creation logic
+  - **StoryTaskViewSet**: Creates task notifications on creation, assignment changes, and completion
+  - **ProjectInvitationViewSet**: Creates member_joined notifications when invitations are accepted
+  - **ProjectMemberViewSet**: Creates member_left notifications when members are removed
+  - **Persistent + Real-time**: Notifications create database records AND show real-time toasts
+- ✅ **Frontend Enhancement**: Improved notification handling and toast messages
+  - **TopNavbar**: Enhanced to show toasts for important notification types (task_assigned, task_completed, member_joined)
+  - **ProjectDetailsUI**: More specific toast messages for task completion and member changes
+  - **Toast Priority**: Only high-priority events show toast notifications for better UX
+- ⚠️ **Testing Required**: This notification system expansion has NOT been tested yet and requires comprehensive testing before production use
+
+### Real-time WebSocket Integration
 - ✅ **Comprehensive Real-time Collaboration System**: Implemented full WebSocket-based real-time updates for instant collaboration
   - **Backend Broadcasting Service**: Created `BroadcastService` class for sending real-time events to project members
   - **Extended NotificationConsumer**: Added event handlers for all project activities (project, epic, task, member, repository updates)

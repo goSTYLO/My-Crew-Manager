@@ -629,13 +629,27 @@ export default function ProjectDetailsUI() {
       },
       onTaskUpdate: (data) => {
         console.log('📡 Real-time task update received:', data);
-        showRealtimeUpdate('Task Updated', `Task ${data.action}`, data.actor);
+        
+        // More specific toast messages based on action
+        let message = `Task ${data.action}`;
+        if (data.action === 'updated' && data.data && data.data.status === 'done') {
+          message = 'Task completed';
+        } else if (data.action === 'updated' && data.data && data.data.assignee) {
+          message = 'Task assigned';
+        }
+        
+        showRealtimeUpdate('Task Updated', message, data.actor);
         // Refresh backlog data
         fetchBacklog();
       },
       onMemberUpdate: (data) => {
         console.log('📡 Real-time member update received:', data);
-        showRealtimeUpdate('Team Updated', `Member ${data.action}`, data.actor);
+        
+        const message = data.action === 'joined' 
+          ? `${data.actor.name} joined the project`
+          : `${data.actor.name} left the project`;
+        
+        showRealtimeUpdate('Team Updated', message, data.actor);
         // Refresh members data
         fetchMembers();
       },

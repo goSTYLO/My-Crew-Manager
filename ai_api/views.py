@@ -804,11 +804,90 @@ class StoryTaskViewSet(ModelViewSet):
 
     def perform_create(self, serializer):
         task = serializer.save()
+        
+        # Create notification if task has an assignee
+        if task.assignee:
+            project = task.user_story.sub_epic.epic.project
+            
+            # Determine recipients (assignee + creator, excluding duplicates and actor)
+            recipients = set()
+            if task.assignee.user:
+                recipients.add(task.assignee.user)
+            if project.created_by != self.request.user:
+                recipients.add(project.created_by)
+            recipients.discard(self.request.user)  # Don't notify the actor
+            
+            # Create task_assigned notification for each recipient
+            from .services.notification_service import NotificationService
+            for recipient in recipients:
+                NotificationService.create_notification(
+                    recipient=recipient,
+                    notification_type='task_assigned',
+                    title=f'Task Assigned: {task.title}',
+                    message=f'{self.request.user.name} assigned you to "{task.title}"',
+                    content_object=task,
+                    action_url=f'/project-details/{project.id}',
+                    actor=self.request.user
+                )
+        
         # Broadcast task creation
         BroadcastService.broadcast_task_update(task, 'created', self.request.user)
 
     def perform_update(self, serializer):
+        old_instance = self.get_object()
         task = serializer.save()
+        project = task.user_story.sub_epic.epic.project
+        
+        # Determine recipients (assignee + creator, excluding duplicates and actor)
+        recipients = set()
+        if task.assignee and task.assignee.user:
+            recipients.add(task.assignee.user)
+        if project.created_by != self.request.user:
+            recipients.add(project.created_by)
+        recipients.discard(self.request.user)  # Don't notify the actor
+        
+        # Create notifications based on what changed
+        from .services.notification_service import NotificationService
+        
+        # Check for assignment change
+        if old_instance.assignee != task.assignee and task.assignee:
+            for recipient in recipients:
+                NotificationService.create_notification(
+                    recipient=recipient,
+                    notification_type='task_assigned',
+                    title=f'Task Assigned: {task.title}',
+                    message=f'{self.request.user.name} assigned you to "{task.title}"',
+                    content_object=task,
+                    action_url=f'/project-details/{project.id}',
+                    actor=self.request.user
+                )
+        
+        # Check for completion
+        elif old_instance.status != 'done' and task.status == 'done':
+            for recipient in recipients:
+                NotificationService.create_notification(
+                    recipient=recipient,
+                    notification_type='task_completed',
+                    title=f'Task Completed: {task.title}',
+                    message=f'{self.request.user.name} completed "{task.title}"',
+                    content_object=task,
+                    action_url=f'/project-details/{project.id}',
+                    actor=self.request.user
+                )
+        
+        # Other updates (if any field changed)
+        elif old_instance.title != task.title or old_instance.description != task.description or old_instance.status != task.status:
+            for recipient in recipients:
+                NotificationService.create_notification(
+                    recipient=recipient,
+                    notification_type='task_updated',
+                    title=f'Task Updated: {task.title}',
+                    message=f'{self.request.user.name} updated "{task.title}"',
+                    content_object=task,
+                    action_url=f'/project-details/{project.id}',
+                    actor=self.request.user
+                )
+        
         # Broadcast task update
         BroadcastService.broadcast_task_update(task, 'updated', self.request.user)
 
@@ -866,6 +945,23 @@ class ProjectMemberViewSet(ModelViewSet):
             
             print(f"Removed member {removed_user.name} from project {project.title}")
             print(f"Deleted {deleted_invitations[0]} related invitations")
+            
+            # Notify all remaining project members that someone left
+            remaining_members = ProjectMember.objects.filter(
+                project=project
+            ).exclude(id=member.id)
+            
+            from .services.notification_service import NotificationService
+            for remaining_member in remaining_members:
+                NotificationService.create_notification(
+                    recipient=remaining_member.user,
+                    notification_type='member_left',
+                    title=f'Member Left: {removed_user.name}',
+                    message=f'{removed_user.name} was removed from {project.title}',
+                    content_object=project,
+                    action_url=f'/project-details/{project.id}',
+                    actor=request.user
+                )
             
             # Broadcast member removal
             BroadcastService.broadcast_member_update(member, 'removed', request.user)
@@ -1043,6 +1139,23 @@ class ProjectInvitationViewSet(ModelViewSet):
                 # Broadcast member joined if membership was created
                 if created:
                     BroadcastService.broadcast_member_update(project_member, 'joined', request.user)
+                    
+                    # Notify all existing project members that someone joined
+                    existing_members = ProjectMember.objects.filter(
+                        project=invitation.project
+                    ).exclude(user=invitation.invitee)
+                    
+                    from .services.notification_service import NotificationService
+                    for member in existing_members:
+                        NotificationService.create_notification(
+                            recipient=member.user,
+                            notification_type='member_joined',
+                            title=f'New Member: {invitation.invitee.name}',
+                            message=f'{invitation.invitee.name} joined {invitation.project.title}',
+                            content_object=invitation.project,
+                            action_url=f'/project-details/{invitation.project.id}',
+                            actor=invitation.invitee
+                        )
             
             return Response({
                 "message": "Invitation accepted successfully",
