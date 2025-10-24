@@ -139,8 +139,8 @@ class LoginController {
 
       // Determine redirect path
       if (isProjectManager) {
-        redirectPath = "/main";
-        console.log("   ✅✅✅ MATCHED: Project Manager → /main");
+        redirectPath = "/main-projects";
+        console.log("   ✅✅✅ MATCHED: Project Manager → /main-projects");
       } else if (isDeveloper) {
         redirectPath = "/user";
         console.log("   ✅ MATCHED: Developer → /user");

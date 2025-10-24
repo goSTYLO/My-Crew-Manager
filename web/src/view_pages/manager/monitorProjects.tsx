@@ -475,7 +475,7 @@ const Projects = () => {
                       <div className="flex items-center gap-2">
                         <h2
                           className={`text-lg font-semibold cursor-pointer hover:text-blue-500 ${theme === "dark" ? "text-white" : "text-gray-800"}`}
-                          onClick={() => navigate(`/project-task/${project.project_id}`)}
+                          onClick={() => navigate(`/project-details/${project.project_id}`)}
                           title="Click to view project details"
                         >
                           {project.name}
