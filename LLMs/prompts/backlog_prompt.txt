@@ -2,6 +2,7 @@ You are an AI assistant tasked with generating a structured backlog for a softwa
 
 Instructions:
 - Treat each high-level goal from the project as a distinct Epic.
+- Generate a MINIMUM of 4 epics to ensure comprehensive project coverage.
 - For each Epic, generate exactly 1 Sub-Epic.
 - For each Sub-Epic, generate exactly 1 User Story.
 - For each User Story, generate only 2 granular Tasks.
@@ -33,6 +34,8 @@ Context:
 
 Additional Guidance:
 - Use the goal titles as Epic anchors. Each Epic must clearly reflect the intent of its corresponding goal.
-- If a goal includes a role (e.g., "Backend Developer"), ensure the tasks reflect that role’s responsibilities.
-- Use the features list to guide scope and avoid generating tasks outside the platform’s intended functionality.
+- If a goal includes a role (e.g., "Backend Developer"), ensure the tasks reflect that role's responsibilities.
+- Use the features list to guide scope and avoid generating tasks outside the platform's intended functionality.
 - Do not invent goals or Epics beyond those provided.
+- If fewer than 4 goals are provided, create additional epics based on common software development areas (e.g., "User Interface", "Data Management", "Security", "Testing", "Deployment").
+- Ensure each epic represents a distinct, major functional area of the project.

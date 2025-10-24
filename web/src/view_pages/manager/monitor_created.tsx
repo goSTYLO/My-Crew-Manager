@@ -2458,15 +2458,23 @@ export default function ProjectDetailsUI() {
                 </div>
 
                 {(backlog.epics || []).map((epic) => (
-                  <div key={epic.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                    <div className="bg-gradient-to-r from-red-50 to-pink-50 px-6 py-4 border-b border-red-100">
+                  <div key={epic.id} className={`rounded-xl shadow-sm border overflow-hidden ${
+                    theme === "dark" ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"
+                  }`}>
+                    <div className={`px-6 py-4 border-b ${
+                      theme === "dark" 
+                        ? "bg-gradient-to-r from-red-900/20 to-pink-900/20 border-red-800/30" 
+                        : "bg-gradient-to-r from-red-50 to-pink-50 border-red-100"
+                    }`}>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center flex-1">
                           <span className="px-4 py-1.5 bg-red-500 text-white rounded-full text-sm font-semibold mr-4 shadow-sm">
                             Epic
                           </span>
                           {(epic as any).is_complete && (
-                            <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium mr-2">
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium mr-2 ${
+                              theme === "dark" ? "bg-green-900/30 text-green-300" : "bg-green-100 text-green-800"
+                            }`}>
                               ✅ Complete
                             </span>
                           )}
@@ -2474,7 +2482,11 @@ export default function ProjectDetailsUI() {
                           <input
                             type="text"
                               value={epic.title}
-                            className="text-xl font-bold text-gray-900 bg-transparent border-b-2 border-transparent hover:border-red-300 focus:border-red-500 focus:outline-none transition-colors flex-1"
+                            className={`text-xl font-bold bg-transparent border-b-2 border-transparent focus:outline-none transition-colors flex-1 ${
+                              theme === "dark" 
+                                ? "text-white hover:border-red-400 focus:border-red-400" 
+                                : "text-gray-900 hover:border-red-300 focus:border-red-500"
+                            }`}
                             onChange={(e) => {
                                 const updatedEpics = backlog.epics.map(ep => 
                                   ep.id === epic.id ? { ...ep, title: e.target.value } : ep
@@ -2483,13 +2495,19 @@ export default function ProjectDetailsUI() {
                             }}
                           />
                           ) : (
-                            <span className="text-xl font-bold text-gray-900">{epic.title}</span>
+                            <span className={`text-xl font-bold ${
+                              theme === "dark" ? "text-white" : "text-gray-900"
+                            }`}>{epic.title}</span>
                           )}
                         </div>
                         {isEditingBacklog && (
                         <button 
                             onClick={() => handleDeleteClick('epic', epic.id, epic.title)}
-                          className="text-red-500 hover:text-red-700 hover:bg-red-100 p-2 rounded-lg transition-colors"
+                          className={`p-2 rounded-lg transition-colors ${
+                            theme === "dark" 
+                              ? "text-red-400 hover:text-red-300 hover:bg-red-900/20" 
+                              : "text-red-500 hover:text-red-700 hover:bg-red-100"
+                          }`}
                         >
                           <Trash2 className="w-5 h-5" />
                         </button>
@@ -2501,14 +2519,18 @@ export default function ProjectDetailsUI() {
                       {/* Sub-Epics */}
                       <div className="space-y-6">
                         {(epic.subEpics || []).map((subEpic) => (
-                          <div key={subEpic.id} className="border-l-4 border-orange-400 pl-6 py-2">
+                          <div key={subEpic.id} className={`border-l-4 pl-6 py-2 ${
+                            theme === "dark" ? "border-orange-500" : "border-orange-400"
+                          }`}>
                             <div className="flex items-center justify-between mb-4">
                               <div className="flex items-center flex-1">
                                 <span className="px-3 py-1.5 bg-orange-500 text-white rounded-full text-sm font-semibold mr-3 shadow-sm">
                                   Sub-Epic
                                 </span>
                                 {(subEpic as any).is_complete && (
-                                  <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium mr-2">
+                                  <span className={`px-2 py-1 rounded-full text-xs font-medium mr-2 ${
+                                    theme === "dark" ? "bg-green-900/30 text-green-300" : "bg-green-100 text-green-800"
+                                  }`}>
                                     ✅ Complete
                                   </span>
                                 )}
@@ -2530,16 +2552,26 @@ export default function ProjectDetailsUI() {
                                     });
                                     setBacklog({ ...backlog, epics: updatedEpics });
                                   }}
-                                  className="text-lg font-semibold text-gray-900 bg-transparent border-b-2 border-transparent hover:border-orange-300 focus:border-orange-500 focus:outline-none transition-colors flex-1"
+                                  className={`text-lg font-semibold bg-transparent border-b-2 border-transparent focus:outline-none transition-colors flex-1 ${
+                                    theme === "dark" 
+                                      ? "text-white hover:border-orange-400 focus:border-orange-400" 
+                                      : "text-gray-900 hover:border-orange-300 focus:border-orange-500"
+                                  }`}
                                 />
                                 ) : (
-                                  <span className="text-lg font-semibold text-gray-900">{subEpic.title}</span>
+                                  <span className={`text-lg font-semibold ${
+                                    theme === "dark" ? "text-white" : "text-gray-900"
+                                  }`}>{subEpic.title}</span>
                                 )}
                               </div>
                               {isEditingBacklog && (
                               <button 
                                   onClick={() => handleDeleteClick('sub-epic', subEpic.id, subEpic.title)}
-                                className="text-red-500 hover:text-red-700 hover:bg-red-50 p-2 rounded-lg transition-colors"
+                                className={`p-2 rounded-lg transition-colors ${
+                                  theme === "dark" 
+                                    ? "text-red-400 hover:text-red-300 hover:bg-red-900/20" 
+                                    : "text-red-500 hover:text-red-700 hover:bg-red-50"
+                                }`}
                               >
                                 <Trash2 className="w-4 h-4" />
                               </button>
@@ -2549,14 +2581,18 @@ export default function ProjectDetailsUI() {
                             {/* User Stories */}
                             <div className="space-y-4 ml-6">
                               {(subEpic.userStories || []).map((story) => (
-                                <div key={story.id} className="border-l-4 border-blue-400 pl-6 py-2">
+                                <div key={story.id} className={`border-l-4 pl-6 py-2 ${
+                                  theme === "dark" ? "border-blue-500" : "border-blue-400"
+                                }`}>
                                   <div className="flex items-center justify-between mb-3">
                                     <div className="flex items-center flex-1">
                                       <span className="px-3 py-1.5 bg-blue-500 text-white rounded-full text-sm font-semibold mr-3 shadow-sm">
                                         User Story
                                       </span>
                                       {(story as any).is_complete && (
-                                        <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium mr-2">
+                                        <span className={`px-2 py-1 rounded-full text-xs font-medium mr-2 ${
+                                          theme === "dark" ? "bg-green-900/30 text-green-300" : "bg-green-100 text-green-800"
+                                        }`}>
                                           ✅ Complete
                                         </span>
                                       )}
@@ -2586,16 +2622,26 @@ export default function ProjectDetailsUI() {
                                           });
                                           setBacklog({ ...backlog, epics: updatedEpics });
                                         }}
-                                        className="flex-1 text-gray-900 bg-transparent border-b-2 border-transparent hover:border-blue-300 focus:border-blue-500 focus:outline-none transition-colors"
+                                        className={`flex-1 bg-transparent border-b-2 border-transparent focus:outline-none transition-colors ${
+                                          theme === "dark" 
+                                            ? "text-white hover:border-blue-400 focus:border-blue-400" 
+                                            : "text-gray-900 hover:border-blue-300 focus:border-blue-500"
+                                        }`}
                                       />
                                       ) : (
-                                        <span className="flex-1 text-gray-900">{story.title}</span>
+                                        <span className={`flex-1 ${
+                                          theme === "dark" ? "text-white" : "text-gray-900"
+                                        }`}>{story.title}</span>
                                       )}
                                     </div>
                                     {isEditingBacklog && (
                                     <button 
                                         onClick={() => handleDeleteClick('user-story', story.id, story.title)}
-                                      className="text-red-500 hover:text-red-700 hover:bg-red-50 p-2 rounded-lg transition-colors"
+                                      className={`p-2 rounded-lg transition-colors ${
+                                        theme === "dark" 
+                                          ? "text-red-400 hover:text-red-300 hover:bg-red-900/20" 
+                                          : "text-red-500 hover:text-red-700 hover:bg-red-50"
+                                      }`}
                                     >
                                       <Trash2 className="w-4 h-4" />
                                     </button>
@@ -2605,7 +2651,11 @@ export default function ProjectDetailsUI() {
                                   {/* Tasks */}
                                   <div className="space-y-2 ml-6">
                                     {(story.tasks || []).map((task) => (
-                                      <div key={task.id} className="p-3 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-200 hover:shadow-md transition-shadow">
+                                      <div key={task.id} className={`p-3 rounded-lg border hover:shadow-md transition-shadow ${
+                                        theme === "dark" 
+                                          ? "bg-gradient-to-r from-green-900/20 to-emerald-900/20 border-green-800/30" 
+                                          : "bg-gradient-to-r from-green-50 to-emerald-50 border-green-200"
+                                      }`}>
                                         <div className="flex items-center justify-between mb-2">
                                           <div className="flex items-center flex-1">
                                             <span className="px-2.5 py-1 bg-green-600 text-white rounded-md text-xs font-semibold mr-3 shadow-sm">
@@ -2645,16 +2695,26 @@ export default function ProjectDetailsUI() {
                                                 });
                                                 setBacklog({ ...backlog, epics: updatedEpics });
                                               }}
-                                              className="bg-transparent text-gray-700 border-b-2 border-transparent hover:border-green-300 focus:border-green-500 focus:outline-none flex-1 transition-colors"
+                                              className={`bg-transparent border-b-2 border-transparent focus:outline-none flex-1 transition-colors ${
+                                                theme === "dark" 
+                                                  ? "text-gray-300 hover:border-green-400 focus:border-green-400" 
+                                                  : "text-gray-700 hover:border-green-300 focus:border-green-500"
+                                              }`}
                                             />
                                             ) : (
-                                              <span className="flex-1 text-gray-700">{task.title}</span>
+                                              <span className={`flex-1 ${
+                                                theme === "dark" ? "text-gray-300" : "text-gray-700"
+                                              }`}>{task.title}</span>
                                             )}
                                           </div>
                                           {isEditingBacklog && (
                                           <button 
                                               onClick={() => handleDeleteClick('task', task.id, task.title)}
-                                            className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1.5 rounded-lg transition-colors"
+                                            className={`p-1.5 rounded-lg transition-colors ${
+                                              theme === "dark" 
+                                                ? "text-red-400 hover:text-red-300 hover:bg-red-900/20" 
+                                                : "text-red-500 hover:text-red-700 hover:bg-red-50"
+                                            }`}
                                           >
                                             <Trash2 className="w-4 h-4" />
                                           </button>
@@ -2667,15 +2727,19 @@ export default function ProjectDetailsUI() {
                                             {/* Status Badge */}
                                             <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                                               task.status === 'done' 
-                                                ? 'bg-green-100 text-green-800' 
-                                                : 'bg-yellow-100 text-yellow-800'
+                                                ? theme === "dark" 
+                                                  ? 'bg-green-900/30 text-green-300' 
+                                                  : 'bg-green-100 text-green-800'
+                                                : theme === "dark"
+                                                  ? 'bg-yellow-900/30 text-yellow-300'
+                                                  : 'bg-yellow-100 text-yellow-800'
                                             }`}>
                                               {task.status === 'done' ? '✅ Done' : '⏳ Pending'}
                                             </span>
                                             
                                             {/* Assignee */}
                                             <div className="flex items-center gap-2">
-                                              <span className="text-gray-500">Assigned to:</span>
+                                              <span className={theme === "dark" ? "text-gray-400" : "text-gray-500"}>Assigned to:</span>
                                               {isEditingBacklog ? (
                                                 <select
                                                   value={task.assignee || ''}
@@ -2683,7 +2747,11 @@ export default function ProjectDetailsUI() {
                                                     const assigneeId = e.target.value ? parseInt(e.target.value) : null;
                                                     assignTask(task.id, assigneeId);
                                                   }}
-                                                  className="px-2 py-1 border border-gray-300 rounded text-xs"
+                                                  className={`px-2 py-1 border rounded text-xs ${
+                                                    theme === "dark" 
+                                                      ? "border-gray-600 bg-gray-700 text-white" 
+                                                      : "border-gray-300"
+                                                  }`}
                                                 >
                                                   <option value="">Unassigned</option>
                                                   {members.map((member) => (
@@ -2693,7 +2761,7 @@ export default function ProjectDetailsUI() {
                                                   ))}
                                                 </select>
                                               ) : (
-                                                <span className="text-gray-700">
+                                                <span className={theme === "dark" ? "text-gray-300" : "text-gray-700"}>
                                                   {(task as any).assignee_details ? 
                                                     `${(task as any).assignee_details.user_name} (${(task as any).assignee_details.user_email})` : 
                                                     'Unassigned'

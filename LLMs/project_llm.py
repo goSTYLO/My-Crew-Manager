@@ -1,12 +1,5 @@
 import os
 import re
-import torch
-from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
-from langchain_huggingface import HuggingFacePipeline
-try:
-    from transformers import BitsAndBytesConfig  # optional, for 4-bit on CUDA
-except Exception:
-    BitsAndBytesConfig = None
 from LLMs.models import (
     ProjectModel,
     TeamMemberModel,
@@ -15,76 +8,7 @@ from LLMs.models import (
 )
 from typing import Dict, Optional
 from ai_api.tasks import CancellationToken, TaskCancelledException
-
-MODEL_ID = "unsloth/mistral-7b-instruct-v0.3-bnb-4bit"
-
-def load_llm() -> HuggingFacePipeline:
-    """Load the model using CUDA (with 4-bit if available) or fallback to CPU."""
-    tokenizer = AutoTokenizer.from_pretrained(MODEL_ID, trust_remote_code=True)
-
-    use_cuda = torch.cuda.is_available()
-    quant_cfg = None
-    
-    # Only try quantization if CUDA is available AND bitsandbytes is properly installed
-    if use_cuda and BitsAndBytesConfig is not None:
-        try:
-            # Test if bitsandbytes is actually working
-            import bitsandbytes as bnb
-            # Try 4-bit quantization for speed/memory on GPU
-            quant_cfg = BitsAndBytesConfig(
-                load_in_4bit=True,
-                bnb_4bit_use_double_quant=True,
-                bnb_4bit_quant_type="nf4",
-                bnb_4bit_compute_dtype=torch.float16,
-            )
-        except (ImportError, Exception) as e:
-            print(f"Warning: bitsandbytes not available, falling back to standard loading: {e}")
-            quant_cfg = None
-
-    if use_cuda:
-        if quant_cfg is not None:
-            # CUDA with 4-bit (requires bitsandbytes, best on Linux)
-            model = AutoModelForCausalLM.from_pretrained(
-                MODEL_ID,
-                device_map="auto",
-                trust_remote_code=True,
-                quantization_config=quant_cfg,
-            )
-        else:
-            # CUDA without bitsandbytes: load then move explicitly to GPU
-            model = AutoModelForCausalLM.from_pretrained(
-                MODEL_ID,
-                device_map=None,
-                dtype=torch.float16,
-                trust_remote_code=True,
-            ).to("cuda")
-        pipe = pipeline(
-            "text-generation",
-            model=model,
-            tokenizer=tokenizer,
-            max_new_tokens=1024,
-            temperature=0.7,
-            do_sample=True,
-            return_full_text=False,
-        )
-    else:
-        # CPU fallback (slower). Avoid 4-bit config on CPU.
-        model = AutoModelForCausalLM.from_pretrained(
-            MODEL_ID,
-            device_map=None,
-            dtype=torch.float32,
-            trust_remote_code=True,
-        )
-        pipe = pipeline(
-            "text-generation",
-            model=model,
-            tokenizer=tokenizer,
-            max_new_tokens=512,
-            temperature=0.7,
-            do_sample=True,
-            return_full_text=False,
-        )
-    return HuggingFacePipeline(pipeline=pipe)
+from LLMs.llm_cache import get_cached_llm
 
 def build_prompt(section: str, proposal_text: str, context: Dict = None) -> str:
     root_dir = os.path.dirname(__file__)
@@ -120,7 +44,7 @@ def validate_section_format(section: str, response: str) -> bool:
         return "timeline:" in response_lower and "week_number:" in response_lower
     return True
 
-def generate_section(llm, section: str, prompt: str, max_retries: int = 5, cancellation_token: Optional[CancellationToken] = None) -> str:
+def generate_section(llm, section: str, prompt: str, max_retries: int = 3, cancellation_token: Optional[CancellationToken] = None) -> str:
     for _ in range(max_retries):
         try:
             # Check for cancellation before each attempt
@@ -146,7 +70,7 @@ def run_pipeline_from_text(proposal_text: str, task_id: Optional[str] = None) ->
     # Create cancellation token if task_id is provided
     cancellation_token = CancellationToken(task_id) if task_id else None
 
-    llm = load_llm()
+    llm = get_cached_llm()  # Uses singleton cache - model loaded only once per server lifetime
     project_model = ProjectModel()
     raw_outputs = {}
     sections = ["summary", "features", "roles", "goals", "timeline"]
