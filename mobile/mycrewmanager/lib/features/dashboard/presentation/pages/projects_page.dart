@@ -6,7 +6,6 @@ import 'package:mycrewmanager/features/dashboard/presentation/pages/tasks_page.d
 import 'package:mycrewmanager/features/dashboard/presentation/pages/messages_screen.dart';
 import 'package:mycrewmanager/features/dashboard/presentation/pages/notifications_page.dart';
 import 'package:mycrewmanager/features/dashboard/presentation/pages/settings_page.dart';
-import 'package:mycrewmanager/features/authentication/presentation/pages/login_page.dart';
 import 'package:mycrewmanager/features/authentication/presentation/bloc/auth_bloc.dart';
 import 'package:mycrewmanager/features/dashboard/presentation/pages/project_overview_page.dart';
 import 'package:mycrewmanager/features/project/presentation/pages/create_project_simple_page.dart';
@@ -30,8 +29,8 @@ class _ProjectsPageState extends State<ProjectsPage> {
   @override
   void initState() {
     super.initState();
-    // Load projects when the page initializes
-    context.read<ProjectBloc>().add(ProjectGetProjects());
+    // Load user's projects when the page initializes
+    context.read<ProjectBloc>().add(ProjectGetMyProjects());
   }
 
   void _showDeleteConfirmation(BuildContext context, Project project) {
@@ -72,8 +71,8 @@ class _ProjectsPageState extends State<ProjectsPage> {
     );
 
     return Scaffold(
-      backgroundColor: Colors.white, // Set scaffold background to white
-      drawer: _buildAppDrawer(context),
+        backgroundColor: Colors.white, // Set scaffold background to white
+        drawer: _buildAppDrawer(context),
       body: SafeArea(
         child: Container(
           color: Colors.white,
@@ -527,7 +526,7 @@ Widget _buildAppDrawer(BuildContext context) {
                         ),
                         onPressed: () {
                           Navigator.pop(context); // Close dialog
-                          Navigator.pushReplacement(context, LoginPage.route());
+                          context.read<AuthBloc>().add(AuthLogout());
                         },
                         child: const Text('Logout'),
                       ),

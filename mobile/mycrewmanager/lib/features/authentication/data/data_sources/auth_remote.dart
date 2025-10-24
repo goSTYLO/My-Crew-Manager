@@ -14,6 +14,9 @@ abstract class AuthRemoteDataSource {
   @POST("signup/")
   Future<UserModel> signup(@Body() Map<String, dynamic> body);
 
+  @POST("logout/")
+  Future<void> logout();
+
   // @GET("me/")
   // Future<UserModel> getCredentials();
 }

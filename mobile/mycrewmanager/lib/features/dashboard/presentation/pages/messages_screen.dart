@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mycrewmanager/features/authentication/presentation/bloc/auth_bloc.dart';
-import 'package:mycrewmanager/features/authentication/presentation/pages/login_page.dart';
 import 'package:mycrewmanager/features/dashboard/presentation/pages/dashboard_page.dart';
 import 'package:mycrewmanager/features/dashboard/presentation/pages/settings_page.dart';
 import 'package:mycrewmanager/features/dashboard/presentation/pages/tasks_page.dart';
@@ -260,7 +259,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
                           ),
                           onPressed: () {
                             Navigator.pop(context); // Close dialog
-                            Navigator.pushReplacement(context, LoginPage.route());
+                            context.read<AuthBloc>().add(AuthLogout());
                           },
                           child: const Text('Logout'),
                         ),
@@ -295,7 +294,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
         .toList();
 
     return Scaffold(
-      drawer: _buildAppDrawer(context),
+        drawer: _buildAppDrawer(context),
       backgroundColor: Colors.white, // Set scaffold background to white
       body: Container(
         color: Colors.white,
