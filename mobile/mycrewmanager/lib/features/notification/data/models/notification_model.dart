@@ -10,6 +10,7 @@ class NotificationModel extends Notification {
     required super.createdAt,
     super.actionUrl,
     super.actor,
+    super.objectId,
   });
 
   factory NotificationModel.fromJson(Map<String, dynamic> json) {
@@ -22,6 +23,7 @@ class NotificationModel extends Notification {
       createdAt: DateTime.parse(json['created_at'] as String),
       actionUrl: json['action_url'] as String?,
       actor: json['actor_name'] as String?,
+      objectId: json['object_id'] as int?,
     );
   }
 
@@ -35,6 +37,7 @@ class NotificationModel extends Notification {
       'created_at': createdAt.toIso8601String(),
       'action_url': actionUrl,
       'actor_name': actor,
+      'object_id': objectId,
     };
   }
 
@@ -47,6 +50,7 @@ class NotificationModel extends Notification {
     DateTime? createdAt,
     String? actionUrl,
     String? actor,
+    int? objectId,
   }) {
     return NotificationModel(
       id: id ?? this.id,
@@ -57,6 +61,7 @@ class NotificationModel extends Notification {
       createdAt: createdAt ?? this.createdAt,
       actionUrl: actionUrl ?? this.actionUrl,
       actor: actor ?? this.actor,
+      objectId: objectId ?? this.objectId,
     );
   }
 }

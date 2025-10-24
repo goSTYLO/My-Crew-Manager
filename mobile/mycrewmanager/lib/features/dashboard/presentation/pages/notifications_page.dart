@@ -404,9 +404,11 @@ class _NotificationsPageState extends State<NotificationsPage> {
           children: [
             TextButton(
               onPressed: () {
-                // Extract invitation ID from notification (you might need to adjust this based on your data structure)
-                final invitationId = notification.id; // This might need adjustment
-                _handleInvitationAction(invitationId, true);
+                // Use objectId which contains the invitation ID
+                final invitationId = notification.objectId;
+                if (invitationId != null) {
+                  _handleInvitationAction(invitationId, true);
+                }
               },
               style: TextButton.styleFrom(
                 backgroundColor: Colors.green,
@@ -423,8 +425,11 @@ class _NotificationsPageState extends State<NotificationsPage> {
             const SizedBox(width: 8),
             TextButton(
               onPressed: () {
-                final invitationId = notification.id; // This might need adjustment
-                _handleInvitationAction(invitationId, false);
+                // Use objectId which contains the invitation ID
+                final invitationId = notification.objectId;
+                if (invitationId != null) {
+                  _handleInvitationAction(invitationId, false);
+                }
               },
               style: TextButton.styleFrom(
                 backgroundColor: Colors.red,

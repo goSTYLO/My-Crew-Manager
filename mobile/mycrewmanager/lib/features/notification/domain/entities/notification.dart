@@ -9,6 +9,7 @@ class Notification extends Equatable {
   final DateTime createdAt;
   final String? actionUrl;
   final String? actor;
+  final int? objectId;
 
   const Notification({
     required this.id,
@@ -19,6 +20,7 @@ class Notification extends Equatable {
     required this.createdAt,
     this.actionUrl,
     this.actor,
+    this.objectId,
   });
 
   @override
@@ -31,5 +33,6 @@ class Notification extends Equatable {
         createdAt,
         actionUrl,
         actor,
+        objectId,
       ];
 }
