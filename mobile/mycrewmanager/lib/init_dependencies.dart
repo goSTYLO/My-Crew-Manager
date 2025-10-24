@@ -16,6 +16,7 @@ import 'package:mycrewmanager/features/project/data/data_sources/project_remote.
 import 'package:mycrewmanager/features/project/data/repositories/project_repository_impl.dart';
 import 'package:mycrewmanager/features/project/domain/repository/project_repository.dart';
 import 'package:mycrewmanager/features/project/domain/usecases/get_projects.dart';
+import 'package:mycrewmanager/features/project/domain/usecases/get_my_projects.dart';
 import 'package:mycrewmanager/features/project/domain/usecases/create_project.dart';
 import 'package:mycrewmanager/features/project/domain/usecases/get_project_backlog.dart';
 import 'package:mycrewmanager/features/project/domain/usecases/update_project.dart';
@@ -106,6 +107,7 @@ void _initProject() {
     )
           //Use cases
           ..registerFactory(() => GetProjects(serviceLocator()))
+          ..registerFactory(() => GetMyProjects(serviceLocator()))
           ..registerFactory(() => CreateProject(serviceLocator()))
           ..registerFactory(() => GetProjectBacklog(serviceLocator()))
           ..registerFactory(() => UpdateProject(serviceLocator()))
@@ -126,6 +128,7 @@ void _initProject() {
       ..registerLazySingleton(
         () => ProjectBloc(
         getProjects: serviceLocator(),
+        getMyProjects: serviceLocator(),
         createProject: serviceLocator(),
         getProjectBacklog: serviceLocator(),
         updateProject: serviceLocator(),

@@ -29,8 +29,8 @@ class _ProjectsPageState extends State<ProjectsPage> {
   @override
   void initState() {
     super.initState();
-    // Load projects when the page initializes
-    context.read<ProjectBloc>().add(ProjectGetProjects());
+    // Load user's projects when the page initializes
+    context.read<ProjectBloc>().add(ProjectGetMyProjects());
   }
 
   void _showDeleteConfirmation(BuildContext context, Project project) {

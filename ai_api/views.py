@@ -315,6 +315,21 @@ class ProjectViewSet(ModelViewSet):
 
         return Response({'project_id': project.id, 'epics': result}, status=status.HTTP_200_OK)
 
+    @action(detail=False, methods=["get"], url_path="my-projects")
+    def my_projects(self, request):
+        """Return only projects where the current user is a member"""
+        # Get project IDs where the user is a member
+        user_project_ids = ProjectMember.objects.filter(
+            user=request.user
+        ).values_list('project_id', flat=True)
+        
+        # Get the actual projects
+        projects = Project.objects.filter(id__in=user_project_ids).order_by('-created_at')
+        
+        # Serialize and return
+        serializer = self.get_serializer(projects, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
 
 class ProposalViewSet(ModelViewSet):
     queryset = Proposal.objects.all()

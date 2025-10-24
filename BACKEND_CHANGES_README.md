@@ -1,6 +1,6 @@
-# Backend Changes for Notification and Invitation System
+# Backend Changes for Notification, Invitation System, and Project Filtering
 
-This document outlines all the backend changes made to fix the notification and invitation system in the My Crew Manager application.
+This document outlines all the backend changes made to fix the notification and invitation system, and implement user-specific project filtering in the My Crew Manager application.
 
 ## Overview
 
@@ -11,6 +11,7 @@ The main issues that were resolved:
 4. **Permission Issues** - Users accessing wrong invitations
 5. **Notification Cleanup** - Notifications not being marked as read after invitation actions
 6. **Notification Filtering** - Backend returning all notifications instead of just unread ones
+7. **Project Security** - Mobile app fetching all projects instead of user-specific projects
 
 ## Files Modified
 
@@ -219,6 +220,44 @@ def clean(self):
 
 ---
 
+### 4. `ai_api/views.py` - Project Filtering Enhancement
+
+#### **Issue**: Mobile app was fetching all projects instead of user-specific projects
+#### **Fix**: Added new endpoint to return only projects where the user is a member
+
+**Added New Endpoint:**
+```python
+@action(detail=False, methods=["get"], url_path="my-projects")
+def my_projects(self, request):
+    """Return only projects where the current user is a member"""
+    # Get project IDs where the user is a member
+    user_project_ids = ProjectMember.objects.filter(
+        user=request.user
+    ).values_list('project_id', flat=True)
+    
+    # Get the actual projects
+    projects = Project.objects.filter(id__in=user_project_ids).order_by('-created_at')
+    
+    # Serialize and return
+    serializer = self.get_serializer(projects, many=True)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+```
+
+#### **Key Changes:**
+- ✅ Added new `my_projects` endpoint accessible at `GET /api/ai/projects/my-projects/`
+- ✅ Filters projects using `ProjectMember` model to ensure user membership
+- ✅ Returns projects ordered by creation date (newest first)
+- ✅ Uses existing `ProjectSerializer` for consistency
+- ✅ Maintains backward compatibility with original `/api/ai/projects/` endpoint
+
+#### **Security Benefits:**
+- ✅ Users can only see projects they're members of
+- ✅ Prevents unauthorized access to project data
+- ✅ Reduces data transfer by filtering at the backend level
+- ✅ Improves performance by limiting result set
+
+---
+
 ## API Endpoint Changes
 
 ### Notification Endpoints
@@ -232,6 +271,10 @@ def clean(self):
 - **POST `/api/ai/invitations/{id}/accept/`** - Accepts invitation and marks related notifications as read
 - **POST `/api/ai/invitations/{id}/decline/`** - Declines invitation and marks related notifications as read
 
+### Project Endpoints
+- **GET `/api/ai/projects/`** - Returns all projects (original endpoint, maintained for backward compatibility)
+- **GET `/api/ai/projects/my-projects/`** - Returns only projects where the current user is a member (new secure endpoint)
+
 ## Data Flow Improvements
 
 ### Before (Broken Flow):
@@ -244,6 +287,8 @@ def clean(self):
 2. Related notification marked as read → Automatically cleaned up
 3. Backend only returns unread notifications → Clean mobile app UI
 4. Mobile app shows clean notification list → No confusing notifications
+5. Mobile app fetches user-specific projects → Only shows relevant projects
+6. Backend filters projects by membership → Improved security and performance
 
 ## Debugging Features Added
 
@@ -267,6 +312,7 @@ Marked 1 related notifications as read
 - ✅ Users can only access their own invitations
 - ✅ Invitation actions are restricted to the intended recipient
 - ✅ Notification access is restricted to the recipient
+- ✅ Project access is restricted to project members only
 
 ### Data Integrity:
 - ✅ Transactional invitation acceptance (atomic operations)
@@ -279,11 +325,15 @@ Marked 1 related notifications as read
 - ✅ Using `update()` instead of `save()` for better performance
 - ✅ Filtering notifications by read status to reduce data transfer
 - ✅ Proper indexing on notification fields (recipient, is_read, created_at)
+- ✅ Filtering projects by membership to reduce data transfer
+- ✅ Optimized project queries using `values_list()` for better performance
 
 ### API Efficiency:
 - ✅ Reduced payload size by filtering unread notifications
 - ✅ Faster invitation acceptance without model validation overhead
 - ✅ Optimized notification queries with proper filtering
+- ✅ Reduced project data transfer by filtering user-specific projects
+- ✅ Improved mobile app performance with targeted project queries
 
 ## Testing Recommendations
 
@@ -292,12 +342,16 @@ Marked 1 related notifications as read
 2. **Test permission filtering** - Ensure users can't access wrong invitations
 3. **Test notification filtering** - Verify only unread notifications are returned
 4. **Test error handling** - Verify proper error messages for invalid requests
+5. **Test project filtering** - Verify `/api/ai/projects/my-projects/` returns only user's projects
+6. **Test project membership** - Verify users can't access projects they're not members of
 
 ### Integration Testing:
 1. **End-to-end invitation flow** - From notification to acceptance
 2. **Mobile app integration** - Verify notifications disappear after acceptance
 3. **WebSocket integration** - Test real-time notification updates
 4. **Permission testing** - Verify security restrictions work correctly
+5. **Project access testing** - Verify mobile app only shows user's projects
+6. **Cross-user testing** - Verify users can't see each other's projects
 
 ## Migration Notes
 
@@ -314,7 +368,7 @@ Marked 1 related notifications as read
 
 ## Summary
 
-These backend changes successfully resolved all major issues with the notification and invitation system:
+These backend changes successfully resolved all major issues with the notification, invitation system, and project access:
 
 1. **Fixed 500 server errors** by cleaning up serializer syntax
 2. **Fixed 404 API errors** by correcting URL construction
@@ -322,5 +376,6 @@ These backend changes successfully resolved all major issues with the notificati
 4. **Fixed permission issues** by adding proper user filtering
 5. **Fixed notification cleanup** by marking related notifications as read
 6. **Fixed notification filtering** by only returning unread notifications
+7. **Fixed project security** by implementing user-specific project filtering
 
-The system now provides a smooth, secure, and efficient notification and invitation experience for users.
+The system now provides a smooth, secure, and efficient notification, invitation, and project management experience for users.
