@@ -16,6 +16,7 @@ import 'package:mycrewmanager/features/notification/presentation/bloc/notificati
 import 'package:mycrewmanager/features/notification/presentation/bloc/notification_event.dart';
 import 'package:mycrewmanager/features/notification/presentation/bloc/notification_state.dart';
 import 'package:mycrewmanager/init_dependencies.dart';
+import 'package:mycrewmanager/core/constants/constants.dart';
 
 class TasksPage extends StatefulWidget {
   final Project? project;
@@ -266,11 +267,13 @@ class _TasksPageState extends State<TasksPage> with SingleTickerProviderStateMix
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const CircleAvatar(
+                      CircleAvatar(
                         radius: 28,
-                        backgroundImage: AssetImage(
-                          'lib/core/assets/images/app_logo.png',
-                        ),
+                        backgroundImage: (state is AuthSuccess && state.user.profilePicture != null)
+                            ? NetworkImage('${Constants.baseUrl.replaceAll('/api/', '')}${state.user.profilePicture!}')
+                            : const AssetImage(
+                                'lib/core/assets/images/app_logo.png',
+                              ) as ImageProvider,
                       ),
                       const SizedBox(height: 10),
                       Text(
