@@ -12,6 +12,7 @@ import 'package:get_it/get_it.dart';
 import 'package:mycrewmanager/features/chat/data/repositories/chat_repository_impl.dart';
 import 'package:mycrewmanager/features/chat/data/models/room_model.dart';
 import 'package:mycrewmanager/features/chat/data/services/chat_ws_service.dart';
+import 'package:mycrewmanager/core/constants/constants.dart';
 
 class MessagesScreen extends StatefulWidget {
   const MessagesScreen({super.key});
@@ -157,11 +158,13 @@ class _MessagesScreenState extends State<MessagesScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Profile picture
-                      const CircleAvatar(
+                      CircleAvatar(
                         radius: 28,
-                        backgroundImage: AssetImage(
-                          'lib/core/assets/images/app_logo.png',
-                        ),
+                        backgroundImage: (state is AuthSuccess && state.user.profilePicture != null)
+                            ? NetworkImage('${Constants.baseUrl.replaceAll('/api/', '')}${state.user.profilePicture!}')
+                            : const AssetImage(
+                                'lib/core/assets/images/app_logo.png',
+                              ) as ImageProvider,
                       ),
                       const SizedBox(height: 10),
                       // Name

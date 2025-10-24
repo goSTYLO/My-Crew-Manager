@@ -15,6 +15,7 @@ import 'package:mycrewmanager/features/project/presentation/bloc/project_bloc.da
 import 'package:mycrewmanager/features/project/domain/entities/project.dart';
 import 'package:mycrewmanager/core/utils/show_snackbar.dart';
 import 'package:mycrewmanager/features/project/presentation/pages/edit_project_page.dart';
+import 'package:mycrewmanager/core/constants/constants.dart';
 
 class ProjectsPage extends StatefulWidget {
   const ProjectsPage({super.key});
@@ -424,11 +425,13 @@ Widget _buildAppDrawer(BuildContext context) {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Profile picture
-                    const CircleAvatar(
+                    CircleAvatar(
                       radius: 28,
-                      backgroundImage: AssetImage(
-                        'lib/core/assets/images/app_logo.png',
-                      ),
+                      backgroundImage: (state is AuthSuccess && state.user.profilePicture != null)
+                          ? NetworkImage('${Constants.baseUrl.replaceAll('/api/', '')}${state.user.profilePicture!}')
+                          : const AssetImage(
+                              'lib/core/assets/images/app_logo.png',
+                            ) as ImageProvider,
                     ),
                     const SizedBox(height: 10),
                     // Name

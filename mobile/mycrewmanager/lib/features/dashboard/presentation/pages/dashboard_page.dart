@@ -14,6 +14,7 @@ import 'package:mycrewmanager/features/dashboard/presentation/pages/projects_pag
 import 'package:mycrewmanager/features/notification/presentation/bloc/notification_bloc.dart';
 import 'package:mycrewmanager/features/notification/presentation/bloc/notification_event.dart';
 import 'package:mycrewmanager/features/notification/presentation/bloc/notification_state.dart';
+import 'package:mycrewmanager/core/constants/constants.dart';
 
 
 class DashboardPage extends StatefulWidget {
@@ -165,11 +166,13 @@ class _DashboardPageState extends State<DashboardPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Profile picture
-                      const CircleAvatar(
+                      CircleAvatar(
                         radius: 28,
-                        backgroundImage: AssetImage(
-                          'lib/core/assets/images/app_logo.png',
-                        ),
+                        backgroundImage: (state is AuthSuccess && state.user.profilePicture != null)
+                            ? NetworkImage('${Constants.baseUrl.replaceAll('/api/', '')}${state.user.profilePicture!}')
+                            : const AssetImage(
+                                'lib/core/assets/images/app_logo.png',
+                              ) as ImageProvider,
                       ),
                       const SizedBox(height: 10),
                       // Name
