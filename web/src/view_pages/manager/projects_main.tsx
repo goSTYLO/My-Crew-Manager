@@ -69,8 +69,8 @@ const ProjectTask = () => {
         try {
             setLoading(true);
             setError(null);
-            const token = localStorage.getItem('token');
-            console.log('🔍 Token from localStorage:', token ? 'Found' : 'Not found');
+            const token = sessionStorage.getItem('token');
+            console.log('🔍 Token from sessionStorage:', token ? 'Found' : 'Not found');
             if (!token) {
                 showError('Authentication Required', 'You are not authenticated. Please log in.');
                 navigate('/sign-in');
@@ -88,7 +88,7 @@ const ProjectTask = () => {
             if (!response.ok) {
                 if (response.status === 401) {
                     showError('Authentication Failed', 'Authentication failed. Please log in again.');
-                    localStorage.removeItem('token');
+                    sessionStorage.removeItem('token');
                     navigate('/sign-in');
                     return;
                 }
@@ -187,7 +187,7 @@ const ProjectTask = () => {
     const fetchAnalyticsData = async () => {
       try {
         setLoadingAnalytics(true);
-        const token = localStorage.getItem('token');
+        const token = sessionStorage.getItem('token');
         if (!token) {
           console.log('❌ No token found for analytics');
           return;

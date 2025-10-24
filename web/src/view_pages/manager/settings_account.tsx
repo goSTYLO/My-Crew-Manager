@@ -93,7 +93,7 @@ const AccountSettings = () => {
     // Fetch user data on component mount
         useEffect(() => {
             const fetchUserData = async () => {
-            const token = localStorage.getItem("token");
+            const token = sessionStorage.getItem("token");
         
             if (!token) {
                 navigate("/login");
@@ -136,7 +136,7 @@ const AccountSettings = () => {
                 setEmail(fixedData.email);
                 setRole(fixedData.role || "");
                 } else {
-                localStorage.removeItem("token");
+                sessionStorage.removeItem("token");
                 navigate("/login");
                 }
             } catch (error) {
@@ -186,7 +186,7 @@ const AccountSettings = () => {
         e.preventDefault();
         setSaveMessage("");
     
-        const token = localStorage.getItem("token");
+        const token = sessionStorage.getItem("token");
         if (!token) {
         navigate("/login");
         return;

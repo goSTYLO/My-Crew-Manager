@@ -46,7 +46,7 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
   const fetchNotifications = async () => {
     try {
       setLoadingNotifications(true);
-      const token = localStorage.getItem('token') || localStorage.getItem('access');
+      const token = sessionStorage.getItem('token') || sessionStorage.getItem('access');
       if (!token) return;
 
       const response = await fetch(`${API_BASE_URL}/api/ai/notifications/`, {
@@ -70,7 +70,7 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
   // Mark notification as read
   const markNotificationAsRead = async (notificationId: number) => {
     try {
-      const token = localStorage.getItem('token') || localStorage.getItem('access');
+      const token = sessionStorage.getItem('token') || sessionStorage.getItem('access');
       if (!token) return;
 
       const response = await fetch(`${API_BASE_URL}/api/ai/notifications/${notificationId}/mark_read/`, {
@@ -96,7 +96,7 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
   // Mark all notifications as read
   const markAllAsRead = async () => {
     try {
-      const token = localStorage.getItem('token') || localStorage.getItem('access');
+      const token = sessionStorage.getItem('token') || sessionStorage.getItem('access');
       if (!token) return;
 
       const response = await fetch(`${API_BASE_URL}/api/ai/notifications/mark_all_read/`, {
@@ -170,7 +170,7 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
     setShowLogoutConfirm(false);
 
     try {
-      const token = localStorage.getItem("token");
+      const token = sessionStorage.getItem("token");
 
       await fetch(`${API_BASE_URL}/api/user/logout/`, {
         method: "POST",
@@ -180,7 +180,7 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
         },
       });
 
-      localStorage.removeItem("token");
+      sessionStorage.removeItem("token");
       sessionStorage.clear();
 
       setTimeout(() => {
@@ -188,7 +188,7 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
       }, 1200);
     } catch (error) {
       console.error("Logout error:", error);
-      localStorage.removeItem("token");
+      sessionStorage.removeItem("token");
       sessionStorage.clear();
 
       setTimeout(() => {
@@ -214,7 +214,7 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
   // Fetch user data and listen for updates from settings
   useEffect(() => {
     const fetchUserData = async () => {
-      const token = localStorage.getItem("token");
+      const token = sessionStorage.getItem("token");
       console.log('🔍 TopNavbar - Token check:', token ? 'Found' : 'Not found');
       if (!token) {
         console.log('❌ TopNavbar - No token, redirecting to sign-in');
@@ -247,7 +247,7 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
           setUserData(fixedData);
         } else {
           console.log('❌ TopNavbar - API call failed, status:', response.status);
-          localStorage.removeItem("token");
+          sessionStorage.removeItem("token");
           navigate("/sign-in");
         }
       } catch (error) {

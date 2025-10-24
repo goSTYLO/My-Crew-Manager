@@ -107,17 +107,13 @@ const ChatApp = () => {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
-  // Get auth token from localStorage
+  // Get auth token from sessionStorage
   const getAuthToken = () => {
     // Try different possible token storage keys
-    const token = localStorage.getItem('authToken') || 
-                  localStorage.getItem('token') || 
-                  localStorage.getItem('auth_token') ||
-                  sessionStorage.getItem('authToken') ||
-                  sessionStorage.getItem('token');
+    const token = sessionStorage.getItem('token');
     
     if (!token) {
-      console.error('⚠️ No auth token found in localStorage. Please login first.');
+      console.error('⚠️ No auth token found in sessionStorage. Please login first.');
     }
     return token || '';
   };

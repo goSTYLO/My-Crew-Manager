@@ -13,7 +13,7 @@ import { useTheme } from "../../components/themeContext";
 const API_BASE_URL = 'http://localhost:8000/api';
 
 const getAuthToken = () => {
-  return localStorage.getItem('token') || sessionStorage.getItem('token');
+  return sessionStorage.getItem('token');
 };
 
 const apiHeaders = () => {
@@ -479,13 +479,19 @@ const ProjectInvitation = () => {
         const enrichedInvitations = await Promise.all(
           invitationsData.map(async (invitation) => {
             try {
+              // Check if project and project.id exist before making API call
+              if (!invitation.project || !invitation.project.id) {
+                console.warn('Invalid project data in invitation:', invitation);
+                return invitation;
+              }
+              
               const details = await invitationAPI.getProjectDetails(invitation.project.id);
               return {
                 ...invitation,
                 ...details
               };
             } catch (err) {
-              console.error(`Error loading details for project ${invitation.project.id}:`, err);
+              console.error(`Error loading details for project ${invitation.project?.id || 'unknown'}:`, err);
               return invitation;
             }
           })
@@ -619,16 +625,16 @@ const ProjectInvitation = () => {
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center space-x-3">
                     <div className="w-12 h-12 bg-blue-500 text-white rounded-lg flex items-center justify-center text-lg font-medium">
-                      {invitation.invited_by.avatar || invitation.invited_by.name.substring(0, 2).toUpperCase()}
+                      {invitation.invited_by?.avatar || (invitation.invited_by?.name ? invitation.invited_by.name.substring(0, 2).toUpperCase() : '??')}
                     </div>
                     <div>
                       <h3 className={`text-lg font-semibold ${
                         theme === "dark" ? "text-white" : "text-gray-900"
-                      }`}>{invitation.project.title}</h3>
+                      }`}>{invitation.project?.title || 'Untitled Project'}</h3>
                       <p className={`text-sm ${
                         theme === "dark" ? "text-gray-400" : "text-gray-600"
                       }`}>
-                        Invited by <span className="font-medium">{invitation.invited_by.name}</span> •{' '}
+                        Invited by <span className="font-medium">{invitation.invited_by?.name || 'Unknown User'}</span> •{' '}
                         {formatDate(invitation.created_at)}
                       </p>
                     </div>
@@ -640,7 +646,7 @@ const ProjectInvitation = () => {
 
                 <p className={`mb-4 ${
                   theme === "dark" ? "text-gray-300" : "text-gray-700"
-                }`}>{invitation.project.summary}</p>
+                }`}>{invitation.project?.summary || 'No description available'}</p>
 
                 {invitation.message && (
                   <div className={`mb-4 p-3 rounded-lg border-l-4 border-blue-500 ${
@@ -657,15 +663,15 @@ const ProjectInvitation = () => {
                 }`}>
                   <div className="flex items-center space-x-2">
                     <Users className="w-4 h-4" />
-                    <span>{invitation.project.member_count} members</span>
+                    <span>{invitation.project?.member_count || 0} members</span>
                   </div>
                   <div className="flex items-center space-x-2">
                     <FolderOpen className="w-4 h-4" />
-                    <span>{invitation.project.task_count} tasks</span>
+                    <span>{invitation.project?.task_count || 0} tasks</span>
                   </div>
                   <div className="flex items-center space-x-2">
                     <Calendar className="w-4 h-4" />
-                    <span>Created {formatDate(invitation.project.created_at)}</span>
+                    <span>Created {formatDate(invitation.project?.created_at || invitation.created_at)}</span>
                   </div>
                   {invitation.proposal && (
                     <div className="flex items-center space-x-2 text-green-600">

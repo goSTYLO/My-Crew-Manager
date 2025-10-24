@@ -29,9 +29,9 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ children }
   const reconnectDelay = 3000; // 3 seconds
 
   const getAuthToken = useCallback(() => {
-    // Try to get token from localStorage
-    const token = localStorage.getItem('token');
-    const access = localStorage.getItem('access');
+    // Try to get token from sessionStorage
+    const token = sessionStorage.getItem('token');
+    const access = sessionStorage.getItem('access');
     
     // Prefer 'access' token if available, otherwise use 'token'
     return access || token;
@@ -180,22 +180,8 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ children }
     };
   }, [connect, disconnect, getAuthToken]);
 
-  // Listen for auth token changes
-  useEffect(() => {
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'token' || e.key === 'access') {
-        const newToken = getAuthToken();
-        if (newToken && connectionStatus === 'disconnected') {
-          connect();
-        } else if (!newToken && connectionStatus === 'connected') {
-          disconnect();
-        }
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, [connect, disconnect, getAuthToken, connectionStatus]);
+  // Note: Removed storage event listener since sessionStorage doesn't fire events across tabs
+  // This provides the desired tab isolation behavior
 
   const contextValue: WebSocketContextType = {
     connectionStatus,

@@ -60,7 +60,7 @@ interface Project {
 const API_BASE_URL = 'http://localhost:8000/api';
 
 const getAuthToken = () => {
-  return localStorage.getItem('token') || sessionStorage.getItem('token');
+  return sessionStorage.getItem('token');
 };
 
 const apiHeaders = () => {
@@ -77,125 +77,123 @@ const apiHeaders = () => {
 // API Functions
 const projectAPI = {
   getMyProjects: async () => {
-    // Get accepted invitations
-    const invitationsResponse = await fetch(`${API_BASE_URL}/ai/invitations/my-invitations/`, {
-      headers: apiHeaders()
-    });
-    
-    if (!invitationsResponse.ok) {
-      throw new Error(`Failed to fetch invitations: ${invitationsResponse.statusText}`);
-    }
-    
-    const invitationsData = await invitationsResponse.json();
-    const acceptedInvitations = invitationsData.invitations.filter(
-      (inv: any) => inv.status === 'accepted'
-    );
-
-    // Fetch full project details for each accepted invitation
-    const projectsWithDetails = await Promise.all(
-      acceptedInvitations.map(async (invitation: any) => {
-        const projectId = invitation.project.id;
-        
-        try {
-          // Fetch project details
-          const projectResponse = await fetch(`${API_BASE_URL}/ai/projects/${projectId}/`, {
-            headers: apiHeaders()
-          });
-          const project = await projectResponse.json();
-          console.log(`Project ${projectId} data:`, project);
-
-          // Fetch proposal
-          let proposal = null;
+    try {
+      // Use the same API endpoint as managers - this should return projects where user is a member
+      const response = await fetch(`${API_BASE_URL}/ai/projects/my-projects/`, {
+        headers: apiHeaders()
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch projects: ${response.statusText}`);
+      }
+      
+      const projectsData = await response.json();
+      console.log('📋 Raw projects data for user:', projectsData);
+      
+      // Sort projects by updated_at (most recent first)
+      const sortedProjects = projectsData.sort((a: any, b: any) => {
+        const dateA = new Date(a.updated_at || a.created_at);
+        const dateB = new Date(b.updated_at || b.created_at);
+        return dateB.getTime() - dateA.getTime();
+      });
+      
+      console.log('📋 Sorted projects for user:', sortedProjects);
+      
+      // Fetch additional details for each project
+      const projectsWithDetails = await Promise.all(
+        sortedProjects.map(async (project: any) => {
           try {
-            const proposalResponse = await fetch(
-              `${API_BASE_URL}/ai/projects/${projectId}/current-proposal/`,
-              { headers: apiHeaders() }
-            );
-            console.log(`Proposal response for project ${projectId}:`, proposalResponse.status);
-            if (proposalResponse.ok) {
-              proposal = await proposalResponse.json();
-              console.log(`Proposal data for project ${projectId}:`, proposal);
-            } else {
-              console.log(`No proposal response for project ${projectId}:`, await proposalResponse.text());
+            // Fetch proposal
+            let proposal = null;
+            try {
+              const proposalResponse = await fetch(
+                `${API_BASE_URL}/ai/projects/${project.id}/current-proposal/`,
+                { headers: apiHeaders() }
+              );
+              if (proposalResponse.ok) {
+                proposal = await proposalResponse.json();
+              }
+            } catch (e) {
+              console.log('No proposal found for project', project.id);
             }
-          } catch (e) {
-            console.log('No proposal found for project', projectId, 'Error:', e);
-          }
 
-          // Fetch backlog to check if it exists and count tasks
-          let hasBacklog = false;
-          let taskCount = 0;
-          try {
-            const backlogResponse = await fetch(
-              `${API_BASE_URL}/ai/projects/${projectId}/backlog/`,
-              { headers: apiHeaders() }
-            );
-            if (backlogResponse.ok) {
-              const backlogData = await backlogResponse.json();
-              hasBacklog = backlogData.epics && backlogData.epics.length > 0;
-              
-              // Count total tasks from backlog
-              if (backlogData.epics) {
-                taskCount = backlogData.epics.reduce((total: number, epic: any) => {
-                  return total + epic.sub_epics.reduce((subTotal: number, subEpic: any) => {
-                    return subTotal + subEpic.user_stories.reduce((storyTotal: number, story: any) => {
-                      return storyTotal + (story.tasks?.length || 0);
+            // Fetch backlog to check if it exists and count tasks
+            let hasBacklog = false;
+            let taskCount = 0;
+            try {
+              const backlogResponse = await fetch(
+                `${API_BASE_URL}/ai/projects/${project.id}/backlog/`,
+                { headers: apiHeaders() }
+              );
+              if (backlogResponse.ok) {
+                const backlogData = await backlogResponse.json();
+                hasBacklog = backlogData.epics && backlogData.epics.length > 0;
+                
+                // Count total tasks from backlog
+                if (backlogData.epics) {
+                  taskCount = backlogData.epics.reduce((total: number, epic: any) => {
+                    return total + epic.sub_epics.reduce((subTotal: number, subEpic: any) => {
+                      return subTotal + subEpic.user_stories.reduce((storyTotal: number, story: any) => {
+                        return storyTotal + (story.tasks?.length || 0);
+                      }, 0);
                     }, 0);
                   }, 0);
-                }, 0);
+                }
               }
+            } catch (e) {
+              console.log('No backlog found for project', project.id);
             }
-          } catch (e) {
-            console.log('No backlog found for project', projectId);
+
+            // Fetch project members
+            const membersResponse = await fetch(
+              `${API_BASE_URL}/ai/project-members/?project_id=${project.id}`,
+              { headers: apiHeaders() }
+            );
+            const members = membersResponse.ok ? await membersResponse.json() : [];
+
+            // Fetch repositories
+            const reposResponse = await fetch(
+              `${API_BASE_URL}/ai/repositories/?project_id=${project.id}`,
+              { headers: apiHeaders() }
+            );
+            const repositories = reposResponse.ok ? await reposResponse.json() : [];
+
+            return {
+              id: project.id,
+              title: project.title,
+              summary: project.summary || project.description,
+              created_by: project.created_by,
+              created_at: project.created_at,
+              member_count: Array.isArray(members) ? members.length : 0,
+              task_count: taskCount,
+              has_proposal: !!proposal,
+              has_backlog: hasBacklog,
+              proposal: proposal,
+              members: Array.isArray(members) ? members : [],
+              repositories: Array.isArray(repositories) ? repositories : [],
+              project_file: project.project_file,
+              project_file_url: project.project_file_url,
+              project_file_download_url: project.project_file_download_url
+            };
+          } catch (error) {
+            console.error(`Error fetching details for project ${project.id}:`, error);
+            return null;
           }
+        })
+      );
 
-          // Fetch project members
-          const membersResponse = await fetch(
-            `${API_BASE_URL}/ai/project-members/?project_id=${projectId}`,
-            { headers: apiHeaders() }
-          );
-          const members = membersResponse.ok ? await membersResponse.json() : [];
-
-          // Fetch repositories
-          const reposResponse = await fetch(
-            `${API_BASE_URL}/ai/repositories/?project_id=${projectId}`,
-            { headers: apiHeaders() }
-          );
-          const repositories = reposResponse.ok ? await reposResponse.json() : [];
-
-          return {
-            id: project.id,
-            title: project.title,
-            summary: project.summary,
-            created_by: invitation.project.created_by,
-            created_at: project.created_at,
-            member_count: Array.isArray(members) ? members.length : 0,
-            task_count: taskCount,
-            has_proposal: !!proposal,
-            has_backlog: hasBacklog,
-            proposal: proposal,
-            members: Array.isArray(members) ? members : [],
-            repositories: Array.isArray(repositories) ? repositories : [],
-            project_file: project.project_file,
-            project_file_url: project.project_file_url,
-            project_file_download_url: project.project_file_download_url
-          };
-        } catch (error) {
-          console.error(`Error fetching details for project ${projectId}:`, error);
-          return null;
-        }
-      })
-    );
-
-    return { projects: projectsWithDetails.filter(p => p !== null) };
+      return { projects: projectsWithDetails.filter(p => p !== null) };
+    } catch (error) {
+      console.error('Error in getMyProjects:', error);
+      throw error;
+    }
   }
 };
 
 // ✅ Project Status Badge Component
-const StatusBadge = ({ hasProposal, hasBacklog, theme }: { 
+const StatusBadge = ({ hasProposal, hasBacklog }: { 
   hasProposal: boolean; 
   hasBacklog: boolean;
-  theme: string;
 }) => {
   if (hasBacklog) {
     return (
@@ -240,7 +238,6 @@ const ProjectCard = ({ project, theme, onDownloadFile }: {
         <StatusBadge 
           hasProposal={project.has_proposal} 
           hasBacklog={project.has_backlog}
-          theme={theme}
         />
       </div>
 
@@ -465,7 +462,7 @@ const ProjectCard = ({ project, theme, onDownloadFile }: {
               ? 'bg-green-600 hover:bg-green-700 text-white' 
               : 'bg-green-500 hover:bg-green-600 text-white'
           }`}
-          onClick={() => navigate(`/project-details/${project.id}`)}
+          onClick={() => navigate(`/user-project/${project.id}`)}
         >
           View Details
         </button>
@@ -497,10 +494,15 @@ const MonitorProjectsUser = () => {
       }
 
       const data = await response.json();
-      const pendingInvitations = data.invitations.filter(
+      console.log('📧 Invitations data:', data);
+      
+      // Handle both possible response formats
+      const invitations = data.invitations || data || [];
+      const pendingInvitations = invitations.filter(
         (invitation: any) => invitation.status === 'pending'
       );
       setPendingInvitationsCount(pendingInvitations.length);
+      console.log('📧 Pending invitations count:', pendingInvitations.length);
     } catch (error) {
       console.error('Error fetching pending invitations:', error);
       // Don't set error state for invitations, just log it

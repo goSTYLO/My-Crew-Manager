@@ -137,7 +137,7 @@ const App: React.FC = () => {
 
   // Helper function to get the access token
   const getAuthToken = (): string | null => {
-    return localStorage.getItem('access') || localStorage.getItem('token');
+    return sessionStorage.getItem('access') || sessionStorage.getItem('token');
   };
 
   // Helper function to handle API responses

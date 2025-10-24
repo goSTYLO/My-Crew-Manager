@@ -796,7 +796,37 @@ For support and questions:
 
 ## 🔄 Recent Updates
 
-### Notification System Expansion (Latest)
+### Multi-Tab Authentication & User Experience Enhancements (Latest)
+- ✅ **Multi-Tab Session Isolation**: Fixed critical authentication bug where logging in as different users in multiple tabs would overwrite sessions
+  - **SessionStorage Migration**: Switched from `localStorage` to `sessionStorage` for all authentication tokens and user data
+  - **Tab Isolation**: Each browser tab now maintains independent user sessions without cross-tab interference
+  - **WebSocket Context Updates**: Updated WebSocket connection management to use sessionStorage and removed cross-tab storage event listeners
+  - **Files Updated**: `signIn.tsx`, `WebSocketContext.tsx`, `topbarLayout.tsx`, `topbarLayout_user.tsx`, `sidebarLayout.tsx`, `sidebarUser.tsx`
+- ✅ **User Project Management**: Enhanced user project monitoring and details viewing capabilities
+  - **Project Fetching Fix**: Fixed `monitorProjects_user.tsx` to properly fetch projects where user is a member using `/api/ai/projects/my-projects/`
+  - **Navigation Enhancement**: Updated "View Details" button to navigate to `/user-project/:id` with proper route parameter handling
+  - **Project Details Integration**: Enhanced `projectsDetails.tsx` with comprehensive project information display
+- ✅ **Task Management for Users**: Implemented task completion and proposal viewing functionality for developers
+  - **Task Completion System**: Added "Mark as Done" button for tasks assigned to current user with confirmation modal
+  - **Commit Tracking**: Required commit title and optional branch information for task completion
+  - **Proposal Viewer**: Added "View Proposal" button with integrated ProposalViewer modal for PDF proposal viewing
+  - **User-Specific Actions**: Task completion buttons only show for tasks assigned to the current user
+- ✅ **Repository Tab for Users**: Added read-only repository management for developers
+  - **Repository Tab**: New "Repository" tab in project details with read-only access (no CUD operations)
+  - **Clickable Links**: Repository URLs are clickable and open in new tabs for easy access
+  - **Visual Design**: Professional repository cards with Git branch icons and proper theming
+- ✅ **UI/UX Improvements**: Enhanced task alignment and visual consistency
+  - **Task Row Alignment**: Fixed alignment issues in tasks tab with better flex layout and responsive design
+  - **Text Overflow Handling**: Added proper text truncation and wrapping for long content
+  - **Button Positioning**: Improved button and badge positioning with proper spacing and responsiveness
+  - **Theme Integration**: Full dark/light theme support for all new components
+- ✅ **Error Handling & Bug Fixes**: Resolved critical issues affecting user experience
+  - **Project ID Parameter Fix**: Fixed `project_id=undefined` errors by correcting URL parameter extraction in `projectsDetails.tsx`
+  - **TypeError Resolution**: Added null checks in `projectInvitation.tsx` to prevent undefined property access
+  - **API Error Handling**: Enhanced error handling for 500 and 404 API responses with proper user feedback
+  - **Route Configuration**: Updated `App.tsx` to properly handle user project routes with ID parameters
+
+### Notification System Expansion
 - ✅ **Enhanced Notification Coverage**: Implemented 5 missing notification types for comprehensive user engagement
   - **Task Notifications**: `task_assigned`, `task_updated`, `task_completed` with smart recipient logic (assignee + creator)
   - **Member Notifications**: `member_joined`, `member_left` for team awareness across all project members

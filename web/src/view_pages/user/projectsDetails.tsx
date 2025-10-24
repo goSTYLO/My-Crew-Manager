@@ -13,17 +13,20 @@ import {
   CheckCircle,
   GitBranch,
   AlertCircle,
-  Download
+  Download,
+  X
 } from 'lucide-react';
 import Sidebar from "../../components/sidebarUser";
 import TopNavbar from "../../components/topbarLayout_user";
 import { useTheme } from "../../components/themeContext";
+import ProposalViewer from "../../components/ProposalViewer";
+import { useToast } from "../../components/ToastContext";
 
 // API configuration
 const API_BASE_URL = 'http://localhost:8000/api';
 
 const getAuthToken = () => {
-  return localStorage.getItem('token') || sessionStorage.getItem('token');
+  return sessionStorage.getItem('token');
 };
 
 const apiHeaders = () => {
@@ -226,35 +229,39 @@ const TaskRow: React.FC<{
   userStoryTitle: string;
   epicTitle: string;
   theme: string;
+  currentUserEmail: string | null;
+  onTaskComplete: (taskId: number) => void;
   onTaskClick?: (taskId: number) => void;
-}> = ({ task, userStoryTitle, epicTitle, theme, onTaskClick }) => {
+}> = ({ task, userStoryTitle, epicTitle, theme, currentUserEmail, onTaskComplete, onTaskClick }) => {
   const assignee = task.assignee_details || task.assignee;
   
   return (
     <div 
-      className={`w-full flex items-center justify-between p-4 border rounded-lg hover:shadow-sm transition-shadow cursor-pointer ${
+      className={`w-full flex items-start gap-4 p-4 border rounded-lg hover:shadow-sm transition-shadow cursor-pointer ${
         theme === 'dark' 
           ? 'bg-gray-800 border-gray-700 hover:bg-gray-750' 
           : 'bg-white border-gray-200 hover:bg-gray-50'
       }`}
       onClick={() => onTaskClick?.(task.id)}
     >
-      <div className="flex items-center gap-3 flex-1">
-        <div className="w-8 h-8 flex items-center justify-center">
+      <div className="flex items-center gap-3 flex-1 min-w-0">
+        {/* Icon */}
+        <div className="w-8 h-8 flex items-center justify-center flex-shrink-0">
           <Lightbulb className={`w-6 h-6 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`} />
         </div>
 
-        <div className="flex-1">
+        {/* Task Info */}
+        <div className="flex-1 min-w-0">
           <h3 className={`font-medium text-sm mb-1 ${theme === 'dark' ? 'text-gray-100' : 'text-gray-900'}`}>
             {task.title}
           </h3>
 
-          <div className={`flex items-center gap-4 text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
-            <span>Epic: {epicTitle}</span>
-            <span>Story: {userStoryTitle}</span>
+          <div className={`flex items-center gap-4 text-xs flex-wrap ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+            <span className="truncate">Epic: {epicTitle}</span>
+            <span className="truncate">Story: {userStoryTitle}</span>
             <StatusBadge status={task.status} />
             {task.ai && (
-              <span className="flex items-center gap-1 px-2 py-0.5 bg-purple-100 text-purple-700 rounded text-xs">
+              <span className="flex items-center gap-1 px-2 py-0.5 bg-purple-100 text-purple-700 rounded text-xs whitespace-nowrap">
                 <Sparkles className="w-3 h-3" />
                 AI Generated
               </span>
@@ -263,17 +270,18 @@ const TaskRow: React.FC<{
         </div>
       </div>
 
-      <div className="flex items-center gap-4">
+      {/* Assignee and Action Button */}
+      <div className="flex items-center gap-3 flex-shrink-0">
         {assignee ? (
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-medium">
               {assignee.user_name.substring(0, 2).toUpperCase()}
             </div>
-            <div className="text-sm">
-              <div className={`font-medium ${theme === 'dark' ? 'text-gray-200' : 'text-gray-700'}`}>
+            <div className="text-sm min-w-[120px]">
+              <div className={`font-medium truncate ${theme === 'dark' ? 'text-gray-200' : 'text-gray-700'}`}>
                 {assignee.user_name}
               </div>
-              <div className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+              <div className={`text-xs truncate ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
                 {assignee.user_email}
               </div>
             </div>
@@ -282,6 +290,22 @@ const TaskRow: React.FC<{
           <span className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
             Unassigned
           </span>
+        )}
+        
+        {/* Mark as Done button */}
+        {task.status !== 'completed' && 
+         assignee && 
+         currentUserEmail && 
+         assignee.user_email === currentUserEmail && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onTaskComplete(task.id);
+            }}
+            className="px-3 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700 transition-colors whitespace-nowrap"
+          >
+            Mark as Done
+          </button>
         )}
       </div>
     </div>
@@ -315,15 +339,80 @@ const TeamMemberCard: React.FC<{ member: ProjectMember; theme: string }> = ({ me
 // Main Component
 const ProjectDetails: React.FC = () => {
   const { theme } = useTheme();
+  const { showSuccess, showError } = useToast();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-  const { projectId } = useParams<{ projectId: string }>();
+  const { id: projectId } = useParams<{ id: string }>();
   
   const [projectDetails, setProjectDetails] = useState<ProjectDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'tasks' | 'team' | 'timeline'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'tasks' | 'team' | 'timeline' | 'repository'>('overview');
+  const [showTaskCompletionModal, setShowTaskCompletionModal] = useState(false);
+  const [completingTaskId, setCompletingTaskId] = useState<number | null>(null);
+  const [editingCommitTitle, setEditingCommitTitle] = useState('');
+  const [editingCommitBranch, setEditingCommitBranch] = useState('');
+  const [showProposalViewer, setShowProposalViewer] = useState(false);
+  const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
+
+  // Get current user email from sessionStorage
+  useEffect(() => {
+    const email = sessionStorage.getItem('email');
+    setCurrentUserEmail(email);
+  }, []);
+
+  // Task completion functions
+  const openTaskCompletionModal = (taskId: number) => {
+    setCompletingTaskId(taskId);
+    setShowTaskCompletionModal(true);
+    setEditingCommitTitle('');
+    setEditingCommitBranch('');
+  };
+
+  const completeTask = async (taskId: number, commitTitle: string, commitBranch?: string) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/ai/story-tasks/${taskId}/`, {
+        method: 'PATCH',
+        headers: apiHeaders(),
+        body: JSON.stringify({ 
+          status: 'done',
+          commit_title: commitTitle,
+          commit_branch: commitBranch || null
+        }),
+      });
+
+      if (response.ok) {
+        showSuccess('Task Completed', 'Task marked as done successfully');
+        // Refresh project details to show updated status
+        const projectResponse = await fetch(`${API_BASE_URL}/ai/projects/${projectId}/`, {
+          headers: apiHeaders()
+        });
+        if (projectResponse.ok) {
+          const project = await projectResponse.json();
+          // Re-fetch backlog to get updated task status
+          const backlogResponse = await fetch(
+            `${API_BASE_URL}/ai/projects/${projectId}/backlog/`,
+            { headers: apiHeaders() }
+          );
+          if (backlogResponse.ok) {
+            const backlogData = await backlogResponse.json();
+            setProjectDetails(prev => prev ? {...prev, backlog: backlogData.epics || []} : null);
+          }
+        }
+        setShowTaskCompletionModal(false);
+        setCompletingTaskId(null);
+        setEditingCommitTitle('');
+        setEditingCommitBranch('');
+      } else {
+        const errorData = await response.json();
+        showError('Completion Failed', errorData.error || 'Failed to complete task');
+      }
+    } catch (error) {
+      console.error('Error completing task:', error);
+      showError('Error', 'Failed to complete task. Please try again.');
+    }
+  };
 
   // Handle project file download
   const handleProjectFileDownload = async () => {
@@ -561,21 +650,6 @@ const ProjectDetails: React.FC = () => {
               </div>
 
               <div className="flex items-center gap-4">
-                {projectDetails.proposal && (
-                  <div className="flex items-center gap-2 px-3 py-1.5 bg-green-100 text-green-700 rounded-lg">
-                    <CheckCircle className="w-4 h-4" />
-                    <span className="text-sm font-medium">Proposal Uploaded</span>
-                  </div>
-                )}
-                {projectDetails.project_file && (
-                  <button
-                    onClick={handleProjectFileDownload}
-                    className="flex items-center gap-2 px-3 py-1.5 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
-                  >
-                    <Download className="w-4 h-4" />
-                    <span className="text-sm font-medium">Download Project File</span>
-                  </button>
-                )}
                 {projectDetails.backlog.length > 0 && (
                   <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-100 text-purple-700 rounded-lg">
                     <Sparkles className="w-4 h-4" />
@@ -662,7 +736,7 @@ const ProjectDetails: React.FC = () => {
           {/* Tabs */}
           <div className={`border-b mb-6 ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'}`}>
             <div className="flex gap-6">
-              {(['overview', 'tasks', 'team', 'timeline'] as const).map((tab) => (
+              {(['overview', 'tasks', 'team', 'timeline', 'repository'] as const).map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
@@ -700,24 +774,34 @@ const ProjectDetails: React.FC = () => {
                         ? 'bg-green-50 border-green-200' 
                         : theme === 'dark' ? 'bg-gray-750 border-gray-600' : 'bg-gray-50 border-gray-200'
                     }`}>
-                      <div className="flex items-center gap-3">
-                        <FileText className={`w-5 h-5 ${projectDetails.proposal ? 'text-green-600' : 'text-gray-400'}`} />
-                        <div>
-                          <p className={`font-medium text-sm ${
-                            projectDetails.proposal 
-                              ? 'text-green-700' 
-                              : theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
-                          }`}>
-                            PDF Proposal
-                          </p>
-                          <p className={`text-xs ${
-                            projectDetails.proposal 
-                              ? 'text-green-600' 
-                              : theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
-                          }`}>
-                            {projectDetails.proposal ? 'Uploaded and ready for AI analysis' : 'No proposal uploaded yet'}
-                          </p>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <FileText className={`w-5 h-5 ${projectDetails.proposal ? 'text-green-600' : 'text-gray-400'}`} />
+                          <div>
+                            <p className={`font-medium text-sm ${
+                              projectDetails.proposal 
+                                ? 'text-green-700' 
+                                : theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                            }`}>
+                              PDF Proposal
+                            </p>
+                            <p className={`text-xs ${
+                              projectDetails.proposal 
+                                ? 'text-green-600' 
+                                : theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+                            }`}>
+                              {projectDetails.proposal ? 'Uploaded and ready for AI analysis' : 'No proposal uploaded yet'}
+                            </p>
+                          </div>
                         </div>
+                        {projectDetails.proposal && (
+                          <button
+                            onClick={() => setShowProposalViewer(true)}
+                            className="px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 transition-colors"
+                          >
+                            View Proposal
+                          </button>
+                        )}
                       </div>
                     </div>
 
@@ -908,6 +992,8 @@ const ProjectDetails: React.FC = () => {
                                       userStoryTitle={story.title}
                                       epicTitle={epic.title}
                                       theme={theme}
+                                      currentUserEmail={currentUserEmail}
+                                      onTaskComplete={openTaskCompletionModal}
                                     />
                                   ))}
                                 </div>
@@ -1068,9 +1154,173 @@ const ProjectDetails: React.FC = () => {
                 )}
               </div>
             )}
+
+            {activeTab === 'repository' && (
+              <div className="space-y-6">
+                <div>
+                  <h2 className={`text-2xl font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>Git Repositories</h2>
+                  <p className={`text-sm mt-1 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>View project repositories</p>
+                </div>
+
+                {projectDetails.repositories.length === 0 ? (
+                  <div className={`p-12 text-center rounded-lg border ${
+                    theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+                  }`}>
+                    <GitBranch className={`w-16 h-16 mx-auto mb-4 ${theme === 'dark' ? 'text-gray-600' : 'text-gray-400'}`} />
+                    <h3 className={`text-lg font-semibold mb-2 ${theme === 'dark' ? 'text-gray-200' : 'text-gray-900'}`}>
+                      No repositories yet
+                    </h3>
+                    <p className={`${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+                      No repositories have been added to this project
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {projectDetails.repositories.map((repo) => (
+                      <div key={repo.id} className={`rounded-xl shadow-sm border p-6 hover:shadow-md transition-shadow ${
+                        theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+                      }`}>
+                        <div className="flex items-start justify-between mb-4">
+                          <div className="flex items-center">
+                            <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg flex items-center justify-center mr-3 shadow-md">
+                              <GitBranch className="w-6 h-6 text-white" />
+                            </div>
+                            <div>
+                              <h3 className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                                {repo.name}
+                              </h3>
+                              <p className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+                                Branch: {repo.branch}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-3">
+                          <div className={`flex items-center text-sm p-3 rounded-lg ${
+                            theme === 'dark' ? 'bg-gray-700 text-gray-300' : 'bg-gray-50 text-gray-600'
+                          }`}>
+                            <span className="font-medium mr-2">URL:</span>
+                            <a 
+                              href={repo.url} 
+                              target="_blank" 
+                              rel="noopener noreferrer" 
+                              className="text-blue-600 hover:underline truncate"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              {repo.url}
+                            </a>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </main>
       </div>
+
+      {/* Task Completion Modal */}
+      {showTaskCompletionModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className={`rounded-xl p-6 w-full max-w-md mx-4 ${
+            theme === 'dark' ? 'bg-gray-800' : 'bg-white'
+          }`}>
+            <h3 className={`text-lg font-semibold mb-4 ${
+              theme === 'dark' ? 'text-white' : 'text-gray-900'
+            }`}>Complete Task</h3>
+            <p className={`text-sm mb-4 ${
+              theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+            }`}>
+              ⚠️ Warning: Once marked as done, this action cannot be undone. Please provide commit information to complete this task.
+            </p>
+            
+            <div className="space-y-4">
+              <div>
+                <label className={`block text-sm font-medium mb-2 ${
+                  theme === 'dark' ? 'text-gray-200' : 'text-gray-700'
+                }`}>
+                  Commit Title <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={editingCommitTitle}
+                  onChange={(e) => setEditingCommitTitle(e.target.value)}
+                  placeholder="e.g., Fix login bug, Add user authentication"
+                  className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent ${
+                    theme === 'dark' 
+                      ? 'bg-gray-700 border-gray-600 text-white' 
+                      : 'border-gray-300'
+                  }`}
+                  required
+                />
+              </div>
+              
+              <div>
+                <label className={`block text-sm font-medium mb-2 ${
+                  theme === 'dark' ? 'text-gray-200' : 'text-gray-700'
+                }`}>
+                  Branch Name (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={editingCommitBranch}
+                  onChange={(e) => setEditingCommitBranch(e.target.value)}
+                  placeholder="e.g., feature/login-fix, bugfix/auth"
+                  className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent ${
+                    theme === 'dark' 
+                      ? 'bg-gray-700 border-gray-600 text-white' 
+                      : 'border-gray-300'
+                  }`}
+                />
+              </div>
+            </div>
+            
+            <div className="flex space-x-3 mt-6">
+              <button
+                onClick={() => {
+                  setShowTaskCompletionModal(false);
+                  setCompletingTaskId(null);
+                  setEditingCommitTitle('');
+                  setEditingCommitBranch('');
+                }}
+                className={`flex-1 px-4 py-2 rounded-lg transition-colors ${
+                  theme === 'dark'
+                    ? 'bg-gray-600 text-white hover:bg-gray-700'
+                    : 'bg-gray-500 text-white hover:bg-gray-600'
+                }`}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  if (!editingCommitTitle.trim()) {
+                    showError('Validation Error', 'Commit title is required');
+                    return;
+                  }
+                  if (completingTaskId) {
+                    completeTask(completingTaskId, editingCommitTitle, editingCommitBranch);
+                  }
+                }}
+                className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              >
+                Mark as Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Proposal Viewer Modal */}
+      {showProposalViewer && projectDetails.proposal && (
+        <ProposalViewer
+          isOpen={showProposalViewer}
+          onClose={() => setShowProposalViewer(false)}
+          proposalData={projectDetails.proposal}
+        />
+      )}
     </div>
   );
 };

@@ -101,8 +101,8 @@ export default function ProjectDetailsUI() {
 
   // API Utility Functions
   const getAuthHeaders = () => {
-    const token = localStorage.getItem('token');
-    console.log('🔍 Token from localStorage:', token ? 'Found' : 'Not found');
+    const token = sessionStorage.getItem('token');
+    console.log('🔍 Token from sessionStorage:', token ? 'Found' : 'Not found');
     return {
       'Authorization': `Token ${token}`,
       'Content-Type': 'application/json',
@@ -113,7 +113,7 @@ export default function ProjectDetailsUI() {
     console.error(`Error ${operation}:`, error);
     if (error.status === 401) {
       showError('Authentication Failed', 'Please log in again.');
-      localStorage.removeItem('token');
+      sessionStorage.removeItem('token');
       navigate('/sign-in');
     } else {
       showError('Operation Failed', `Failed to ${operation}. Please try again.`);
@@ -800,7 +800,7 @@ export default function ProjectDetailsUI() {
       return;
     }
 
-    const token = localStorage.getItem('token');
+    const token = sessionStorage.getItem('token');
     if (!token) {
       showError('Authentication Required', 'Please log in again.');
       return;
@@ -1689,7 +1689,7 @@ export default function ProjectDetailsUI() {
       return;
     }
 
-    const token = localStorage.getItem('token');
+    const token = sessionStorage.getItem('token');
     if (!token) {
       showError('Authentication Required', 'Please log in again.');
       return;
