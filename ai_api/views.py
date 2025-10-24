@@ -330,6 +330,28 @@ class ProjectViewSet(ModelViewSet):
         serializer = self.get_serializer(projects, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+    @action(detail=True, methods=["get"], url_path="statistics")
+    def statistics(self, request, pk=None):
+        """Return statistics for a project: member count, task count, sprint count"""
+        project = self.get_object()
+        
+        # Count members
+        member_count = ProjectMember.objects.filter(project=project).count()
+        
+        # Count all StoryTasks across all epics/sub-epics/user-stories
+        task_count = StoryTask.objects.filter(
+            user_story__sub_epic__epic__project=project
+        ).count()
+        
+        # Count TimelineWeeks (sprints)
+        sprint_count = TimelineWeek.objects.filter(project=project).count()
+        
+        return Response({
+            'member_count': member_count,
+            'task_count': task_count,
+            'sprint_count': sprint_count,
+        }, status=status.HTTP_200_OK)
+
 
 class ProposalViewSet(ModelViewSet):
     queryset = Proposal.objects.all()

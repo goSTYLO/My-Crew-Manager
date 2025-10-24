@@ -379,3 +379,63 @@ These backend changes successfully resolved all major issues with the notificati
 7. **Fixed project security** by implementing user-specific project filtering
 
 The system now provides a smooth, secure, and efficient notification, invitation, and project management experience for users.
+
+---
+
+## Project Statistics Endpoint
+
+### 8. `ai_api/views.py` - Project Statistics
+
+#### **Issue**: Mobile app showing hardcoded "0" for tasks and sprints counts
+#### **Fix**: Added new statistics endpoint to return accurate project statistics
+
+**Added New Endpoint:**
+```python
+@action(detail=True, methods=["get"], url_path="statistics")
+def statistics(self, request, pk=None):
+    """Return statistics for a project: member count, task count, sprint count"""
+    project = self.get_object()
+    
+    # Count members
+    member_count = ProjectMember.objects.filter(project=project).count()
+    
+    # Count all StoryTasks across all epics/sub-epics/user-stories
+    task_count = StoryTask.objects.filter(
+        user_story__sub_epic__epic__project=project
+    ).count()
+    
+    # Count TimelineWeeks (sprints)
+    sprint_count = TimelineWeek.objects.filter(project=project).count()
+    
+    return Response({
+        'member_count': member_count,
+        'task_count': task_count,
+        'sprint_count': sprint_count,
+    }, status=status.HTTP_200_OK)
+```
+
+#### **Key Changes:**
+- ✅ Added new `statistics` endpoint accessible at `GET /api/ai/projects/{id}/statistics/`
+- ✅ Returns member count from `ProjectMember` model
+- ✅ Returns task count from all `StoryTask` records across project hierarchy
+- ✅ Returns sprint count from `TimelineWeek` records
+- ✅ Provides consistent statistics for mobile app dashboard
+
+#### **API Endpoint Details:**
+- **URL**: `GET /api/ai/projects/{project_id}/statistics/`
+- **Authentication**: Required (IsAuthenticated)
+- **Response Format**:
+  ```json
+  {
+    "member_count": 2,
+    "task_count": 15,
+    "sprint_count": 4
+  }
+  ```
+
+#### **Usage:**
+- Mobile app can fetch project statistics to display accurate counts
+- Replaces hardcoded "0" values with real data from database
+- Provides foundation for project dashboard statistics
+
+The system now provides accurate project statistics for the mobile app dashboard, showing real member, task, and sprint counts instead of hardcoded zeros.
