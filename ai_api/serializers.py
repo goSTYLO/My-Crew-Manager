@@ -185,11 +185,5 @@ class NotificationSerializer(serializers.ModelSerializer):
             'actor', 'actor_name'
         ]
         read_only_fields = ['id', 'created_at', 'actor_name']
-    action = serializers.ChoiceField(choices=['accept', 'decline'])
-    
-    def validate_action(self, value):
-        if value not in ['accept', 'decline']:
-            raise serializers.ValidationError("Action must be 'accept' or 'decline'")
-        return value
 
 

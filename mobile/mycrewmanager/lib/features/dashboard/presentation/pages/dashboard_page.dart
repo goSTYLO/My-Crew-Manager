@@ -11,6 +11,9 @@ import 'package:mycrewmanager/features/dashboard/widgets/recentactivity_widget.d
 import 'package:mycrewmanager/features/dashboard/presentation/pages/tasks_page.dart';
 import 'package:mycrewmanager/features/dashboard/presentation/pages/notifications_page.dart';
 import 'package:mycrewmanager/features/dashboard/presentation/pages/projects_page.dart';
+import 'package:mycrewmanager/features/notification/presentation/bloc/notification_bloc.dart';
+import 'package:mycrewmanager/features/notification/presentation/bloc/notification_event.dart';
+import 'package:mycrewmanager/features/notification/presentation/bloc/notification_state.dart';
 
 
 class DashboardPage extends StatefulWidget {
@@ -24,6 +27,13 @@ class DashboardPage extends StatefulWidget {
 }
 
 class _DashboardPageState extends State<DashboardPage> {
+  @override
+  void initState() {
+    super.initState();
+    // Load unread count when the page opens
+    context.read<NotificationBloc>().add(const LoadUnreadCount());
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocListener<AuthBloc, AuthState>(
@@ -43,6 +53,50 @@ class _DashboardPageState extends State<DashboardPage> {
           backgroundColor: Colors.white,
           foregroundColor: const Color.fromARGB(255, 0, 0, 0),
           actions: [
+            BlocBuilder<NotificationBloc, NotificationState>(
+              builder: (context, state) {
+                int unreadCount = 0;
+                if (state is UnreadCountLoaded) {
+                  unreadCount = state.unreadCount;
+                }
+                
+                return Stack(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.notifications_outlined),
+                      onPressed: () {
+                        Navigator.push(context, NotificationsPage.route());
+                      },
+                    ),
+                    if (unreadCount > 0)
+                      Positioned(
+                        right: 8,
+                        top: 8,
+                        child: Container(
+                          padding: const EdgeInsets.all(2),
+                          decoration: BoxDecoration(
+                            color: Colors.red,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          constraints: const BoxConstraints(
+                            minWidth: 16,
+                            minHeight: 16,
+                          ),
+                          child: Text(
+                            unreadCount > 99 ? '99+' : unreadCount.toString(),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ),
+                  ],
+                );
+              },
+            ),
           ],
         ),
         body: Container(
