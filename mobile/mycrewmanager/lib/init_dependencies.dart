@@ -10,6 +10,7 @@ import 'package:mycrewmanager/features/authentication/data/repositories/auth_rep
 import 'package:mycrewmanager/features/authentication/domain/repository/auth_repository.dart';
 import 'package:mycrewmanager/features/authentication/domain/usecases/user_login.dart';
 import 'package:mycrewmanager/features/authentication/domain/usecases/user_signup.dart';
+import 'package:mycrewmanager/features/authentication/domain/usecases/user_logout.dart';
 import 'package:mycrewmanager/features/authentication/presentation/bloc/auth_bloc.dart';
 import 'package:mycrewmanager/features/project/data/data_sources/project_remote.dart';
 import 'package:mycrewmanager/features/project/data/repositories/project_repository_impl.dart';
@@ -60,6 +61,7 @@ void _initAuth() {
       //Use cases
       ..registerFactory(() => UserLogin(serviceLocator()))
       ..registerFactory(() => UserSignup(serviceLocator()))
+      ..registerFactory(() => UserLogout(serviceLocator()))
 
       //Repository
       ..registerFactory<AuthRepository>(
@@ -70,6 +72,7 @@ void _initAuth() {
         () => AuthBloc(
         userLogin: serviceLocator(),
         userSignup: serviceLocator(),
+        userLogout: serviceLocator(),
         tokenStorage: serviceLocator<TokenStorage>()
       ),
     );

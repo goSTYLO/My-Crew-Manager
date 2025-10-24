@@ -361,7 +361,7 @@ class _TasksPageState extends State<TasksPage> with SingleTickerProviderStateMix
                           ),
                           onPressed: () {
                             Navigator.pop(context); 
-                            Navigator.pushReplacement(context, LoginPage.route());
+                            context.read<AuthBloc>().add(AuthLogout());
                           },
                           child: const Text('Logout'),
                         ),
@@ -383,7 +383,17 @@ class _TasksPageState extends State<TasksPage> with SingleTickerProviderStateMix
   @override
   Widget build(BuildContext context) {
     final tabLabels = ["All", "To Do", "Completed"]; // Removed "In Progress" tab
-    return BlocBuilder<AuthBloc, AuthState>(
+    return BlocListener<AuthBloc, AuthState>(
+      listener: (context, state) {
+        if (state is AuthLoggedOut) {
+          Navigator.pushAndRemoveUntil(
+            context,
+            LoginPage.route(),
+            (route) => false,
+          );
+        }
+      },
+      child: BlocBuilder<AuthBloc, AuthState>(
       builder: (context, authState) {
         String? currentUserEmail;
         String? currentUserName;
@@ -531,8 +541,9 @@ class _TasksPageState extends State<TasksPage> with SingleTickerProviderStateMix
             );
           },
         ),
-    );
+        );
       },
+      ),
     );
   }
 }

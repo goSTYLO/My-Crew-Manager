@@ -5,6 +5,8 @@ import 'package:mycrewmanager/core/tokenhandlers/token_storage.dart';
 import 'package:mycrewmanager/features/authentication/domain/entities/user.dart';
 import 'package:mycrewmanager/features/authentication/domain/usecases/user_login.dart';
 import 'package:mycrewmanager/features/authentication/domain/usecases/user_signup.dart';
+import 'package:mycrewmanager/features/authentication/domain/usecases/user_logout.dart';
+import 'package:mycrewmanager/core/usecase/usercase.dart';
 
 part 'auth_event.dart';
 part 'auth_state.dart';
@@ -12,16 +14,19 @@ part 'auth_state.dart';
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final UserLogin _userLogin;
   final UserSignup _userSignup;
+  final UserLogout _userLogout;
   final TokenStorage _tokenStorage;
 
-  AuthBloc({required UserLogin userLogin, required UserSignup userSignup, required TokenStorage tokenStorage})
+  AuthBloc({required UserLogin userLogin, required UserSignup userSignup, required UserLogout userLogout, required TokenStorage tokenStorage})
       : _userLogin = userLogin,
         _userSignup = userSignup,
+        _userLogout = userLogout,
         _tokenStorage = tokenStorage,
         super(AuthInitial()) {
     on<AuthEvent>((_, emit) => emit(AuthLoading()));
     on<AuthLogin>(_onAuthLogin);
     on<AuthSignUp>(_onAuthSignup);
+    on<AuthLogout>(_onAuthLogout);
   }
 
   void _onAuthLogin(AuthLogin event, Emitter<AuthState> emit) async {
@@ -60,6 +65,24 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         logger.d("✅ SIGNUP SUCCESS: ${user.name} - Token: ${user.token}");
         await _tokenStorage.saveToken(user.token);
         emit(AuthSuccess(user));
+      }
+    );
+  }
+
+  void _onAuthLogout(AuthLogout event, Emitter<AuthState> emit) async {
+    logger.d("🔐 Starting logout process");
+    
+    final res = await _userLogout(NoParams());
+
+    await res.fold(
+      (failure) async {
+        logger.d("❌ LOGOUT FAILED: ${failure.message}");
+        emit(AuthFailure(failure.message));
+      },
+      (_) async {
+        logger.d("✅ LOGOUT SUCCESS");
+        await _tokenStorage.clearToken();
+        emit(AuthLoggedOut());
       }
     );
   }

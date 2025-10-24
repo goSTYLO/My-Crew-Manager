@@ -26,53 +26,64 @@ class DashboardPage extends StatefulWidget {
 class _DashboardPageState extends State<DashboardPage> {
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      drawer: _buildAppDrawer(context),
-      appBar: AppBar(
-        title: const Text('Dashboard'),
-        backgroundColor: Colors.white,
-        foregroundColor: const Color.fromARGB(255, 0, 0, 0),
-        actions: [
-        ],
-      ),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Colors.blue[50]!, Colors.white],
-          ),
+    return BlocListener<AuthBloc, AuthState>(
+      listener: (context, state) {
+        if (state is AuthLoggedOut) {
+          Navigator.pushAndRemoveUntil(
+            context,
+            LoginPage.route(),
+            (route) => false,
+          );
+        }
+      },
+      child: Scaffold(
+        drawer: _buildAppDrawer(context),
+        appBar: AppBar(
+          title: const Text('Dashboard'),
+          backgroundColor: Colors.white,
+          foregroundColor: const Color.fromARGB(255, 0, 0, 0),
+          actions: [
+          ],
         ),
-        child: SingleChildScrollView(
-          child: Column(
-            children: [
-              SizedBox(
-                width: 450, // Set your desired width
-                child: TaskWidget(),
-              ),
-              // --- Add TaskCarouselWidget below TaskWidget ---
-              SizedBox(
-                width: 450,
-                child: TaskCarouselWidget(),
-              ),
-              SizedBox(
-                width: 450,
-                child: IncomingTaskWidget(
-                  onViewAll: () {
-                    // Implement your "View All" logic here
-                  },
+        body: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [Colors.blue[50]!, Colors.white],
+            ),
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              children: [
+                SizedBox(
+                  width: 450, // Set your desired width
+                  child: TaskWidget(),
                 ),
-              ),
-              SizedBox(
-                width: 450,
-                child: RecentActivityWidget(),
-              ),
-              // Add more widgets below if needed
-            ],
+                // --- Add TaskCarouselWidget below TaskWidget ---
+                SizedBox(
+                  width: 450,
+                  child: TaskCarouselWidget(),
+                ),
+                SizedBox(
+                  width: 450,
+                  child: IncomingTaskWidget(
+                    onViewAll: () {
+                      // Implement your "View All" logic here
+                    },
+                  ),
+                ),
+                SizedBox(
+                  width: 450,
+                  child: RecentActivityWidget(),
+                ),
+                // Add more widgets below if needed
+              ],
+            ),
           ),
         ),
       ),
-    );   
+    );
   }
 
   Widget _buildAppDrawer(BuildContext context) {
@@ -203,7 +214,7 @@ class _DashboardPageState extends State<DashboardPage> {
                             ),
                             onPressed: () {
                               Navigator.pop(context); // Close dialog
-                              Navigator.pushReplacement(context, LoginPage.route());
+                              context.read<AuthBloc>().add(AuthLogout());
                             },
                             child: const Text('Logout'),
                           ),
