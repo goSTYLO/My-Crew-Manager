@@ -106,7 +106,7 @@ class LoginController {
     console.log("   📐 Role length:", data.role ? data.role.length : 'N/A');
     console.log("   🔤 Role charCodes:", data.role ? Array.from(data.role).map((c: any) => c.charCodeAt(0)).join(',') : 'N/A');
     
-    let redirectPath = "/user"; // Default redirect for Developer
+    let redirectPath = "/projects-user"; // Default redirect for Developer
 
     if (data.role) {
       // Enhanced normalization: trim, remove special chars, standardize
@@ -142,18 +142,18 @@ class LoginController {
         redirectPath = "/main-projects";
         console.log("   ✅✅✅ MATCHED: Project Manager → /main-projects");
       } else if (isDeveloper) {
-        redirectPath = "/user";
-        console.log("   ✅ MATCHED: Developer → /user");
+        redirectPath = "/projects-user";
+        console.log("   ✅ MATCHED: Developer → /projects-user");
       } else {
         // Default to user for unknown roles
-        redirectPath = "/user";
-        console.warn("   ⚠️ UNKNOWN ROLE - defaulting to /user");
+        redirectPath = "/projects-user";
+        console.warn("   ⚠️ UNKNOWN ROLE - defaulting to /projects-user");
         console.warn("   ❓ Role was:", normalizedRole);
       }
     } else {
       console.warn("   ⚠️ No 'role' in backend response!");
       localStorage.setItem("userRole", "Developer");
-      redirectPath = "/user";
+      redirectPath = "/projects-user";
     }
 
     console.log("   🎯 FINAL REDIRECT PATH:", redirectPath);

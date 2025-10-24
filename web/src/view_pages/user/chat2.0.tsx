@@ -1,8 +1,8 @@
 //chat.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import { Send, Search, MoreVertical, Paperclip, Smile, Phone, Video, MessageSquare, ArrowLeft, Users, X, Plus, Check } from 'lucide-react';
-import Sidebar from "../../components/sidebarLayout";
-import TopNavbar from "../../components/topbarLayouot";
+import Sidebar from "../../components/sidebarUser";
+import TopNavbar from "../../components/topbarLayout_user";
 import { useTheme } from "../../components/themeContext";
 
 // API Configuration
@@ -286,24 +286,28 @@ const ChatApp = () => {
       console.log('📥 Fetching messages for room:', roomId);
       console.log('👤 Current user ID:', currentUserId);
       const msgs: ApiMessage[] = await apiCall(`/rooms/${roomId}/messages/`);
-
+      
+      // Check if we already have messages for this room to preserve sender status
       const existingMessages = messages[roomId];
       
       const formattedMessages: Message[] = msgs.map(msg => {
         // Check if this message already exists in our state
         const existingMsg = existingMessages?.find(m => m.message_id === msg.message_id);
         
-        // If message exists, preserve its sender status (me/them)
-        const isMyMessage = msg.sender_id === currentUserId; 
-        // This prevents messages from switching sides when leaving and returning
+        // Always determine sender based on currentUserId comparison
+        // This ensures YOUR messages (where sender_id matches currentUserId) always appear on the right
+        const isMyMessage = msg.sender_id === currentUserId;
+        
+        // If message exists, preserve its sender status ONLY if it was 'me'
+        // This prevents your own messages from moving to the left
         let sender: 'me' | 'them';
-        if (existingMsg) {
-          sender = existingMsg.sender;
-          console.log(`♻️ Preserving existing message ${msg.message_id} as '${sender}'`);
+        if (existingMsg && existingMsg.sender === 'me') {
+          sender = 'me';
+          console.log(`♻️ Preserving YOUR message ${msg.message_id} on the right`);
         } else {
-          // For new messages, determine based on sender_id
+          // For all other cases, determine based on sender_id
           sender = isMyMessage ? 'me' : 'them';
-          console.log(`🆕 New message ${msg.message_id}: sender_id=${msg.sender_id}, currentUserId=${currentUserId}, determined as '${sender}'`);
+          console.log(`🆕 Message ${msg.message_id}: sender_id=${msg.sender_id}, currentUserId=${currentUserId}, positioned as '${sender}'`);
         }
         
         return {
@@ -469,6 +473,7 @@ const ChatApp = () => {
 
   // Handle new message from WebSocket
   const handleNewMessage = (roomId: number, messageData: ApiMessage, senderId: number) => {
+    // Use the stored currentUserId to determine if message is from current user
     const newMessage: Message = {
       id: messageData.message_id,
       sender: senderId === currentUserId ? 'me' : 'them',
@@ -517,10 +522,10 @@ const ChatApp = () => {
           })
         });
         
-        // Immediately display the message on the right side
+        // Immediately display the message on the right side using stored currentUserId
         const newMessage: Message = {
           id: response.message_id || Date.now(),
-          sender: 'me',
+          sender: 'me', // Always 'me' for sent messages
           text: messageText,
           time: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
           sender_id: currentUserId || undefined,
@@ -636,78 +641,6 @@ const ChatApp = () => {
     console.log('🗑️ Email removed:', email);
   };
 
-  // Create group via API
-  const handleCreateGroup = async () => {
-    const totalMembers = selectedMembers.length + memberEmails.length;
-    
-    if (groupName.trim() && totalMembers >= 2) {
-      try {
-        console.log('📝 Creating group:', groupName);
-        console.log('Selected members:', selectedMembers.length);
-        console.log('Email invites:', memberEmails);
-        
-        const response = await apiCall('/rooms/', {
-          method: 'POST',
-          body: JSON.stringify({
-            name: groupName,
-            is_private: false
-          })
-        });
-        
-        const newRoomId = response.room_id;
-        console.log('✅ Group created:', newRoomId);
-        
-        // Invite members by email
-        for (const email of memberEmails) {
-          try {
-            await apiCall(`/rooms/${newRoomId}/invite/`, {
-              method: 'POST',
-              body: JSON.stringify({ email })
-            });
-            console.log('✅ Invited:', email);
-          } catch (err) {
-            console.error('❌ Failed to invite:', email, err);
-            // Continue inviting other members even if one fails
-          }
-        }
-        
-        // Reset form and refresh rooms
-        setGroupName('');
-        setSelectedMembers([]);
-        setMemberEmails([]);
-        setEmailInput('');
-        setEmailError(null);
-        setSearchMember('');
-        setShowCreateGroup(false);
-        await fetchRooms();
-        
-        console.log('✅ Group creation complete');
-      } catch (err) {
-        console.error('❌ Failed to create group:', err);
-        setError('Failed to create group');
-      }
-    }
-  };
-
-  // Create direct chat using email
-  const createDirectChat = async (email: string) => {
-    try {
-      console.log('💬 Creating direct chat with:', email);
-      
-      const response = await apiCall('/rooms/direct/', {
-        method: 'POST',
-        body: JSON.stringify({ email })
-      });
-      
-      console.log('✅ Direct chat created/found:', response.room_id);
-      await fetchRooms();
-      handleSelectChat(response.room_id);
-    } catch (err) {
-      console.error('❌ Failed to create direct chat:', err);
-      setError('Failed to create direct chat');
-    }
-  };
-
   // Update group name
   const handleUpdateGroupName = async () => {
     if (editingGroupId && editingGroupName.trim()) {
@@ -759,34 +692,16 @@ const ChatApp = () => {
   const fetchGroupMembers = async (roomId: number) => {
     try {
       const members = await apiCall(`/rooms/${roomId}/members/`);
-      setGroupMembers(members);
       console.log('✅ Group members loaded:', members);
+      console.log('📊 First member structure:', members[0]); // Debug: see the exact structure
+      console.log('📊 All member keys:', members.map((m: any) => Object.keys(m))); // Debug: see all keys
+      setGroupMembers(members);
     } catch (err) {
       console.error('❌ Failed to fetch group members:', err);
       setError('Failed to load group members');
     }
   };
 
-  // Leave group
-  const handleLeaveGroup = async () => {
-    if (selectedChat && window.confirm('Are you sure you want to leave this group?')) {
-      try {
-        await apiCall(`/rooms/${selectedChat}/leave/`, {
-          method: 'POST'
-        });
-        
-        // Remove from contacts
-        setContacts(prev => prev.filter(contact => contact.id !== selectedChat));
-        setSelectedChat(null);
-        setShowContactList(true);
-        setShowGroupMenu(false);
-        console.log('✅ Left group successfully');
-      } catch (err) {
-        console.error('❌ Failed to leave group:', err);
-        setError('Failed to leave group');
-      }
-    }
-  };
 
   // Update nickname
   const handleUpdateNickname = async () => {
@@ -881,51 +796,6 @@ const ChatApp = () => {
     }
   };
 
-  // Add member to group
-  const handleAddMember = async () => {
-    if (selectedChat && addMemberEmail.trim()) {
-      const email = addMemberEmail.trim().toLowerCase();
-      
-      // Validate email
-      if (!isValidEmail(email)) {
-        setAddMemberError('Please enter a valid email address');
-        return;
-      }
-      
-      try {
-        await apiCall(`/rooms/${selectedChat}/invite/`, {
-          method: 'POST',
-          body: JSON.stringify({ email })
-        });
-        
-        // Add system message to chat
-        const systemMessage: Message = {
-          id: Date.now(),
-          sender: 'them',
-          text: `➕ ${email} was invited to the group`,
-          time: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
-          message_id: Date.now()
-        };
-        
-        setMessages(prev => ({
-          ...prev,
-          [selectedChat]: [...(prev[selectedChat] || []), systemMessage]
-        }));
-        
-        // Refresh group members
-        await fetchGroupMembers(selectedChat);
-        
-        setAddMemberEmail('');
-        setAddMemberError(null);
-        setShowAddMemberModal(false);
-        setShowGroupMenu(false);
-        console.log('✅ Member added successfully');
-      } catch (err) {
-        console.error('❌ Failed to add member:', err);
-        setAddMemberError('Failed to add member. User may not exist or already in group.');
-      }
-    }
-  };
 
   // Handle file selection
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -1087,7 +957,7 @@ const ChatApp = () => {
             <div className={`${showContactList ? 'flex' : 'hidden'} md:flex w-full md:w-80 flex-col ${
               theme === "dark" ? "border-r border-gray-700" : "border-r border-gray-200"
             }`}>
-              {/* Search and Create Group Button */}
+              {/* Search Button */}
               <div className={`p-4 ${theme === "dark" ? "border-b border-gray-700" : "border-b border-gray-200"}`}>
                 <div className="relative mb-3">
                   <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 ${
@@ -1105,13 +975,7 @@ const ChatApp = () => {
                     }`}
                   />
                 </div>
-                <button
-                  onClick={() => setShowCreateGroup(true)}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  <Users className="w-4 h-4" />
-                  <span className="text-sm font-medium">Create Group</span>
-                </button>
+                
               </div>
 
               {/* Contact List */}
@@ -1366,23 +1230,9 @@ const ChatApp = () => {
                                     Set Nickname
                                   </button>
                                   
-                                  <button
-                                    onClick={() => {
-                                      setShowAddMemberModal(true);
-                                      setShowGroupMenu(false);
-                                    }}
-                                    className={`w-full px-4 py-2 text-left text-sm flex items-center gap-3 ${
-                                      theme === "dark" ? "hover:bg-gray-700 text-gray-300" : "hover:bg-gray-50 text-gray-700"
-                                    }`}
-                                  >
-                                    <Plus className="w-4 h-4" />
-                                    Add Member
-                                  </button>
-                                  
                                   <div className={`border-t ${theme === "dark" ? "border-gray-700" : "border-gray-200"}`} />
                                   
                                   <button
-                                    onClick={handleLeaveGroup}
                                     className={`w-full px-4 py-2 text-left text-sm flex items-center gap-3 text-red-500 hover:bg-red-50 ${
                                       theme === "dark" ? "hover:bg-red-900/20" : ""
                                     }`}
@@ -1610,282 +1460,6 @@ const ChatApp = () => {
           </div>
         </div>
       </div>
-
-      {/* Create Group Modal */}
-      {showCreateGroup && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className={`w-full max-w-md rounded-lg shadow-xl ${
-            theme === "dark" ? "bg-gray-800" : "bg-white"
-          }`}>
-            {/* Modal Header */}
-            <div className={`flex items-center justify-between p-4 border-b ${
-              theme === "dark" ? "border-gray-700" : "border-gray-200"
-            }`}>
-              <h2 className={`text-xl font-semibold ${
-                theme === "dark" ? "text-white" : "text-gray-800"
-              }`}>Create Group</h2>
-              <button
-                onClick={() => {
-                  setShowCreateGroup(false);
-                  setGroupName('');
-                  setSelectedMembers([]);
-                  setMemberEmails([]);
-                  setEmailInput('');
-                  setEmailError(null);
-                  setSearchMember('');
-                }}
-                className={`p-1 rounded-lg transition-colors ${
-                  theme === "dark" ? "hover:bg-gray-700" : "hover:bg-gray-100"
-                }`}
-              >
-                <X className={`w-5 h-5 ${
-                  theme === "dark" ? "text-gray-400" : "text-gray-600"
-                }`} />
-              </button>
-            </div>
-
-            {/* Modal Body */}
-            <div className="p-4 max-h-[70vh] overflow-y-auto">
-              {/* Group Name Input */}
-              <div className="mb-4">
-                <label className={`block text-sm font-medium mb-2 ${
-                  theme === "dark" ? "text-gray-300" : "text-gray-700"
-                }`}>
-                  Group Name
-                </label>
-                <input
-                  type="text"
-                  value={groupName}
-                  onChange={(e) => setGroupName(e.target.value)}
-                  placeholder="Enter group name..."
-                  className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                    theme === "dark"
-                      ? "bg-gray-900 border-gray-700 text-white placeholder-gray-500"
-                      : "border-gray-300"
-                  }`}
-                />
-              </div>
-
-              {/* Search Members */}
-              <div className="mb-3">
-                <label className={`block text-sm font-medium mb-2 ${
-                  theme === "dark" ? "text-gray-300" : "text-gray-700"
-                }`}>
-                  Add Members (Minimum 2)
-                </label>
-                <div className="relative">
-                  <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 ${
-                    theme === "dark" ? "text-gray-500" : "text-gray-400"
-                  }`} />
-                  <input
-                    type="text"
-                    value={searchMember}
-                    onChange={(e) => setSearchMember(e.target.value)}
-                    placeholder="Search members..."
-                    className={`w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                      theme === "dark"
-                        ? "bg-gray-900 border-gray-700 text-white placeholder-gray-500"
-                        : "border-gray-300"
-                    }`}
-                  />
-                </div>
-              </div>
-
-              {/* Selected Members Count */}
-              {(selectedMembers.length > 0 || memberEmails.length > 0) && (
-                <div className={`mb-3 p-2 rounded-lg ${
-                  theme === "dark" ? "bg-gray-900" : "bg-blue-50"
-                }`}>
-                  <p className={`text-sm ${
-                    theme === "dark" ? "text-gray-300" : "text-blue-700"
-                  }`}>
-                    {selectedMembers.length + memberEmails.length} member{selectedMembers.length + memberEmails.length > 1 ? 's' : ''} selected
-                    {selectedMembers.length + memberEmails.length < 2 && (
-                      <span className={`ml-2 ${
-                        theme === "dark" ? "text-gray-400" : "text-blue-500"
-                      }`}>
-                        (Add at least {2 - (selectedMembers.length + memberEmails.length)} more)
-                      </span>
-                    )}
-                  </p>
-                </div>
-              )}
-
-              {/* Members List */}
-              <div className={`border rounded-lg overflow-hidden mb-4 ${
-                theme === "dark" ? "border-gray-700" : "border-gray-200"
-              }`}>
-                {filteredMembers.length > 0 ? (
-                  <div className="max-h-64 overflow-y-auto">
-                    {filteredMembers.map(member => (
-                      <div
-                        key={member.id}
-                        onClick={() => toggleMemberSelection(member.id)}
-                        className={`flex items-center gap-3 p-3 cursor-pointer transition-colors ${
-                          theme === "dark"
-                            ? "hover:bg-gray-700 border-b border-gray-700"
-                            : "hover:bg-gray-50 border-b border-gray-100"
-                        }`}
-                      >
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold">
-                          {member.avatar}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h3 className={`font-medium truncate ${
-                            theme === "dark" ? "text-white" : "text-gray-800"
-                          }`}>{member.name}</h3>
-                          <p className={`text-sm truncate ${
-                            theme === "dark" ? "text-gray-400" : "text-gray-500"
-                          }`}>{member.role}</p>
-                        </div>
-                        <div className={`w-6 h-6 rounded border-2 flex items-center justify-center ${
-                          selectedMembers.includes(member.id)
-                            ? 'bg-blue-600 border-blue-600'
-                            : theme === "dark"
-                            ? 'border-gray-600'
-                            : 'border-gray-300'
-                        }`}>
-                          {selectedMembers.includes(member.id) && (
-                            <Check className="w-4 h-4 text-white" />
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className={`p-8 text-center ${
-                    theme === "dark" ? "text-gray-400" : "text-gray-500"
-                  }`}>
-                    <p>No members found</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Add Members by Email Section */}
-              <div className="mb-4">
-                <label className={`block text-sm font-medium mb-2 ${
-                  theme === "dark" ? "text-gray-300" : "text-gray-700"
-                }`}>
-                  Or Add Members by Email
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="email"
-                    value={emailInput}
-                    onChange={(e) => {
-                      setEmailInput(e.target.value);
-                      setEmailError(null);
-                    }}
-                    onKeyPress={(e) => e.key === 'Enter' && handleAddEmail()}
-                    placeholder="Enter email address..."
-                    className={`flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                      emailError
-                        ? 'border-red-500'
-                        : theme === "dark"
-                        ? "bg-gray-900 border-gray-700 text-white placeholder-gray-500"
-                        : "border-gray-300"
-                    }`}
-                  />
-                  <button
-                    onClick={handleAddEmail}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span className="hidden sm:inline">Add</span>
-                  </button>
-                </div>
-                {emailError && (
-                  <p className="text-red-500 text-xs mt-1">{emailError}</p>
-                )}
-              </div>
-
-              {/* Email List */}
-              {memberEmails.length > 0 && (
-                <div className={`border rounded-lg overflow-hidden ${
-                  theme === "dark" ? "border-gray-700" : "border-gray-200"
-                }`}>
-                  <div className={`px-3 py-2 border-b ${
-                    theme === "dark" ? "bg-gray-900 border-gray-700" : "bg-gray-50 border-gray-200"
-                  }`}>
-                    <p className={`text-sm font-medium ${
-                      theme === "dark" ? "text-gray-300" : "text-gray-700"
-                    }`}>
-                      Email Invitations ({memberEmails.length})
-                    </p>
-                  </div>
-                  <div className="max-h-40 overflow-y-auto">
-                    {memberEmails.map((email, index) => (
-                      <div
-                        key={index}
-                        className={`flex items-center justify-between px-3 py-2 ${
-                          theme === "dark"
-                            ? "hover:bg-gray-700 border-b border-gray-700"
-                            : "hover:bg-gray-50 border-b border-gray-100"
-                        }`}
-                      >
-                        <span className={`text-sm truncate ${
-                          theme === "dark" ? "text-gray-300" : "text-gray-700"
-                        }`}>
-                          {email}
-                        </span>
-                        <button
-                          onClick={() => handleRemoveEmail(email)}
-                          className={`p-1 rounded transition-colors ${
-                            theme === "dark"
-                              ? "hover:bg-gray-600 text-gray-400 hover:text-red-400"
-                              : "hover:bg-gray-200 text-gray-500 hover:text-red-500"
-                          }`}
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Modal Footer */}
-            <div className={`p-4 border-t ${
-              theme === "dark" ? "border-gray-700" : "border-gray-200"
-            }`}>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => {
-                    setShowCreateGroup(false);
-                    setGroupName('');
-                    setSelectedMembers([]);
-                    setMemberEmails([]);
-                    setEmailInput('');
-                    setEmailError(null);
-                    setSearchMember('');
-                  }}
-                  className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${
-                    theme === "dark"
-                      ? "bg-gray-700 text-gray-300 hover:bg-gray-600"
-                      : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                  }`}
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleCreateGroup}
-                  disabled={!groupName.trim() || (selectedMembers.length + memberEmails.length) < 2}
-                  className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${
-                    !groupName.trim() || (selectedMembers.length + memberEmails.length) < 2
-                      ? theme === "dark"
-                        ? "bg-gray-700 text-gray-500 cursor-not-allowed"
-                        : "bg-gray-200 text-gray-400 cursor-not-allowed"
-                      : "bg-blue-600 text-white hover:bg-blue-700"
-                  }`}
-                >
-                  Create Group
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
       
       {/* View Members Modal */}
       {showMembersModal && (
@@ -1921,17 +1495,17 @@ const ChatApp = () => {
                     }`}
                   >
                     <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold">
-                      {member.email ? member.email[0].toUpperCase() : 'U'}
+                      {(member.user?.email || member.email) ? (member.user?.email || member.email)[0].toUpperCase() : 'U'}
                     </div>
-                    <div className="flex-1">
-                      <h3 className={`font-medium ${
+                    <div className="flex-1 min-w-0">
+                      <h3 className={`font-medium truncate ${
                         theme === "dark" ? "text-white" : "text-gray-800"
                       }`}>
-                        {member.nickname || member.username || 'Unknown User'}
+                        {member.nickname || member.user?.username || member.username || (member.user?.email || member.email) || 'Unknown User'}
                       </h3>
-                      <p className={`text-sm ${
+                      <p className={`text-sm truncate ${
                         theme === "dark" ? "text-gray-400" : "text-gray-500"
-                      }`}>{member.email}</p>
+                      }`}>{member.user?.email || member.email || 'No email'}</p>
                     </div>
                   </div>
                 ))
@@ -2028,135 +1602,6 @@ const ChatApp = () => {
         </div>
       )}
       
-      {/* Edit Group Picture Modal */}
-      {showEditPictureModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className={`w-full max-w-md rounded-lg shadow-xl ${
-            theme === "dark" ? "bg-gray-800" : "bg-white"
-          }`}>
-            <div className={`flex items-center justify-between p-4 border-b ${
-              theme === "dark" ? "border-gray-700" : "border-gray-200"
-            }`}>
-              <h2 className={`text-xl font-semibold ${
-                theme === "dark" ? "text-white" : "text-gray-800"
-              }`}>Edit Group Picture</h2>
-              <button
-                onClick={() => {
-                  setShowEditPictureModal(false);
-                  setSelectedFile(null);
-                  setPreviewImage('');
-                }}
-                className={`p-1 rounded-lg transition-colors ${
-                  theme === "dark" ? "hover:bg-gray-700" : "hover:bg-gray-100"
-                }`}
-              >
-                <X className={`w-5 h-5 ${
-                  theme === "dark" ? "text-gray-400" : "text-gray-600"
-                }`} />
-              </button>
-            </div>
-            
-            <div className="p-4">
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleFileSelect}
-                className="hidden"
-              />
-              
-              <div className="flex flex-col items-center">
-                {previewImage ? (
-                  <div className="relative mb-4">
-                    <img
-                      src={previewImage}
-                      alt="Preview"
-                      className="w-32 h-32 rounded-full object-cover border-4 border-blue-500"
-                    />
-                    <button
-                      onClick={() => {
-                        setSelectedFile(null);
-                        setPreviewImage('');
-                      }}
-                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                ) : (
-                  <div
-                    onClick={() => fileInputRef.current?.click()}
-                    className={`w-32 h-32 rounded-full flex flex-col items-center justify-center border-2 border-dashed cursor-pointer mb-4 transition-colors ${
-                      theme === "dark"
-                        ? "border-gray-600 hover:border-blue-500 bg-gray-900"
-                        : "border-gray-300 hover:border-blue-500 bg-gray-50"
-                    }`}
-                  >
-                    <svg className={`w-12 h-12 mb-2 ${theme === "dark" ? "text-gray-500" : "text-gray-400"}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                    <span className={`text-sm ${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}>
-                      Click to upload
-                    </span>
-                  </div>
-                )}
-                
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className={`px-4 py-2 rounded-lg transition-colors ${
-                    theme === "dark"
-                      ? "bg-gray-700 text-gray-300 hover:bg-gray-600"
-                      : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                  }`}
-                >
-                  Choose Image
-                </button>
-                
-                <p className={`text-xs mt-3 text-center ${
-                  theme === "dark" ? "text-gray-400" : "text-gray-500"
-                }`}>
-                  Supported formats: JPG, PNG, GIF (Max 5MB)
-                </p>
-              </div>
-            </div>
-            
-            <div className={`p-4 border-t ${
-              theme === "dark" ? "border-gray-700" : "border-gray-200"
-            }`}>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => {
-                    setShowEditPictureModal(false);
-                    setSelectedFile(null);
-                    setPreviewImage('');
-                  }}
-                  className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${
-                    theme === "dark"
-                      ? "bg-gray-700 text-gray-300 hover:bg-gray-600"
-                      : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                  }`}
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleUpdateGroupPicture}
-                  disabled={!selectedFile}
-                  className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${
-                    !selectedFile
-                      ? theme === "dark"
-                        ? "bg-gray-700 text-gray-500 cursor-not-allowed"
-                        : "bg-gray-200 text-gray-400 cursor-not-allowed"
-                      : "bg-blue-600 text-white hover:bg-blue-700"
-                  }`}
-                >
-                  Save Picture
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
       
       {/* Delete Message Confirmation */}
       {showDeleteConfirm && (
@@ -2196,104 +1641,6 @@ const ChatApp = () => {
               >
                 Delete
               </button>
-            </div>
-          </div>
-        </div>
-      )}
-      
-      {/* Add Member Modal */}
-      {showAddMemberModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className={`w-full max-w-md rounded-lg shadow-xl ${
-            theme === "dark" ? "bg-gray-800" : "bg-white"
-          }`}>
-            <div className={`flex items-center justify-between p-4 border-b ${
-              theme === "dark" ? "border-gray-700" : "border-gray-200"
-            }`}>
-              <h2 className={`text-xl font-semibold ${
-                theme === "dark" ? "text-white" : "text-gray-800"
-              }`}>Add Member</h2>
-              <button
-                onClick={() => {
-                  setShowAddMemberModal(false);
-                  setAddMemberEmail('');
-                  setAddMemberError(null);
-                }}
-                className={`p-1 rounded-lg transition-colors ${
-                  theme === "dark" ? "hover:bg-gray-700" : "hover:bg-gray-100"
-                }`}
-              >
-                <X className={`w-5 h-5 ${
-                  theme === "dark" ? "text-gray-400" : "text-gray-600"
-                }`} />
-              </button>
-            </div>
-            
-            <div className="p-4">
-              <label className={`block text-sm font-medium mb-2 ${
-                theme === "dark" ? "text-gray-300" : "text-gray-700"
-              }`}>
-                Member Email Address
-              </label>
-              <input
-                type="email"
-                value={addMemberEmail}
-                onChange={(e) => {
-                  setAddMemberEmail(e.target.value);
-                  setAddMemberError(null);
-                }}
-                onKeyPress={(e) => e.key === 'Enter' && handleAddMember()}
-                placeholder="Enter email address..."
-                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                  addMemberError
-                    ? 'border-red-500'
-                    : theme === "dark"
-                    ? "bg-gray-900 border-gray-700 text-white placeholder-gray-500"
-                    : "border-gray-300"
-                }`}
-              />
-              {addMemberError && (
-                <p className="text-red-500 text-xs mt-1">{addMemberError}</p>
-              )}
-              <p className={`text-xs mt-2 ${
-                theme === "dark" ? "text-gray-400" : "text-gray-500"
-              }`}>
-                The user will receive an invitation to join this group.
-              </p>
-            </div>
-            
-            <div className={`p-4 border-t ${
-              theme === "dark" ? "border-gray-700" : "border-gray-200"
-            }`}>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => {
-                    setShowAddMemberModal(false);
-                    setAddMemberEmail('');
-                    setAddMemberError(null);
-                  }}
-                  className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${
-                    theme === "dark"
-                      ? "bg-gray-700 text-gray-300 hover:bg-gray-600"
-                      : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                  }`}
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleAddMember}
-                  disabled={!addMemberEmail.trim()}
-                  className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${
-                    !addMemberEmail.trim()
-                      ? theme === "dark"
-                        ? "bg-gray-700 text-gray-500 cursor-not-allowed"
-                        : "bg-gray-200 text-gray-400 cursor-not-allowed"
-                      : "bg-blue-600 text-white hover:bg-blue-700"
-                  }`}
-                >
-                  Add Member
-                </button>
-              </div>
             </div>
           </div>
         </div>

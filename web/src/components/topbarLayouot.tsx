@@ -1,7 +1,8 @@
+//topbarLayouot.tsx
 import React, { useState, useRef, useEffect } from "react";
 import {Menu,Search,Bell,MessageSquare,ChevronDown,ChevronUp,User,LogOut,Sun, Moon} from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import logo from "../assets/logo.png";
+import logo from "../assets/logo2.png";
 import { useTheme } from "./themeContext";
 import { API_BASE_URL } from "../config/api";
 import { useRealtimeUpdates } from "../hooks/useRealtimeUpdates";
@@ -286,7 +287,7 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
 
   return (
     <header
-      className={`fixed top-0 left-0 w-full shadow-sm border-b px-4 lg:px-6 py-4 z-50 ${
+      className={`fixed top-0 left-0 w-full shadow-sm border-b px-4 lg:px-6 py-4 ${
         theme === "dark"
           ? "bg-gray-800 border-gray-700"
           : "bg-white border-gray-200"
