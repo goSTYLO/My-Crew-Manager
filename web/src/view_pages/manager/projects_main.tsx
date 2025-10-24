@@ -56,6 +56,9 @@ const ProjectTask = () => {
     const [timeFilter, setTimeFilter] = useState('all');
     const [selectedUser, setSelectedUser] = useState<Collaborator | null>(null);
     const [showUserModal, setShowUserModal] = useState(false);
+    const [showViewAllModal, setShowViewAllModal] = useState(false);
+    const [modalCurrentPage, setModalCurrentPage] = useState(1);
+    const projectsPerModalPage = 20;
 
     // API Configuration
     const AI_API_BASE_URL = `${API_BASE_URL}/api/ai`;
@@ -310,6 +313,28 @@ const ProjectTask = () => {
         }
     };
 
+    // Modal pagination functions
+    const totalModalPages = Math.ceil(projects.length / projectsPerModalPage);
+    const modalStartIndex = (modalCurrentPage - 1) * projectsPerModalPage;
+    const modalEndIndex = modalStartIndex + projectsPerModalPage;
+    const modalProjects = projects.slice(modalStartIndex, modalEndIndex);
+
+    const handleModalPageChange = (page: number) => {
+        setModalCurrentPage(page);
+    };
+
+    const handleModalPreviousPage = () => {
+        if (modalCurrentPage > 1) {
+            setModalCurrentPage(modalCurrentPage - 1);
+        }
+    };
+
+    const handleModalNextPage = () => {
+        if (modalCurrentPage < totalModalPages) {
+            setModalCurrentPage(modalCurrentPage + 1);
+        }
+    };
+
     // Calculate dynamic data for charts
     const taskData = aggregatedStats.total > 0 ? [
       { name: 'Completed', value: aggregatedStats.completed, color: '#10B981' },
@@ -377,7 +402,7 @@ const ProjectTask = () => {
                           )}
                         </div>
                         <button 
-                           onClick={() => navigate("#")} 
+                           onClick={() => setShowViewAllModal(true)} 
                           className="text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors"
                         >
                           View all
@@ -438,6 +463,57 @@ const ProjectTask = () => {
                         ))
                       )}
                     </div>
+
+                    {/* Pagination Controls */}
+                    {projects.length > projectsPerPage && (
+                      <div className={`flex items-center justify-between mt-4 pt-4 border-t ${
+                        theme === "dark" ? "border-gray-700" : "border-gray-200"
+                      }`}>
+                        <button 
+                          onClick={handlePreviousPage}
+                          disabled={currentPage === 1}
+                          className={`px-3 py-1 text-sm rounded-md transition-colors ${
+                            currentPage === 1 
+                              ? 'text-gray-400 cursor-not-allowed' 
+                              : theme === "dark"
+                              ? 'text-blue-400 hover:bg-gray-700'
+                              : 'text-blue-600 hover:bg-blue-50'
+                          }`}
+                        >
+                          Previous
+                        </button>
+                        <div className="flex items-center space-x-2">
+                          {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                            <button
+                              key={page}
+                              onClick={() => handlePageChange(page)}
+                              className={`px-3 py-1 text-sm rounded-md transition-colors ${
+                                currentPage === page
+                                  ? 'bg-blue-600 text-white'
+                                  : theme === "dark"
+                                  ? 'text-gray-300 hover:bg-gray-700'
+                                  : 'text-gray-600 hover:bg-gray-100'
+                              }`}
+                            >
+                              {page}
+                            </button>
+                          ))}
+                        </div>
+                        <button 
+                          onClick={handleNextPage}
+                          disabled={currentPage === totalPages}
+                          className={`px-3 py-1 text-sm rounded-md transition-colors ${
+                            currentPage === totalPages 
+                              ? 'text-gray-400 cursor-not-allowed' 
+                              : theme === "dark"
+                              ? 'text-blue-400 hover:bg-gray-700'
+                              : 'text-blue-600 hover:bg-blue-50'
+                          }`}
+                        >
+                          Next
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   {/* Tasks Card */}
@@ -725,6 +801,133 @@ const ProjectTask = () => {
                         Close
                       </button>
                     </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* View All Projects Modal */}
+            {showViewAllModal && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                <div className={`rounded-lg max-w-6xl w-full max-h-[90vh] overflow-hidden ${
+                  theme === "dark" ? "bg-gray-800" : "bg-white"
+                }`}>
+                  {/* Modal Header */}
+                  <div className={`flex items-center justify-between p-6 border-b ${
+                    theme === "dark" ? "border-gray-700" : "border-gray-200"
+                  }`}>
+                    <h3 className={`text-xl font-semibold ${
+                      theme === "dark" ? "text-white" : "text-gray-900"
+                    }`}>
+                      All Projects ({projects.length})
+                    </h3>
+                    <button
+                      onClick={() => setShowViewAllModal(false)}
+                      className={`text-gray-400 hover:text-gray-600 ${
+                        theme === "dark" ? "hover:text-gray-200" : ""
+                      }`}
+                    >
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+
+                  {/* Modal Content - Grid of Projects */}
+                  <div className="p-6 overflow-y-auto max-h-[calc(90vh-180px)]">
+                    <div className="grid grid-cols-4 gap-4">
+                      {modalProjects.map((project: any) => (
+                        <div
+                          key={project.id}
+                          className={`p-4 rounded-lg border cursor-pointer transition-all duration-200 hover:shadow-md ${
+                            theme === "dark" 
+                              ? "bg-gray-700 border-gray-600 hover:bg-gray-600" 
+                              : "bg-gray-50 border-gray-200 hover:bg-white"
+                          }`}
+                          onClick={() => {
+                            setShowViewAllModal(false);
+                            navigate(`/project-details/${project.id}`);
+                          }}
+                        >
+                          <div className={`w-full h-24 bg-gradient-to-br from-blue-100 to-purple-100 rounded-lg mb-3 flex items-center justify-center ${
+                            theme === "dark" ? "from-blue-900 to-purple-900" : ""
+                          }`}>
+                            <FolderOpen className={`w-8 h-8 ${
+                              theme === "dark" ? "text-blue-300" : "text-blue-600"
+                            }`} />
+                          </div>
+                          <h4 className={`font-medium text-sm mb-1 truncate ${
+                            theme === "dark" ? "text-white" : "text-gray-900"
+                          }`}>
+                            {project.title}
+                          </h4>
+                          <p className={`text-xs truncate ${
+                            theme === "dark" ? "text-gray-400" : "text-gray-500"
+                          }`}>
+                            {project.description || 'No description'}
+                          </p>
+                          <p className={`text-xs mt-2 ${
+                            theme === "dark" ? "text-gray-500" : "text-gray-400"
+                          }`}>
+                            {new Date(project.created_at).toLocaleDateString()}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Modal Pagination */}
+                  <div className={`flex items-center justify-between p-6 border-t ${
+                    theme === "dark" ? "border-gray-700" : "border-gray-200"
+                  }`}>
+                    <button 
+                      onClick={handleModalPreviousPage}
+                      disabled={modalCurrentPage === 1}
+                      className={`px-4 py-2 text-sm rounded-md transition-colors ${
+                        modalCurrentPage === 1 
+                          ? 'text-gray-400 cursor-not-allowed' 
+                          : theme === "dark"
+                          ? 'text-blue-400 hover:bg-gray-700'
+                          : 'text-blue-600 hover:bg-blue-50'
+                      }`}
+                    >
+                      Previous
+                    </button>
+                    <div className="flex items-center space-x-2">
+                      {Array.from({ length: Math.min(totalModalPages, 10) }, (_, i) => {
+                        if (totalModalPages <= 10) return i + 1;
+                        if (modalCurrentPage <= 5) return i + 1;
+                        if (modalCurrentPage >= totalModalPages - 4) return totalModalPages - 9 + i;
+                        return modalCurrentPage - 5 + i;
+                      }).map(page => (
+                        <button
+                          key={page}
+                          onClick={() => handleModalPageChange(page)}
+                          className={`px-3 py-1 text-sm rounded-md transition-colors ${
+                            modalCurrentPage === page
+                              ? 'bg-blue-600 text-white'
+                              : theme === "dark"
+                              ? 'text-gray-300 hover:bg-gray-700'
+                              : 'text-gray-600 hover:bg-gray-100'
+                          }`}
+                        >
+                          {page}
+                        </button>
+                      ))}
+                    </div>
+                    <button 
+                      onClick={handleModalNextPage}
+                      disabled={modalCurrentPage === totalModalPages}
+                      className={`px-4 py-2 text-sm rounded-md transition-colors ${
+                        modalCurrentPage === totalModalPages 
+                          ? 'text-gray-400 cursor-not-allowed' 
+                          : theme === "dark"
+                          ? 'text-blue-400 hover:bg-gray-700'
+                          : 'text-blue-600 hover:bg-blue-50'
+                      }`}
+                    >
+                      Next
+                    </button>
                   </div>
                 </div>
               </div>
