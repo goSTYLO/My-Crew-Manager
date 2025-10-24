@@ -291,7 +291,7 @@ const App: React.FC = () => {
       return;
     }
 
-    setLoadingState('analyzing');
+    setLoadingState(null);
 
     try {
       const projectData = {
@@ -344,7 +344,7 @@ const App: React.FC = () => {
       return;
     }
 
-    setLoadingState('analyzing');
+    setLoadingState(null);
 
     try {
       const formData = new FormData();
@@ -1486,19 +1486,18 @@ const App: React.FC = () => {
       <TopNavbar onMenuClick={() => setSidebarOpen(true)} />
         
 
-      <main className="flex-1 p-4 lg:p-6 xl:p-8 overflow-auto space-y-6 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-800">
-        <button
-            onClick={() => navigate('/main-projects', { replace: true })}
-            className={`flex items-center transition-colors mb-4 group ${
-              theme === "dark" 
-                ? "text-gray-300 hover:text-white" 
-                : "text-gray-600 hover:text-gray-900"
-            }`}>
-            <ArrowLeft className="w-5 h-5 mr-2 group-hover:-translate-x-1 transition-transform" />
-            <span className="font-medium">Back to Projects</span>
-          </button>
-      <div className="w-full max-w-3xl sm:max-w-4xl lg:max-w-5xl xl:max-w-6xl mx-auto">
+      <main className="flex-1 overflow-auto mt-20">
+        {/* Main Content */}
+        <div className="p-4 lg:p-6 xl:p-8">
+          <div className="w-full max-w-3xl sm:max-w-4xl lg:max-w-5xl xl:max-w-6xl mx-auto">
         <div className={`rounded-lg border p-4 sm:p-6 lg:p-8 shadow-sm min-h-[calc(100vh-6rem)] sm:min-h-[calc(100vh-8rem)] ${theme === "dark" ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"}`}>
+          {/* Back to Projects button - positioned inside the main card */}
+          <button
+              onClick={() => navigate('/main-projects', { replace: true })}
+              className={`flex items-center ${theme === 'dark' ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-gray-900'} transition-colors mb-6 group`}>
+              <ArrowLeft className="w-5 h-5 mr-2 group-hover:-translate-x-1 transition-transform" />
+              <span className="font-medium">Back to Projects</span>
+            </button>
           <h1 className={`text-2xl font-bold mb-6 ${theme === "dark" ? "text-white" : "text-gray-800"}`}>Create New Project</h1>
           
           <StepIndicator />
@@ -2500,9 +2499,10 @@ const App: React.FC = () => {
               </div>
             </div>
           )}
+          </div>
         </div>
-      </div>
-    </main>
+        </div>
+      </main>
     </div>
     
     {/* Loading Modals */}
@@ -2535,9 +2535,11 @@ const App: React.FC = () => {
     
     {/* Confirmation Modal */}
     {showConfirmModal && confirmModalData && (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className={`bg-white rounded-xl p-6 w-full max-w-md mx-4 ${
-          theme === 'dark' ? 'bg-gray-800' : 'bg-white'
+      <div className={`fixed inset-0 flex items-center justify-center z-50 ${
+        theme === 'dark' ? 'bg-black bg-opacity-70' : 'bg-black bg-opacity-50'
+      }`}>
+        <div className={`rounded-xl p-6 w-full max-w-md mx-4 shadow-xl ${
+          theme === 'dark' ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'
         }`}>
           <h3 className={`text-lg font-semibold mb-4 ${
             theme === 'dark' ? 'text-white' : 'text-gray-900'
@@ -2554,8 +2556,8 @@ const App: React.FC = () => {
               onClick={handleCancelConfirm}
               className={`flex-1 px-4 py-2 rounded-lg transition-colors ${
                 theme === 'dark' 
-                  ? 'bg-gray-600 text-white hover:bg-gray-700' 
-                  : 'bg-gray-500 text-white hover:bg-gray-600'
+                  ? 'bg-gray-600 text-white hover:bg-gray-700 border border-gray-600' 
+                  : 'bg-gray-500 text-white hover:bg-gray-600 border border-gray-400'
               }`}
             >
               {confirmModalData.cancelText || 'Cancel'}
@@ -2564,8 +2566,8 @@ const App: React.FC = () => {
               onClick={handleConfirm}
               className={`flex-1 px-4 py-2 rounded-lg transition-colors ${
                 theme === 'dark' 
-                  ? 'bg-blue-600 text-white hover:bg-blue-700' 
-                  : 'bg-blue-600 text-white hover:bg-blue-700'
+                  ? 'bg-blue-600 text-white hover:bg-blue-700 border border-blue-600' 
+                  : 'bg-blue-600 text-white hover:bg-blue-700 border border-blue-600'
               }`}
             >
               {confirmModalData.confirmText || 'Confirm'}

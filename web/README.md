@@ -1,4 +1,45 @@
-# React + TypeScript + Vite
+# MyCrewManager - Project Management Platform
+
+A comprehensive project management platform built with React, TypeScript, and Vite. MyCrewManager provides AI-powered project analysis, team collaboration tools, and streamlined project creation workflows.
+
+## Recent Updates - Project Generation Flow Enhancement
+
+### 🚀 New Features & Improvements
+
+**Enhanced Project Creation Workflow:**
+- **7-Step Project Generation Process**: Implemented a comprehensive multi-step workflow for project creation
+- **AI-Powered Analysis**: Integrated AI analysis for proposal processing and backlog generation
+- **Smart Flow Management**: Added intelligent step skipping when proposals are not uploaded
+- **Confirmation Modals**: Added non-cancelable confirmation dialogs for AI operations
+- **Responsive Design**: Implemented fully responsive layout with adaptive step indicators
+
+**UI/UX Improvements:**
+- **Custom Scrollbar Styling**: Added theme-aware custom scrollbars for better visual consistency
+- **Dark Mode Support**: Enhanced dark mode compatibility across all components
+- **Navigation Enhancement**: Added "Back to Projects" button with proper positioning
+- **Container Optimization**: Improved responsive container sizing and layout structure
+- **Step Indicator**: Created adaptive step progress indicators for desktop, tablet, and mobile views
+
+**Technical Enhancements:**
+- **Authentication Integration**: Improved token handling and API authentication
+- **Error Handling**: Enhanced error management and user feedback systems
+- **State Management**: Optimized component state management for complex workflows
+- **Performance**: Improved rendering performance with better component structure
+
+### 🔧 Technical Details
+
+**Project Generation Steps:**
+1. Create Project → 2. Upload Proposal → 3. AI Analysis → 4. Review & Edit → 5. Generate Backlog → 6. Review Backlog → 7. Invite Team
+
+**Key Components Updated:**
+- `generateProject.tsx`: Complete workflow restructuring
+- `LoadingSpinner.tsx`: Modal implementation with dark mode support
+- `index.css`: Custom scrollbar styling
+- Responsive design system implementation
+
+---
+
+## Development Setup
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
