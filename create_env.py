@@ -1,4 +1,6 @@
-VITE_API_BASE_URL=http://localhost:8000
+#!/usr/bin/env python3
+
+content = """VITE_API_BASE_URL=http://localhost:8000
 
 DEBUG=True
 SECRET_KEY=django-insecure-c-5y7c^n+=8ci@_a4ebrflde2o@%w$@iur0e7&582*&x4v(g=z   
@@ -21,3 +23,9 @@ OPENROUTER_API_KEY="YOUR_OPENROUTER_KEY_HERE"         # Optional, for OpenRouter
 AZURE_OPENAI_API_KEY="your_azure_key_here"            # Optional, for Azure OpenAI models (requires endpoint in .taskmaster/config.json).                       
 OLLAMA_API_KEY="your_ollama_api_key_here"             # Optional: For remote Ollama servers that require authentication.                                        
 GITHUB_API_KEY="your_github_api_key_here"             # Optional: For GitHub import/export features. Format: ghp_... or github_pat_...                          
+"""
+
+with open('.env', 'w', encoding='utf-8') as f:
+    f.write(content)
+
+print('File created successfully')

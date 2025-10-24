@@ -176,7 +176,7 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
 
   return (
     <header
-      className={`fixed top-0 left-0 w-full shadow-sm border-b px-4 lg:px-6 py-4 ${
+      className={`fixed top-0 left-0 w-full shadow-sm border-b px-4 lg:px-6 py-4 z-50 ${
         theme === "dark"
           ? "bg-gray-800 border-gray-700"
           : "bg-white border-gray-200"

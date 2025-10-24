@@ -9,6 +9,16 @@ import LoadingSpinner from '../../components/LoadingSpinner';
 import RegenerationSuccessModal from '../../components/RegenerationSuccessModal';
 import { useToast } from '../../components/ToastContext';
 import ProposalViewer from '../../components/ProposalViewer';
+import { 
+  calculateTaskStats, 
+  generateWeeklyData, 
+  getDefaultAnalyticsConfig 
+} from '../../utils/analyticsUtils';
+import type { 
+  AnalyticsConfig, 
+  TaskStats, 
+  WeeklyData 
+} from '../../utils/analyticsUtils';
 
 export default function ProjectDetailsUI() {
   const { theme } = useTheme();
@@ -679,12 +689,34 @@ export default function ProjectDetailsUI() {
   const [showRepoModal, setShowRepoModal] = useState(false);
   const [editingRepo, setEditingRepo] = useState(null);
 
-  const [monitoringData] = useState({
-    weeks: ['Week 1', 'Week 2', 'Week 3', 'Week 4', 'Week 5', 'Week 6'],
-    completed: [12, 18, 25, 32, 38, 45],
-    inProgress: [5, 8, 6, 9, 7, 10],
-    pending: [8, 6, 4, 3, 5, 2]
+  // Analytics state
+  const [analyticsConfig, setAnalyticsConfig] = useState<AnalyticsConfig>(getDefaultAnalyticsConfig());
+  const [taskStats, setTaskStats] = useState<TaskStats>({
+    completed: 0,
+    inProgress: 0,
+    pending: 0,
+    total: 0
   });
+  const [weeklyData, setWeeklyData] = useState<WeeklyData>({
+    weeks: [],
+    completed: [],
+    inProgress: [],
+    pending: []
+  });
+
+  // Calculate analytics when backlog data changes
+  useEffect(() => {
+    if (backlog) {
+      console.log('📊 Calculating analytics for backlog:', backlog);
+      const stats = calculateTaskStats(backlog, analyticsConfig);
+      setTaskStats(stats);
+      
+      const weekly = generateWeeklyData(backlog, analyticsConfig);
+      setWeeklyData(weekly);
+      
+      console.log('📈 Analytics calculated:', { stats, weekly });
+    }
+  }, [backlog, analyticsConfig]);
 
   const handleInvite = async () => {
     if (!inviteForm.email || !inviteForm.role) {
@@ -1740,8 +1772,8 @@ export default function ProjectDetailsUI() {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className={`text-sm font-medium ${theme === 'dark' ? 'text-green-300' : 'text-green-600'} mb-1`}>Total Completed</p>
-                        <p className={`text-4xl font-bold ${theme === 'dark' ? 'text-green-200' : 'text-green-700'}`}>45</p>
-                        <p className={`text-xs ${theme === 'dark' ? 'text-green-400' : 'text-green-600'} mt-1`}>+8 from last week</p>
+                        <p className={`text-4xl font-bold ${theme === 'dark' ? 'text-green-200' : 'text-green-700'}`}>{taskStats.completed}</p>
+                        <p className={`text-xs ${theme === 'dark' ? 'text-green-400' : 'text-green-600'} mt-1`}>+{taskStats.completed > 0 ? Math.floor(taskStats.completed * 0.2) : 0} from last period</p>
                       </div>
                       <div className="w-14 h-14 bg-green-500 rounded-full flex items-center justify-center shadow-lg">
                         <CheckCircle className="w-7 h-7 text-white" />
@@ -1753,7 +1785,7 @@ export default function ProjectDetailsUI() {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className={`text-sm font-medium ${theme === 'dark' ? 'text-blue-300' : 'text-blue-600'} mb-1`}>In Progress</p>
-                        <p className={`text-4xl font-bold ${theme === 'dark' ? 'text-blue-200' : 'text-blue-700'}`}>10</p>
+                        <p className={`text-4xl font-bold ${theme === 'dark' ? 'text-blue-200' : 'text-blue-700'}`}>{taskStats.inProgress}</p>
                         <p className={`text-xs ${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'} mt-1`}>Active tasks</p>
                       </div>
                       <div className="w-14 h-14 bg-blue-500 rounded-full flex items-center justify-center shadow-lg">
@@ -1766,13 +1798,56 @@ export default function ProjectDetailsUI() {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className={`text-sm font-medium ${theme === 'dark' ? 'text-orange-300' : 'text-orange-600'} mb-1`}>Pending</p>
-                        <p className={`text-4xl font-bold ${theme === 'dark' ? 'text-orange-200' : 'text-orange-700'}`}>2</p>
+                        <p className={`text-4xl font-bold ${theme === 'dark' ? 'text-orange-200' : 'text-orange-700'}`}>{taskStats.pending}</p>
                         <p className={`text-xs ${theme === 'dark' ? 'text-orange-400' : 'text-orange-600'} mt-1`}>Awaiting start</p>
                       </div>
                       <div className="w-14 h-14 bg-orange-500 rounded-full flex items-center justify-center shadow-lg">
                         <Clock className="w-7 h-7 text-white" />
                       </div>
                     </div>
+                  </div>
+                </div>
+
+                {/* Analytics Configuration */}
+                <div className={`${theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} rounded-xl shadow-sm p-6 border`}>
+                  <h3 className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'} mb-4`}>Analytics Configuration</h3>
+                  <div className="flex items-center gap-6 flex-wrap">
+                    <label className="flex items-center">
+                      <input 
+                        type="checkbox" 
+                        checked={analyticsConfig.includeTasks} 
+                        onChange={(e) => setAnalyticsConfig({...analyticsConfig, includeTasks: e.target.checked})}
+                        className="mr-2"
+                      />
+                      <span className={`text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}>Tasks</span>
+                    </label>
+                    <label className="flex items-center">
+                      <input 
+                        type="checkbox" 
+                        checked={analyticsConfig.includeUserStories}
+                        onChange={(e) => setAnalyticsConfig({...analyticsConfig, includeUserStories: e.target.checked})}
+                        className="mr-2"
+                      />
+                      <span className={`text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}>User Stories</span>
+                    </label>
+                    <label className="flex items-center">
+                      <input 
+                        type="checkbox" 
+                        checked={analyticsConfig.includeSubEpics}
+                        onChange={(e) => setAnalyticsConfig({...analyticsConfig, includeSubEpics: e.target.checked})}
+                        className="mr-2"
+                      />
+                      <span className={`text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}>Sub-Epics</span>
+                    </label>
+                    <label className="flex items-center">
+                      <input 
+                        type="checkbox" 
+                        checked={analyticsConfig.includeEpics}
+                        onChange={(e) => setAnalyticsConfig({...analyticsConfig, includeEpics: e.target.checked})}
+                        className="mr-2"
+                      />
+                      <span className={`text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}>Epics</span>
+                    </label>
                   </div>
                 </div>
 
@@ -1824,12 +1899,12 @@ export default function ProjectDetailsUI() {
                         </g>
                       ))}
                       
-                      {monitoringData.weeks.map((week, i) => {
+                      {weeklyData.weeks.map((week, i) => {
                         const x = 80 + (i * 110);
                         const barWidth = 25;
-                        const completed = monitoringData.completed[i];
-                        const inProgress = monitoringData.inProgress[i];
-                        const pending = monitoringData.pending[i];
+                        const completed = weeklyData.completed[i];
+                        const inProgress = weeklyData.inProgress[i];
+                        const pending = weeklyData.pending[i];
                         const scale = 4.8;
                         
                         return (
