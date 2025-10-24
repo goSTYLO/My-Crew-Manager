@@ -51,6 +51,12 @@ export default function ProjectDetailsUI() {
   // Backlog editing state
   const [isEditingBacklog, setIsEditingBacklog] = useState(false);
   
+  // Task assignment and commit tracking state
+  const [editingCommitTitle, setEditingCommitTitle] = useState('');
+  const [editingCommitBranch, setEditingCommitBranch] = useState('');
+  const [showTaskCompletionModal, setShowTaskCompletionModal] = useState(false);
+  const [completingTaskId, setCompletingTaskId] = useState<number | null>(null);
+  
   const [showEditMemberModal, setShowEditMemberModal] = useState(false);
   const [editingMember, setEditingMember] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -250,6 +256,21 @@ export default function ProjectDetailsUI() {
       const data = await response.json();
       console.log('✅ Backlog data fetched:', data);
       
+      // Debug: Check if tasks have assignee details
+      if (data.epics && data.epics.length > 0) {
+        const firstEpic = data.epics[0];
+        if (firstEpic.sub_epics && firstEpic.sub_epics.length > 0) {
+          const firstSubEpic = firstEpic.sub_epics[0];
+          if (firstSubEpic.user_stories && firstSubEpic.user_stories.length > 0) {
+            const firstStory = firstSubEpic.user_stories[0];
+            if (firstStory.tasks && firstStory.tasks.length > 0) {
+              const firstTask = firstStory.tasks[0];
+              console.log('🔍 First task assignee details:', firstTask.assignee_details);
+            }
+          }
+        }
+      }
+      
       // Transform nested structure to match frontend state
       const transformedBacklog = {
         epics: (data.epics || []).map((epic: any) => ({
@@ -257,20 +278,26 @@ export default function ProjectDetailsUI() {
           title: epic.title,
           description: epic.description,
           ai: epic.ai,
+          is_complete: epic.is_complete || false,
           subEpics: (epic.sub_epics || []).map((subEpic: any) => ({
             id: subEpic.id,
             title: subEpic.title,
             ai: subEpic.ai,
+            is_complete: subEpic.is_complete || false,
             userStories: (subEpic.user_stories || []).map((story: any) => ({
               id: story.id,
               title: story.title,
               ai: story.ai,
+              is_complete: story.is_complete || false,
               tasks: (story.tasks || []).map((task: any) => ({
                 id: task.id,
                 title: task.title,
                 status: task.status,
                 ai: task.ai,
-                assignee: task.assignee
+                assignee: task.assignee,
+                assignee_details: task.assignee_details,
+                commit_title: task.commit_title,
+                commit_branch: task.commit_branch
               }))
             }))
           }))
@@ -412,6 +439,66 @@ export default function ProjectDetailsUI() {
       console.error('Error fetching proposal:', error);
       setCurrentProposal(null);
     }
+  };
+
+  // Task Assignment Functions
+  const assignTask = async (taskId: number, assigneeId: number | null) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/story-tasks/${taskId}/`, {
+        method: 'PATCH',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+        body: JSON.stringify({ assignee: assigneeId }),
+      });
+
+      if (response.ok) {
+        showSuccess('Task Assigned', 'Task assignment updated successfully');
+        console.log('🔄 Refreshing backlog after assignment...');
+        await fetchBacklog(); // Refresh backlog to show updated assignee
+        console.log('✅ Backlog refreshed');
+      } else {
+        const errorData = await response.json();
+        showError('Assignment Failed', errorData.error || 'Failed to assign task');
+      }
+    } catch (error) {
+      handleApiError(error, 'assign task');
+    }
+  };
+
+  const completeTask = async (taskId: number, commitTitle: string, commitBranch?: string) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/story-tasks/${taskId}/`, {
+        method: 'PATCH',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+        body: JSON.stringify({ 
+          status: 'done',
+          commit_title: commitTitle,
+          commit_branch: commitBranch || null
+        }),
+      });
+
+      if (response.ok) {
+        showSuccess('Task Completed', 'Task marked as done successfully');
+        await fetchBacklog(); // Refresh backlog to show updated status and auto-completion
+        setShowTaskCompletionModal(false);
+        setCompletingTaskId(null);
+        setEditingCommitTitle('');
+        setEditingCommitBranch('');
+      } else {
+        const errorData = await response.json();
+        showError('Completion Failed', errorData.error || 'Failed to complete task');
+      }
+    } catch (error) {
+      handleApiError(error, 'complete task');
+    }
+  };
+
+  const openTaskCompletionModal = (taskId: number) => {
+    setCompletingTaskId(taskId);
+    setShowTaskCompletionModal(true);
+    setEditingCommitTitle('');
+    setEditingCommitBranch('');
   };
 
   // Load all data on component mount
@@ -2213,6 +2300,11 @@ export default function ProjectDetailsUI() {
                           <span className="px-4 py-1.5 bg-red-500 text-white rounded-full text-sm font-semibold mr-4 shadow-sm">
                             Epic
                           </span>
+                          {(epic as any).is_complete && (
+                            <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium mr-2">
+                              ✅ Complete
+                            </span>
+                          )}
                           {isEditingBacklog ? (
                           <input
                             type="text"
@@ -2250,6 +2342,11 @@ export default function ProjectDetailsUI() {
                                 <span className="px-3 py-1.5 bg-orange-500 text-white rounded-full text-sm font-semibold mr-3 shadow-sm">
                                   Sub-Epic
                                 </span>
+                                {(subEpic as any).is_complete && (
+                                  <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium mr-2">
+                                    ✅ Complete
+                                  </span>
+                                )}
                                 {isEditingBacklog ? (
                                 <input
                                   type="text"
@@ -2293,6 +2390,11 @@ export default function ProjectDetailsUI() {
                                       <span className="px-3 py-1.5 bg-blue-500 text-white rounded-full text-sm font-semibold mr-3 shadow-sm">
                                         User Story
                                       </span>
+                                      {(story as any).is_complete && (
+                                        <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium mr-2">
+                                          ✅ Complete
+                                        </span>
+                                      )}
                                       {isEditingBacklog ? (
                                       <input
                                         type="text"
@@ -2338,58 +2440,127 @@ export default function ProjectDetailsUI() {
                                   {/* Tasks */}
                                   <div className="space-y-2 ml-6">
                                     {(story.tasks || []).map((task) => (
-                                      <div key={task.id} className="flex items-center justify-between p-3 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-200 hover:shadow-md transition-shadow">
-                                        <div className="flex items-center flex-1">
-                                          <span className="px-2.5 py-1 bg-green-600 text-white rounded-md text-xs font-semibold mr-3 shadow-sm">
-                                            Task
-                                          </span>
-                                          {isEditingBacklog ? (
-                                          <input
-                                            type="text"
-                                              value={task.title}
-                                            onChange={(e) => {
-                                              const updatedEpics = backlog.epics.map(ep => {
-                                                if (ep.id === epic.id) {
-                                                  return {
-                                                    ...ep,
-                                                    subEpics: ep.subEpics.map(se => {
-                                                      if (se.id === subEpic.id) {
-                                                        return {
-                                                          ...se,
-                                                          userStories: se.userStories.map(us => {
-                                                            if (us.id === story.id) {
-                                                                return {
-                                                                  ...us,
-                                                                  tasks: us.tasks.map(t =>
-                                                                    t.id === task.id ? { ...t, title: e.target.value } : t
-                                                                  )
-                                                                };
-                                                            }
-                                                            return us;
-                                                          })
-                                                        };
-                                                      }
-                                                      return se;
-                                                    })
-                                                  };
-                                                }
-                                                return ep;
-                                              });
-                                              setBacklog({ ...backlog, epics: updatedEpics });
-                                            }}
-                                            className="bg-transparent text-gray-700 border-b-2 border-transparent hover:border-green-300 focus:border-green-500 focus:outline-none flex-1 transition-colors"
-                                          />
-                                          ) : (
-                                            <span className="flex-1 text-gray-700">{task.title}</span>
+                                      <div key={task.id} className="p-3 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-200 hover:shadow-md transition-shadow">
+                                        <div className="flex items-center justify-between mb-2">
+                                          <div className="flex items-center flex-1">
+                                            <span className="px-2.5 py-1 bg-green-600 text-white rounded-md text-xs font-semibold mr-3 shadow-sm">
+                                              Task
+                                            </span>
+                                            {isEditingBacklog ? (
+                                            <input
+                                              type="text"
+                                                value={task.title}
+                                              onChange={(e) => {
+                                                const updatedEpics = backlog.epics.map(ep => {
+                                                  if (ep.id === epic.id) {
+                                                    return {
+                                                      ...ep,
+                                                      subEpics: ep.subEpics.map(se => {
+                                                        if (se.id === subEpic.id) {
+                                                          return {
+                                                            ...se,
+                                                            userStories: se.userStories.map(us => {
+                                                              if (us.id === story.id) {
+                                                                  return {
+                                                                    ...us,
+                                                                    tasks: us.tasks.map(t =>
+                                                                      t.id === task.id ? { ...t, title: e.target.value } : t
+                                                                    )
+                                                                  };
+                                                              }
+                                                              return us;
+                                                            })
+                                                          };
+                                                        }
+                                                        return se;
+                                                      })
+                                                    };
+                                                  }
+                                                  return ep;
+                                                });
+                                                setBacklog({ ...backlog, epics: updatedEpics });
+                                              }}
+                                              className="bg-transparent text-gray-700 border-b-2 border-transparent hover:border-green-300 focus:border-green-500 focus:outline-none flex-1 transition-colors"
+                                            />
+                                            ) : (
+                                              <span className="flex-1 text-gray-700">{task.title}</span>
+                                            )}
+                                          </div>
+                                          {isEditingBacklog && (
+                                          <button 
+                                              onClick={() => handleDeleteClick('task', task.id, task.title)}
+                                            className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1.5 rounded-lg transition-colors"
+                                          >
+                                            <Trash2 className="w-4 h-4" />
+                                          </button>
                                           )}
                                         </div>
-                                        {isEditingBacklog && (
-                                        <button 
-                                            onClick={() => handleDeleteClick('task', task.id, task.title)}
-                                          className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1.5 rounded-lg transition-colors"
-                                        >
-                                          <Trash2 className="w-4 h-4" />
-                                        </button>
+                                        
+                                        {/* Task Details Row */}
+                                        <div className="flex items-center justify-between text-sm">
+                                          <div className="flex items-center gap-4">
+                                            {/* Status Badge */}
+                                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                              task.status === 'done' 
+                                                ? 'bg-green-100 text-green-800' 
+                                                : 'bg-yellow-100 text-yellow-800'
+                                            }`}>
+                                              {task.status === 'done' ? '✅ Done' : '⏳ Pending'}
+                                            </span>
+                                            
+                                            {/* Assignee */}
+                                            <div className="flex items-center gap-2">
+                                              <span className="text-gray-500">Assigned to:</span>
+                                              {isEditingBacklog ? (
+                                                <select
+                                                  value={task.assignee || ''}
+                                                  onChange={(e) => {
+                                                    const assigneeId = e.target.value ? parseInt(e.target.value) : null;
+                                                    assignTask(task.id, assigneeId);
+                                                  }}
+                                                  className="px-2 py-1 border border-gray-300 rounded text-xs"
+                                                >
+                                                  <option value="">Unassigned</option>
+                                                  {members.map((member) => (
+                                                    <option key={member.id} value={member.id}>
+                                                      {member.name} ({member.email})
+                                                    </option>
+                                                  ))}
+                                                </select>
+                                              ) : (
+                                                <span className="text-gray-700">
+                                                  {(task as any).assignee_details ? 
+                                                    `${(task as any).assignee_details.user_name} (${(task as any).assignee_details.user_email})` : 
+                                                    'Unassigned'
+                                                  }
+                                                </span>
+                                              )}
+                                            </div>
+                                            
+                                            {/* Completion Action */}
+                                            {task.status !== 'done' && (
+                                              <button
+                                                onClick={() => openTaskCompletionModal(task.id)}
+                                                className="px-3 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700 transition-colors"
+                                              >
+                                                Mark as Done
+                                              </button>
+                                            )}
+                                          </div>
+                                        </div>
+                                        
+                                        {/* Commit Information (if task is done) */}
+                                        {task.status === 'done' && ((task as any).commit_title || (task as any).commit_branch) && (
+                                          <div className="mt-2 p-2 bg-gray-50 rounded border-l-4 border-green-400">
+                                            <div className="text-xs text-gray-600">
+                                              <strong>Commit:</strong> {(task as any).commit_title}
+                                              {(task as any).commit_branch && (
+                                                <span className="ml-2">
+                                                  <strong>Branch:</strong> {(task as any).commit_branch}
+                                                </span>
+                                              )}
+                                            </div>
+                                          </div>
                                         )}
                                       </div>
                                     ))}
@@ -3341,6 +3512,75 @@ export default function ProjectDetailsUI() {
                 className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               >
                 Add Task
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Task Completion Modal */}
+      {showTaskCompletionModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Complete Task</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Please provide commit information to mark this task as done.
+            </p>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Commit Title <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={editingCommitTitle}
+                  onChange={(e) => setEditingCommitTitle(e.target.value)}
+                  placeholder="e.g., Fix login bug, Add user authentication"
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  required
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Branch Name (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={editingCommitBranch}
+                  onChange={(e) => setEditingCommitBranch(e.target.value)}
+                  placeholder="e.g., feature/login-fix, bugfix/auth"
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                />
+              </div>
+            </div>
+            
+            <div className="flex space-x-3 mt-6">
+              <button
+                onClick={() => {
+                  setShowTaskCompletionModal(false);
+                  setCompletingTaskId(null);
+                  setEditingCommitTitle('');
+                  setEditingCommitBranch('');
+                }}
+                className="flex-1 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  if (!editingCommitTitle.trim()) {
+                    showError('Validation Error', 'Commit title is required');
+                    return;
+                  }
+                  if (completingTaskId) {
+                    completeTask(completingTaskId, editingCommitTitle, editingCommitBranch);
+                  }
+                }}
+                className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              >
+                Mark as Done
               </button>
             </div>
           </div>

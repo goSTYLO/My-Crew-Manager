@@ -1,6 +1,7 @@
 import os
 import re
-from typing import Dict
+from typing import Dict, Optional
+from ai_api.tasks import CancellationToken, TaskCancelledException
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
 from langchain_huggingface import HuggingFacePipeline
@@ -85,12 +86,18 @@ def build_prompt(section: str, proposal_text: str, context: Dict = None) -> str:
     prompt = re.sub(r"{\w+}", "", prompt)
     return prompt
 
-def generate_section(llm, section: str, prompt: str, max_retries: int = 3) -> str:
+def generate_section(llm, section: str, prompt: str, max_retries: int = 3, cancellation_token: Optional[CancellationToken] = None) -> str:
     for _ in range(max_retries):
         try:
+            # Check for cancellation before each attempt
+            if cancellation_token:
+                cancellation_token.check_cancelled()
+            
             response = llm.invoke(prompt).strip()
             if response:
                 return response
+        except TaskCancelledException:
+            raise  # Re-raise cancellation exceptions
         except Exception:
             continue
     return ""
@@ -145,16 +152,23 @@ def parse_backlog(raw_text: str) -> BacklogModel:
 
     return backlog
 
-def run_backlog_pipeline(proposal_text: str, context: Dict) -> BacklogModel:
+def run_backlog_pipeline(proposal_text: str, context: Dict, task_id: Optional[str] = None) -> BacklogModel:
     if not proposal_text:
         return BacklogModel()
+
+    # Create cancellation token if task_id is provided
+    cancellation_token = CancellationToken(task_id) if task_id else None
+
+    # Check for cancellation before starting
+    if cancellation_token:
+        cancellation_token.check_cancelled()
 
     llm = load_llm()
     prompt = build_prompt("backlog", proposal_text, context)
     if not prompt:
         return BacklogModel()
 
-    raw_backlog = generate_section(llm, "backlog", prompt)
+    raw_backlog = generate_section(llm, "backlog", prompt, cancellation_token=cancellation_token)
     if not raw_backlog:
         return BacklogModel()
 

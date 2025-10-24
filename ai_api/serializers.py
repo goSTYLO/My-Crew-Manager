@@ -71,7 +71,7 @@ class EpicSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Epic
-        fields = ['id', 'project', 'title', 'description', 'ai']
+        fields = ['id', 'project', 'title', 'description', 'ai', 'is_complete']
 
 
 class SubEpicSerializer(serializers.ModelSerializer):
@@ -79,7 +79,7 @@ class SubEpicSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = SubEpic
-        fields = ['id', 'epic', 'title', 'ai']
+        fields = ['id', 'epic', 'title', 'ai', 'is_complete']
 
 
 class UserStorySerializer(serializers.ModelSerializer):
@@ -87,17 +87,29 @@ class UserStorySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = UserStory
-        fields = ['id', 'sub_epic', 'title', 'ai']
+        fields = ['id', 'sub_epic', 'title', 'ai', 'is_complete']
 
 
 class StoryTaskSerializer(serializers.ModelSerializer):
     id = serializers.IntegerField(read_only=True)
+    user_story = serializers.PrimaryKeyRelatedField(queryset=UserStory.objects.all(), required=False)
+    title = serializers.CharField(required=False)
+    status = serializers.CharField(required=False)
+    ai = serializers.BooleanField(required=False)
     assignee = serializers.PrimaryKeyRelatedField(queryset=ProjectMember.objects.all(), required=False, allow_null=True)
     assignee_details = serializers.SerializerMethodField()
+    commit_title = serializers.CharField(required=False, allow_blank=True)
+    commit_branch = serializers.CharField(required=False, allow_blank=True)
 
     class Meta:
         model = StoryTask
-        fields = ['id', 'user_story', 'title', 'status', 'ai', 'assignee', 'assignee_details']
+        fields = ['id', 'user_story', 'title', 'status', 'ai', 'assignee', 'assignee_details', 'commit_title', 'commit_branch']
+
+    def validate(self, data):
+        """Validate that commit_title is provided when status is 'done'"""
+        if data.get('status') == 'done' and not data.get('commit_title'):
+            raise serializers.ValidationError("Commit title is required when marking task as done.")
+        return data
 
     def get_assignee_details(self, obj):
         if obj.assignee:

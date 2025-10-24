@@ -13,7 +13,8 @@ from LLMs.models import (
     TimelineWeekModel,
     TimelineGoalModel
 )
-from typing import Dict
+from typing import Dict, Optional
+from ai_api.tasks import CancellationToken, TaskCancelledException
 
 MODEL_ID = "unsloth/mistral-7b-instruct-v0.3-bnb-4bit"
 
@@ -119,22 +120,31 @@ def validate_section_format(section: str, response: str) -> bool:
         return "timeline:" in response_lower and "week_number:" in response_lower
     return True
 
-def generate_section(llm, section: str, prompt: str, max_retries: int = 5) -> str:
+def generate_section(llm, section: str, prompt: str, max_retries: int = 5, cancellation_token: Optional[CancellationToken] = None) -> str:
     for _ in range(max_retries):
         try:
+            # Check for cancellation before each attempt
+            if cancellation_token:
+                cancellation_token.check_cancelled()
+            
             response = llm.invoke(prompt).strip()
             if not response:
                 continue
             if not validate_section_format(section, response):
                 continue
             return response
+        except TaskCancelledException:
+            raise  # Re-raise cancellation exceptions
         except Exception:
             continue
     return ""
 
-def run_pipeline_from_text(proposal_text: str) -> ProjectModel:
+def run_pipeline_from_text(proposal_text: str, task_id: Optional[str] = None) -> ProjectModel:
     if not proposal_text:
         return ProjectModel()
+
+    # Create cancellation token if task_id is provided
+    cancellation_token = CancellationToken(task_id) if task_id else None
 
     llm = load_llm()
     project_model = ProjectModel()
@@ -151,6 +161,10 @@ def run_pipeline_from_text(proposal_text: str) -> ProjectModel:
     }
 
     for section in sections:
+        # Check for cancellation before each section
+        if cancellation_token:
+            cancellation_token.check_cancelled()
+        
         context["project_title"] = project_model.title or ""
         context["project_summary"] = project_model.summary or ""
         context["overarching_goals"] = ", ".join(project_model.features)
@@ -166,7 +180,7 @@ def run_pipeline_from_text(proposal_text: str) -> ProjectModel:
 
         prompt = build_prompt(section, proposal_text, context)
         if prompt:
-            raw_response = generate_section(llm, section, prompt)
+            raw_response = generate_section(llm, section, prompt, cancellation_token=cancellation_token)
             if raw_response:
                 print(f"\n--- RAW {section.upper()} ---\n{raw_response}\n")
                 raw_outputs[section] = raw_response

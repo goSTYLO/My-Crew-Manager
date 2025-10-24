@@ -532,7 +532,44 @@ For support and questions:
 
 ## 🔄 Recent Updates
 
-### Repository Management & Project Invitation System (Latest)
+### Task Assignment & Commit Tracking System (Latest)
+- ✅ **Task Assignment System**: Implemented comprehensive task assignment functionality for story tasks
+  - **Assignment Restrictions**: Only project members can be assigned to tasks with proper validation
+  - **UI Integration**: Added assignee dropdown selector in task rows with project member filtering
+  - **Real-time Updates**: Task assignments update immediately in the UI with proper data refresh
+  - **Unassign Capability**: Added option to unassign tasks by selecting "Unassigned" from dropdown
+  - **Backend Validation**: Enhanced StoryTaskViewSet to validate assignee belongs to same project
+- ✅ **Commit Tracking for Task Completion**: Added commit information tracking for completed tasks
+  - **Required Commit Title**: Developers must provide commit title when marking tasks as done
+  - **Optional Branch Information**: Added optional branch name field for commit tracking
+  - **Completion Modal**: Professional modal for task completion with form validation
+  - **PM Verification**: Project managers can view commit details for verification in repository
+  - **Database Schema**: Added `commit_title` and `commit_branch` fields to StoryTask model
+- ✅ **Automatic Completion Cascade**: Implemented intelligent auto-completion system
+  - **User Story Completion**: User stories automatically marked complete when all tasks are done
+  - **Sub-Epic Completion**: Sub-epics automatically marked complete when all user stories are complete
+  - **Epic Completion**: Epics automatically marked complete when all sub-epics are complete
+  - **Visual Indicators**: Added completion badges (✅ Complete) throughout the backlog hierarchy
+  - **Real-time Updates**: Completion status updates immediately in the UI after task completion
+- ✅ **Enhanced Backend API**: Updated backend to support all new task management features
+  - **Model Updates**: Added `is_complete` fields to UserStory, SubEpic, and Epic models
+  - **Serializer Enhancements**: Updated StoryTaskSerializer with new fields and validation
+  - **Auto-completion Logic**: Added cascade completion methods to all parent models
+  - **API Response Updates**: Backlog endpoint now returns assignee details and completion status
+  - **Database Migration**: Applied migration for all new fields with proper data structure
+- ✅ **Frontend Integration**: Complete UI integration for task assignment and completion tracking
+  - **Task Display Enhancement**: Enhanced task rendering with status badges, assignee info, and commit details
+  - **Assignment UI**: Professional dropdown selector with project member filtering and unassign option
+  - **Completion Workflow**: Modal-based task completion with required commit title and optional branch
+  - **Status Visualization**: Visual completion indicators for all hierarchy levels (epics, sub-epics, user stories)
+  - **Data Flow**: Proper data transformation and state management for all new fields
+- ✅ **Bug Fixes & Validation**: Resolved critical issues in task assignment system
+  - **Serializer Validation**: Fixed partial update validation to allow assignee-only updates
+  - **API Response**: Fixed backend backlog endpoint to include all new fields (assignee_details, commit info, completion status)
+  - **Data Consistency**: Ensured frontend and backend data structures match perfectly
+  - **Error Handling**: Added comprehensive error handling and user feedback for all operations
+
+### Repository Management & Project Invitation System
 - ✅ **Repository Backend Cleanup**: Simplified repository management by removing member assignment complexity
   - **Model Simplification**: Removed `assigned_to` field from Repository model, added `updated_at` timestamp
   - **API Streamlining**: Updated RepositorySerializer to remove assignment-related fields and methods
@@ -558,6 +595,11 @@ For support and questions:
   - **Frontend Updates**: Renamed "position" to "role" throughout the interface for consistency
   - **Member Editing**: Fixed member role editing to use proper API calls with PATCH requests
   - **Database Migration**: Applied migration to add role field to existing invitation table
+- ✅ **Invitation Role Assignment Bug Fix**: Fixed critical bug where accepted invitations weren't preserving invited roles
+  - **Root Cause**: ProjectInvitation.save() method was hardcoded to create ProjectMember with 'Member' role
+  - **Solution**: Updated models.py to use `self.role` instead of hardcoded 'Member' when creating ProjectMember
+  - **Impact**: Members now correctly receive the exact role they were invited with (e.g., "Frontend Developer", "QA Engineer")
+  - **Verification**: Confirmed entire invitation flow works correctly from frontend → serializer → views → models
 
 ### Proposal Upload & Viewing System
 - ✅ **Proposal Upload Integration**: Added comprehensive PDF proposal upload functionality to project monitor page

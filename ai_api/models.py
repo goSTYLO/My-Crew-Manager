@@ -55,18 +55,59 @@ class Epic(models.Model):
     title = models.CharField(max_length=512)
     description = models.TextField(blank=True, null=True)
     ai = models.BooleanField(default=True)
+    is_complete = models.BooleanField(default=False)
+
+    def check_and_update_completion(self):
+        """Check if all sub-epics are complete and update completion status"""
+        all_sub_epics_complete = self.sub_epics.filter(is_complete=True).count() == self.sub_epics.count()
+        if all_sub_epics_complete and not self.is_complete:
+            self.is_complete = True
+            self.save(update_fields=['is_complete'])
+        elif not all_sub_epics_complete and self.is_complete:
+            self.is_complete = False
+            self.save(update_fields=['is_complete'])
 
 
 class SubEpic(models.Model):
     epic = models.ForeignKey(Epic, on_delete=models.CASCADE, related_name='sub_epics')
     title = models.CharField(max_length=512)
     ai = models.BooleanField(default=True)
+    is_complete = models.BooleanField(default=False)
+
+    def check_and_update_completion(self):
+        """Check if all user stories are complete and update completion status"""
+        all_stories_complete = self.user_stories.filter(is_complete=True).count() == self.user_stories.count()
+        if all_stories_complete and not self.is_complete:
+            self.is_complete = True
+            self.save(update_fields=['is_complete'])
+            # Trigger parent completion check
+            self.epic.check_and_update_completion()
+        elif not all_stories_complete and self.is_complete:
+            self.is_complete = False
+            self.save(update_fields=['is_complete'])
+            # Trigger parent completion check
+            self.epic.check_and_update_completion()
 
 
 class UserStory(models.Model):
     sub_epic = models.ForeignKey(SubEpic, on_delete=models.CASCADE, related_name='user_stories')
     title = models.CharField(max_length=512)
     ai = models.BooleanField(default=True)
+    is_complete = models.BooleanField(default=False)
+
+    def check_and_update_completion(self):
+        """Check if all tasks are done and update completion status"""
+        all_tasks_done = self.tasks.filter(status='done').count() == self.tasks.count()
+        if all_tasks_done and not self.is_complete:
+            self.is_complete = True
+            self.save(update_fields=['is_complete'])
+            # Trigger parent completion check
+            self.sub_epic.check_and_update_completion()
+        elif not all_tasks_done and self.is_complete:
+            self.is_complete = False
+            self.save(update_fields=['is_complete'])
+            # Trigger parent completion check
+            self.sub_epic.check_and_update_completion()
 
 
 class StoryTask(models.Model):
@@ -75,6 +116,14 @@ class StoryTask(models.Model):
     status = models.CharField(max_length=50, default='pending')
     ai = models.BooleanField(default=True)
     assignee = models.ForeignKey('ProjectMember', on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_tasks')
+    commit_title = models.CharField(max_length=512, blank=True, null=True)
+    commit_branch = models.CharField(max_length=255, blank=True, null=True)
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        # Check if this task is now complete and trigger cascade check
+        if self.status == 'done':
+            self.user_story.check_and_update_completion()
 
 
 class ProjectMember(models.Model):
@@ -139,7 +188,7 @@ class ProjectInvitation(models.Model):
                     ProjectMember.objects.get_or_create(
                         project=self.project,
                         user=self.invitee,
-                        defaults={'role': 'Member'}
+                        defaults={'role': self.role}
                     )
                     print(f"ProjectMember created for user {self.invitee.name} in project {self.project.title}")
             except ProjectInvitation.DoesNotExist:

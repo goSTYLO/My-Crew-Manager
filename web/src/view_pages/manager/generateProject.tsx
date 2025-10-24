@@ -5,6 +5,7 @@ import Sidebar from "../../components/sidebarLayout";
 import { useTheme } from "../../components/themeContext"; // <-- import ThemeContext
 import LoadingSpinner from "../../components/LoadingSpinner";
 import { useToast } from "../../components/ToastContext";
+import { useNavigate } from 'react-router-dom';
 
 // Types based on Django models
 interface Member {
@@ -76,11 +77,13 @@ interface Invitation {
   sent: boolean;
 }
 
-type Step = 'create' | 'upload' | 'analyze' | 'review' | 'backlog' | 'invite';
+type Step = 'create' | 'upload' | 'analyze' | 'review' | 'generate-backlog' | 'review-backlog' | 'invite';
 
 const App: React.FC = () => {
   const { theme } = useTheme();
   const { showSuccess, showError, showWarning } = useToast();
+  const navigate = useNavigate();
+
   const [currentStep, setCurrentStep] = useState<Step>('create');
   const [projectTitle, setProjectTitle] = useState('');
   const [projectSummary, setProjectSummary] = useState('');
@@ -91,11 +94,26 @@ const App: React.FC = () => {
   const [timeline, setTimeline] = useState<TimelineWeek[]>([]);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [dragActive, setDragActive] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [loadingState, setLoadingState] = useState<'analyzing' | 'generating-backlog' | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [createdProjectId, setCreatedProjectId] = useState<string | null>(null);
   const [uploadedProposalId, setUploadedProposalId] = useState<string | null>(null);
   const [authFormat, setAuthFormat] = useState<'Bearer' | 'Token'>('Bearer');
+  
+  // Skip tracking states
+  const [analysisSkipped, setAnalysisSkipped] = useState(false);
+  const [proposalSkipped, setProposalSkipped] = useState(false);
+  
+  
+  // Confirmation modal state
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [confirmModalData, setConfirmModalData] = useState<{
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    confirmText?: string;
+    cancelText?: string;
+  } | null>(null);
 
   // New states for Epic, Sub Epic, User Story, Tasks
   const [epics, setEpics] = useState<Epic[]>([]);
@@ -141,6 +159,32 @@ const App: React.FC = () => {
     }
 
     return data;
+  };
+
+
+  // Confirmation modal helper
+  const showConfirmation = (title: string, message: string, onConfirm: () => void, confirmText = 'Confirm', cancelText = 'Cancel') => {
+    setConfirmModalData({
+      title,
+      message,
+      onConfirm,
+      confirmText,
+      cancelText
+    });
+    setShowConfirmModal(true);
+  };
+
+  const handleConfirm = () => {
+    if (confirmModalData) {
+      confirmModalData.onConfirm();
+      setShowConfirmModal(false);
+      setConfirmModalData(null);
+    }
+  };
+
+  const handleCancelConfirm = () => {
+    setShowConfirmModal(false);
+    setConfirmModalData(null);
   };
 
   // Test API connection on component mount
@@ -247,7 +291,7 @@ const App: React.FC = () => {
       return;
     }
 
-    setIsLoading(true);
+    setLoadingState('analyzing');
 
     try {
       const projectData = {
@@ -273,7 +317,7 @@ const App: React.FC = () => {
       console.error('Error creating project:', error);
       showError('Project Creation Failed', `Failed to create project: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
-      setIsLoading(false);
+      setLoadingState(null);
     }
   };
 
@@ -300,7 +344,7 @@ const App: React.FC = () => {
       return;
     }
 
-    setIsLoading(true);
+    setLoadingState('analyzing');
 
     try {
       const formData = new FormData();
@@ -323,19 +367,37 @@ const App: React.FC = () => {
       console.error('Error uploading proposal:', error);
       showError('Upload Failed', `Failed to upload proposal: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
-      setIsLoading(false);
+      setLoadingState(null);
     }
   };
 
   // Skip Upload Proposal
   const skipUploadProposal = () => {
-    setCurrentStep('analyze');
+    showConfirmation(
+      'Skip Upload Proposal',
+      'Are you sure you want to skip uploading a proposal?\n\nWithout a proposal, AI analysis and backlog generation will be skipped. You will jump directly to inviting team members.',
+      () => {
+        setProposalSkipped(true);
+        setAnalysisSkipped(true);
+        showWarning('Proposal Skipped', 'Proposal upload skipped. AI analysis and backlog generation will be skipped. You can invite team members directly.');
+        setCurrentStep('invite');
+      },
+      'Skip Upload',
+      'Cancel'
+    );
   };
 
   // STEP 3: Analyze with LLM (Ingest Proposal)
   const analyzeProposal = async () => {
-    if (!createdProjectId || !uploadedProposalId) {
-      showError('Missing Data', 'Missing project or proposal data');
+    if (!createdProjectId) {
+      showError('Missing Data', 'Missing project data');
+      return;
+    }
+    
+    if (!uploadedProposalId) {
+      showWarning('No Proposal Uploaded', 'No proposal was uploaded. AI analysis and backlog generation will be skipped. You can invite team members directly.');
+      setAnalysisSkipped(true);
+      setCurrentStep('invite');
       return;
     }
 
@@ -345,7 +407,25 @@ const App: React.FC = () => {
       return;
     }
 
-    setIsLoading(true);
+    // Show confirmation modal
+    showConfirmation(
+      'Start AI Analysis',
+      'This will analyze your proposal using AI to extract project requirements, team roles, features, goals, and timeline.\n\n⚠️ This process cannot be canceled once started and may take several minutes to complete.\n\nDo you want to continue?',
+      () => {
+        setLoadingState('analyzing');
+        performAnalysis();
+      },
+      'Start Analysis',
+      'Cancel'
+    );
+  };
+
+  const performAnalysis = async () => {
+    const token = getAuthToken();
+    if (!token) {
+      showError('Authentication Required', 'Please log in again.');
+      return;
+    }
 
     try {
       const response = await fetch(
@@ -378,11 +458,13 @@ const App: React.FC = () => {
       }
 
       console.log('Proposal analyzed:', data);
+      console.log('LLM output structure:', data.llm);
 
-      // Extract LLM output
-      const llmOutput = data.llm;
+      // Extract LLM output with fallback
+      const llmOutput = data.llm || {};
+      console.log('Processing LLM output:', llmOutput);
       
-      // Set AI-generated summary
+      // Set AI-generated summary (optional)
       if (llmOutput.summary) {
         setAiGeneratedSummary(llmOutput.summary);
       }
@@ -429,24 +511,122 @@ const App: React.FC = () => {
         setTimeline(aiTimeline);
       }
 
+      showSuccess('Analysis Complete', 'Proposal has been analyzed successfully!');
       setCurrentStep('review');
     } catch (error) {
       console.error('Error analyzing proposal:', error);
       showError('Analysis Failed', `Failed to analyze proposal: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
-      setIsLoading(false);
+      setLoadingState(null);
+    }
+  };
+
+  const saveAnalysisEdits = async () => {
+    if (!createdProjectId) {
+      showError('Missing Data', 'Missing project data');
+      return;
+    }
+
+    const token = getAuthToken();
+    if (!token) {
+      showError('Authentication Required', 'Please log in again.');
+      return;
+    }
+
+    setLoadingState(null);
+
+    try {
+      // Save roles/members
+      for (const member of members.filter(m => !m.ai)) {
+        await fetch(`${API_BASE_URL}/api/ai/project-members/`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `${authFormat} ${token}`,
+          },
+          body: JSON.stringify({
+            project: createdProjectId,
+            role: member.role,
+            user_name: member.user_name || '',
+            user_email: member.user_email || ''
+          }),
+        });
+      }
+
+      // Save features
+      for (const feature of features.filter(f => !f.ai)) {
+        await fetch(`${API_BASE_URL}/api/ai/project-features/`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `${authFormat} ${token}`,
+          },
+          body: JSON.stringify({
+            project: createdProjectId,
+            title: feature.title
+          }),
+        });
+      }
+
+      // Save goals
+      for (const goal of goals.filter(g => !g.ai)) {
+        await fetch(`${API_BASE_URL}/api/ai/project-goals/`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `${authFormat} ${token}`,
+          },
+          body: JSON.stringify({
+            project: createdProjectId,
+            title: goal.title,
+            role: goal.role
+          }),
+        });
+      }
+
+      showSuccess('Changes Saved', 'Your edits have been saved successfully!');
+      setCurrentStep('generate-backlog');
+    } catch (error) {
+      console.error('Error saving edits:', error);
+      showError('Save Failed', `Failed to save edits: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setLoadingState(null);
     }
   };
 
   // Skip AI Analysis
   const skipAnalyzeProposal = () => {
-    setCurrentStep('review');
+    showConfirmation(
+      'Skip AI Analysis',
+      'Are you sure you want to skip AI analysis?\n\nThis will also skip backlog generation, and you will jump directly to inviting team members. You will need to manually create project structure later.\n\nDo you want to continue?',
+      () => {
+        setAnalysisSkipped(true);
+        if (!uploadedProposalId) {
+          setProposalSkipped(true);
+        }
+        showWarning('Analysis Skipped', 'Analysis and backlog generation skipped. You can invite team members directly.');
+        setCurrentStep('invite');
+      },
+      'Skip Analysis',
+      'Cancel'
+    );
   };
 
   // Skip Review and Edit
   const skipReviewEdit = () => {
-    setCurrentStep('backlog');
-    generateMockBacklog();
+    if (analysisSkipped) {
+      setCurrentStep('invite');
+    } else {
+      showConfirmation(
+        'Skip Review & Edit',
+        'Are you sure you want to skip reviewing and editing the AI-generated content?\n\nThis will proceed directly to backlog generation with the current AI analysis results.',
+        () => {
+          setCurrentStep('generate-backlog');
+        },
+        'Skip Review',
+        'Cancel'
+      );
+    }
   };
 
   // Generate Mock Backlog (for demo purposes)
@@ -526,13 +706,38 @@ const App: React.FC = () => {
       return;
     }
 
+    // Check if analysis was skipped
+    if (analysisSkipped) {
+      showWarning('Backlog Skipped', 'Backlog generation was skipped because analysis was skipped.');
+      setCurrentStep('invite');
+      return;
+    }
+
     const token = getAuthToken();
     if (!token) {
       showError('Authentication Required', 'Please log in again.');
       return;
     }
 
-    setIsLoading(true);
+    // Show confirmation modal
+    showConfirmation(
+      'Generate Project Backlog',
+      'This will generate a complete project backlog with epics, sub-epics, user stories, and tasks using AI.\n\n⚠️ This process cannot be canceled once started and may take several minutes to complete.\n\nDo you want to continue?',
+      () => {
+        setLoadingState('generating-backlog');
+        performBacklogGeneration();
+      },
+      'Generate Backlog',
+      'Cancel'
+    );
+  };
+
+  const performBacklogGeneration = async () => {
+    const token = getAuthToken();
+    if (!token) {
+      showError('Authentication Required', 'Please log in again.');
+      return;
+    }
 
     try {
       const response = await fetch(
@@ -551,15 +756,15 @@ const App: React.FC = () => {
 
       // Fetch the complete backlog structure after generation
       await fetchBacklog();
-      setCurrentStep('backlog');
+      setCurrentStep('review-backlog');
     } catch (error) {
       console.error('Error generating backlog:', error);
       showError('Backlog Generation Failed', `Failed to generate backlog: ${error instanceof Error ? error.message : 'Unknown error'}`);
       // Generate mock backlog for demo
       generateMockBacklog();
-      setCurrentStep('backlog');
+      setCurrentStep('review-backlog');
     } finally {
-      setIsLoading(false);
+      setLoadingState(null);
     }
   };
 
@@ -981,7 +1186,7 @@ const App: React.FC = () => {
       return;
     }
 
-    setIsLoading(true);
+    setLoadingState(null);
 
     try {
       let successCount = 0;
@@ -993,7 +1198,7 @@ const App: React.FC = () => {
           const usersResponse = await fetch(
             `${API_BASE_URL}/api/user/?email=${encodeURIComponent(invitation.email)}`,
             {
-              headers: { 'Authorization': `${authFormat} ${token}` },
+              headers: { 'Authorization': `Token ${token}` },
               credentials: 'include',
             }
           );
@@ -1051,16 +1256,23 @@ const App: React.FC = () => {
       }
       
       // Reset after success
-      if (successCount > 0) {
-      setTimeout(() => {
-        resetForm();
-      }, 2000);
-      }
+        if (successCount > 0) {
+          setTimeout(() => {
+            resetForm();
+            navigate('/main-projects', { replace: true });
+          }, 2000);
+        } else {
+          // If no invitations were sent, still redirect to projects
+          setTimeout(() => {
+            resetForm();
+            navigate('/main-projects', { replace: true });
+          }, 1000);
+        }
     } catch (error) {
       console.error('Error sending invitations:', error);
       showError('Invitations Failed', `Failed to send invitations: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
-      setIsLoading(false);
+      setLoadingState(null);
     }
   };
 
@@ -1081,6 +1293,9 @@ const App: React.FC = () => {
     setTasks([]);
     setInvitations([]);
     setCurrentStep('create');
+    setLoadingState(null);
+    setAnalysisSkipped(false);
+    setProposalSkipped(false);
   };
 
   const addMember = () => {
@@ -1179,59 +1394,111 @@ const App: React.FC = () => {
 
   // Step indicator component
   const StepIndicator = () => {
-    const steps = [
-      { key: 'create', label: 'Create Project', completed: ['upload', 'analyze', 'review', 'backlog', 'invite'].includes(currentStep) },
-      { key: 'upload', label: 'Upload Proposal', completed: ['analyze', 'review', 'backlog', 'invite'].includes(currentStep) },
-      { key: 'analyze', label: 'AI Analysis', completed: ['review', 'backlog', 'invite'].includes(currentStep) },
-      { key: 'review', label: 'Review & Edit', completed: ['backlog', 'invite'].includes(currentStep) },
-      { key: 'backlog', label: 'Generate Backlog', completed: currentStep === 'invite' },
-      { key: 'invite', label: 'Invite Team', completed: false },
-    ];
+  const steps = [
+    { key: 'create', label: 'Create Project', completed: ['upload', 'analyze', 'review', 'generate-backlog', 'review-backlog', 'invite'].includes(currentStep) },
+    { key: 'upload', label: 'Upload Proposal', completed: ['analyze', 'review', 'generate-backlog', 'review-backlog', 'invite'].includes(currentStep) },
+    { key: 'analyze', label: 'AI Analysis', completed: ['review', 'generate-backlog', 'review-backlog', 'invite'].includes(currentStep) },
+    { key: 'review', label: 'Review & Edit', completed: ['generate-backlog', 'review-backlog', 'invite'].includes(currentStep) },
+    { key: 'generate-backlog', label: 'Generate Backlog', completed: ['review-backlog', 'invite'].includes(currentStep) },
+    { key: 'review-backlog', label: 'Review Backlog', completed: currentStep === 'invite' },
+    { key: 'invite', label: 'Invite Team', completed: false },
+  ];
 
     return (
-      <div className="flex items-center justify-between mb-8 overflow-x-auto pb-2">
-        {steps.map((step, index) => (
-          <React.Fragment key={step.key}>
-            <div className="flex items-center flex-shrink-0">
-              <div className={`flex items-center justify-center w-8 h-8 rounded-full ${
-                step.completed ? 'bg-green-500' : currentStep === step.key ? 'bg-blue-500' : theme === "dark" ? 'bg-gray-600' : 'bg-gray-300'
-              } text-white font-semibold text-sm`}>
-                {step.completed ? <Check size={16} /> : index + 1}
+      <div className="mb-8">
+        {/* Desktop/Tablet View */}
+        <div className="hidden lg:flex items-center justify-between overflow-x-auto pb-2">
+          {steps.map((step, index) => (
+            <React.Fragment key={step.key}>
+              <div className="flex items-center flex-shrink-0">
+                <div className={`flex items-center justify-center w-8 h-8 rounded-full ${
+                  step.completed ? 'bg-green-500' : currentStep === step.key ? 'bg-blue-500' : theme === "dark" ? 'bg-gray-600' : 'bg-gray-300'
+                } text-white font-semibold text-sm`}>
+                  {step.completed ? <Check size={16} /> : index + 1}
+                </div>
+                <span className={`ml-2 text-sm font-medium whitespace-nowrap ${
+                  currentStep === step.key ? 'text-blue-600' : theme === "dark" ? 'text-gray-300' : 'text-gray-600'
+                }`}>
+                  {step.label}
+                </span>
               </div>
-              <span className={`ml-2 text-sm font-medium whitespace-nowrap ${
-                currentStep === step.key ? 'text-blue-600' : theme === "dark" ? 'text-gray-300' : 'text-gray-600'
-              }`}>
-                {step.label}
-              </span>
-            </div>
-            {index < steps.length - 1 && (
-              <div className={`flex-1 h-0.5 mx-4 min-w-[20px] ${
-                step.completed ? 'bg-green-500' : theme === "dark" ? 'bg-gray-600' : 'bg-gray-300'
-              }`} />
-            )}
-          </React.Fragment>
-        ))}
+              {index < steps.length - 1 && (
+                <div className={`flex-1 h-0.5 mx-2 min-w-[10px] ${
+                  step.completed ? 'bg-green-500' : theme === "dark" ? 'bg-gray-600' : 'bg-gray-300'
+                }`} />
+              )}
+            </React.Fragment>
+          ))}
+        </div>
+        
+        {/* Tablet View - Compact */}
+        <div className="hidden sm:block lg:hidden">
+          <div className="flex items-center justify-between mb-2">
+            <span className={`text-sm font-medium ${theme === "dark" ? "text-gray-300" : "text-gray-700"}`}>
+              Step {steps.findIndex(s => s.key === currentStep) + 1} of {steps.length}
+            </span>
+            <span className={`text-sm ${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}>
+              {steps.find(s => s.key === currentStep)?.label}
+            </span>
+          </div>
+          <div className="flex items-center space-x-1">
+            {steps.map((step, index) => (
+              <div
+                key={step.key}
+                className={`flex-1 h-2 rounded-full ${
+                  step.completed ? 'bg-green-500' : currentStep === step.key ? 'bg-blue-500' : theme === "dark" ? 'bg-gray-600' : 'bg-gray-300'
+                }`}
+              />
+            ))}
+          </div>
+        </div>
+        
+        {/* Mobile View - Very Compact */}
+        <div className="sm:hidden">
+          <div className="flex items-center justify-between mb-2">
+            <span className={`text-sm font-medium ${theme === "dark" ? "text-gray-300" : "text-gray-700"}`}>
+              Step {steps.findIndex(s => s.key === currentStep) + 1} of {steps.length}
+            </span>
+            <span className={`text-xs ${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}>
+              {steps.find(s => s.key === currentStep)?.label}
+            </span>
+          </div>
+          <div className="flex items-center space-x-1">
+            {steps.map((step, index) => (
+              <div
+                key={step.key}
+                className={`flex-1 h-1 rounded-full ${
+                  step.completed ? 'bg-green-500' : currentStep === step.key ? 'bg-blue-500' : theme === "dark" ? 'bg-gray-600' : 'bg-gray-300'
+                }`}
+              />
+            ))}
+          </div>
+        </div>
       </div>
     );
   };
 
   return (
     <div className={`flex min-h-screen ${theme === "dark" ? "bg-gray-900" : "bg-gray-50"}`}>
-     <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+       <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
     <div className="flex-1 flex flex-col">
       <TopNavbar onMenuClick={() => setSidebarOpen(true)} />
         
 
-      <main className="flex-1 p-4 lg:p-[100px] overflow-auto space-y-[40px]">
+      <main className="flex-1 p-4 lg:p-6 xl:p-8 overflow-auto space-y-6 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-800">
         <button
-            onClick={() => window.history.back()}
-            className="flex items-center text-gray-600 hover:text-gray-900 transition-colors mb-4 group">
+            onClick={() => navigate('/main-projects', { replace: true })}
+            className={`flex items-center transition-colors mb-4 group ${
+              theme === "dark" 
+                ? "text-gray-300 hover:text-white" 
+                : "text-gray-600 hover:text-gray-900"
+            }`}>
             <ArrowLeft className="w-5 h-5 mr-2 group-hover:-translate-x-1 transition-transform" />
             <span className="font-medium">Back to Projects</span>
           </button>
-      <div className="max-w-6xl mx-auto">
-        <div className={`rounded-lg border p-6 shadow-sm ${theme === "dark" ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"}`}>
+      <div className="w-full max-w-3xl sm:max-w-4xl lg:max-w-5xl xl:max-w-6xl mx-auto">
+        <div className={`rounded-lg border p-4 sm:p-6 lg:p-8 shadow-sm min-h-[calc(100vh-6rem)] sm:min-h-[calc(100vh-8rem)] ${theme === "dark" ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"}`}>
           <h1 className={`text-2xl font-bold mb-6 ${theme === "dark" ? "text-white" : "text-gray-800"}`}>Create New Project</h1>
           
           <StepIndicator />
@@ -1249,7 +1516,7 @@ const App: React.FC = () => {
                     theme === "dark" ? "bg-gray-900 border-gray-700 text-white" : "border-gray-300"
                   }`}
                   placeholder="Enter project name"
-                  disabled={isLoading}
+                  disabled={loadingState !== null}
                 />
               </div>
 
@@ -1263,24 +1530,24 @@ const App: React.FC = () => {
                     theme === "dark" ? "bg-gray-900 border-gray-700 text-white" : "border-gray-300"
                   }`}
                   placeholder="Describe your project (optional)"
-                  disabled={isLoading}
+                  disabled={loadingState !== null}
                 />
               </div>
 
               <div className="flex justify-between">
                 <button
                   onClick={skipCreateProject}
-                  disabled={!projectTitle || isLoading}
+                  disabled={!projectTitle || loadingState !== null}
                   className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Skip
                 </button>
                 <button
                   onClick={createProject}
-                  disabled={!projectTitle || isLoading}
+                  disabled={!projectTitle || loadingState !== null}
                   className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
-                  {isLoading ? (
+                  {loadingState !== null ? (
                     <>
                       <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
                       Creating...
@@ -1314,8 +1581,8 @@ const App: React.FC = () => {
                   onDrop={handleDrop}
                   className={`border-2 border-dashed rounded-lg p-6 text-center transition-all ${
                     dragActive ? 'border-blue-400 bg-blue-50' : theme === "dark" ? 'border-gray-600 hover:border-gray-500' : 'border-gray-300 hover:border-gray-400'
-                  } cursor-pointer ${isLoading ? 'opacity-50 pointer-events-none' : ''}`}
-                  onClick={() => !isLoading && document.getElementById('fileInput')?.click()}
+                  } cursor-pointer ${loadingState !== null ? 'opacity-50 pointer-events-none' : ''}`}
+                  onClick={() => !loadingState !== null && document.getElementById('fileInput')?.click()}
                 >
                   <Upload size={32} className={`mx-auto mb-2 ${theme === "dark" ? "text-gray-400" : "text-gray-400"}`} />
                   <p className={`text-sm ${theme === "dark" ? "text-gray-300" : "text-gray-600"}`}>
@@ -1331,7 +1598,7 @@ const App: React.FC = () => {
                     accept="application/pdf"
                     onChange={handleFileChange}
                     className="hidden"
-                    disabled={isLoading}
+                    disabled={loadingState !== null}
                   />
                 </div>
 
@@ -1343,7 +1610,7 @@ const App: React.FC = () => {
                     <button
                       onClick={removeFile}
                       className="text-red-500 hover:text-red-700 flex items-center gap-1 text-sm"
-                      disabled={isLoading}
+                      disabled={loadingState !== null}
                     >
                       <X size={14} /> Remove
                     </button>
@@ -1354,17 +1621,17 @@ const App: React.FC = () => {
               <div className="flex justify-between">
                 <button
                   onClick={skipUploadProposal}
-                  disabled={isLoading}
+                  disabled={loadingState !== null}
                   className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Skip
                 </button>
                 <button
                   onClick={uploadProposal}
-                  disabled={!uploadedFile || isLoading}
+                  disabled={!uploadedFile || loadingState !== null}
                   className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
-                  {isLoading ? (
+                  {loadingState !== null ? (
                     <>
                       <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
                       Uploading...
@@ -1394,33 +1661,51 @@ const App: React.FC = () => {
 
               <div className="text-center py-8">
                 <Sparkles size={48} className="mx-auto text-blue-500 mb-4" />
-                <h3 className={`text-lg font-semibold mb-2 ${theme === "dark" ? "text-white" : "text-gray-800"}`}>Ready to Analyze</h3>
+                <h3 className={`text-lg font-semibold mb-2 ${theme === "dark" ? "text-white" : "text-gray-800"}`}>
+                  {uploadedProposalId ? 'Ready to Analyze' : 'No Proposal Uploaded'}
+                </h3>
                 <p className={`mb-6 ${theme === "dark" ? "text-gray-300" : "text-gray-600"}`}>
-                  Our AI will analyze your proposal and generate project roles, features, goals, and timeline.
+                  {uploadedProposalId 
+                    ? 'Our AI will analyze your proposal and generate project roles, features, goals, and timeline.'
+                    : 'No proposal was uploaded. AI analysis and backlog generation will be skipped. You can proceed directly to inviting team members.'
+                  }
                 </p>
 
                 <div className="flex justify-center gap-4">
-                  <button
-                    onClick={skipAnalyzeProposal}
-                    disabled={isLoading}
-                    className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Skip
-                  </button>
-                  <button
-                    onClick={analyzeProposal}
-                    disabled={isLoading}
-                    className="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                  >
-                    {isLoading ? (
-                      <LoadingSpinner className="text-white" />
-                    ) : (
-                      <>
-                        <Sparkles size={20} />
-                        Analyze with AI
-                      </>
-                    )}
-                  </button>
+                  {uploadedProposalId ? (
+                    <>
+                      <button
+                        onClick={skipAnalyzeProposal}
+                        disabled={loadingState !== null}
+                        className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                        title="Skipping will also skip backlog generation"
+                      >
+                        Skip
+                      </button>
+                      <button
+                        onClick={analyzeProposal}
+                        disabled={loadingState !== null}
+                        className="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                      >
+                        {loadingState === 'analyzing' ? (
+                          <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
+                        ) : (
+                          <>
+                            <Sparkles size={20} />
+                            Analyze with AI
+                          </>
+                        )}
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      onClick={analyzeProposal}
+                      className="px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
+                    >
+                      <ArrowRight size={20} />
+                      Proceed to Invite Team
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -1450,7 +1735,7 @@ const App: React.FC = () => {
                     className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
                       theme === "dark" ? "bg-purple-900 border-purple-700 text-white" : "bg-purple-50 border-gray-300"
                     }`}
-                    disabled={isLoading}
+                    disabled={loadingState !== null}
                   />
                 </div>
               )}
@@ -1465,7 +1750,7 @@ const App: React.FC = () => {
                     </h3>
                   </div>
                   
-                  <div className="space-y-2 mb-3 max-h-60 overflow-y-auto">
+                  <div className="space-y-2 mb-3 max-h-60 sm:max-h-72 lg:max-h-80 xl:max-h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-800">
                     {members.map(member => (
                       <div key={member.id} className={`flex items-center justify-between p-3 rounded-lg ${
                         member.ai ? 'bg-purple-50 border border-purple-200' : theme === "dark" ? 'bg-gray-900' : 'bg-gray-50'
@@ -1481,7 +1766,7 @@ const App: React.FC = () => {
                         <button 
                           onClick={() => removeMember(member.id)} 
                           className="text-red-500 hover:text-red-700"
-                          disabled={isLoading}
+                          disabled={loadingState !== null}
                         >
                           <X size={16} />
                         </button>
@@ -1498,12 +1783,12 @@ const App: React.FC = () => {
                       className={`flex-1 px-3 py-2 border rounded-lg text-sm ${
                         theme === "dark" ? "bg-gray-900 border-gray-700 text-white" : "border-gray-300"
                       }`}
-                      disabled={isLoading}
+                      disabled={loadingState !== null}
                     />
                     <button 
                       onClick={addMember} 
                       className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-                      disabled={isLoading}
+                      disabled={loadingState !== null}
                     >
                       <Plus size={16} />
                     </button>
@@ -1521,7 +1806,7 @@ const App: React.FC = () => {
                     </h3>
                   </div>
                   
-                  <div className="space-y-2 mb-3 max-h-60 overflow-y-auto">
+                  <div className="space-y-2 mb-3 max-h-60 sm:max-h-72 lg:max-h-80 xl:max-h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-800">
                     {features.map(feature => (
                       <div key={feature.id} className={`p-3 rounded-lg ${
                         feature.ai ? 'bg-purple-50 border border-purple-200' : theme === "dark" ? 'bg-gray-900' : 'bg-gray-50'
@@ -1540,7 +1825,7 @@ const App: React.FC = () => {
                           <button 
                             onClick={() => removeFeature(feature.id)} 
                             className="text-red-500 hover:text-red-700 ml-2"
-                            disabled={isLoading}
+                            disabled={loadingState !== null}
                           >
                             <X size={16} />
                           </button>
@@ -1558,12 +1843,12 @@ const App: React.FC = () => {
                       className={`flex-1 px-3 py-2 border rounded-lg text-sm ${
                         theme === "dark" ? "bg-gray-900 border-gray-700 text-white" : "border-gray-300"
                       }`}
-                      disabled={isLoading}
+                      disabled={loadingState !== null}
                     />
                     <button 
                       onClick={addFeature} 
                       className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-                      disabled={isLoading}
+                      disabled={loadingState !== null}
                     >
                       <Plus size={16} />
                     </button>
@@ -1581,7 +1866,7 @@ const App: React.FC = () => {
                     </h3>
                   </div>
                   
-                  <div className="space-y-2 mb-3 max-h-60 overflow-y-auto">
+                  <div className="space-y-2 mb-3 max-h-60 sm:max-h-72 lg:max-h-80 xl:max-h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-800">
                     {goals.map(goal => (
                       <div key={goal.id} className={`p-3 rounded-lg ${
                         goal.ai ? 'bg-purple-50 border border-purple-200' : theme === "dark" ? 'bg-gray-900' : 'bg-gray-50'
@@ -1605,7 +1890,7 @@ const App: React.FC = () => {
                           <button 
                             onClick={() => removeGoal(goal.id)} 
                             className="text-red-500 hover:text-red-700 ml-2"
-                            disabled={isLoading}
+                            disabled={loadingState !== null}
                           >
                             <X size={16} />
                           </button>
@@ -1623,7 +1908,7 @@ const App: React.FC = () => {
                       className={`w-full px-3 py-2 border rounded-lg text-sm ${
                         theme === "dark" ? "bg-gray-900 border-gray-700 text-white" : "border-gray-300"
                       }`}
-                      disabled={isLoading}
+                      disabled={loadingState !== null}
                     />
                     <div className="flex gap-2">
                       <input
@@ -1634,12 +1919,12 @@ const App: React.FC = () => {
                         className={`flex-1 px-3 py-2 border rounded-lg text-sm ${
                           theme === "dark" ? "bg-gray-900 border-gray-700 text-white" : "border-gray-300"
                         }`}
-                        disabled={isLoading}
+                        disabled={loadingState !== null}
                       />
                       <button 
                         onClick={addGoal} 
                         className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-                        disabled={isLoading}
+                        disabled={loadingState !== null}
                       >
                         <Plus size={16} />
                       </button>
@@ -1658,7 +1943,7 @@ const App: React.FC = () => {
                     </h3>
                   </div>
                   
-                  <div className="space-y-3 mb-3 max-h-80 overflow-y-auto">
+                  <div className="space-y-3 mb-3 max-h-80 sm:max-h-96 lg:max-h-[28rem] xl:max-h-[32rem] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-800">
                     {timeline.map(week => (
                       <div key={week.id} className={`p-4 rounded-lg ${
                         week.ai ? 'bg-purple-50 border border-purple-200' : theme === "dark" ? 'bg-gray-900' : 'bg-gray-50'
@@ -1682,7 +1967,7 @@ const App: React.FC = () => {
                               <button
                                 onClick={() => removeTimelineGoal(week.id, idx)}
                                 className="text-red-500 hover:text-red-700 ml-2"
-                                disabled={isLoading}
+                                disabled={loadingState !== null}
                               >
                                 <X size={14} />
                               </button>
@@ -1704,7 +1989,7 @@ const App: React.FC = () => {
                         className={`w-24 px-3 py-2 border rounded-lg text-sm ${
                           theme === "dark" ? "bg-gray-900 border-gray-700 text-white" : "border-gray-300"
                         }`}
-                        disabled={isLoading}
+                        disabled={loadingState !== null}
                       />
                     </div>
                     <div className="flex gap-2">
@@ -1716,7 +2001,7 @@ const App: React.FC = () => {
                         className={`flex-1 px-3 py-2 border rounded-lg text-sm ${
                           theme === "dark" ? "bg-gray-900 border-gray-700 text-white" : "border-gray-300"
                         }`}
-                        disabled={isLoading}
+                        disabled={loadingState !== null}
                         onKeyPress={(e) => {
                           if (e.key === 'Enter') {
                             e.preventDefault();
@@ -1727,7 +2012,7 @@ const App: React.FC = () => {
                       <button 
                         onClick={addTimelineWeek} 
                         className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-                        disabled={isLoading}
+                        disabled={loadingState !== null}
                       >
                         <Plus size={16} />
                       </button>
@@ -1739,21 +2024,21 @@ const App: React.FC = () => {
               <div className={`flex justify-between pt-4 border-t ${theme === "dark" ? "border-gray-700" : ""}`}>
                 <button
                   onClick={skipReviewEdit}
-                  disabled={isLoading}
+                  disabled={loadingState !== null}
                   className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Skip
                 </button>
                 <button
-                  onClick={generateBacklogAndSave}
-                  disabled={isLoading}
+                  onClick={saveAnalysisEdits}
+                  disabled={loadingState !== null}
                   className="px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
-                  {isLoading ? (
-                    <LoadingSpinner className="text-white" />
+                  {loadingState === 'analyzing' ? (
+                    <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
                   ) : (
                     <>
-                      Generate Backlog
+                      Confirm & Continue
                       <ArrowRight size={20} />
                     </>
                   )}
@@ -1762,13 +2047,59 @@ const App: React.FC = () => {
             </div>
           )}
 
-          {/* STEP 5: Backlog (Epic, Sub Epic, User Story) */}
-          {currentStep === 'backlog' && (
+          {/* STEP 5: Generate Backlog */}
+          {currentStep === 'generate-backlog' && (
             <div className="space-y-6">
               <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
                 <p className="text-green-800 text-sm flex items-center gap-2">
                   <Check size={16} className="text-green-600" />
-                  Backlog generated successfully! Review and assign user stories.
+                  Analysis confirmed! Ready to generate project backlog.
+                </p>
+              </div>
+
+              <div className="text-center py-8">
+                <Sparkles size={48} className="mx-auto text-blue-500 mb-4" />
+                <h3 className={`text-lg font-semibold mb-2 ${theme === "dark" ? "text-white" : "text-gray-800"}`}>
+                  Ready to Generate Backlog
+                </h3>
+                <p className={`mb-6 ${theme === "dark" ? "text-gray-300" : "text-gray-600"}`}>
+                  Our AI will generate a complete project backlog with epics, sub-epics, user stories, and tasks based on your project analysis.
+                </p>
+
+                <div className="flex justify-center gap-4">
+                  <button
+                    onClick={() => setCurrentStep('invite')}
+                    disabled={loadingState !== null}
+                    className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Skip
+                  </button>
+                  <button
+                    onClick={generateBacklogAndSave}
+                    disabled={loadingState !== null}
+                    className="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  >
+                    {loadingState === 'generating-backlog' ? (
+                      <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
+                    ) : (
+                      <>
+                        <Sparkles size={20} />
+                        Generate Backlog
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 6: Review & Edit Backlog */}
+          {currentStep === 'review-backlog' && (
+            <div className="space-y-6">
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+                <p className="text-green-800 text-sm flex items-center gap-2">
+                  <Check size={16} className="text-green-600" />
+                  Backlog generated successfully! Review and edit below.
                 </p>
               </div>
 
@@ -1783,7 +2114,7 @@ const App: React.FC = () => {
                         createEpic({ title, description: description || '' });
                       }
                     }}
-                    disabled={isLoading}
+                    disabled={loadingState !== null}
                     className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center gap-2"
                   >
                     <Plus size={16} />
@@ -1791,7 +2122,7 @@ const App: React.FC = () => {
                   </button>
                 <button
                   onClick={refreshBacklog}
-                  disabled={isLoading}
+                  disabled={loadingState !== null}
                   className="px-4 py-2 border border-blue-500 text-blue-600 rounded-lg hover:bg-blue-50 disabled:opacity-50 flex items-center gap-2"
                 >
                   <RefreshCw size={16} />
@@ -1924,7 +2255,7 @@ const App: React.FC = () => {
                                                 className={`text-xs px-2 py-1 border rounded ${
                                                   theme === "dark" ? "bg-gray-800 border-gray-600 text-white" : "border-gray-300"
                                         }`}
-                                        disabled={isLoading}
+                                        disabled={loadingState !== null}
                                       >
                                         <option value="">Unassigned</option>
                                         {members.map(member => (
@@ -1936,7 +2267,7 @@ const App: React.FC = () => {
                                               <button
                                                 onClick={() => deleteTask(task.id)}
                                                 className="text-red-500 hover:text-red-700 text-xs"
-                                                disabled={isLoading}
+                                                disabled={loadingState !== null}
                                               >
                                                 <X size={12} />
                                               </button>
@@ -1960,7 +2291,7 @@ const App: React.FC = () => {
                                         className={`w-full text-xs px-3 py-2 border-2 border-dashed rounded-lg ${
                                           theme === "dark" ? "border-gray-600 text-gray-400 hover:border-gray-500" : "border-gray-300 text-gray-600 hover:border-gray-400"
                                         }`}
-                                        disabled={isLoading}
+                                        disabled={loadingState !== null}
                                       >
                                         + Add Task
                                       </button>
@@ -1997,25 +2328,25 @@ const App: React.FC = () => {
 
               <div className={`flex justify-between pt-4 border-t ${theme === "dark" ? "border-gray-700" : ""}`}>
                 <button
-                  onClick={skipGenerateBacklog}
-                  disabled={isLoading}
+                  onClick={() => setCurrentStep('invite')}
+                  disabled={loadingState !== null}
                   className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Skip
-                  </button>
-                  <button
-                    onClick={() => setCurrentStep('invite')}
-                    disabled={isLoading}
-                    className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                  >
-                    Next: Invite Team
-                    <ArrowRight size={20} />
-                  </button>
+                </button>
+                <button
+                  onClick={() => setCurrentStep('invite')}
+                  disabled={loadingState !== null}
+                  className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  Confirm & Continue
+                  <ArrowRight size={20} />
+                </button>
               </div>
             </div>
           )}
 
-          {/* STEP 6: Invite Developers */}
+          {/* STEP 7: Invite Team Members */}
           {currentStep === 'invite' && (
             <div className="space-y-6">
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
@@ -2032,7 +2363,7 @@ const App: React.FC = () => {
                 </h2>
 
                 {/* Invitation List */}
-                <div className="space-y-3 mb-4 max-h-96 overflow-y-auto">
+                <div className="space-y-3 mb-4 max-h-80 sm:max-h-96 lg:max-h-[28rem] xl:max-h-[32rem] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-800">
                   {invitations.map(invitation => (
                     <div key={invitation.id} className={`flex items-center justify-between p-4 rounded-lg border ${
                       invitation.sent 
@@ -2060,7 +2391,7 @@ const App: React.FC = () => {
                         <button
                           onClick={() => removeInvitation(invitation.id)}
                           className="text-red-500 hover:text-red-700 ml-4"
-                          disabled={isLoading}
+                          disabled={loadingState !== null}
                         >
                           <X size={20} />
                         </button>
@@ -2096,7 +2427,7 @@ const App: React.FC = () => {
                         className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
                           theme === "dark" ? "bg-gray-900 border-gray-700 text-white" : "border-gray-300"
                         }`}
-                        disabled={isLoading}
+                        disabled={loadingState !== null}
                       />
                     </div>
                     <div>
@@ -2109,7 +2440,7 @@ const App: React.FC = () => {
                         className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
                           theme === "dark" ? "bg-gray-900 border-gray-700 text-white" : "border-gray-300"
                         }`}
-                        disabled={isLoading}
+                        disabled={loadingState !== null}
                       >
                         <option value="">Select a role</option>
                         {members.map(member => (
@@ -2127,7 +2458,7 @@ const App: React.FC = () => {
                     </div>
                     <button
                       onClick={addInvitation}
-                      disabled={!newInvitation.email || !newInvitation.role || isLoading}
+                      disabled={!newInvitation.email || !newInvitation.role || loadingState !== null}
                       className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                     >
                       <Plus size={16} />
@@ -2143,6 +2474,7 @@ const App: React.FC = () => {
                   onClick={() => {
                     showSuccess('Project Created!', 'Project created successfully!');
                     resetForm();
+                    navigate('/main-projects', { replace: true });
                   }}
                   className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
                 >
@@ -2150,10 +2482,10 @@ const App: React.FC = () => {
                 </button>
                 <button
                   onClick={sendInvitations}
-                  disabled={invitations.length === 0 || isLoading}
+                  disabled={invitations.length === 0 || loadingState !== null}
                   className="px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
-                  {isLoading ? (
+                  {loadingState !== null ? (
                     <>
                       <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></div>
                       Sending...
@@ -2172,6 +2504,76 @@ const App: React.FC = () => {
       </div>
     </main>
     </div>
+    
+    {/* Loading Modals */}
+    <LoadingSpinner
+      isOpen={loadingState === 'analyzing'}
+      customMessages={[
+        "AI is analyzing your proposal...",
+        "Extracting project requirements...",
+        "Identifying team roles...",
+        "Generating project features...",
+        "Creating project goals...",
+        "Building timeline...",
+        "Almost done analyzing...",
+        "Finalizing analysis..."
+      ]}
+    />
+    
+    <LoadingSpinner
+      isOpen={loadingState === 'generating-backlog'}
+      customMessages={[
+        "Generating project backlog...",
+        "Creating epics and sub-epics...",
+        "Writing user stories...",
+        "Breaking down tasks...",
+        "Organizing project structure...",
+        "Almost done with backlog...",
+        "Finalizing backlog..."
+      ]}
+    />
+    
+    {/* Confirmation Modal */}
+    {showConfirmModal && confirmModalData && (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className={`bg-white rounded-xl p-6 w-full max-w-md mx-4 ${
+          theme === 'dark' ? 'bg-gray-800' : 'bg-white'
+        }`}>
+          <h3 className={`text-lg font-semibold mb-4 ${
+            theme === 'dark' ? 'text-white' : 'text-gray-900'
+          }`}>
+            {confirmModalData.title}
+          </h3>
+          <p className={`mb-6 whitespace-pre-line ${
+            theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+          }`}>
+            {confirmModalData.message}
+          </p>
+          <div className="flex space-x-3">
+            <button
+              onClick={handleCancelConfirm}
+              className={`flex-1 px-4 py-2 rounded-lg transition-colors ${
+                theme === 'dark' 
+                  ? 'bg-gray-600 text-white hover:bg-gray-700' 
+                  : 'bg-gray-500 text-white hover:bg-gray-600'
+              }`}
+            >
+              {confirmModalData.cancelText || 'Cancel'}
+            </button>
+            <button
+              onClick={handleConfirm}
+              className={`flex-1 px-4 py-2 rounded-lg transition-colors ${
+                theme === 'dark' 
+                  ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                  : 'bg-blue-600 text-white hover:bg-blue-700'
+              }`}
+            >
+              {confirmModalData.confirmText || 'Confirm'}
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
     </div>
   );
 };

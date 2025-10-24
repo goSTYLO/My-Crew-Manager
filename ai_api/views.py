@@ -27,8 +27,10 @@ from .serializers import (
 # Real LLM pipelines
 from LLMs.project_llm import run_pipeline_from_text, model_to_dict
 from LLMs.backlog_llm import run_backlog_pipeline
+from ai_api.tasks import task_manager, TaskCancelledException
 
 import pdfplumber
+import threading
 
 
 class ProjectViewSet(ModelViewSet):
@@ -53,49 +55,56 @@ class ProjectViewSet(ModelViewSet):
         if not proposal.parsed_text:
             return Response({"error": "Proposal has no parsed text"}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Run real LLM pipeline and return structured output
-        project_model = run_pipeline_from_text(proposal.parsed_text)
-        output = model_to_dict(project_model)
+        try:
+            # Run real LLM pipeline
+            project_model = run_pipeline_from_text(proposal.parsed_text)
+            output = model_to_dict(project_model)
 
-        # Optionally persist minimal fields on our local Project
-        title_override = request.data.get("title")
-        if title_override:
-            output["title"] = title_override
-        project.title = output.get("title") or project.title
-        project.summary = output.get("summary") or project.summary
-        project.save(update_fields=["title", "summary"])
+            # Optionally persist minimal fields on our local Project
+            title_override = request.data.get("title")
+            if title_override:
+                output["title"] = title_override
+            project.title = output.get("title") or project.title
+            project.summary = output.get("summary") or project.summary
+            project.save(update_fields=["title", "summary"])
 
-        # Persist features
-        ProjectFeature.objects.filter(project=project).delete()
-        for feat in output.get("features", [])[:10]:
-            ProjectFeature.objects.create(project=project, title=str(feat)[:512])
+            # Persist features
+            ProjectFeature.objects.filter(project=project).delete()
+            for feat in output.get("features", [])[:10]:
+                ProjectFeature.objects.create(project=project, title=str(feat)[:512])
 
-        # Persist roles
-        ProjectRole.objects.filter(project=project).delete()
-        for role in output.get("roles", [])[:20]:
-            ProjectRole.objects.create(project=project, role=str(role)[:255])
+            # Persist roles
+            ProjectRole.objects.filter(project=project).delete()
+            for role in output.get("roles", [])[:20]:
+                ProjectRole.objects.create(project=project, role=str(role)[:255])
 
-        # Persist goals
-        ProjectGoal.objects.filter(project=project).delete()
-        for g in output.get("goals", [])[:20]:
-            ProjectGoal.objects.create(
-                project=project,
-                title=str(g.get("title", ""))[:512],
-                role=(g.get("role") or "")[:255]
-            )
+            # Persist goals
+            ProjectGoal.objects.filter(project=project).delete()
+            for g in output.get("goals", [])[:20]:
+                ProjectGoal.objects.create(
+                    project=project,
+                    title=str(g.get("title", ""))[:512],
+                    role=(g.get("role") or "")[:255]
+                )
 
-        # Persist timeline
-        TimelineWeek.objects.filter(project=project).delete()
-        for week in output.get("timeline", [])[:12]:
-            tw = TimelineWeek.objects.create(project=project, week_number=int(week.get("week_number", 0) or 0))
-            for item in week.get("goals", [])[:20]:
-                TimelineItem.objects.create(week=tw, title=str(item)[:512])
+            # Persist timeline
+            TimelineWeek.objects.filter(project=project).delete()
+            for week in output.get("timeline", [])[:12]:
+                tw = TimelineWeek.objects.create(project=project, week_number=int(week.get("week_number", 0) or 0))
+                for item in week.get("goals", [])[:20]:
+                    TimelineItem.objects.create(week=tw, title=str(item)[:512])
 
-        return Response({
-            "message": "Project enriched with LLM output",
-            "project_id": project.id,
-            "llm": output,
-        }, status=status.HTTP_200_OK)
+            return Response({
+                "message": "Project enriched with LLM output",
+                "project_id": project.id,
+                "llm": output
+            })
+            
+        except Exception as e:
+            print(f"Analysis failed: {str(e)}")
+            return Response({
+                "error": f"Analysis failed: {str(e)}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     @action(detail=True, methods=["get"], url_path="current-proposal")
     def current_proposal(self, request, pk=None):
@@ -114,54 +123,62 @@ class ProjectViewSet(ModelViewSet):
         if not proposal or not proposal.parsed_text:
             return Response({"error": "No parsed proposal found for project"}, status=status.HTTP_400_BAD_REQUEST)
 
-        context = {
-            "project_title": project.title or "",
-        }
-        backlog_model = run_backlog_pipeline(proposal.parsed_text, context)
+        try:
+            context = {
+                "project_title": project.title or "",
+            }
+            backlog_model = run_backlog_pipeline(proposal.parsed_text, context)
 
-        # Convert backlog model to dict
-        backlog_dict = {
-            "epics": [
-                {
-                    "title": epic.title,
-                    "description": getattr(epic, "description", ""),
-                    "sub_epics": [
-                        {
-                            "title": sub.title,
-                            "user_stories": [
-                                {
-                                    "title": us.title,
-                                    "tasks": [t.title for t in us.tasks],
-                                }
-                                for us in sub.user_stories
-                            ],
-                        }
-                        for sub in epic.sub_epics
-                    ],
-                }
-                for epic in backlog_model.epics
-            ]
-        }
+            # Convert backlog model to dict
+            backlog_dict = {
+                "epics": [
+                    {
+                        "title": epic.title,
+                        "description": getattr(epic, "description", ""),
+                        "sub_epics": [
+                            {
+                                "title": sub.title,
+                                "user_stories": [
+                                    {
+                                        "title": us.title,
+                                        "tasks": [t.title for t in us.tasks],
+                                    }
+                                    for us in sub.user_stories
+                                ],
+                            }
+                            for sub in epic.sub_epics
+                        ],
+                    }
+                    for epic in backlog_model.epics
+                ]
+            }
 
-        # Persist backlog structures
-        Epic.objects.filter(project=project, ai=True).delete()
-        for epic in backlog_model.epics[:20]:
-            e = Epic.objects.create(
-                project=project,
-                title=str(epic.title)[:512],
-                description=getattr(epic, "description", "")
-            )
-            for sub in epic.sub_epics[:20]:
-                se = SubEpic.objects.create(epic=e, title=str(sub.title)[:512])
-                for us in sub.user_stories[:20]:
-                    u = UserStory.objects.create(sub_epic=se, title=str(us.title)[:512])
-                    for t in us.tasks[:50]:
-                        StoryTask.objects.create(user_story=u, title=str(t.title)[:512])
+            # Persist backlog structures
+            Epic.objects.filter(project=project, ai=True).delete()
+            for epic in backlog_model.epics[:20]:
+                e = Epic.objects.create(
+                    project=project,
+                    title=str(epic.title)[:512],
+                    description=getattr(epic, "description", "")
+                )
+                for sub in epic.sub_epics[:20]:
+                    se = SubEpic.objects.create(epic=e, title=str(sub.title)[:512])
+                    for us in sub.user_stories[:20]:
+                        u = UserStory.objects.create(sub_epic=se, title=str(us.title)[:512])
+                        for t in us.tasks[:50]:
+                            StoryTask.objects.create(user_story=u, title=str(t.title)[:512])
 
-        return Response({
-            "message": "Backlog generated successfully",
-            "backlog": backlog_dict,
-        }, status=status.HTTP_200_OK)
+            return Response({
+                "message": "Backlog generated successfully",
+                "backlog": backlog_dict
+            })
+            
+        except Exception as e:
+            print(f"Backlog generation failed: {str(e)}")
+            return Response({
+                "error": f"Backlog generation failed: {str(e)}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
     @action(detail=True, methods=["put"], url_path="generate-overview")
     def generate_overview(self, request, pk=None):
@@ -261,7 +278,8 @@ class ProjectViewSet(ModelViewSet):
                             'title': t.title,
                             'status': t.status,
                             'ai': t.ai,
-                            'assignee': (
+                            'assignee': t.assignee.id if t.assignee else None,
+                            'assignee_details': (
                                 {
                                     'id': assignee.id,
                                     'user_name': getattr(assignee, 'user_name', None),
@@ -269,17 +287,21 @@ class ProjectViewSet(ModelViewSet):
                                 }
                                 if assignee is not None else None
                             ),
+                            'commit_title': t.commit_title,
+                            'commit_branch': t.commit_branch,
                         })
                     user_stories.append({
                         'id': us.id,
                         'title': us.title,
                         'ai': us.ai,
+                        'is_complete': us.is_complete,
                         'tasks': tasks,
                     })
                 sub_epics.append({
                     'id': se.id,
                     'title': se.title,
                     'ai': se.ai,
+                    'is_complete': se.is_complete,
                     'user_stories': user_stories,
                 })
             result.append({
@@ -287,6 +309,7 @@ class ProjectViewSet(ModelViewSet):
                 'title': e.title,
                 'description': e.description,
                 'ai': e.ai,
+                'is_complete': e.is_complete,
                 'sub_epics': sub_epics,
             })
 
@@ -620,6 +643,48 @@ class StoryTaskViewSet(ModelViewSet):
             return Response({"updated": updated}, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    def update(self, request, *args, **kwargs):
+        """Update a task with validation for assignee and commit requirements"""
+        try:
+            task = self.get_object()
+            project = task.user_story.sub_epic.epic.project
+            
+            # Validate assignee if provided
+            assignee_id = request.data.get('assignee')
+            if assignee_id is not None:
+                try:
+                    assignee = ProjectMember.objects.get(id=assignee_id)
+                    # Ensure assignee belongs to the same project
+                    if assignee.project_id != project.id:
+                        return Response(
+                            {"error": "Assignee must be a member of the same project"},
+                            status=status.HTTP_400_BAD_REQUEST
+                        )
+                except ProjectMember.DoesNotExist:
+                    return Response(
+                        {"error": "Invalid assignee ID"},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+            
+            # Validate commit requirements when marking as done
+            if request.data.get('status') == 'done':
+                if not request.data.get('commit_title'):
+                    return Response(
+                        {"error": "Commit title is required when marking task as done"},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+            
+            return super().update(request, *args, **kwargs)
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+    def partial_update(self, request, *args, **kwargs):
+        """Partial update with same validation as full update"""
+        return self.update(request, *args, **kwargs)
 
     def destroy(self, request, *args, **kwargs):
         try:
