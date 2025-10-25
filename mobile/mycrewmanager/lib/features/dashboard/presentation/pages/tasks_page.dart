@@ -137,7 +137,7 @@ class _TasksPageState extends State<TasksPage> with SingleTickerProviderStateMix
     {
       "title": "Code Review for Project A",
       "subtitle": "Sprint 1 • Backend",
-      "status": "Completed",
+      "status": "Done",
       "icon": Icons.trending_up,
       "iconColor": Colors.red,
       "members": [
@@ -161,7 +161,7 @@ class _TasksPageState extends State<TasksPage> with SingleTickerProviderStateMix
     {
       "title": "Backend Initialization",
       "subtitle": "Sprint 1 • Backend",
-      "status": "Completed",
+      "status": "Done",
       "icon": Icons.drag_indicator,
       "iconColor": Colors.amber,
       "members": [
@@ -405,7 +405,7 @@ class _TasksPageState extends State<TasksPage> with SingleTickerProviderStateMix
 
   @override
   Widget build(BuildContext context) {
-    final tabLabels = ["All", "To Do", "Completed"]; // Removed "In Progress" tab
+    final tabLabels = ["All", "To Do", "Done"]; // Removed "In Progress" tab
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
         if (state is AuthLoggedOut) {
@@ -582,32 +582,42 @@ class _TasksPageState extends State<TasksPage> with SingleTickerProviderStateMix
                     children: tabLabels.map((tab) {
                       final filtered = getFilteredTasks(tab, currentUserEmail, currentUserName);
                       return filtered.isEmpty
-                          ? const Center(
-                              child: Text(
-                                'No tasks found',
-                                style: TextStyle(color: Colors.grey),
+                          ? RefreshIndicator(
+                              onRefresh: _loadTasks,
+                              child: const Center(
+                                child: Text(
+                                  'No tasks found',
+                                  style: TextStyle(color: Colors.grey),
+                                ),
                               ),
                             )
-                          : ListView.builder(
-              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
-              itemCount: filtered.length,
-              itemBuilder: (context, i) {
-                final t = filtered[i];
-                final assigneeLabel = t.assigneeName ?? 'Unassigned';
-                return _TaskCard(
-                  title: t.title,
-                  subtitle: assigneeLabel,
-                  status: t.status,
-                  icon: Icons.task_alt,
-                  iconColor: t.status.toLowerCase() == 'completed' ? Colors.green : Colors.blue,
-                  members: [],
-                  progress: t.status.toLowerCase() == 'completed' ? 1.0 : 0.0,
-                  onTap: () {
-                    Navigator.of(context).push(TaskOverviewPage.route(t));
-                  },
-                );
-              },
-            );
+                          : RefreshIndicator(
+                              onRefresh: _loadTasks,
+                              child: ListView.builder(
+                                padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+                                itemCount: filtered.length,
+                                itemBuilder: (context, i) {
+                                  final t = filtered[i];
+                                  final assigneeLabel = t.assigneeName ?? 'Unassigned';
+                                  return _TaskCard(
+                                    title: t.title,
+                                    subtitle: assigneeLabel,
+                                    status: t.status,
+                                    icon: Icons.task_alt,
+                                    iconColor: t.status.toLowerCase() == 'done' ? Colors.green : Colors.blue,
+                                    members: [],
+                                    progress: t.status.toLowerCase() == 'done' ? 1.0 : 0.0,
+                                    onTap: () async {
+                                      await Navigator.of(context).push(TaskOverviewPage.route(t));
+                                      // Refresh tasks list when returning from task overview
+                                      if (mounted) {
+                                        _loadTasks();
+                                      }
+                                    },
+                                  );
+                                },
+                              ),
+                            );
                     }).toList(),
                   ),
       ),
@@ -700,7 +710,7 @@ class _TaskCard extends StatelessWidget {
 
   Color getStatusColor() {
     switch (status.toLowerCase()) {
-      case "completed":
+      case "done":
         return Colors.green;
       case "in progress":
         return Colors.amber;
@@ -816,7 +826,7 @@ class _TaskCard extends StatelessWidget {
                   minHeight: 6,
                   backgroundColor: const Color(0xFFE8ECF4),
                   valueColor: AlwaysStoppedAnimation<Color>(
-                    status.toLowerCase() == "completed" ? Colors.green : status.toLowerCase() == "in progress" ? Colors.amber : Colors.black26,
+                    status.toLowerCase() == "done" ? Colors.green : status.toLowerCase() == "in progress" ? Colors.amber : Colors.black26,
                   ),
                 ),
           ],

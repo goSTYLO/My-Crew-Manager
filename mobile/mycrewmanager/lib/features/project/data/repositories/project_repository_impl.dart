@@ -166,9 +166,9 @@ class ProjectRepositoryImpl implements ProjectRepository {
   }
 
   @override
-  Future<Either<Failure, ProjectTask>> updateTaskStatus(int taskId, String status) {
+  Future<Either<Failure, ProjectTask>> updateTaskStatus(int taskId, String status, {String? commitTitle}) {
     return _getData(
-      () async => await remoteDataSource.updateTaskStatus(taskId, status),
+      () async => await remoteDataSource.updateTaskStatus(taskId, status, commitTitle: commitTitle),
     );
   }
 

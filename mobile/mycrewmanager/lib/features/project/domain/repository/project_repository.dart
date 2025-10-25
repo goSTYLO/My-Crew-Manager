@@ -48,6 +48,6 @@ abstract class ProjectRepository {
   Future<Either<Failure, List<ProjectTask>>> getProjectTasks(int projectId);
   Future<Either<Failure, List<ProjectTask>>> getUserAssignedTasks();
   Future<Either<Failure, List<Activity>>> getRecentCompletedTasks();
-  Future<Either<Failure, ProjectTask>> updateTaskStatus(int taskId, String status);
+  Future<Either<Failure, ProjectTask>> updateTaskStatus(int taskId, String status, {String? commitTitle});
 }
 

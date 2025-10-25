@@ -98,7 +98,7 @@ class _TaskBottomSheetState extends State<TaskBottomSheet> {
                 Expanded(
                   child: DropdownButtonFormField<String>(
                     initialValue: status,
-                    items: ['To Do', 'In Progress', 'Completed']
+                    items: ['To Do', 'In Progress', 'Done']
                         .map((s) => DropdownMenuItem(
                               value: s,
                               child: Text(s),

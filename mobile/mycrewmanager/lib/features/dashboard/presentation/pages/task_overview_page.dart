@@ -62,9 +62,14 @@ class _TaskOverviewPageState extends State<TaskOverviewPage> {
   }
 
   Future<void> _markTaskAsComplete() async {
+    // Show dialog to get commit title
+    final commitTitle = await _showCommitTitleDialog();
+    if (commitTitle == null) return; // User cancelled
+
     final result = await _updateTaskStatus(UpdateTaskStatusParams(
       taskId: currentTask.id,
-      status: 'completed',
+      status: 'done',
+      commitTitle: commitTitle,
     ));
 
     result.fold(
@@ -80,6 +85,50 @@ class _TaskOverviewPageState extends State<TaskOverviewPage> {
         
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Task marked as complete!')),
+        );
+      },
+    );
+  }
+
+  Future<String?> _showCommitTitleDialog() async {
+    final TextEditingController commitController = TextEditingController();
+    commitController.text = 'Task completed: ${currentTask.title}';
+
+    return showDialog<String>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Mark Task as Complete'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Please provide a commit title for this task completion:'),
+              const SizedBox(height: 16),
+              TextField(
+                controller: commitController,
+                decoration: const InputDecoration(
+                  labelText: 'Commit Title',
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: 2,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final title = commitController.text.trim();
+                if (title.isNotEmpty) {
+                  Navigator.of(context).pop(title);
+                }
+              },
+              child: const Text('Complete Task'),
+            ),
+          ],
         );
       },
     );
@@ -225,7 +274,7 @@ class _TaskOverviewPageState extends State<TaskOverviewPage> {
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                     decoration: BoxDecoration(
-                                      color: currentTask.status.toLowerCase() == 'completed' 
+                                      color: currentTask.status.toLowerCase() == 'done' 
                                           ? Colors.green.withOpacity(0.15)
                                           : Colors.blue.withOpacity(0.15),
                                       borderRadius: BorderRadius.circular(8),
@@ -234,7 +283,7 @@ class _TaskOverviewPageState extends State<TaskOverviewPage> {
                                       currentTask.status.toUpperCase(),
                                       style: TextStyle(
                                         fontWeight: FontWeight.w600, 
-                                        color: currentTask.status.toLowerCase() == 'completed' 
+                                        color: currentTask.status.toLowerCase() == 'done' 
                                             ? Colors.green 
                                             : Colors.blue,
                                       ),
@@ -344,7 +393,7 @@ class _TaskOverviewPageState extends State<TaskOverviewPage> {
                                     ),
                                   ),
                                 ),
-                              ] else if (currentTask.status.toLowerCase() == 'completed') ...[
+                              ] else if (currentTask.status.toLowerCase() == 'done') ...[
                                 // Show completion status for completed tasks
                                 Container(
                                   width: double.infinity,

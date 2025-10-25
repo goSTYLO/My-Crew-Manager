@@ -49,7 +49,29 @@ class InvitationRepositoryImpl implements InvitationRepository {
       return right(null);
     } on DioException catch (e) {
       logger.d("❌ Accept invitation DioException: ${e.message} - Status: ${e.response?.statusCode}");
-      return left(Failure("Failed to accept invitation. Try Again!"));
+      logger.d("📊 Response data: ${e.response?.data}");
+      logger.d("📊 Request URL: ${e.requestOptions.uri}");
+      
+      // Handle timeout errors specifically
+      if (e.type == DioExceptionType.receiveTimeout || e.type == DioExceptionType.connectionTimeout) {
+        logger.d("⏰ Invitation acceptance timed out - operation may have succeeded on server");
+        return left(Failure("Request timed out. The invitation may have been accepted. Please refresh to check the status."));
+      }
+      
+      // Extract specific error message from response
+      String errorMessage = "Failed to accept invitation. Try Again!";
+      if (e.response?.data != null) {
+        try {
+          final responseData = e.response!.data;
+          if (responseData is Map<String, dynamic> && responseData.containsKey('error')) {
+            errorMessage = responseData['error'].toString();
+          }
+        } catch (parseError) {
+          logger.d("❌ Error parsing response data: $parseError");
+        }
+      }
+      
+      return left(Failure(errorMessage));
     }
   }
 
@@ -67,7 +89,29 @@ class InvitationRepositoryImpl implements InvitationRepository {
       return right(null);
     } on DioException catch (e) {
       logger.d("❌ Decline invitation DioException: ${e.message} - Status: ${e.response?.statusCode}");
-      return left(Failure("Failed to decline invitation. Try Again!"));
+      logger.d("📊 Response data: ${e.response?.data}");
+      logger.d("📊 Request URL: ${e.requestOptions.uri}");
+      
+      // Handle timeout errors specifically
+      if (e.type == DioExceptionType.receiveTimeout || e.type == DioExceptionType.connectionTimeout) {
+        logger.d("⏰ Invitation decline timed out - operation may have succeeded on server");
+        return left(Failure("Request timed out. The invitation may have been declined. Please refresh to check the status."));
+      }
+      
+      // Extract specific error message from response
+      String errorMessage = "Failed to decline invitation. Try Again!";
+      if (e.response?.data != null) {
+        try {
+          final responseData = e.response!.data;
+          if (responseData is Map<String, dynamic> && responseData.containsKey('error')) {
+            errorMessage = responseData['error'].toString();
+          }
+        } catch (parseError) {
+          logger.d("❌ Error parsing response data: $parseError");
+        }
+      }
+      
+      return left(Failure(errorMessage));
     }
   }
 }

@@ -11,7 +11,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
   String selectedStatus = 'All';
   String selectedDueDate = 'Any';
 
-  final List<String> statuses = const ['All', 'In Progress', 'Completed'];
+  final List<String> statuses = const ['All', 'In Progress', 'Done'];
   final List<String> dueDates = const ['Any', 'Today', 'This Week', 'This Month', 'Custom'];
 
   Widget _buildChipSection({

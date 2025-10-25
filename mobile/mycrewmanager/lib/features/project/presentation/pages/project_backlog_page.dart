@@ -477,7 +477,7 @@ class _TaskCard extends StatelessWidget {
 
   Color _getStatusColor() {
     switch (task.status.toLowerCase()) {
-      case "completed":
+      case "done":
         return Colors.green;
       case "in progress":
         return Colors.blue;
