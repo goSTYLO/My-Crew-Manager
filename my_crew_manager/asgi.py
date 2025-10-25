@@ -13,17 +13,21 @@ from channels.routing import ProtocolTypeRouter, URLRouter
 from channels.auth import AuthMiddlewareStack
 from chat.auth import TokenAuthMiddlewareStack
 import chat.routing
+from ai_api.routing import websocket_urlpatterns as ai_websocket_urlpatterns
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'my_crew_manager.settings')
 
 django_asgi_app = get_asgi_application()
+
+# Combine all WebSocket URL patterns
+websocket_urlpatterns = chat.routing.websocket_urlpatterns + ai_websocket_urlpatterns
 
 application = ProtocolTypeRouter({
     "http": django_asgi_app,
     "websocket": TokenAuthMiddlewareStack(
         AuthMiddlewareStack(
             URLRouter(
-                chat.routing.websocket_urlpatterns
+                websocket_urlpatterns
             )
         )
     ),

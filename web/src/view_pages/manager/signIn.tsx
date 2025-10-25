@@ -69,33 +69,33 @@ class LoginController {
       throw new Error(data.error || data.detail || data.message || "Invalid credentials");
     }
 
-    // ✅ Save authentication tokens to localStorage
+    // ✅ Save authentication tokens to sessionStorage
     console.log("🔍 Checking for tokens in response...");
     
     if (data.token) {
-      localStorage.setItem("token", data.token);
-      localStorage.setItem("access", data.token);
+      sessionStorage.setItem("token", data.token);
+      sessionStorage.setItem("access", data.token);
       console.log("✅ Token stored successfully (DRF Token Auth)");
     } else if (data.access) {
-      localStorage.setItem("access", data.access);
-      localStorage.setItem("token", data.access);
+      sessionStorage.setItem("access", data.access);
+      sessionStorage.setItem("token", data.access);
       console.log("✅ Access token stored successfully (JWT)");
     } else {
       console.warn("⚠️ No authentication token in response!");
     }
 
     if (data.refresh) {
-      localStorage.setItem("refresh", data.refresh);
+      sessionStorage.setItem("refresh", data.refresh);
       console.log("✅ Refresh token stored successfully");
     }
 
     if (data.name) {
-      localStorage.setItem("username", data.name);
+      sessionStorage.setItem("username", data.name);
       console.log("✅ Username stored:", data.name);
     }
 
     if (data.email) {
-      localStorage.setItem("email", data.email);
+      sessionStorage.setItem("email", data.email);
       console.log("✅ Email stored:", data.email);
     }
 
@@ -106,7 +106,7 @@ class LoginController {
     console.log("   📐 Role length:", data.role ? data.role.length : 'N/A');
     console.log("   🔤 Role charCodes:", data.role ? Array.from(data.role).map((c: any) => c.charCodeAt(0)).join(',') : 'N/A');
     
-    let redirectPath = "/user"; // Default redirect for Developer
+    let redirectPath = "/projects-user"; // Default redirect for Developer
 
     if (data.role) {
       // Enhanced normalization: trim, remove special chars, standardize
@@ -118,8 +118,8 @@ class LoginController {
       console.log("   🔽 Lowercase role:", JSON.stringify(lowerRole));
       
       // Store the normalized role
-      localStorage.setItem("userRole", normalizedRole);
-      console.log("   💾 Stored role in localStorage:", normalizedRole);
+      sessionStorage.setItem("userRole", normalizedRole);
+      console.log("   💾 Stored role in sessionStorage:", normalizedRole);
 
       // 🎯 Multiple matching strategies for maximum compatibility
       const isProjectManager = 
@@ -142,31 +142,31 @@ class LoginController {
         redirectPath = "/main-projects";
         console.log("   ✅✅✅ MATCHED: Project Manager → /main-projects");
       } else if (isDeveloper) {
-        redirectPath = "/user";
-        console.log("   ✅ MATCHED: Developer → /user");
+        redirectPath = "/projects-user";
+        console.log("   ✅ MATCHED: Developer → /projects-user");
       } else {
         // Default to user for unknown roles
-        redirectPath = "/user";
-        console.warn("   ⚠️ UNKNOWN ROLE - defaulting to /user");
+        redirectPath = "/projects-user";
+        console.warn("   ⚠️ UNKNOWN ROLE - defaulting to /projects-user");
         console.warn("   ❓ Role was:", normalizedRole);
       }
     } else {
       console.warn("   ⚠️ No 'role' in backend response!");
-      localStorage.setItem("userRole", "Developer");
-      redirectPath = "/user";
+      sessionStorage.setItem("userRole", "Developer");
+      redirectPath = "/projects-user";
     }
 
     console.log("   🎯 FINAL REDIRECT PATH:", redirectPath);
     console.log("========================================\n");
 
     // Final verification log
-    console.log("🔐 Final localStorage state:");
-    console.log("   - access:", localStorage.getItem("access") ? "✓" : "✗");
-    console.log("   - token:", localStorage.getItem("token") ? "✓" : "✗");
-    console.log("   - refresh:", localStorage.getItem("refresh") ? "✓" : "✗");
-    console.log("   - username:", localStorage.getItem("username") || "✗");
-    console.log("   - email:", localStorage.getItem("email") || "✗");
-    console.log("   - userRole:", localStorage.getItem("userRole") || "✗");
+    console.log("🔐 Final sessionStorage state:");
+    console.log("   - access:", sessionStorage.getItem("access") ? "✓" : "✗");
+    console.log("   - token:", sessionStorage.getItem("token") ? "✓" : "✗");
+    console.log("   - refresh:", sessionStorage.getItem("refresh") ? "✓" : "✗");
+    console.log("   - username:", sessionStorage.getItem("username") || "✗");
+    console.log("   - email:", sessionStorage.getItem("email") || "✗");
+    console.log("   - userRole:", sessionStorage.getItem("userRole") || "✗");
 
     return { 
       success: true, 

@@ -1,7 +1,7 @@
 // pages/forgotPassword.tsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Mail, ArrowLeft, Shield, Users, BarChart3, CheckCircle } from 'lucide-react';
+import { Mail, ArrowLeft, Shield, Users, BarChart3, CheckCircle, Eye, EyeOff } from 'lucide-react';
 import logo from "./../assets/logo2.png";
 import { API_BASE_URL } from "../config/api";
 
@@ -12,6 +12,10 @@ export default function ForgotPasswordPage() {
   const [message, setMessage] = useState<{ text: string; type: 'error' | 'success' } | null>(null);
   const [emailSent, setEmailSent] = useState(false);
   const [emailError, setEmailError] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   // Validate email domain
   const validateEmailDomain = (email: string): boolean => {
@@ -31,6 +35,15 @@ export default function ForgotPasswordPage() {
     
     const emailLower = email.toLowerCase();
     return validDomains.some(domain => emailLower.endsWith(domain));
+  };
+
+  // Validate password
+  const validatePassword = (password: string): boolean => {
+    return password.length >= 8;
+  };
+
+  const validatePasswordMatch = (): boolean => {
+    return newPassword === confirmPassword && newPassword.length > 0;
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -61,19 +74,37 @@ export default function ForgotPasswordPage() {
       return;
     }
 
+    // Validate password
+    if (!newPassword) {
+      setMessage({ text: 'Please enter a new password', type: 'error' });
+      return;
+    }
+
+    if (!validatePassword(newPassword)) {
+      setMessage({ text: 'Password must be at least 8 characters long', type: 'error' });
+      return;
+    }
+
+    if (!validatePasswordMatch()) {
+      setMessage({ text: 'Passwords do not match', type: 'error' });
+      return;
+    }
+
     setLoading(true);
     setMessage(null);
 
     try {
       console.log("🔄 Sending password reset request for:", email);
 
-      // TODO: Replace with your actual API endpoint
-      const response = await fetch(`${API_BASE_URL}/api/user/forgot-password/`, {
+      const response = await fetch(`${API_BASE_URL}/api/user/reset-password/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ 
+          email, 
+          password: newPassword 
+        }),
       });
 
       console.log("📡 Response status:", response.status);
@@ -90,12 +121,17 @@ export default function ForgotPasswordPage() {
       }
 
       if (response.ok) {
-        console.log("✅ Password reset email sent successfully");
+        console.log("✅ Password reset successfully");
         setEmailSent(true);
         setMessage({ 
-          text: 'Password reset instructions have been sent to your email!', 
+          text: 'Password has been reset successfully! Redirecting to sign in...', 
           type: 'success' 
         });
+        
+        // Auto redirect to sign in page after 3 seconds
+        setTimeout(() => {
+          navigate("/signin");
+        }, 3000);
       } else {
         console.error("❌ Password reset failed:", data);
         const errorMessage = data?.error || data?.detail || data?.message || "Failed to send reset email. Please try again.";
@@ -259,6 +295,79 @@ export default function ForgotPasswordPage() {
                   )}
                 </div>
 
+                {/* New Password Input */}
+                <div>
+                  <label htmlFor="newPassword" className="block text-sm font-semibold text-gray-700 mb-2">
+                    New Password
+                  </label>
+                  <div className="relative">
+                    <input
+                      id="newPassword"
+                      type={showPassword ? "text" : "password"}
+                      name="newPassword"
+                      value={newPassword}
+                      onChange={(e) => {
+                        setNewPassword(e.target.value);
+                        if (passwordError) setPasswordError('');
+                        if (message) setMessage(null);
+                      }}
+                      className={`block w-full pr-11 py-3 border rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#2c7a9e] focus:border-transparent transition-all ${
+                        newPassword && !validatePassword(newPassword) ? 'border-red-500' : 'border-gray-300'
+                      }`}
+                      placeholder="Enter new password (min 8 characters)"
+                      required
+                      disabled={loading}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-5 w-5 text-gray-400" />
+                      ) : (
+                        <Eye className="h-5 w-5 text-gray-400" />
+                      )}
+                    </button>
+                  </div>
+                  {newPassword && !validatePassword(newPassword) && (
+                    <p className="mt-2 text-sm text-red-600">Password must be at least 8 characters long</p>
+                  )}
+                  {newPassword && validatePassword(newPassword) && (
+                    <p className="mt-2 text-sm text-green-600">✓ Password meets requirements</p>
+                  )}
+                </div>
+
+                {/* Confirm Password Input */}
+                <div>
+                  <label htmlFor="confirmPassword" className="block text-sm font-semibold text-gray-700 mb-2">
+                    Confirm Password
+                  </label>
+                  <input
+                    id="confirmPassword"
+                    type={showPassword ? "text" : "password"}
+                    name="confirmPassword"
+                    value={confirmPassword}
+                    onChange={(e) => {
+                      setConfirmPassword(e.target.value);
+                      if (passwordError) setPasswordError('');
+                      if (message) setMessage(null);
+                    }}
+                    className={`block w-full py-3 border rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#2c7a9e] focus:border-transparent transition-all ${
+                      confirmPassword && !validatePasswordMatch() ? 'border-red-500' : 'border-gray-300'
+                    }`}
+                    placeholder="Confirm your new password"
+                    required
+                    disabled={loading}
+                  />
+                  {confirmPassword && !validatePasswordMatch() && (
+                    <p className="mt-2 text-sm text-red-600">Passwords do not match</p>
+                  )}
+                  {confirmPassword && validatePasswordMatch() && (
+                    <p className="mt-2 text-sm text-green-600">✓ Passwords match</p>
+                  )}
+                </div>
+
                 {/* Error/Success Message */}
                 {message && (
                   <div className={`rounded-lg p-4 ${
@@ -273,16 +382,16 @@ export default function ForgotPasswordPage() {
                 {/* Submit Button */}
                 <button
                   type="submit"
-                  disabled={loading || !email || !!emailError}
+                  disabled={loading || !email || !!emailError || !newPassword || !validatePassword(newPassword) || !validatePasswordMatch()}
                   className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white bg-[#1a5f7a] hover:bg-[#2c7a9e] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#2c7a9e] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   {loading ? (
                     <div className="flex items-center gap-2">
                       <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      <span>Sending...</span>
+                      <span>Resetting...</span>
                     </div>
                   ) : (
-                    'Send Reset Instructions'
+                    'Reset Password'
                   )}
                 </button>
 
@@ -312,35 +421,38 @@ export default function ForgotPasswordPage() {
                   </div>
                 </div>
 
-                <h2 className="text-3xl font-bold text-gray-900 mb-2">Check Your Email</h2>
+                <h2 className="text-3xl font-bold text-gray-900 mb-2">Password Reset Successful!</h2>
                 <p className="text-gray-600 mb-6">
-                  We've sent password reset instructions to
+                  Your password has been successfully reset for
                 </p>
                 <p className="text-[#1a5f7a] font-semibold mb-8">{email}</p>
 
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                  <p className="text-sm text-blue-800">
-                    <strong>Didn't receive the email?</strong> Check your spam folder or try again with a different email address.
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+                  <p className="text-sm text-green-800">
+                    <strong>Success!</strong> You can now sign in with your new password. You will be redirected to the sign-in page automatically.
                   </p>
                 </div>
 
                 {/* Action Buttons */}
                 <div className="space-y-3">
                   <button
-                    onClick={() => {
-                      setEmailSent(false);
-                      setMessage(null);
-                    }}
+                    onClick={() => navigate("/signin")}
                     className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white bg-[#1a5f7a] hover:bg-[#2c7a9e] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#2c7a9e] transition-colors"
                   >
-                    Resend Email
+                    Go to Sign In
                   </button>
 
                   <button
-                    onClick={() => navigate("/signin")}
+                    onClick={() => {
+                      setEmailSent(false);
+                      setMessage(null);
+                      setEmail('');
+                      setNewPassword('');
+                      setConfirmPassword('');
+                    }}
                     className="w-full flex justify-center py-3 px-4 border border-gray-300 rounded-lg shadow-sm text-sm font-semibold text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#2c7a9e] transition-colors"
                   >
-                    Back to Sign In
+                    Reset Another Password
                   </button>
                 </div>
               </div>

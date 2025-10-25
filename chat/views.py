@@ -1,3 +1,4 @@
+#views.py
 """
 Hybrid Chat System: REST API for data operations + WebSocket for real-time updates
 """

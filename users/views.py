@@ -118,3 +118,29 @@ class UserListView(APIView):
         
         serializer = UserSerializer(users, many=True)
         return Response(serializer.data)
+
+class PasswordResetView(APIView):
+    # No permission_classes, so it's accessible without authentication
+    
+    def post(self, request):
+        email = request.data.get('email')
+        new_password = request.data.get('password')
+        
+        if not email or not new_password:
+            return Response(
+                {'error': 'Email and password are required'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            user = User.objects.get(email=email)
+            user.set_password(new_password)
+            user.save()
+            return Response({
+                'message': 'Password has been reset successfully'
+            }, status=status.HTTP_200_OK)
+        except User.DoesNotExist:
+            return Response(
+                {'error': 'No account found with this email address'}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
