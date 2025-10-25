@@ -5,7 +5,6 @@ import SettingsNavigation from "../../components/sidebarNavLayout";
 import TopNavbar from "../../components/topbarLayouot";
 import { useTheme } from "../../components/themeContext";
 import { useNavigate } from "react-router-dom";
-import { API_BASE_URL } from "../../config/api";
 import {  Camera, Phone, Mail, User, TrendingUp  } from "lucide-react";
 
 interface UserData {
@@ -101,7 +100,7 @@ const AccountSettings = () => {
             }
         
             try {
-                const response = await fetch(`${API_BASE_URL}/api/user/me/`, {
+                const response = await fetch("http://localhost:8000/api/user/me/", {
                 headers: {
                     Authorization: `Token ${token}`,
                     "Content-Type": "application/json",
@@ -117,7 +116,7 @@ const AccountSettings = () => {
                     profile_picture: data.profile_picture
                     ? data.profile_picture.startsWith("http")
                         ? data.profile_picture
-                        : `${API_BASE_URL}${data.profile_picture}`
+                        : `http://localhost:8000${data.profile_picture}`
                     : null,
                 };
         
@@ -208,7 +207,7 @@ const AccountSettings = () => {
             formData.append("password", password);
         }
     
-        const response = await fetch(`${API_BASE_URL}/api/user/me/`, {
+        const response = await fetch("http://localhost:8000/api/user/me/", {
             method: "PUT",
             headers: {
             Authorization: `Token ${token}`,
@@ -223,7 +222,7 @@ const AccountSettings = () => {
             const updatedProfilePictureURL = updatedData.profile_picture
             ? updatedData.profile_picture.startsWith("http")
                 ? updatedData.profile_picture
-                : `${API_BASE_URL}${updatedData.profile_picture}`
+                : `http://localhost:8000${updatedData.profile_picture}`
             : null;
     
             setUserData({

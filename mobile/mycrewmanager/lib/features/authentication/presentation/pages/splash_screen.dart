@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mycrewmanager/core/theme/pallete.dart';
 import 'package:mycrewmanager/features/authentication/presentation/pages/login_page.dart';
-import 'package:mycrewmanager/features/authentication/presentation/bloc/auth_bloc.dart';
-import 'package:mycrewmanager/features/dashboard/presentation/pages/dashboard_page.dart';
 
 class SplashScreen extends StatefulWidget {
   static route() =>
@@ -38,8 +35,19 @@ class _SplashScreenState extends State<SplashScreen>
 
     _animationController.forward();
 
-    // Check if user is already logged in
-    context.read<AuthBloc>().add(AuthIsUserLoggedIn());
+    // Navigate to login page after 3 seconds
+    Future.delayed(const Duration(seconds: 3), () {
+      Navigator.of(context).pushReplacement(
+        PageRouteBuilder(
+          pageBuilder: (context, animation, secondaryAnimation) =>
+              const LoginPage(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+          transitionDuration: const Duration(milliseconds: 500),
+        ),
+      );
+    });
   }
 
   @override
@@ -50,108 +58,75 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<AuthBloc, AuthState>(
-      listener: (context, state) {
-        if (state is AuthSuccess) {
-          // User is logged in, navigate to dashboard
-          Future.delayed(const Duration(seconds: 1), () {
-            Navigator.of(context).pushReplacement(
-              PageRouteBuilder(
-                pageBuilder: (context, animation, secondaryAnimation) =>
-                    const DashboardPage(),
-                transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                  return FadeTransition(opacity: animation, child: child);
-                },
-                transitionDuration: const Duration(milliseconds: 500),
-              ),
-            );
-          });
-        } else if (state is AuthLoggedOut) {
-          // User is not logged in, navigate to login
-          Future.delayed(const Duration(seconds: 1), () {
-            Navigator.of(context).pushReplacement(
-              PageRouteBuilder(
-                pageBuilder: (context, animation, secondaryAnimation) =>
-                    const LoginPage(),
-                transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                  return FadeTransition(opacity: animation, child: child);
-                },
-                transitionDuration: const Duration(milliseconds: 500),
-              ),
-            );
-          });
-        }
-      },
-      child: Scaffold(
-        body: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [Color(0xFFF5F5F5), Color(0xFFE8F4FD)],
-            ),
+    return Scaffold(
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0xFFF5F5F5), Color(0xFFE8F4FD)],
           ),
-          child: Center(
-            child: AnimatedBuilder(
-              animation: _animationController,
-              builder: (context, child) {
-                return FadeTransition(
-                  opacity: _fadeAnimation,
-                  child: ScaleTransition(
-                    scale: _scaleAnimation,
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        // Logo
-                        Container(
-                          width: 120,
-                          height: 120,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Image.asset(
-                            "lib/core/assets/images/app_logo.png",
-                            width: 100,
-                            height: 100,
-                          ),
+        ),
+        child: Center(
+          child: AnimatedBuilder(
+            animation: _animationController,
+            builder: (context, child) {
+              return FadeTransition(
+                opacity: _fadeAnimation,
+                child: ScaleTransition(
+                  scale: _scaleAnimation,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // Logo
+                      Container(
+                        width: 120,
+                        height: 120,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(20),
                         ),
-                        const SizedBox(height: 30),
+                        child: Image.asset(
+                          "lib/core/assets/images/app_logo.png",
+                          width: 100,
+                          height: 100,
+                        ),
+                      ),
+                      const SizedBox(height: 30),
 
-                        // App Name
-                        Text(
-                          "MyCrewManager",
-                          style: TextStyle(
-                            color: AppPallete.titleColor,
-                            fontSize: 36,
-                            fontWeight: FontWeight.bold,
-                            decoration: TextDecoration.none,
-                          ),
+                      // App Name
+                      Text(
+                        "MyCrewManager",
+                        style: TextStyle(
+                          color: AppPallete.titleColor,
+                          fontSize: 36,
+                          fontWeight: FontWeight.bold,
+                          decoration: TextDecoration.none,
                         ),
-                        const SizedBox(height: 20),
+                      ),
+                      const SizedBox(height: 20),
 
-                        // Tagline
-                        const Text(
-                          "Manage Your Crew Efficiently",
-                          style: TextStyle(
-                            color: Colors.black54,
-                            fontSize: 18,
-                            decoration: TextDecoration.none,
-                          ),
+                      // Tagline
+                      const Text(
+                        "Manage Your Crew Efficiently",
+                        style: TextStyle(
+                          color: Colors.black54,
+                          fontSize: 18,
+                          decoration: TextDecoration.none,
                         ),
-                        const SizedBox(height: 50),
+                      ),
+                      const SizedBox(height: 50),
 
-                        // Loading indicator
-                        const CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            Color(0xFF2E5A88),
-                          ),
+                      // Loading indicator
+                      const CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          Color(0xFF2E5A88),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                );
-              },
-            ),
+                ),
+              );
+            },
           ),
         ),
       ),

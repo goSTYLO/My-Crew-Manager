@@ -3,8 +3,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mycrewmanager/core/theme/app_theme.dart';
 import 'package:mycrewmanager/features/authentication/presentation/bloc/auth_bloc.dart';
 import 'package:mycrewmanager/features/project/presentation/bloc/project_bloc.dart';
-import 'package:mycrewmanager/features/notification/presentation/bloc/notification_bloc.dart';
-import 'package:mycrewmanager/features/invitation/presentation/bloc/invitation_bloc.dart';
 import 'package:mycrewmanager/features/authentication/presentation/pages/splash_screen.dart';
 import 'package:mycrewmanager/init_dependencies.dart';
 
@@ -15,8 +13,6 @@ void main() async {
       providers: [
         BlocProvider(create: (_) => serviceLocator<AuthBloc>()),
         BlocProvider(create: (_) => serviceLocator<ProjectBloc>()),
-        BlocProvider(create: (_) => serviceLocator<NotificationBloc>()),
-        BlocProvider(create: (_) => serviceLocator<InvitationBloc>()),
       ],
       child: MainApp()));
 }

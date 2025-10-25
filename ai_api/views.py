@@ -315,43 +315,6 @@ class ProjectViewSet(ModelViewSet):
 
         return Response({'project_id': project.id, 'epics': result}, status=status.HTTP_200_OK)
 
-    @action(detail=False, methods=["get"], url_path="my-projects")
-    def my_projects(self, request):
-        """Return only projects where the current user is a member"""
-        # Get project IDs where the user is a member
-        user_project_ids = ProjectMember.objects.filter(
-            user=request.user
-        ).values_list('project_id', flat=True)
-        
-        # Get the actual projects
-        projects = Project.objects.filter(id__in=user_project_ids).order_by('-created_at')
-        
-        # Serialize and return
-        serializer = self.get_serializer(projects, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
-    @action(detail=True, methods=["get"], url_path="statistics")
-    def statistics(self, request, pk=None):
-        """Return statistics for a project: member count, task count, sprint count"""
-        project = self.get_object()
-        
-        # Count members
-        member_count = ProjectMember.objects.filter(project=project).count()
-        
-        # Count all StoryTasks across all epics/sub-epics/user-stories
-        task_count = StoryTask.objects.filter(
-            user_story__sub_epic__epic__project=project
-        ).count()
-        
-        # Count TimelineWeeks (sprints)
-        sprint_count = TimelineWeek.objects.filter(project=project).count()
-        
-        return Response({
-            'member_count': member_count,
-            'task_count': task_count,
-            'sprint_count': sprint_count,
-        }, status=status.HTTP_200_OK)
-
 
 class ProposalViewSet(ModelViewSet):
     queryset = Proposal.objects.all()
@@ -814,11 +777,6 @@ class ProjectInvitationViewSet(ModelViewSet):
         project_id = self.request.query_params.get('project_id')
         if project_id:
             return self.queryset.filter(project_id=project_id)
-        
-        # For accept/decline actions, only show invitations for the current user
-        if self.action in ['accept_invitation', 'decline_invitation']:
-            return self.queryset.filter(invitee=self.request.user)
-        
         return self.queryset
 
     def perform_create(self, serializer):
@@ -884,13 +842,7 @@ class ProjectInvitationViewSet(ModelViewSet):
     def accept_invitation(self, request, pk=None):
         """Accept a project invitation"""
         try:
-            # Debug: Check what invitations are available for this user
-            user_invitations = ProjectInvitation.objects.filter(invitee=request.user)
-            print(f"User {request.user.user_id} has {user_invitations.count()} invitations: {list(user_invitations.values_list('id', 'status'))}")
-            print(f"Trying to accept invitation ID: {pk}")
-            
             invitation = self.get_object()
-            print(f"Accepting invitation {invitation.id}: project={invitation.project.id}, invitee={invitation.invitee.user_id}, status={invitation.status}")
             
             # Check if the current user is the invitee
             if invitation.invitee != request.user:
@@ -908,30 +860,21 @@ class ProjectInvitationViewSet(ModelViewSet):
             
             # Transactionally accept invitation and create membership
             from django.db import transaction
-            from django.utils import timezone
             
             with transaction.atomic():
-                # Update invitation status without triggering model validation
-                # Use update() to bypass clean() method which would fail during acceptance
-                ProjectInvitation.objects.filter(id=invitation.id).update(
-                    status='accepted',
-                    updated_at=timezone.now()
-                )
+                # Update invitation status
+                invitation.status = 'accepted'
+                invitation.save(update_fields=['status', 'updated_at'])
                 
                 # Create project membership if it doesn't exist
                 # The ProjectMember.save() method will automatically populate user_name and user_email
-                try:
-                    project_member, created = ProjectMember.objects.get_or_create(
-                        project=invitation.project,
-                        user=invitation.invitee,
-                        defaults={
-                            'role': invitation.role  # Use the role from the invitation
-                        }
-                    )
-                    print(f"ProjectMember {'created' if created else 'retrieved'}: {project_member}")
-                except Exception as member_error:
-                    print(f"Error creating ProjectMember: {member_error}")
-                    raise member_error
+                project_member, created = ProjectMember.objects.get_or_create(
+                    project=invitation.project,
+                    user=invitation.invitee,
+                    defaults={
+                        'role': invitation.role  # Use the role from the invitation
+                    }
+                )
                 
                 # Clean up any other pending invitations for this user to this project
                 # This prevents duplicate invitations and ensures clean state
@@ -947,21 +890,6 @@ class ProjectInvitationViewSet(ModelViewSet):
                 if deleted_count > 0:
                     print(f"Cleaned up {deleted_count} duplicate pending invitations for {invitation.invitee.name} to project {invitation.project.title}")
                 
-                # Mark related notifications as read when invitation is accepted
-                from django.contrib.contenttypes.models import ContentType
-                invitation_content_type = ContentType.objects.get_for_model(ProjectInvitation)
-                print(f"Looking for notifications with content_type={invitation_content_type}, object_id={invitation.id}, recipient={invitation.invitee.user_id}")
-                
-                related_notifications = Notification.objects.filter(
-                    recipient=invitation.invitee,
-                    content_type=invitation_content_type,
-                    object_id=invitation.id,
-                    is_read=False
-                )
-                print(f"Found {related_notifications.count()} related notifications to mark as read")
-                
-                updated_notifications = related_notifications.update(is_read=True, read_at=timezone.now())
-                print(f"Marked {updated_notifications} related notifications as read")
             
             return Response({
                 "message": "Invitation accepted successfully",
@@ -971,22 +899,8 @@ class ProjectInvitationViewSet(ModelViewSet):
             }, status=status.HTTP_200_OK)
             
         except Exception as e:
-            import traceback
-            error_details = {
-                "error": str(e),
-                "error_type": type(e).__name__,
-                "traceback": traceback.format_exc()
-            }
-            print(f"Accept invitation error: {error_details}")
-            
-            # If it's a 404 error, provide more helpful message
-            if "No ProjectInvitation matches" in str(e):
-                user_invitations = ProjectInvitation.objects.filter(invitee=request.user)
-                available_ids = list(user_invitations.values_list('id', flat=True))
-                error_details["helpful_message"] = f"User {request.user.user_id} can only access invitations: {available_ids}. Requested ID {pk} is not available."
-            
             return Response(
-                error_details,
+                {"error": str(e)},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -1010,28 +924,9 @@ class ProjectInvitationViewSet(ModelViewSet):
                     status=status.HTTP_400_BAD_REQUEST
                 )
             
-            # Update invitation status without triggering model validation
-            from django.utils import timezone
-            ProjectInvitation.objects.filter(id=invitation.id).update(
-                status='declined',
-                updated_at=timezone.now()
-            )
-            
-            # Mark related notifications as read when invitation is declined
-            from django.contrib.contenttypes.models import ContentType
-            invitation_content_type = ContentType.objects.get_for_model(ProjectInvitation)
-            print(f"Looking for notifications with content_type={invitation_content_type}, object_id={invitation.id}, recipient={invitation.invitee.user_id}")
-            
-            related_notifications = Notification.objects.filter(
-                recipient=invitation.invitee,
-                content_type=invitation_content_type,
-                object_id=invitation.id,
-                is_read=False
-            )
-            print(f"Found {related_notifications.count()} related notifications to mark as read")
-            
-            updated_notifications = related_notifications.update(is_read=True, read_at=timezone.now())
-            print(f"Marked {updated_notifications} related notifications as read")
+            # Update invitation status
+            invitation.status = 'declined'
+            invitation.save(update_fields=['status', 'updated_at'])
             
             return Response({
                 "message": "Invitation declined successfully",
@@ -1072,8 +967,7 @@ class NotificationViewSet(ModelViewSet):
     permission_classes = [IsAuthenticated]
     
     def get_queryset(self):
-        # Only return unread notifications by default
-        return Notification.objects.filter(recipient=self.request.user, is_read=False)
+        return Notification.objects.filter(recipient=self.request.user)
     
     @action(detail=False, methods=['get'])
     def unread_count(self, request):

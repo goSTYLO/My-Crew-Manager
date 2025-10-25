@@ -6,7 +6,6 @@ import { useTheme } from "../../components/themeContext"; // <-- import ThemeCon
 import LoadingSpinner from "../../components/LoadingSpinner";
 import { useToast } from "../../components/ToastContext";
 import { useNavigate } from 'react-router-dom';
-import { API_BASE_URL } from "../../config/api";
 
 // Types based on Django models
 interface Member {
@@ -133,7 +132,8 @@ const App: React.FC = () => {
   const [newGoal, setNewGoal] = useState({ title: '', role: '' });
   const [newTimelineWeek, setNewTimelineWeek] = useState({ week_number: 1, goal: '' });
 
-  // API base URL is now imported from config
+  // API base URL
+  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
   // Helper function to get the access token
   const getAuthToken = (): string | null => {

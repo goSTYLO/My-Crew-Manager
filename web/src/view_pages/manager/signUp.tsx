@@ -1,7 +1,6 @@
 // pages/signUp.tsx
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { API_BASE_URL } from "../../config/api";
 import { Mail, Lock, Eye, EyeOff, User, CheckCircle, Users, BarChart3, Check, X, ArrowLeft } from "lucide-react";
 import logo from "../../assets/logo2.png";
 
@@ -124,7 +123,7 @@ export default function SignUpPage() {
     console.log("👤 Selected role:", formData.role);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/user/signup/`, {
+      const response = await fetch("http://127.0.0.1:8000/api/user/signup/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

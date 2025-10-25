@@ -7,7 +7,6 @@ import 'package:mycrewmanager/features/project/domain/entities/activity.dart';
 
 abstract class ProjectRepository {
   Future<Either<Failure, List<Project>>> getProjects();
-  Future<Either<Failure, List<Project>>> getMyProjects();
   Future<Either<Failure, Project>> getProject(int id);
   Future<Either<Failure, Project>> createProject({
     required String title,

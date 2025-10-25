@@ -28,13 +28,6 @@ class ProjectRepositoryImpl implements ProjectRepository {
   }
 
   @override
-  Future<Either<Failure, List<Project>>> getMyProjects() async {
-    return _getData(
-      () async => await remoteDataSource.getMyProjects(),
-    );
-  }
-
-  @override
   Future<Either<Failure, Project>> getProject(int id) async {
     return _getData(
       () async => await remoteDataSource.getProject(id),

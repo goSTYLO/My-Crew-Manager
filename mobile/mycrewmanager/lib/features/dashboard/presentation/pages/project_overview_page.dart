@@ -1,19 +1,12 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:http/http.dart' as http;
 import 'package:mycrewmanager/features/dashboard/presentation/pages/manage_members_page.dart';
 import 'package:mycrewmanager/features/dashboard/presentation/pages/tasks_page.dart';
 import 'package:mycrewmanager/features/project/domain/entities/project.dart';
-import 'package:mycrewmanager/features/project/domain/entities/member.dart';
-import 'package:mycrewmanager/features/project/domain/usecases/get_project_members.dart';
 import 'package:mycrewmanager/features/authentication/presentation/bloc/auth_bloc.dart';
-import 'package:mycrewmanager/init_dependencies.dart';
-import 'package:mycrewmanager/core/constants/constants.dart';
-import 'package:mycrewmanager/core/tokenhandlers/token_storage.dart';
 
-class ProjectOverviewPage extends StatefulWidget {
+class ProjectOverviewPage extends StatelessWidget {
   final Project? project;
   
   const ProjectOverviewPage({super.key, this.project});
@@ -21,141 +14,6 @@ class ProjectOverviewPage extends StatefulWidget {
   static Route<Object?> route([Project? project]) => MaterialPageRoute(
     builder: (_) => ProjectOverviewPage(project: project)
   );
-
-  @override
-  State<ProjectOverviewPage> createState() => _ProjectOverviewPageState();
-}
-
-class _ProjectOverviewPageState extends State<ProjectOverviewPage> {
-  List<Member> members = [];
-  bool isLoadingMembers = true;
-  String? membersError;
-
-  // Statistics state
-  int taskCount = 0;
-  int sprintCount = 0;
-  bool isLoadingStatistics = true;
-  String? statisticsError;
-
-  final GetProjectMembers _getProjectMembers = serviceLocator<GetProjectMembers>();
-  final TokenStorage _tokenStorage = serviceLocator<TokenStorage>();
-
-  @override
-  void initState() {
-    super.initState();
-    _loadMembers();
-    _loadStatistics();
-  }
-
-  Future<void> _loadMembers() async {
-    if (widget.project == null) {
-      setState(() {
-        isLoadingMembers = false;
-        membersError = 'No project selected';
-      });
-      return;
-    }
-
-    setState(() {
-      isLoadingMembers = true;
-      membersError = null;
-    });
-
-    final result = await _getProjectMembers(GetProjectMembersParams(
-      projectId: widget.project!.id,
-    ));
-
-    result.fold(
-      (failure) {
-        setState(() {
-          isLoadingMembers = false;
-          membersError = failure.message;
-        });
-      },
-      (membersList) {
-        setState(() {
-          isLoadingMembers = false;
-          members = membersList;
-        });
-      },
-    );
-  }
-
-  Future<void> _loadStatistics() async {
-    if (widget.project == null) {
-      setState(() {
-        isLoadingStatistics = false;
-        statisticsError = 'No project selected';
-      });
-      return;
-    }
-
-    setState(() {
-      isLoadingStatistics = true;
-      statisticsError = null;
-    });
-
-    try {
-      final response = await http.get(
-        Uri.parse('${Constants.baseUrl}ai/projects/${widget.project!.id}/statistics/'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Token ${await _getAuthToken()}',
-        },
-      );
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        setState(() {
-          isLoadingStatistics = false;
-          taskCount = data['task_count'] ?? 0;
-          sprintCount = data['sprint_count'] ?? 0;
-        });
-      } else {
-        setState(() {
-          isLoadingStatistics = false;
-          statisticsError = 'Failed to load statistics';
-        });
-      }
-    } catch (e) {
-      setState(() {
-        isLoadingStatistics = false;
-        statisticsError = 'Error loading statistics: $e';
-      });
-    }
-  }
-
-  Future<String> _getAuthToken() async {
-    final token = await _tokenStorage.getToken();
-    return token ?? '';
-  }
-
-  String _getInitials(String name) {
-    if (name.isEmpty) return '?';
-    
-    final words = name.trim().split(' ');
-    if (words.length == 1) {
-      return words[0].substring(0, 1).toUpperCase();
-    } else {
-      return (words[0].substring(0, 1) + words[1].substring(0, 1)).toUpperCase();
-    }
-  }
-
-  Color _getColorFromString(String text) {
-    final colors = [
-      Colors.blue,
-      Colors.purple,
-      Colors.pink,
-      Colors.green,
-      Colors.orange,
-      Colors.teal,
-      Colors.indigo,
-      Colors.red,
-    ];
-    
-    int hash = text.hashCode;
-    return colors[hash.abs() % colors.length];
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -169,10 +27,10 @@ class _ProjectOverviewPageState extends State<ProjectOverviewPage> {
     );
 
     // Use default values if no project is provided
-    final projectTitle = widget.project?.title ?? "My Crew Tasker";
-    final projectSummary = widget.project?.summary ?? "MyCrewManager is an AI-driven project management system that automates task tracking, sprint progress monitoring, and developer well-being analysis.";
-    final projectId = widget.project?.id ?? 0;
-    final projectCreatedAt = widget.project?.createdAt ?? DateTime.now();
+    final projectTitle = project?.title ?? "My Crew Tasker";
+    final projectSummary = project?.summary ?? "MyCrewManager is an AI-driven project management system that automates task tracking, sprint progress monitoring, and developer well-being analysis.";
+    final projectId = project?.id ?? 0;
+    final projectCreatedAt = project?.createdAt ?? DateTime.now();
 
     return Scaffold(
       backgroundColor: Colors.white, 
@@ -210,9 +68,9 @@ class _ProjectOverviewPageState extends State<ProjectOverviewPage> {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _ProjectAvatar(
-                        projectName: projectTitle,
-                        size: 76,
+                      CircleAvatar(
+                        radius: 38,
+                        backgroundImage: AssetImage('lib/core/assets/images/app_logo.png'),
                       ),
                       const SizedBox(width: 16),
                       Expanded(
@@ -330,38 +188,19 @@ class _ProjectOverviewPageState extends State<ProjectOverviewPage> {
                 const SizedBox(height: 8),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: isLoadingMembers
-                      ? const SizedBox(
-                          height: 40,
-                          child: Center(child: CircularProgressIndicator()),
-                        )
-                      : membersError != null
-                          ? Text(
-                              'Error loading members: $membersError',
-                              style: const TextStyle(
-                                color: Colors.red,
-                                fontSize: 14,
-                              ),
-                            )
-                          : members.isEmpty
-                              ? const Text(
-                                  'No members yet',
-                                  style: TextStyle(
-                                    color: Colors.grey,
-                                    fontSize: 14,
-                                  ),
-                                )
-                              : Row(
-                                  children: [
-                                    ...members.map((member) => Padding(
-                                      padding: const EdgeInsets.only(right: 8),
-                                      child: _MemberCircle(
-                                        label: _getInitials(member.name),
-                                        color: _getColorFromString(member.name),
-                                      ),
-                                    )),
-                                  ],
-                                ),
+                  child: Row(
+                    children: [
+                      _MemberCircle(label: "LR", color: Colors.blue),
+                      const SizedBox(width: 8),
+                      _MemberCircle(label: "PB", color: Colors.purple),
+                      const SizedBox(width: 8),
+                      _MemberCircle(label: "TD", color: Colors.pink),
+                      const SizedBox(width: 8),
+                      _MemberCircle(label: "VB", color: Colors.green),
+                      const SizedBox(width: 8),
+                      _MemberCircle(label: "+", color: Colors.black26, textColor: Colors.black87),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 18),
                 // Sprint Progress
@@ -406,15 +245,9 @@ class _ProjectOverviewPageState extends State<ProjectOverviewPage> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      _StatBox(
-                        label: isLoadingStatistics ? "..." : "$taskCount", 
-                        sublabel: "Tasks"
-                      ),
-                      _StatBox(
-                        label: isLoadingStatistics ? "..." : "$sprintCount", 
-                        sublabel: "Sprints"
-                      ),
-                      _StatBox(label: "${members.length}", sublabel: "Members"),
+                      _StatBox(label: "0", sublabel: "Tasks"),
+                      _StatBox(label: "0", sublabel: "Sprints"),
+                      _StatBox(label: "1", sublabel: "Members"),
                     ],
                   ),
                 ),
@@ -434,7 +267,7 @@ class _ProjectOverviewPageState extends State<ProjectOverviewPage> {
                       style: TextStyle(color: Colors.black, fontWeight: FontWeight.w600, fontSize: 16),
                     ),
                     onPressed: () {
-                      Navigator.of(context).push(TasksPage.route(widget.project));
+                      Navigator.of(context).push(TasksPage.route(project));
                     },
                   ),
                 ),
@@ -467,7 +300,7 @@ class _ProjectOverviewPageState extends State<ProjectOverviewPage> {
                           style: TextStyle(color: Colors.black, fontWeight: FontWeight.w600, fontSize: 16),
                         ),
                         onPressed: () {
-                          Navigator.of(context).push(ManageMembersPage.route(widget.project));
+                          Navigator.of(context).push(ManageMembersPage.route(project));
                         },
                       ),
                     );
@@ -516,81 +349,6 @@ class _MemberCircle extends StatelessWidget {
         ),
       ),
     );
-  }
-}
-
-class _ProjectAvatar extends StatelessWidget {
-  final String projectName;
-  final double size;
-
-  const _ProjectAvatar({
-    required this.projectName,
-    required this.size,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final initials = _getProjectInitials(projectName);
-    final backgroundColor = _getColorFromProjectName(projectName);
-    
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: backgroundColor,
-        boxShadow: [
-          BoxShadow(
-            color: backgroundColor.withOpacity(0.3),
-            blurRadius: 8,
-            spreadRadius: 2,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Center(
-        child: Text(
-          initials,
-          style: TextStyle(
-            fontSize: size * 0.4,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-            letterSpacing: 1.2,
-          ),
-        ),
-      ),
-    );
-  }
-
-  String _getProjectInitials(String projectName) {
-    if (projectName.isEmpty) return '?';
-    
-    final words = projectName.trim().split(' ');
-    if (words.length == 1) {
-      return words[0].substring(0, 1).toUpperCase();
-    } else {
-      return (words[0].substring(0, 1) + words[1].substring(0, 1)).toUpperCase();
-    }
-  }
-
-  Color _getColorFromProjectName(String projectName) {
-    final colors = [
-      Colors.red,
-      Colors.blue,
-      Colors.purple,
-      Colors.pink,
-      Colors.green,
-      Colors.orange,
-      Colors.teal,
-      Colors.indigo,
-      Colors.deepPurple,
-      Colors.cyan,
-      Colors.amber,
-      Colors.deepOrange,
-    ];
-    
-    int hash = projectName.hashCode;
-    return colors[hash.abs() % colors.length];
   }
 }
 

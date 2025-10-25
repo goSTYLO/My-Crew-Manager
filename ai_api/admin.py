@@ -7,7 +7,6 @@ class ProjectAdmin(admin.ModelAdmin):
     list_filter = ['created_at', 'created_by']
     search_fields = ['title', 'summary', 'created_by__name']
     date_hierarchy = 'created_at'
-    actions = ['edit']
 
 @admin.register(Proposal)
 class ProposalAdmin(admin.ModelAdmin):
@@ -15,7 +14,6 @@ class ProposalAdmin(admin.ModelAdmin):
     list_filter = ['uploaded_at', 'project']
     search_fields = ['project__title', 'uploaded_by__name']
     date_hierarchy = 'uploaded_at'
-    actions = ['edit']
     
     def get_project_name(self, obj):
         return obj.project.title
@@ -27,7 +25,6 @@ class ProjectFeatureAdmin(admin.ModelAdmin):
     list_display = ['id', 'title', 'project_name']
     list_filter = ['project']
     search_fields = ['title', 'project__title']
-    actions = ['edit']
     
     def project_name(self, obj):
         return obj.project.title
@@ -39,7 +36,6 @@ class ProjectGoalAdmin(admin.ModelAdmin):
     list_display = ['id', 'title', 'role', 'project_name']
     list_filter = ['role', 'project']
     search_fields = ['title', 'role', 'project__title']
-    actions = ['edit']
     
     def project_name(self, obj):
         return obj.project.title
@@ -51,7 +47,6 @@ class ProjectRoleAdmin(admin.ModelAdmin):
     list_display = ['id', 'role', 'project_name']
     list_filter = ['project']
     search_fields = ['role', 'project__title']
-    actions = ['edit']
     
     def project_name(self, obj):
         return obj.project.title
@@ -63,7 +58,6 @@ class TimelineWeekAdmin(admin.ModelAdmin):
     list_display = ['id', 'week_number', 'project_name']
     list_filter = ['project']
     search_fields = ['project__title']
-    actions = ['edit']
     
     def project_name(self, obj):
         return obj.project.title
@@ -75,7 +69,6 @@ class TimelineItemAdmin(admin.ModelAdmin):
     list_display = ['id', 'title', 'week_number', 'project_name']
     list_filter = ['week__project']
     search_fields = ['title', 'week__project__title']
-    actions = ['edit']
     
     def week_number(self, obj):
         return obj.week.week_number
@@ -92,7 +85,6 @@ class EpicAdmin(admin.ModelAdmin):
     list_display = ['id', 'title', 'project_name', 'ai']
     list_filter = ['ai', 'project']
     search_fields = ['title', 'description', 'project__title']
-    actions = ['edit']
     
     def project_name(self, obj):
         return obj.project.title
@@ -104,7 +96,6 @@ class SubEpicAdmin(admin.ModelAdmin):
     list_display = ['id', 'title', 'epic_title', 'project_name', 'ai']
     list_filter = ['ai', 'epic__project']
     search_fields = ['title', 'epic__title', 'epic__project__title']
-    actions = ['edit']
     
     def epic_title(self, obj):
         return obj.epic.title
@@ -121,7 +112,6 @@ class UserStoryAdmin(admin.ModelAdmin):
     list_display = ['id', 'title', 'sub_epic_title', 'epic_title', 'project_name', 'ai']
     list_filter = ['ai', 'sub_epic__epic__project']
     search_fields = ['title', 'sub_epic__title', 'sub_epic__epic__project__title']
-    actions = ['edit']
     
     def sub_epic_title(self, obj):
         return obj.sub_epic.title
@@ -143,7 +133,6 @@ class StoryTaskAdmin(admin.ModelAdmin):
     list_display = ['id', 'title', 'user_story_title', 'sub_epic_title', 'epic_title', 'status', 'assignee', 'project_name', 'ai']
     list_filter = ['status', 'ai', 'user_story__sub_epic__epic__project', 'assignee']
     search_fields = ['title', 'user_story__title', 'assignee__user_name', 'user_story__sub_epic__epic__project__title']
-    actions = ['edit']
     
     def user_story_title(self, obj):
         return obj.user_story.title
@@ -171,7 +160,6 @@ class ProjectMemberAdmin(admin.ModelAdmin):
     list_filter = ['role', 'joined_at', 'project']
     search_fields = ['user_name', 'user_email', 'project__title']
     date_hierarchy = 'joined_at'
-    actions = ['edit']
     
     def project_name(self, obj):
         return obj.project.title
@@ -185,7 +173,6 @@ class ProjectInvitationAdmin(admin.ModelAdmin):
     search_fields = ['project__title', 'invitee__name', 'invitee__email', 'invited_by__name']
     date_hierarchy = 'created_at'
     readonly_fields = ['created_at', 'updated_at']
-    actions = ['edit']
     
     def project_name(self, obj):
         return obj.project.title
@@ -214,7 +201,6 @@ class NotificationAdmin(admin.ModelAdmin):
     list_filter = ['notification_type', 'is_read', 'created_at']
     search_fields = ['title', 'message', 'recipient__name', 'recipient__email']
     readonly_fields = ['created_at', 'read_at']
-    actions = ['edit']
     
     def recipient_name(self, obj):
         return obj.recipient.name
@@ -228,7 +214,6 @@ class RepositoryAdmin(admin.ModelAdmin):
     search_fields = ['name', 'url', 'project__title']
     date_hierarchy = 'created_at'
     readonly_fields = ['created_at', 'updated_at']
-    actions = ['edit']
     
     def project_name(self, obj):
         return obj.project.title

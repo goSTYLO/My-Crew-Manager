@@ -15,12 +15,6 @@ class ProjectRemoteDataSource {
     return data.map((json) => ProjectModel.fromJson(json)).toList();
   }
 
-  Future<List<ProjectModel>> getMyProjects() async {
-    final response = await dio.get('ai/projects/my-projects/');
-    final List<dynamic> data = response.data;
-    return data.map((json) => ProjectModel.fromJson(json)).toList();
-  }
-
   Future<ProjectModel> getProject(int id) async {
     final response = await dio.get('ai/projects/$id/');
     return ProjectModel.fromJson(response.data);

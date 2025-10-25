@@ -1,13 +1,14 @@
 import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
+  LayoutDashboard,
   FolderOpen,
+  Clock,
   TrendingUp,
   Settings,
   LogOut,
   MessageSquare
 } from "lucide-react";
-import { API_BASE_URL } from "../config/api";
 import { useTheme } from "./themeContext";
 
 interface SidebarProps {
@@ -31,7 +32,7 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
       const token = localStorage.getItem("token");
   
       // Call the logout API endpoint
-      await fetch(`${API_BASE_URL}/api/user/logout/`, {
+      await fetch("http://localhost:8000/api/user/logout/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -60,8 +61,10 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
   };
 
   const navigationItems = [
-    { name: "Project", icon: FolderOpen, path: "/main-projects" },
+    { name: "Dashboard", icon: LayoutDashboard, path: "/main" },
     { name: "Team Chat", icon: MessageSquare, path: "/chat" },
+    { name: "Project", icon: FolderOpen, path: "/main-projects" },
+    { name: "Work Logs", icon: Clock, path: "/work-logs" },
     { name: "Leaderboard", icon: TrendingUp, path: "/leaderboard" },
     { name: "Settings", icon: Settings, path: "/settings" },
     { name: "Logout", icon: LogOut, action: () => setShowLogoutConfirm(true) },

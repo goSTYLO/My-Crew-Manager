@@ -6,6 +6,7 @@ import 'package:mycrewmanager/features/dashboard/presentation/pages/tasks_page.d
 import 'package:mycrewmanager/features/dashboard/presentation/pages/messages_screen.dart';
 import 'package:mycrewmanager/features/dashboard/presentation/pages/notifications_page.dart';
 import 'package:mycrewmanager/features/dashboard/presentation/pages/settings_page.dart';
+import 'package:mycrewmanager/features/authentication/presentation/pages/login_page.dart';
 import 'package:mycrewmanager/features/authentication/presentation/bloc/auth_bloc.dart';
 import 'package:mycrewmanager/features/dashboard/presentation/pages/project_overview_page.dart';
 import 'package:mycrewmanager/features/project/presentation/pages/create_project_simple_page.dart';
@@ -31,8 +32,8 @@ class _ProjectsPageState extends State<ProjectsPage> {
   @override
   void initState() {
     super.initState();
-    // Load user's projects when the page initializes
-    context.read<ProjectBloc>().add(ProjectGetMyProjects());
+    // Load projects when the page initializes
+    context.read<ProjectBloc>().add(ProjectGetProjects());
   }
 
   void _showDeleteConfirmation(BuildContext context, Project project) {
@@ -557,13 +558,11 @@ Widget _buildAppDrawer(BuildContext context) {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Profile picture
-                    CircleAvatar(
+                    const CircleAvatar(
                       radius: 28,
-                      backgroundImage: (state is AuthSuccess && state.user.profilePicture != null)
-                          ? NetworkImage('${Constants.baseUrl.replaceAll('/api/', '')}${state.user.profilePicture!}')
-                          : const AssetImage(
-                              'lib/core/assets/images/app_logo.png',
-                            ) as ImageProvider,
+                      backgroundImage: AssetImage(
+                        'lib/core/assets/images/app_logo.png',
+                      ),
                     ),
                     const SizedBox(height: 10),
                     // Name
@@ -661,7 +660,7 @@ Widget _buildAppDrawer(BuildContext context) {
                         ),
                         onPressed: () {
                           Navigator.pop(context); // Close dialog
-                          context.read<AuthBloc>().add(AuthLogout());
+                          Navigator.pushReplacement(context, LoginPage.route());
                         },
                         child: const Text('Logout'),
                       ),

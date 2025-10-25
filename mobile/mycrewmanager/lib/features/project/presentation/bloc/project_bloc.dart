@@ -3,7 +3,6 @@ import 'package:equatable/equatable.dart';
 import 'package:mycrewmanager/core/constants/constants.dart';
 import 'package:mycrewmanager/features/project/domain/entities/project.dart';
 import 'package:mycrewmanager/features/project/domain/usecases/get_projects.dart';
-import 'package:mycrewmanager/features/project/domain/usecases/get_my_projects.dart';
 import 'package:mycrewmanager/features/project/domain/usecases/create_project.dart';
 import 'package:mycrewmanager/features/project/domain/usecases/get_project_backlog.dart';
 import 'package:mycrewmanager/features/project/domain/usecases/update_project.dart';
@@ -14,7 +13,6 @@ part 'project_state.dart';
 
 class ProjectBloc extends Bloc<ProjectEvent, ProjectState> {
   final GetProjects _getProjects;
-  final GetMyProjects _getMyProjects;
   final CreateProject _createProject;
   final GetProjectBacklog _getProjectBacklog;
   final UpdateProject _updateProject;
@@ -22,13 +20,11 @@ class ProjectBloc extends Bloc<ProjectEvent, ProjectState> {
 
   ProjectBloc({
     required GetProjects getProjects,
-    required GetMyProjects getMyProjects,
     required CreateProject createProject,
     required GetProjectBacklog getProjectBacklog,
     required UpdateProject updateProject,
     required DeleteProject deleteProject,
   })  : _getProjects = getProjects,
-        _getMyProjects = getMyProjects,
         _createProject = createProject,
         _getProjectBacklog = getProjectBacklog,
         _updateProject = updateProject,
@@ -36,7 +32,6 @@ class ProjectBloc extends Bloc<ProjectEvent, ProjectState> {
         super(ProjectInitial()) {
     on<ProjectEvent>((_, emit) => emit(ProjectLoading()));
     on<ProjectGetProjects>(_onGetProjects);
-    on<ProjectGetMyProjects>(_onGetMyProjects);
     on<ProjectCreateProject>(_onCreateProject);
     on<ProjectGetBacklog>(_onGetBacklog);
     on<ProjectUpdateProject>(_onUpdateProject);
@@ -49,20 +44,6 @@ class ProjectBloc extends Bloc<ProjectEvent, ProjectState> {
     await res.fold(
       (failure) async {
         logger.d("Failed to get projects: ${failure.message}");
-        emit(ProjectFailure(failure.message));
-      },
-      (projects) async {
-        emit(ProjectSuccess(projects: projects));
-      },
-    );
-  }
-
-  void _onGetMyProjects(ProjectGetMyProjects event, Emitter<ProjectState> emit) async {
-    final res = await _getMyProjects();
-
-    await res.fold(
-      (failure) async {
-        logger.d("Failed to get my projects: ${failure.message}");
         emit(ProjectFailure(failure.message));
       },
       (projects) async {
