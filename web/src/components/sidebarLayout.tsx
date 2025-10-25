@@ -28,7 +28,7 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
     setShowLogoutConfirm(false); // hide confirmation immediately
   
     try {
-      const token = localStorage.getItem("token");
+      const token = sessionStorage.getItem("token");
   
       // Call the logout API endpoint
       await fetch(`${API_BASE_URL}/api/user/logout/`, {
@@ -39,8 +39,8 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
         },
       });
   
-      // Clear local storage and session
-      localStorage.removeItem("token");
+      // Clear session storage
+      sessionStorage.removeItem("token");
       sessionStorage.clear();
   
       // Add a small delay so the spinner is visible
@@ -50,7 +50,7 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
   
     } catch (error) {
       console.error("Logout error:", error);
-      localStorage.removeItem("token");
+      sessionStorage.removeItem("token");
       sessionStorage.clear();
   
       setTimeout(() => {
@@ -132,7 +132,7 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
             const active =
               anyActive
                 ? checkIsActive(item.path)
-                : item.name === "Settings";
+                : item.name === "Project";
 
             return (
               <button

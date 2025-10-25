@@ -27,7 +27,9 @@ from .serializers import (
 # Real LLM pipelines
 from LLMs.project_llm import run_pipeline_from_text, model_to_dict
 from LLMs.backlog_llm import run_backlog_pipeline
+from LLMs.llm_cache import clear_cache_and_free_memory, get_memory_usage, start_auto_cleanup
 from ai_api.tasks import task_manager, TaskCancelledException
+from .services.broadcast_service import BroadcastService
 
 import pdfplumber
 import threading
@@ -46,6 +48,8 @@ class ProjectViewSet(ModelViewSet):
             user=self.request.user,
             role='Owner'
         )
+        # Broadcast project creation
+        BroadcastService.broadcast_project_update(project, 'created', self.request.user)
 
     @action(detail=True, methods=["put"], url_path="ingest-proposal/(?P<proposal_id>[^/.]+)")
     def ingest_proposal(self, request, pk=None, proposal_id=None):
@@ -168,6 +172,9 @@ class ProjectViewSet(ModelViewSet):
                         for t in us.tasks[:50]:
                             StoryTask.objects.create(user_story=u, title=str(t.title)[:512])
 
+            # Broadcast backlog regeneration
+            BroadcastService.broadcast_backlog_regenerated(project, self.request.user)
+            
             return Response({
                 "message": "Backlog generated successfully",
                 "backlog": backlog_dict
@@ -253,6 +260,9 @@ class ProjectViewSet(ModelViewSet):
                     title=item_title[:512]
                 )
 
+        # Broadcast overview regeneration
+        BroadcastService.broadcast_overview_regenerated(project, self.request.user)
+        
         return Response({
             "message": "Project overview generated successfully",
             "overview": output,
@@ -317,14 +327,18 @@ class ProjectViewSet(ModelViewSet):
 
     @action(detail=False, methods=["get"], url_path="my-projects")
     def my_projects(self, request):
-        """Return only projects where the current user is a member"""
+        """Return projects where the current user is the creator OR a member"""
+        from django.db.models import Q
+        
         # Get project IDs where the user is a member
-        user_project_ids = ProjectMember.objects.filter(
+        member_project_ids = ProjectMember.objects.filter(
             user=request.user
         ).values_list('project_id', flat=True)
         
-        # Get the actual projects
-        projects = Project.objects.filter(id__in=user_project_ids).order_by('-created_at')
+        # Get projects where user is creator OR member
+        projects = Project.objects.filter(
+            Q(id__in=member_project_ids) | Q(created_by=request.user)
+        ).distinct().order_by('-created_at')
         
         # Serialize and return
         serializer = self.get_serializer(projects, many=True)
@@ -351,6 +365,56 @@ class ProjectViewSet(ModelViewSet):
             'task_count': task_count,
             'sprint_count': sprint_count,
         }, status=status.HTTP_200_OK)
+
+    def perform_update(self, serializer):
+        project = serializer.save()
+        # Broadcast project update
+        BroadcastService.broadcast_project_update(project, 'updated', self.request.user)
+
+    @action(detail=False, methods=["post"], url_path="clear-llm-cache")
+    def clear_llm_cache(self, request):
+        """
+        Clear LLM cache and free GPU memory.
+        Useful for freeing VRAM when not using LLM features.
+        """
+        try:
+            memory_before = get_memory_usage()
+            clear_cache_and_free_memory()
+            memory_after = get_memory_usage()
+            
+            return Response({
+                "message": "LLM cache cleared successfully",
+                "memory_before": memory_before,
+                "memory_after": memory_after,
+                "memory_freed_mb": memory_before['allocated_mb'] - memory_after['allocated_mb']
+            })
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=False, methods=["get"], url_path="memory-usage")
+    def memory_usage(self, request):
+        """
+        Get current GPU memory usage.
+        """
+        try:
+            memory_info = get_memory_usage()
+            return Response(memory_info)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=False, methods=["post"], url_path="start-auto-cleanup")
+    def start_auto_cleanup(self, request):
+        """
+        Start the auto-cleanup background thread.
+        """
+        try:
+            start_auto_cleanup()
+            return Response({
+                "message": "Auto-cleanup started successfully",
+                "cleanup_interval_seconds": 1800  # 30 minutes
+            })
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class ProposalViewSet(ModelViewSet):
@@ -464,6 +528,21 @@ class EpicViewSet(ModelViewSet):
             return self.queryset.filter(project_id=project_id)
         return self.queryset
 
+    def perform_create(self, serializer):
+        epic = serializer.save()
+        # Broadcast epic creation
+        BroadcastService.broadcast_epic_update(epic, 'created', self.request.user)
+
+    def perform_update(self, serializer):
+        epic = serializer.save()
+        # Broadcast epic update
+        BroadcastService.broadcast_epic_update(epic, 'updated', self.request.user)
+
+    def perform_destroy(self, instance):
+        # Broadcast epic deletion before destroying
+        BroadcastService.broadcast_epic_update(instance, 'deleted', self.request.user)
+        instance.delete()
+
 
 class SubEpicViewSet(ModelViewSet):
     queryset = SubEpic.objects.all()
@@ -476,6 +555,21 @@ class SubEpicViewSet(ModelViewSet):
             return self.queryset.filter(epic_id=epic_id)
         return self.queryset
 
+    def perform_create(self, serializer):
+        sub_epic = serializer.save()
+        # Broadcast sub-epic creation
+        BroadcastService.broadcast_sub_epic_update(sub_epic, 'created', self.request.user)
+
+    def perform_update(self, serializer):
+        sub_epic = serializer.save()
+        # Broadcast sub-epic update
+        BroadcastService.broadcast_sub_epic_update(sub_epic, 'updated', self.request.user)
+
+    def perform_destroy(self, instance):
+        # Broadcast sub-epic deletion before destroying
+        BroadcastService.broadcast_sub_epic_update(instance, 'deleted', self.request.user)
+        instance.delete()
+
 
 class UserStoryViewSet(ModelViewSet):
     queryset = UserStory.objects.all()
@@ -487,6 +581,21 @@ class UserStoryViewSet(ModelViewSet):
         if sub_epic_id:
             return self.queryset.filter(sub_epic_id=sub_epic_id)
         return self.queryset
+
+    def perform_create(self, serializer):
+        user_story = serializer.save()
+        # Broadcast user story creation
+        BroadcastService.broadcast_user_story_update(user_story, 'created', self.request.user)
+
+    def perform_update(self, serializer):
+        user_story = serializer.save()
+        # Broadcast user story update
+        BroadcastService.broadcast_user_story_update(user_story, 'updated', self.request.user)
+
+    def perform_destroy(self, instance):
+        # Broadcast user story deletion before destroying
+        BroadcastService.broadcast_user_story_update(instance, 'deleted', self.request.user)
+        instance.delete()
 
 
 class StoryTaskViewSet(ModelViewSet):
@@ -743,6 +852,100 @@ class StoryTaskViewSet(ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+    def perform_create(self, serializer):
+        task = serializer.save()
+        
+        # Create notification if task has an assignee
+        if task.assignee:
+            project = task.user_story.sub_epic.epic.project
+            
+            # Determine recipients (assignee + creator, excluding duplicates and actor)
+            recipients = set()
+            if task.assignee.user:
+                recipients.add(task.assignee.user)
+            if project.created_by != self.request.user:
+                recipients.add(project.created_by)
+            recipients.discard(self.request.user)  # Don't notify the actor
+            
+            # Create task_assigned notification for each recipient
+            from .services.notification_service import NotificationService
+            for recipient in recipients:
+                NotificationService.create_notification(
+                    recipient=recipient,
+                    notification_type='task_assigned',
+                    title=f'Task Assigned: {task.title}',
+                    message=f'{self.request.user.name} assigned you to "{task.title}"',
+                    content_object=task,
+                    action_url=f'/project-details/{project.id}',
+                    actor=self.request.user
+                )
+        
+        # Broadcast task creation
+        BroadcastService.broadcast_task_update(task, 'created', self.request.user)
+
+    def perform_update(self, serializer):
+        old_instance = self.get_object()
+        task = serializer.save()
+        project = task.user_story.sub_epic.epic.project
+        
+        # Determine recipients (assignee + creator, excluding duplicates and actor)
+        recipients = set()
+        if task.assignee and task.assignee.user:
+            recipients.add(task.assignee.user)
+        if project.created_by != self.request.user:
+            recipients.add(project.created_by)
+        recipients.discard(self.request.user)  # Don't notify the actor
+        
+        # Create notifications based on what changed
+        from .services.notification_service import NotificationService
+        
+        # Check for assignment change
+        if old_instance.assignee != task.assignee and task.assignee:
+            for recipient in recipients:
+                NotificationService.create_notification(
+                    recipient=recipient,
+                    notification_type='task_assigned',
+                    title=f'Task Assigned: {task.title}',
+                    message=f'{self.request.user.name} assigned you to "{task.title}"',
+                    content_object=task,
+                    action_url=f'/project-details/{project.id}',
+                    actor=self.request.user
+                )
+        
+        # Check for completion
+        elif old_instance.status != 'done' and task.status == 'done':
+            for recipient in recipients:
+                NotificationService.create_notification(
+                    recipient=recipient,
+                    notification_type='task_completed',
+                    title=f'Task Completed: {task.title}',
+                    message=f'{self.request.user.name} completed "{task.title}"',
+                    content_object=task,
+                    action_url=f'/project-details/{project.id}',
+                    actor=self.request.user
+                )
+        
+        # Other updates (if any field changed)
+        elif old_instance.title != task.title or old_instance.status != task.status:
+            for recipient in recipients:
+                NotificationService.create_notification(
+                    recipient=recipient,
+                    notification_type='task_updated',
+                    title=f'Task Updated: {task.title}',
+                    message=f'{self.request.user.name} updated "{task.title}"',
+                    content_object=task,
+                    action_url=f'/project-details/{project.id}',
+                    actor=self.request.user
+                )
+        
+        # Broadcast task update
+        BroadcastService.broadcast_task_update(task, 'updated', self.request.user)
+
+    def perform_destroy(self, instance):
+        # Broadcast task deletion before destroying
+        BroadcastService.broadcast_task_update(instance, 'deleted', self.request.user)
+        instance.delete()
+
 
 class ProjectMemberViewSet(ModelViewSet):
     queryset = ProjectMember.objects.all()
@@ -792,6 +995,26 @@ class ProjectMemberViewSet(ModelViewSet):
             
             print(f"Removed member {removed_user.name} from project {project.title}")
             print(f"Deleted {deleted_invitations[0]} related invitations")
+            
+            # Notify all remaining project members that someone left
+            remaining_members = ProjectMember.objects.filter(
+                project=project
+            ).exclude(id=member.id)
+            
+            from .services.notification_service import NotificationService
+            for remaining_member in remaining_members:
+                NotificationService.create_notification(
+                    recipient=remaining_member.user,
+                    notification_type='member_left',
+                    title=f'Member Left: {removed_user.name}',
+                    message=f'{removed_user.name} was removed from {project.title}',
+                    content_object=project,
+                    action_url=f'/project-details/{project.id}',
+                    actor=request.user
+                )
+            
+            # Broadcast member removal
+            BroadcastService.broadcast_member_update(member, 'removed', request.user)
             
             return Response({
                 "message": "Member removed successfully",
@@ -962,6 +1185,27 @@ class ProjectInvitationViewSet(ModelViewSet):
                 
                 updated_notifications = related_notifications.update(is_read=True, read_at=timezone.now())
                 print(f"Marked {updated_notifications} related notifications as read")
+                
+                # Broadcast member joined if membership was created
+                if created:
+                    BroadcastService.broadcast_member_update(project_member, 'joined', request.user)
+                    
+                    # Notify all existing project members that someone joined
+                    existing_members = ProjectMember.objects.filter(
+                        project=invitation.project
+                    ).exclude(user=invitation.invitee)
+                    
+                    from .services.notification_service import NotificationService
+                    for member in existing_members:
+                        NotificationService.create_notification(
+                            recipient=member.user,
+                            notification_type='member_joined',
+                            title=f'New Member: {invitation.invitee.name}',
+                            message=f'{invitation.invitee.name} joined {invitation.project.title}',
+                            content_object=invitation.project,
+                            action_url=f'/project-details/{invitation.project.id}',
+                            actor=invitation.invitee
+                        )
             
             return Response({
                 "message": "Invitation accepted successfully",
@@ -1112,18 +1356,24 @@ class RepositoryViewSet(ModelViewSet):
         project = serializer.validated_data['project']
         if project.created_by != self.request.user:
             raise PermissionDenied("Only project creators can add repositories")
-        serializer.save()
+        repository = serializer.save()
+        # Broadcast repository creation
+        BroadcastService.broadcast_repository_update(repository, 'created', self.request.user)
 
     def perform_update(self, serializer):
         # Only allow project creators to update repositories
         repository = self.get_object()
         if repository.project.created_by != self.request.user:
             raise PermissionDenied("Only project creators can update repositories")
-        serializer.save()
+        repository = serializer.save()
+        # Broadcast repository update
+        BroadcastService.broadcast_repository_update(repository, 'updated', self.request.user)
 
     def perform_destroy(self, instance):
         # Only allow project creators to delete repositories
         if instance.project.created_by != self.request.user:
             raise PermissionDenied("Only project creators can delete repositories")
+        # Broadcast repository deletion before destroying
+        BroadcastService.broadcast_repository_update(instance, 'deleted', self.request.user)
         instance.delete()
 

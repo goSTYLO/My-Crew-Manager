@@ -2,71 +2,8 @@ import os
 import re
 from typing import Dict, Optional
 from ai_api.tasks import CancellationToken, TaskCancelledException
-import torch
-from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
-from langchain_huggingface import HuggingFacePipeline
-try:
-    from transformers import BitsAndBytesConfig
-except Exception:
-    BitsAndBytesConfig = None
 from LLMs.models import BacklogModel, EpicModel, SubEpicModel, UserStoryModel, TaskModel
-
-MODEL_ID = "unsloth/mistral-7b-instruct-v0.3-bnb-4bit"
-
-def load_llm() -> HuggingFacePipeline:
-    tokenizer = AutoTokenizer.from_pretrained(MODEL_ID, trust_remote_code=True)
-
-    use_cuda = torch.cuda.is_available()
-    quant_cfg = None
-    if use_cuda and BitsAndBytesConfig is not None:
-        quant_cfg = BitsAndBytesConfig(
-            load_in_4bit=True,
-            bnb_4bit_use_double_quant=True,
-            bnb_4bit_quant_type="nf4",
-            bnb_4bit_compute_dtype=torch.float16,
-        )
-
-    if use_cuda:
-        if quant_cfg is not None:
-            model = AutoModelForCausalLM.from_pretrained(
-                MODEL_ID,
-                device_map="auto",
-                trust_remote_code=True,
-                quantization_config=quant_cfg,
-            )
-        else:
-            model = AutoModelForCausalLM.from_pretrained(
-                MODEL_ID,
-                device_map=None,
-                dtype=torch.float16,
-                trust_remote_code=True,
-            ).to("cuda")
-        pipe = pipeline(
-            "text-generation",
-            model=model,
-            tokenizer=tokenizer,
-            max_new_tokens=1024,
-            temperature=0.7,
-            do_sample=True,
-            return_full_text=False,
-        )
-    else:
-        model = AutoModelForCausalLM.from_pretrained(
-            MODEL_ID,
-            device_map=None,
-            dtype=torch.float32,
-            trust_remote_code=True,
-        )
-        pipe = pipeline(
-            "text-generation",
-            model=model,
-            tokenizer=tokenizer,
-            max_new_tokens=512,
-            temperature=0.7,
-            do_sample=True,
-            return_full_text=False,
-        )
-    return HuggingFacePipeline(pipeline=pipe)
+from LLMs.llm_cache import get_cached_backlog_llm
 
 def build_prompt(section: str, proposal_text: str, context: Dict = None) -> str:
     root_dir = os.path.dirname(__file__)
@@ -86,6 +23,27 @@ def build_prompt(section: str, proposal_text: str, context: Dict = None) -> str:
     prompt = re.sub(r"{\w+}", "", prompt)
     return prompt
 
+def validate_backlog_format(response: str) -> bool:
+    """Validate that the backlog response has the expected format with Epic, Sub-Epic, User Story, and Task entries."""
+    if not response or not isinstance(response, str):
+        return False
+    
+    response_lower = response.lower().strip()
+    
+    # Check for the specific format expected by the parser
+    # Must have Epic entries with colons
+    has_epic = "epic" in response_lower and ":" in response
+    # Must have Task entries (can be -Task or Task)
+    has_task = "-task" in response_lower or "task" in response_lower
+    
+    # Check for proper indentation structure (Epic, then indented Sub-Epic, etc.)
+    lines = response.splitlines()
+    epic_count = sum(1 for line in lines if line.strip().lower().startswith("epic") and ":" in line)
+    task_count = sum(1 for line in lines if line.strip().lower().startswith("-task") and ":" in line)
+    
+    # Require minimum of 4 epics and at least one task for a valid backlog
+    return has_epic and has_task and epic_count >= 4 and task_count > 0
+
 def generate_section(llm, section: str, prompt: str, max_retries: int = 3, cancellation_token: Optional[CancellationToken] = None) -> str:
     for _ in range(max_retries):
         try:
@@ -94,8 +52,17 @@ def generate_section(llm, section: str, prompt: str, max_retries: int = 3, cance
                 cancellation_token.check_cancelled()
             
             response = llm.invoke(prompt).strip()
-            if response:
-                return response
+            if not response:
+                continue
+            if not validate_backlog_format(response):
+                lines = response.splitlines()
+                epic_count = sum(1 for line in lines if line.strip().lower().startswith("epic") and ":" in line)
+                task_count = sum(1 for line in lines if line.strip().lower().startswith("-task") and ":" in line)
+                print(f"Backlog validation failed, retrying... (attempt {_ + 1}/{max_retries})")
+                print(f"Epic count: {epic_count} (need >=4), Task count: {task_count}")
+                print(f"Response preview: {response[:200]}...")
+                continue
+            return response
         except TaskCancelledException:
             raise  # Re-raise cancellation exceptions
         except Exception:
@@ -163,7 +130,7 @@ def run_backlog_pipeline(proposal_text: str, context: Dict, task_id: Optional[st
     if cancellation_token:
         cancellation_token.check_cancelled()
 
-    llm = load_llm()
+    llm = get_cached_backlog_llm()  # Uses dedicated backlog model cache - separate from project model
     prompt = build_prompt("backlog", proposal_text, context)
     if not prompt:
         return BacklogModel()
@@ -173,4 +140,38 @@ def run_backlog_pipeline(proposal_text: str, context: Dict, task_id: Optional[st
         return BacklogModel()
 
     print(f"\n--- RAW BACKLOG ---\n{raw_backlog}\n")
-    return parse_backlog(raw_backlog)
+    
+    backlog_model = parse_backlog(raw_backlog)
+    
+    # Ensure minimum of 4 epics - add generic epics if needed
+    if len(backlog_model.epics) < 4:
+        print(f"Warning: Only {len(backlog_model.epics)} epics generated, adding generic epics to reach minimum of 4")
+        generic_epics = [
+            ("User Interface", "User Interface Development"),
+            ("Data Management", "Data Storage and Management"),
+            ("Security", "Security Implementation"),
+            ("Testing", "Testing and Quality Assurance")
+        ]
+        
+        for i, (title, description) in enumerate(generic_epics):
+            if len(backlog_model.epics) >= 4:
+                break
+            epic_num = len(backlog_model.epics) + 1
+            epic = EpicModel(
+                title=f"Epic {epic_num}: {title}",
+                description=description,
+                ai=True
+            )
+            # Add a basic sub-epic, user story, and tasks
+            sub_epic = SubEpicModel(title=f"-Sub-Epic {epic_num}.1: {title} Implementation", ai=True)
+            user_story = UserStoryModel(title=f"-User Story {epic_num}.1.1: As a developer, I need to implement {title.lower()} functionality", ai=True)
+            
+            task1 = TaskModel(title=f"-Task {epic_num}.1.1.1: Design {title.lower()} components", description="", status="pending", ai=True)
+            task2 = TaskModel(title=f"-Task {epic_num}.1.1.2: Implement {title.lower()} functionality", description="", status="pending", ai=True)
+            
+            user_story.tasks = [task1, task2]
+            sub_epic.user_stories = [user_story]
+            epic.sub_epics = [sub_epic]
+            backlog_model.epics.append(epic)
+    
+    return backlog_model

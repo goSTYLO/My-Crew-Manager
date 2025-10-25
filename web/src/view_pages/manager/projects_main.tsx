@@ -7,6 +7,7 @@ import { PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tool
 import TopNavbar from "../../components/topbarLayouot";
 import { useTheme } from "../../components/themeContext";
 import { useToast } from "../../components/ToastContext";
+import { useRealtimeUpdates } from "../../hooks/useRealtimeUpdates";
 import { 
   calculateAggregatedTaskStats, 
   generateProjectCreationTrends, 
@@ -68,15 +69,15 @@ const ProjectTask = () => {
         try {
             setLoading(true);
             setError(null);
-            const token = localStorage.getItem('token');
-            console.log('🔍 Token from localStorage:', token ? 'Found' : 'Not found');
+            const token = sessionStorage.getItem('token');
+            console.log('🔍 Token from sessionStorage:', token ? 'Found' : 'Not found');
             if (!token) {
                 showError('Authentication Required', 'You are not authenticated. Please log in.');
                 navigate('/sign-in');
                 return;
             }
 
-            const response = await fetch(`${AI_API_BASE_URL}/projects/`, {
+            const response = await fetch(`${AI_API_BASE_URL}/projects/my-projects/`, {
                 headers: {
                     'Authorization': `Token ${token}`,
                     'Content-Type': 'application/json',
@@ -87,7 +88,7 @@ const ProjectTask = () => {
             if (!response.ok) {
                 if (response.status === 401) {
                     showError('Authentication Failed', 'Authentication failed. Please log in again.');
-                    localStorage.removeItem('token');
+                    sessionStorage.removeItem('token');
                     navigate('/sign-in');
                     return;
                 }
@@ -186,7 +187,7 @@ const ProjectTask = () => {
     const fetchAnalyticsData = async () => {
       try {
         setLoadingAnalytics(true);
-        const token = localStorage.getItem('token');
+        const token = sessionStorage.getItem('token');
         if (!token) {
           console.log('❌ No token found for analytics');
           return;
@@ -290,6 +291,29 @@ const ProjectTask = () => {
         }
     }, [timeFilter, projectBacklogs, projects]);
 
+    // Real-time updates for project changes
+    useRealtimeUpdates({
+      callbacks: {
+        onProjectUpdate: (data) => {
+          console.log('📡 Real-time project update received:', data);
+          // Refresh projects list when any project is updated
+          fetchProjects();
+        },
+        onTaskUpdate: (data) => {
+          console.log('📡 Real-time task update received:', data);
+          // Refresh analytics when tasks are updated
+          if (projects.length > 0) {
+            fetchAnalyticsData();
+          }
+        },
+        onMemberUpdate: (data) => {
+          console.log('📡 Real-time member update received:', data);
+          // Refresh projects list when members are updated
+          fetchProjects();
+        }
+      }
+    });
+
     // Pagination logic
     const totalPages = Math.ceil(projects.length / projectsPerPage);
     const startIndex = (currentPage - 1) * projectsPerPage;
@@ -370,7 +394,7 @@ const ProjectTask = () => {
                 <TopNavbar onMenuClick={() => setSidebarOpen(true)} />
 
               {/* Projects Content */}
-              <main className="flex-1 p-4 lg:p-[100px] overflow-y-auto overflow-x-hidden space-y-[40px]">
+              <main className="flex-1 p-4 lg:p-[100px] overflow-y-auto overflow-x-hidden space-y-[40px] pt-20">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-3">
                   <h2 className={`text-2xl font-semibold ${theme === "dark" ? "text-white" : "text-gray-800"}`}>Projects</h2>
                   <button 
@@ -729,7 +753,7 @@ const ProjectTask = () => {
 
             {/* User Details Modal */}
             {showUserModal && selectedUser && (
-              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-40">
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
                 <div className={`${theme === "dark" ? "bg-gray-800" : "bg-white"} rounded-lg p-6 max-w-md w-full mx-4 shadow-xl`}>
                   <div className="flex items-center justify-between mb-4">
                     <h3 className={`text-lg font-semibold ${theme === "dark" ? "text-white" : "text-gray-900"}`}>
@@ -808,7 +832,7 @@ const ProjectTask = () => {
 
             {/* View All Projects Modal */}
             {showViewAllModal && (
-              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
                 <div className={`rounded-lg max-w-6xl w-full max-h-[90vh] overflow-hidden ${
                   theme === "dark" ? "bg-gray-800" : "bg-white"
                 }`}>

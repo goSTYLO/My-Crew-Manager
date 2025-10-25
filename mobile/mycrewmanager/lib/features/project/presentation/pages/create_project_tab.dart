@@ -316,7 +316,7 @@ class _CreateProjectTabState extends State<CreateProjectTab> {
                   Expanded(
                     child: ElevatedButton(
                       onPressed: () {
-                        Navigator.push(context, BacklogOverviewPage.route(projectName: "My Crew Manager"));
+                        Navigator.push(context, BacklogOverviewPage.route(project: null));
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.black,
