@@ -2,6 +2,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:mycrewmanager/core/constants/constants.dart';
 import 'package:mycrewmanager/features/project/domain/entities/project.dart';
+import 'package:mycrewmanager/features/project/domain/entities/backlog.dart';
 import 'package:mycrewmanager/features/project/domain/usecases/get_projects.dart';
 import 'package:mycrewmanager/features/project/domain/usecases/get_my_projects.dart';
 import 'package:mycrewmanager/features/project/domain/usecases/create_project.dart';

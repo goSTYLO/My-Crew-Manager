@@ -30,7 +30,7 @@ class ProjectCreated extends ProjectState {
 }
 
 class ProjectBacklogLoaded extends ProjectState {
-  final Map<String, dynamic> backlog;
+  final Backlog backlog;
 
   const ProjectBacklogLoaded({required this.backlog});
 
