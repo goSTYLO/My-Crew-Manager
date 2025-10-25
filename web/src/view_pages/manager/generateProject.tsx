@@ -1490,14 +1490,15 @@ const App: React.FC = () => {
         {/* Main Content */}
         <div className="p-4 lg:p-6 xl:p-8">
           <div className="w-full max-w-3xl sm:max-w-4xl lg:max-w-5xl xl:max-w-6xl mx-auto">
-        <div className={`rounded-lg border p-4 sm:p-6 lg:p-8 shadow-sm min-h-[calc(100vh-6rem)] sm:min-h-[calc(100vh-8rem)] ${theme === "dark" ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"}`}>
-          {/* Back to Projects button - positioned inside the main card */}
           <button
               onClick={() => navigate('/main-projects', { replace: true })}
               className={`flex items-center ${theme === 'dark' ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-gray-900'} transition-colors mb-6 group`}>
               <ArrowLeft className="w-5 h-5 mr-2 group-hover:-translate-x-1 transition-transform" />
               <span className="font-medium">Back to Projects</span>
             </button>
+        <div className={`rounded-lg border p-4 sm:p-6 lg:p-8 shadow-sm min-h-[calc(100vh-6rem)] sm:min-h-[calc(100vh-8rem)] ${theme === "dark" ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"}`}>
+          {/* Back to Projects button - positioned inside the main card */}
+          
           <h1 className={`text-2xl font-bold mb-6 ${theme === "dark" ? "text-white" : "text-gray-800"}`}>Create New Project</h1>
           
           <StepIndicator />

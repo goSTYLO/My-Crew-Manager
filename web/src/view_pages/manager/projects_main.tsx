@@ -394,7 +394,7 @@ const ProjectTask = () => {
                 <TopNavbar onMenuClick={() => setSidebarOpen(true)} />
 
               {/* Projects Content */}
-              <main className="flex-1 p-4 lg:p-[100px] overflow-y-auto overflow-x-hidden space-y-[40px]">
+              <main className="flex-1 p-4 lg:p-[100px] overflow-y-auto overflow-x-hidden space-y-[40px] pt-20">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-3">
                   <h2 className={`text-2xl font-semibold ${theme === "dark" ? "text-white" : "text-gray-800"}`}>Projects</h2>
                   <button 
@@ -753,7 +753,7 @@ const ProjectTask = () => {
 
             {/* User Details Modal */}
             {showUserModal && selectedUser && (
-              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-40">
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
                 <div className={`${theme === "dark" ? "bg-gray-800" : "bg-white"} rounded-lg p-6 max-w-md w-full mx-4 shadow-xl`}>
                   <div className="flex items-center justify-between mb-4">
                     <h3 className={`text-lg font-semibold ${theme === "dark" ? "text-white" : "text-gray-900"}`}>
@@ -832,7 +832,7 @@ const ProjectTask = () => {
 
             {/* View All Projects Modal */}
             {showViewAllModal && (
-              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
                 <div className={`rounded-lg max-w-6xl w-full max-h-[90vh] overflow-hidden ${
                   theme === "dark" ? "bg-gray-800" : "bg-white"
                 }`}>

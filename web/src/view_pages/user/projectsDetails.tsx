@@ -23,7 +23,8 @@ import ProposalViewer from "../../components/ProposalViewer";
 import { useToast } from "../../components/ToastContext";
 
 // API configuration
-const API_BASE_URL = 'http://localhost:8000/api';
+const API_BASE_URL = 'http://localhost:8000';
+const AI_API_BASE_URL = `${API_BASE_URL}/api/ai`;
 
 const getAuthToken = () => {
   return sessionStorage.getItem('token');
@@ -208,6 +209,7 @@ const TeamAvatars: React.FC<{ members: ProjectMember[]; theme: string }> = ({ me
 // Status Badge Component
 const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
   const statusConfig = {
+    done: { bg: 'bg-green-100', text: 'text-green-700', label: 'Done' },
     completed: { bg: 'bg-green-100', text: 'text-green-700', label: 'Completed' },
     pending: { bg: 'bg-yellow-100', text: 'text-yellow-700', label: 'Pending' },
     in_progress: { bg: 'bg-blue-100', text: 'text-blue-700', label: 'In Progress' },
@@ -293,7 +295,7 @@ const TaskRow: React.FC<{
         )}
         
         {/* Mark as Done button */}
-        {task.status !== 'completed' && 
+        {task.status !== 'done' && 
          assignee && 
          currentUserEmail && 
          assignee.user_email === currentUserEmail && (
@@ -362,6 +364,57 @@ const ProjectDetails: React.FC = () => {
     setCurrentUserEmail(email);
   }, []);
 
+  // Fetch backlog function similar to monitor_created.tsx
+  const fetchBacklog = async () => {
+    try {
+      console.log('🔍 Fetching backlog for projectId:', projectId);
+      const response = await fetch(`${AI_API_BASE_URL}/projects/${projectId}/backlog/`, {
+        headers: apiHeaders(),
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        console.error('❌ Backlog fetch failed:', response.status);
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('✅ Backlog data fetched:', data);
+      
+      // Transform the backlog data to match the expected structure
+      const transformedBacklog = (data.epics || []).map((epic: any) => ({
+        id: epic.id,
+        title: epic.title,
+        description: epic.description,
+        ai: epic.ai,
+        sub_epics: (epic.sub_epics || []).map((subEpic: any) => ({
+          id: subEpic.id,
+          title: subEpic.title,
+          ai: subEpic.ai,
+          user_stories: (subEpic.user_stories || []).map((story: any) => ({
+            id: story.id,
+            title: story.title,
+            ai: story.ai,
+            tasks: (story.tasks || []).map((task: any) => ({
+              id: task.id,
+              title: task.title,
+              status: task.status,
+              ai: task.ai,
+              assignee: task.assignee,
+              assignee_details: task.assignee_details,
+              commit_title: task.commit_title,
+              commit_branch: task.commit_branch
+            }))
+          }))
+        }))
+      }));
+
+      setProjectDetails(prev => prev ? {...prev, backlog: transformedBacklog} : null);
+    } catch (error) {
+      console.error('Error fetching backlog:', error);
+    }
+  };
+
   // Task completion functions
   const openTaskCompletionModal = (taskId: number) => {
     setCompletingTaskId(taskId);
@@ -372,7 +425,7 @@ const ProjectDetails: React.FC = () => {
 
   const completeTask = async (taskId: number, commitTitle: string, commitBranch?: string) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/ai/story-tasks/${taskId}/`, {
+      const response = await fetch(`${AI_API_BASE_URL}/story-tasks/${taskId}/`, {
         method: 'PATCH',
         headers: apiHeaders(),
         body: JSON.stringify({ 
@@ -384,22 +437,7 @@ const ProjectDetails: React.FC = () => {
 
       if (response.ok) {
         showSuccess('Task Completed', 'Task marked as done successfully');
-        // Refresh project details to show updated status
-        const projectResponse = await fetch(`${API_BASE_URL}/ai/projects/${projectId}/`, {
-          headers: apiHeaders()
-        });
-        if (projectResponse.ok) {
-          const project = await projectResponse.json();
-          // Re-fetch backlog to get updated task status
-          const backlogResponse = await fetch(
-            `${API_BASE_URL}/ai/projects/${projectId}/backlog/`,
-            { headers: apiHeaders() }
-          );
-          if (backlogResponse.ok) {
-            const backlogData = await backlogResponse.json();
-            setProjectDetails(prev => prev ? {...prev, backlog: backlogData.epics || []} : null);
-          }
-        }
+        await fetchBacklog(); // Refresh backlog to show updated status
         setShowTaskCompletionModal(false);
         setCompletingTaskId(null);
         setEditingCommitTitle('');
@@ -469,7 +507,7 @@ const ProjectDetails: React.FC = () => {
         setLoading(true);
         
         // Fetch project basic info
-        const projectResponse = await fetch(`${API_BASE_URL}/ai/projects/${projectId}/`, {
+        const projectResponse = await fetch(`${AI_API_BASE_URL}/projects/${projectId}/`, {
           headers: apiHeaders()
         });
         
@@ -484,7 +522,7 @@ const ProjectDetails: React.FC = () => {
         let proposal = null;
         try {
           const proposalResponse = await fetch(
-            `${API_BASE_URL}/ai/projects/${projectId}/current-proposal/`,
+            `${AI_API_BASE_URL}/projects/${projectId}/current-proposal/`,
             { headers: apiHeaders() }
           );
           if (proposalResponse.ok) {
@@ -494,16 +532,43 @@ const ProjectDetails: React.FC = () => {
           console.log('No proposal found');
         }
 
-        // Fetch backlog
+        // Fetch backlog using the same function as task completion
         let backlog: Epic[] = [];
         try {
           const backlogResponse = await fetch(
-            `${API_BASE_URL}/ai/projects/${projectId}/backlog/`,
+            `${AI_API_BASE_URL}/projects/${projectId}/backlog/`,
             { headers: apiHeaders() }
           );
           if (backlogResponse.ok) {
             const backlogData = await backlogResponse.json();
-            backlog = backlogData.epics || [];
+            
+            // Transform the backlog data to match the expected structure
+            backlog = (backlogData.epics || []).map((epic: any) => ({
+              id: epic.id,
+              title: epic.title,
+              description: epic.description,
+              ai: epic.ai,
+              sub_epics: (epic.sub_epics || []).map((subEpic: any) => ({
+                id: subEpic.id,
+                title: subEpic.title,
+                ai: subEpic.ai,
+                user_stories: (subEpic.user_stories || []).map((story: any) => ({
+                  id: story.id,
+                  title: story.title,
+                  ai: story.ai,
+                  tasks: (story.tasks || []).map((task: any) => ({
+                    id: task.id,
+                    title: task.title,
+                    status: task.status,
+                    ai: task.ai,
+                    assignee: task.assignee,
+                    assignee_details: task.assignee_details,
+                    commit_title: task.commit_title,
+                    commit_branch: task.commit_branch
+                  }))
+                }))
+              }))
+            }));
           }
         } catch (e) {
           console.log('No backlog found');
@@ -511,35 +576,35 @@ const ProjectDetails: React.FC = () => {
 
         // Fetch project members
         const membersResponse = await fetch(
-          `${API_BASE_URL}/ai/project-members/?project_id=${projectId}`,
+          `${AI_API_BASE_URL}/project-members/?project_id=${projectId}`,
           { headers: apiHeaders() }
         );
         const members = membersResponse.ok ? await membersResponse.json() : [];
 
         // Fetch repositories
         const reposResponse = await fetch(
-          `${API_BASE_URL}/ai/repositories/?project_id=${projectId}`,
+          `${AI_API_BASE_URL}/repositories/?project_id=${projectId}`,
           { headers: apiHeaders() }
         );
         const repositories = reposResponse.ok ? await reposResponse.json() : [];
 
         // Fetch features
         const featuresResponse = await fetch(
-          `${API_BASE_URL}/ai/project-features/?project_id=${projectId}`,
+          `${AI_API_BASE_URL}/project-features/?project_id=${projectId}`,
           { headers: apiHeaders() }
         );
         const features = featuresResponse.ok ? await featuresResponse.json() : [];
 
         // Fetch goals
         const goalsResponse = await fetch(
-          `${API_BASE_URL}/ai/project-goals/?project_id=${projectId}`,
+          `${AI_API_BASE_URL}/project-goals/?project_id=${projectId}`,
           { headers: apiHeaders() }
         );
         const goals = goalsResponse.ok ? await goalsResponse.json() : [];
 
         // Fetch timeline
         const timelineResponse = await fetch(
-          `${API_BASE_URL}/ai/timeline-weeks/?project_id=${projectId}`,
+          `${AI_API_BASE_URL}/timeline-weeks/?project_id=${projectId}`,
           { headers: apiHeaders() }
         );
         const timeline = timelineResponse.ok ? await timelineResponse.json() : [];
@@ -575,7 +640,7 @@ const ProjectDetails: React.FC = () => {
   const completedTasks = projectDetails?.backlog.reduce((acc, epic) => 
     acc + epic.sub_epics.reduce((acc2, subEpic) => 
       acc2 + subEpic.user_stories.reduce((acc3, story) => 
-        acc3 + story.tasks.filter(t => t.status === 'completed').length, 0), 0), 0) || 0;
+        acc3 + story.tasks.filter(t => t.status === 'done').length, 0), 0), 0) || 0;
 
   if (loading) {
     return (
@@ -1056,7 +1121,7 @@ const ProjectDetails: React.FC = () => {
                         )
                       );
 
-                      const completedCount = memberTasks.filter(t => t.status === 'completed').length;
+                      const completedCount = memberTasks.filter(t => t.status === 'done').length;
                       const totalCount = memberTasks.length;
                       const percentage = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
 
