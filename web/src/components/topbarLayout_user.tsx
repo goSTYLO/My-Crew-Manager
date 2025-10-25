@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 import logo from "../assets/logo2.png";
 import { useTheme } from "./themeContext";
 import { API_BASE_URL } from "../config/api";
-import { useRealtimeUpdates } from "../hooks/useRealtimeUpdates";
+import { useNotificationPolling } from "../hooks/useNotificationPolling";
 import { useToast } from "./ToastContext";
 
 interface TopNavbarProps {
@@ -117,21 +117,22 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
     }
   };
 
-  // Real-time notification updates
-  useRealtimeUpdates({
-    callbacks: {
-      onNotification: (notification) => {
-        // Add new notification to the list
-        setNotifications(prev => [notification, ...prev]);
-        
-        // Show toast for important notifications
-        const importantTypes = [
-          'task_assigned', 
-          'task_completed',
-          'project_invitation', 
-          'member_joined'
-        ];
-        
+  // Smart polling for notifications
+  useNotificationPolling({
+    enabled: true,
+    onNewNotifications: (newNotifications) => {
+      // Add new notifications to the list
+      setNotifications(prev => [...newNotifications, ...prev]);
+      
+      // Show toast for important notifications
+      const importantTypes = [
+        'task_assigned', 
+        'task_completed',
+        'project_invitation', 
+        'member_joined'
+      ];
+      
+      newNotifications.forEach(notification => {
         if (importantTypes.includes(notification.notification_type)) {
           showRealtimeUpdate(
             notification.title,
@@ -139,7 +140,10 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
             notification.actor
           );
         }
-      }
+      });
+    },
+    onError: (error) => {
+      console.error('Notification polling error:', error);
     }
   });
 

@@ -1316,8 +1316,21 @@ class NotificationViewSet(ModelViewSet):
     permission_classes = [IsAuthenticated]
     
     def get_queryset(self):
-        # Only return unread notifications by default
-        return Notification.objects.filter(recipient=self.request.user, is_read=False)
+        # Get all notifications for the user (not just unread)
+        queryset = Notification.objects.filter(recipient=self.request.user)
+        
+        # Support timestamp filtering for polling
+        since_timestamp = self.request.query_params.get('since')
+        if since_timestamp:
+            try:
+                from datetime import datetime
+                since_date = datetime.fromisoformat(since_timestamp.replace('Z', '+00:00'))
+                queryset = queryset.filter(created_at__gt=since_date)
+            except ValueError:
+                # Invalid timestamp format, ignore the filter
+                pass
+        
+        return queryset.order_by('-created_at')
     
     @action(detail=False, methods=['get'])
     def unread_count(self, request):

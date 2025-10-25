@@ -4,6 +4,7 @@ import { Send, Search, MoreVertical, Paperclip, Smile, Phone, Video, MessageSqua
 import Sidebar from "../../components/sidebarLayout";
 import TopNavbar from "../../components/topbarLayouot";
 import { useTheme } from "../../components/themeContext";
+import { useChatPolling } from "../../hooks/useChatPolling";
 
 // API Configuration
 const API_BASE_URL = import.meta.env.REACT_APP_API_URL || 'http://localhost:8000/api/chat';
@@ -29,8 +30,9 @@ interface Message {
   text: string;
   time: string;
   sender_id?: number;
+  sender_username?: string;
   message_id?: number;
-  reply_to_id?: number;
+  reply_to_id?: number | null;
 }
 
 interface Room {
@@ -56,9 +58,11 @@ interface ApiMessage {
 }
 
 interface UserData {
-  id: number;
+  user_id: number;
   name: string;
   email: string;
+  role: string;
+  profile_picture: string | null;
 }
 
 const ChatApp = () => {
@@ -107,6 +111,77 @@ const ChatApp = () => {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
+  // Chat polling for real-time updates
+  const chatPolling = useChatPolling({
+    roomId: selectedChat?.toString(),
+    enabled: !!currentUserId && !!selectedChat, // Only enable polling after currentUserId and selectedChat are set
+    onNewMessages: (newMessages) => {
+      if (selectedChat && newMessages.length > 0) {
+        console.log(`💬 [chat] Received ${newMessages.length} new messages via polling`);
+        console.log(`💬 [chat] Current user ID: ${currentUserId}`);
+        console.log(`💬 [chat] Selected chat: ${selectedChat}`);
+        
+        const convertedMessages: Message[] = newMessages.map((msg: ApiMessage) => {
+          const isMyMessage = msg.sender_id === currentUserId;
+          console.log(`💬 [chat] Message ${msg.message_id}: sender_id=${msg.sender_id} (${typeof msg.sender_id}), currentUserId=${currentUserId} (${typeof currentUserId}), isMyMessage=${isMyMessage}`);
+          
+          return {
+            id: msg.message_id,
+            sender: isMyMessage ? 'me' as const : 'them' as const,
+            text: msg.content,
+            time: new Date(msg.created_at).toLocaleTimeString(),
+            sender_id: msg.sender_id,
+            sender_username: msg.sender_username,
+            message_id: msg.message_id,
+            reply_to_id: msg.reply_to_id
+          };
+        });
+        
+        // Check for duplicates before adding
+        setMessages(prev => {
+          const existingMessages = prev[selectedChat] || [];
+          const existingIds = new Set(existingMessages.map(m => m.message_id));
+          const newUniqueMessages = convertedMessages.filter(m => !existingIds.has(m.message_id));
+          
+          if (newUniqueMessages.length > 0) {
+            console.log(`💬 [chat] Adding ${newUniqueMessages.length} new unique messages`);
+            return {
+              ...prev,
+              [selectedChat]: [...existingMessages, ...newUniqueMessages]
+            };
+          }
+          return prev;
+        });
+        
+        // Scroll to bottom
+        setTimeout(() => {
+          messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        }, 100);
+      }
+    },
+    onRoomUpdate: (rooms) => {
+      console.log(`💬 Received ${rooms.length} rooms via polling`);
+      
+      const updatedContacts = rooms.map((room: any) => ({
+        id: room.room_id,
+        name: room.name || 'Unnamed Room',
+        role: room.is_private ? 'Private' : 'Group',
+        avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(room.name || 'Room')}&background=random`,
+        online: true,
+        lastMessage: 'No messages yet',
+        time: '',
+        unread: 0,
+        isGroup: !room.is_private,
+        members: []
+      }));
+      
+      setContacts(updatedContacts);
+    },
+    onError: (error) => {
+      console.error('💬 Chat polling error:', error);
+    }
+  });
+
   // Get auth token from sessionStorage
   const getAuthToken = () => {
     // Try different possible token storage keys
@@ -122,7 +197,13 @@ const ChatApp = () => {
   const getCurrentUser = async () => {
     try {
       const token = getAuthToken();
-      const response = await fetch('http://localhost:8000/api/user/me/', {
+      
+      if (!token) {
+        console.error('❌ No auth token found');
+        return null;
+      }
+      
+      const response = await fetch('/api/user/me/', {
         headers: {
           'Authorization': `Token ${token}`,
         },
@@ -130,12 +211,15 @@ const ChatApp = () => {
       
       if (response.ok) {
         const userData: UserData = await response.json();
-        setCurrentUserId(userData.id);
-        console.log('✅ Current user loaded:', userData);
+        setCurrentUserId(userData.user_id);
+        console.log('✅ Current user loaded:', userData.name, `(ID: ${userData.user_id})`);
         return userData;
+      } else {
+        const errorText = await response.text();
+        console.error('❌ Failed to fetch current user:', response.status, errorText);
       }
     } catch (err) {
-      console.error('Failed to fetch current user:', err);
+      console.error('❌ Failed to fetch current user:', err);
     }
     return null;
   };
@@ -175,13 +259,9 @@ const ChatApp = () => {
     const init = async () => {
       const user = await getCurrentUser();
       if (user) {
+        console.log('✅ Current user loaded, starting chat initialization...');
         await fetchRooms();
-        
-        // Temporarily disable WebSocket for testing
-        // Uncomment when Django Channels + Redis is configured
-        // connectNotificationWebSocket();
-        
-        console.log('⚠️ WebSocket notifications disabled. Enable after configuring Django Channels + Redis');
+        console.log('💬 Chat initialized with polling (WebSocket disabled)');
       } else {
         setError('Please login to use chat');
       }
@@ -226,6 +306,12 @@ const ChatApp = () => {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, selectedChat]);
+
+  // Debug polling state
+  useEffect(() => {
+    console.log(`💬 [chat] Polling state changed: enabled=${!!currentUserId && !!selectedChat}, currentUserId=${currentUserId}, selectedChat=${selectedChat}`);
+    console.log(`💬 [chat] Chat polling status: isPolling=${chatPolling.isPolling}, lastUpdate=${chatPolling.lastUpdate}`);
+  }, [currentUserId, selectedChat, chatPolling.isPolling, chatPolling.lastUpdate]);
 
   // Fetch rooms from API
   const fetchRooms = async () => {
@@ -281,7 +367,19 @@ const ChatApp = () => {
     try {
       console.log('📥 Fetching messages for room:', roomId);
       console.log('👤 Current user ID:', currentUserId);
-      const msgs: ApiMessage[] = await apiCall(`/rooms/${roomId}/messages/`);
+      console.log('👤 Current user ID type:', typeof currentUserId);
+      const response = await apiCall(`/rooms/${roomId}/messages/`);
+      
+      // Handle different response structures
+      const msgs: ApiMessage[] = response.results || response.messages || response || [];
+      console.log('📥 API Response structure:', response);
+      console.log('📥 Extracted messages:', msgs);
+
+      if (!Array.isArray(msgs)) {
+        console.error('❌ Messages is not an array:', msgs);
+        setError('Invalid response format from server');
+        return;
+      }
 
       const existingMessages = messages[roomId];
       
@@ -291,6 +389,8 @@ const ChatApp = () => {
         
         // If message exists, preserve its sender status (me/them)
         const isMyMessage = msg.sender_id === currentUserId; 
+        console.log(`🔍 Message ${msg.message_id}: sender_id=${msg.sender_id} (${typeof msg.sender_id}), currentUserId=${currentUserId} (${typeof currentUserId}), isMyMessage=${isMyMessage}`);
+        
         // This prevents messages from switching sides when leaving and returning
         let sender: 'me' | 'them';
         if (existingMsg) {
@@ -308,6 +408,7 @@ const ChatApp = () => {
           text: msg.content,
           time: new Date(msg.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
           sender_id: msg.sender_id,
+          sender_username: msg.sender_username,
           message_id: msg.message_id,
           reply_to_id: msg.reply_to_id || undefined
         };
@@ -498,6 +599,22 @@ const ChatApp = () => {
     }
   };
 
+  // Refresh messages for current chat (similar to fetchBacklog in monitor_created.tsx)
+  const refreshMessages = async () => {
+    if (selectedChat) {
+      console.log('🔄 Refreshing messages for room:', selectedChat);
+      console.log('🔄 Current user ID before refresh:', currentUserId);
+      
+      // Force a fresh fetch of messages
+      await fetchMessages(selectedChat);
+      
+      // Force a re-render by updating a dummy state
+      setMessages(prev => ({ ...prev }));
+      
+      console.log('✅ Messages refreshed and UI updated');
+    }
+  };
+
   // Send message via API
   const handleSendMessage = async () => {
     if (message.trim() && selectedChat) {
@@ -513,20 +630,12 @@ const ChatApp = () => {
           })
         });
         
-        // Immediately display the message on the right side
-        const newMessage: Message = {
-          id: response.message_id || Date.now(),
-          sender: 'me',
-          text: messageText,
-          time: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
-          sender_id: currentUserId || undefined,
-          message_id: response.message_id
-        };
+        console.log('✅ Message sent successfully:', response);
         
-        setMessages(prev => ({
-          ...prev,
-          [selectedChat]: [...(prev[selectedChat] || []), newMessage]
-        }));
+        // Refresh messages immediately after sending (like assignTask in monitor_created.tsx)
+        console.log('🔄 Refreshing messages after sending...');
+        await refreshMessages();
+        console.log('✅ Messages refreshed after send');
         
         // Update last message in contacts
         setContacts(prev => prev.map(contact => 
@@ -549,14 +658,13 @@ const ChatApp = () => {
     setShowContactList(false);
     setShowGroupMenu(false); // Close menu when switching chats
     
-    // Close existing WebSocket
-    if (wsRef.current) {
-      wsRef.current.close();
+    // Load initial messages if not already loaded
+    if (!messages[id] || messages[id].length === 0) {
+      console.log(`💬 Loading initial messages for room ${id}`);
+      fetchMessages(id);
+    } else {
+      console.log(`💬 Messages already loaded for room ${id}`);
     }
-    
-    // Fetch messages and connect WebSocket
-    fetchMessages(id);
-    connectRoomWebSocket(id);
     
     // Reset unread count
     setContacts(prev => prev.map(contact => 
@@ -1410,8 +1518,26 @@ const ChatApp = () => {
                   <div className={`flex-1 overflow-y-auto p-3 md:p-4 ${
                     theme === "dark" ? "bg-gray-900" : "bg-gray-50"
                   }`}>
+                    {/* Load More Button */}
+                    {chatPolling.hasMoreMessages && (
+                      <div className="flex justify-center mb-4">
+                        <button
+                          onClick={chatPolling.loadMoreMessages}
+                          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                            theme === "dark"
+                              ? "bg-gray-700 text-gray-300 hover:bg-gray-600"
+                              : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                          }`}
+                        >
+                          Load More Messages
+                        </button>
+                      </div>
+                    )}
+                    
+                    
                     <div className="space-y-3 md:space-y-4">
-                      {getCurrentMessages().map(msg => (
+                      {getCurrentMessages().map(msg => {
+                        return (
                         <div
                           key={msg.id}
                           className={`flex ${msg.sender === 'me' ? 'justify-end' : 'justify-start'} group`}
@@ -1425,7 +1551,7 @@ const ChatApp = () => {
                                   ? theme === "dark" ? "text-blue-400" : "text-blue-600"
                                   : theme === "dark" ? "text-gray-400" : "text-gray-600"
                               }`}>
-                                {msg.sender === 'me' ? 'You' : 'Member'}
+                                {msg.sender === 'me' ? 'You' : (msg.sender_username || 'Member')}
                               </span>
                               
                               <div
@@ -1458,7 +1584,7 @@ const ChatApp = () => {
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    setShowMessageMenu(showMessageMenu === msg.message_id ? null : msg.message_id);
+                                    setShowMessageMenu(showMessageMenu === msg.message_id ? null : (msg.message_id || null));
                                   }}
                                   className={`p-1.5 rounded-lg ${
                                     theme === "dark" ? "hover:bg-gray-700 text-gray-400" : "hover:bg-gray-200 text-gray-500"
@@ -1493,7 +1619,8 @@ const ChatApp = () => {
                             )}
                           </div>
                         </div>
-                      ))}
+                        );
+                      })}
                       <div ref={messagesEndRef} />
                     </div>
                   </div>

@@ -200,7 +200,74 @@ class MessageViewSet(mixins.ListModelMixin,
 
     def get_queryset(self):
         room_id = self.kwargs.get('room_pk')
-        return Message.objects.filter(room_id=room_id, is_deleted=False).select_related('sender').order_by('created_at')
+        queryset = Message.objects.filter(room_id=room_id, is_deleted=False).select_related('sender')
+        
+        # Support pagination with offset and limit
+        limit = self.request.query_params.get('limit', 50)
+        offset = self.request.query_params.get('offset', 0)
+        after_id = self.request.query_params.get('after_id')
+        
+        try:
+            limit = int(limit)
+            offset = int(offset)
+        except ValueError:
+            limit = 50
+            offset = 0
+        
+        # If after_id is provided, get messages after that ID (for polling)
+        if after_id:
+            try:
+                after_id = int(after_id)
+                queryset = queryset.filter(message_id__gt=after_id)
+            except ValueError:
+                pass
+        
+        # Order by created_at ascending for pagination, then by message_id for consistency
+        queryset = queryset.order_by('created_at', 'message_id')
+        
+        # Apply offset and limit
+        if offset > 0:
+            queryset = queryset[offset:offset + limit]
+        else:
+            queryset = queryset[:limit]
+        
+        return queryset
+
+    def list(self, request, *args, **kwargs):
+        """Custom list method to include pagination metadata"""
+        import logging
+        from datetime import datetime
+        
+        room_id = self.kwargs.get('room_pk')
+        after_id = self.request.query_params.get('after_id')
+        limit = int(self.request.query_params.get('limit', 50))
+        offset = int(self.request.query_params.get('offset', 0))
+        
+        # Log the request
+        timestamp = datetime.now().strftime('%H:%M:%S')
+        logger = logging.getLogger(__name__)
+        logger.info(f"📡 [{timestamp}] 💬 BACKEND: Messages request - room={room_id}, after_id={after_id}, limit={limit}, offset={offset}")
+        
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True)
+        
+        # Get total count for pagination metadata
+        total_count = Message.objects.filter(room_id=room_id, is_deleted=False).count()
+        
+        # Check if there are more messages
+        has_more = (offset + len(queryset)) < total_count
+        
+        # Log the response
+        logger.info(f"📡 [{timestamp}] 💬 BACKEND: Messages response - room={room_id}, found={len(queryset)} messages, total={total_count}")
+        
+        return Response({
+            'results': serializer.data,
+            'messages': serializer.data,  # For backward compatibility
+            'total_count': total_count,
+            'has_more': has_more,
+            'limit': limit,
+            'offset': offset
+        })
 
     def create(self, request, *args, **kwargs):
         room_id = self.kwargs.get('room_pk')
