@@ -27,6 +27,7 @@ from .serializers import (
 # Real LLM pipelines
 from LLMs.project_llm import run_pipeline_from_text, model_to_dict
 from LLMs.backlog_llm import run_backlog_pipeline
+from LLMs.llm_cache import clear_cache_and_free_memory, get_memory_usage, start_auto_cleanup
 from ai_api.tasks import task_manager, TaskCancelledException
 from .services.broadcast_service import BroadcastService
 
@@ -369,6 +370,51 @@ class ProjectViewSet(ModelViewSet):
         project = serializer.save()
         # Broadcast project update
         BroadcastService.broadcast_project_update(project, 'updated', self.request.user)
+
+    @action(detail=False, methods=["post"], url_path="clear-llm-cache")
+    def clear_llm_cache(self, request):
+        """
+        Clear LLM cache and free GPU memory.
+        Useful for freeing VRAM when not using LLM features.
+        """
+        try:
+            memory_before = get_memory_usage()
+            clear_cache_and_free_memory()
+            memory_after = get_memory_usage()
+            
+            return Response({
+                "message": "LLM cache cleared successfully",
+                "memory_before": memory_before,
+                "memory_after": memory_after,
+                "memory_freed_mb": memory_before['allocated_mb'] - memory_after['allocated_mb']
+            })
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=False, methods=["get"], url_path="memory-usage")
+    def memory_usage(self, request):
+        """
+        Get current GPU memory usage.
+        """
+        try:
+            memory_info = get_memory_usage()
+            return Response(memory_info)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=False, methods=["post"], url_path="start-auto-cleanup")
+    def start_auto_cleanup(self, request):
+        """
+        Start the auto-cleanup background thread.
+        """
+        try:
+            start_auto_cleanup()
+            return Response({
+                "message": "Auto-cleanup started successfully",
+                "cleanup_interval_seconds": 1800  # 30 minutes
+            })
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class ProposalViewSet(ModelViewSet):
@@ -880,7 +926,7 @@ class StoryTaskViewSet(ModelViewSet):
                 )
         
         # Other updates (if any field changed)
-        elif old_instance.title != task.title or old_instance.description != task.description or old_instance.status != task.status:
+        elif old_instance.title != task.title or old_instance.status != task.status:
             for recipient in recipients:
                 NotificationService.create_notification(
                     recipient=recipient,
