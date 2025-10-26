@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Fix Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 4px; font-weight: bold; }
+        .connected { background-color: #d4edda; color: #155724; }
+        .disconnected { background-color: #f8d7da; color: #721c24; }
+        .connecting { background-color: #fff3cd; color: #856404; }
+        .log { background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; padding: 10px; height: 300px; overflow-y: auto; font-family: monospace; font-size: 12px; }
+        .log-entry { margin: 2px 0; padding: 2px 0; }
+        .log-info { color: #0066cc; }
+        .log-success { color: #28a745; }
+        .log-error { color: #dc3545; }
+        .log-warning { color: #ffc107; }
+        button { background-color: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; margin: 5px; }
+        button:hover { background-color: #0056b3; }
+        button:disabled { background-color: #6c757d; cursor: not-allowed; }
+        input[type="text"] { padding: 8px; border: 1px solid #ced4da; border-radius: 4px; margin: 5px; width: 300px; }
+    </style>
+</head>
+<body>
+    <h1>🔧 WebSocket Fix Test</h1>
+    <p>This page tests the updated WebSocket authentication system.</p>
+    
+    <div id="status" class="status disconnected">Status: Disconnected</div>
+    
+    <div>
+        <h3>Step 1: Get Token from React App</h3>
+        <p>1. Go to <a href="http://localhost:5173" target="_blank">http://localhost:5173</a></p>
+        <p>2. Login to your account</p>
+        <p>3. Open Developer Tools (F12) → Application → Local Storage</p>
+        <p>4. Copy the token from 'access' or 'token' key</p>
+        <p>5. Paste it below:</p>
+        <input type="text" id="tokenInput" placeholder="Paste your JWT token here">
+        <button onclick="getTokenFromStorage()">Get from Storage</button>
+    </div>
+    
+    <div>
+        <h3>Step 2: Test WebSocket Connection</h3>
+        <button id="connectBtn" onclick="connectWebSocket()">Connect</button>
+        <button id="disconnectBtn" onclick="disconnectWebSocket()" disabled>Disconnect</button>
+        <button onclick="clearLog()">Clear Log</button>
+    </div>
+    
+    <div>
+        <h3>Step 3: Test Real-time Updates</h3>
+        <p>After connecting successfully, go back to the React app and make some changes (create project, add tasks, etc.) to see real-time messages here.</p>
+    </div>
+    
+    <h3>Connection Log</h3>
+    <div id="log" class="log"></div>
+
+    <script>
+        let ws = null;
+
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            entry.textContent = `[${timestamp}] ${message}`;
+            logDiv.appendChild(entry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function updateStatus(status, message) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.className = `status ${status}`;
+            statusDiv.textContent = `Status: ${message}`;
+        }
+
+        function getTokenFromStorage() {
+            // This won't work from this page, but shows the instruction
+            log('Please copy the token from the React app manually', 'warning');
+        }
+
+        function connectWebSocket() {
+            const token = document.getElementById('tokenInput').value;
+            if (!token) {
+                log('Please enter a token first', 'error');
+                return;
+            }
+
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                log('WebSocket already connected', 'warning');
+                return;
+            }
+
+            updateStatus('connecting', 'Connecting...');
+            log('Attempting to connect to WebSocket...', 'info');
+            
+            try {
+                ws = new WebSocket('ws://localhost:8000/ws/notifications/');
+                
+                ws.onopen = function(event) {
+                    log('WebSocket connected! Sending authentication...', 'success');
+                    updateStatus('connecting', 'Authenticating...');
+                    
+                    // Send authentication message
+                    const authMessage = {
+                        type: 'auth',
+                        token: token
+                    };
+                    ws.send(JSON.stringify(authMessage));
+                    log('Authentication message sent', 'info');
+                };
+                
+                ws.onmessage = function(event) {
+                    log(`Received: ${event.data}`, 'success');
+                    try {
+                        const data = JSON.parse(event.data);
+                        
+                        if (data.type === 'auth_success') {
+                            log('✅ Authentication successful!', 'success');
+                            updateStatus('connected', 'Connected & Authenticated');
+                            document.getElementById('connectBtn').disabled = true;
+                            document.getElementById('disconnectBtn').disabled = false;
+                        } else if (data.type === 'error') {
+                            log(`❌ Error: ${data.message}`, 'error');
+                            updateStatus('disconnected', 'Authentication Failed');
+                        } else if (data.type === 'notification') {
+                            log(`📧 Notification: ${JSON.stringify(data.notification, null, 2)}`, 'info');
+                        } else if (data.type === 'project_update') {
+                            log(`🔄 Project Update: ${JSON.stringify(data.payload, null, 2)}`, 'info');
+                        } else if (data.type === 'task_update') {
+                            log(`📋 Task Update: ${JSON.stringify(data.payload, null, 2)}`, 'info');
+                        } else {
+                            log(`📨 Message: ${JSON.stringify(data, null, 2)}`, 'info');
+                        }
+                    } catch (e) {
+                        log(`Failed to parse JSON: ${e.message}`, 'error');
+                    }
+                };
+                
+                ws.onclose = function(event) {
+                    log(`WebSocket closed. Code: ${event.code}, Reason: ${event.reason}`, 'warning');
+                    updateStatus('disconnected', 'Disconnected');
+                    document.getElementById('connectBtn').disabled = false;
+                    document.getElementById('disconnectBtn').disabled = true;
+                };
+                
+                ws.onerror = function(error) {
+                    log(`WebSocket error: ${error}`, 'error');
+                    updateStatus('disconnected', 'Error');
+                };
+                
+            } catch (error) {
+                log(`Failed to create WebSocket: ${error.message}`, 'error');
+                updateStatus('disconnected', 'Connection Failed');
+            }
+        }
+
+        function disconnectWebSocket() {
+            if (ws) {
+                ws.close();
+                ws = null;
+                log('WebSocket disconnected manually', 'info');
+            }
+        }
+
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+        }
+
+        // Auto-focus token input
+        window.onload = function() {
+            document.getElementById('tokenInput').focus();
+            log('WebSocket fix test page loaded', 'info');
+            log('Please get your token from the React app and paste it above', 'info');
+        };
+    </script>
+</body>
+</html>

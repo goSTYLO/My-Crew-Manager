@@ -1,0 +1,177 @@
+import 'package:dio/dio.dart';
+import 'package:get_it/get_it.dart';
+import 'package:internet_connection_checker_plus/internet_connection_checker_plus.dart';
+import 'package:logger/logger.dart';
+import 'package:mycrewmanager/core/network/api_client.dart';
+import 'package:mycrewmanager/core/network/connection_checker.dart';
+import 'package:mycrewmanager/core/tokenhandlers/token_storage.dart';
+import 'package:mycrewmanager/features/authentication/data/data_sources/auth_remote.dart';
+import 'package:mycrewmanager/features/authentication/data/repositories/auth_repository_impl.dart';
+import 'package:mycrewmanager/features/authentication/domain/repository/auth_repository.dart';
+import 'package:mycrewmanager/features/authentication/domain/usecases/user_login.dart';
+import 'package:mycrewmanager/features/authentication/domain/usecases/user_signup.dart';
+import 'package:mycrewmanager/features/authentication/domain/usecases/user_logout.dart';
+import 'package:mycrewmanager/features/authentication/presentation/bloc/auth_bloc.dart';
+import 'package:mycrewmanager/features/project/data/data_sources/project_remote.dart';
+import 'package:mycrewmanager/features/project/data/repositories/project_repository_impl.dart';
+import 'package:mycrewmanager/features/project/domain/repository/project_repository.dart';
+import 'package:mycrewmanager/features/project/domain/usecases/get_projects.dart';
+import 'package:mycrewmanager/features/project/domain/usecases/get_my_projects.dart';
+import 'package:mycrewmanager/features/project/domain/usecases/create_project.dart';
+import 'package:mycrewmanager/features/project/domain/usecases/get_project_backlog.dart';
+import 'package:mycrewmanager/features/project/domain/usecases/update_project.dart';
+import 'package:mycrewmanager/features/project/domain/usecases/delete_project.dart';
+import 'package:mycrewmanager/features/project/domain/usecases/get_project_members.dart';
+import 'package:mycrewmanager/features/project/domain/usecases/get_project_tasks.dart';
+import 'package:mycrewmanager/features/project/domain/usecases/get_user_assigned_tasks.dart';
+import 'package:mycrewmanager/features/project/domain/usecases/get_recent_completed_tasks.dart';
+import 'package:mycrewmanager/features/project/domain/usecases/update_task_status.dart';
+import 'package:mycrewmanager/features/project/domain/usecases/create_member.dart';
+import 'package:mycrewmanager/features/project/domain/usecases/delete_member.dart';
+import 'package:mycrewmanager/features/project/presentation/bloc/project_bloc.dart';
+import 'package:mycrewmanager/features/chat/data/data_sources/chat_remote.dart';
+import 'package:mycrewmanager/features/chat/data/repositories/chat_repository_impl.dart';
+import 'package:mycrewmanager/features/chat/data/services/chat_ws_service.dart';
+import 'package:mycrewmanager/features/notification/data/data_sources/notification_remote.dart';
+import 'package:mycrewmanager/features/notification/data/data_sources/notification_remote_impl.dart';
+import 'package:mycrewmanager/features/notification/data/repositories/notification_repository_impl.dart';
+import 'package:mycrewmanager/features/notification/data/services/notification_ws_service.dart';
+import 'package:mycrewmanager/features/notification/domain/repository/notification_repository.dart';
+import 'package:mycrewmanager/features/notification/presentation/bloc/notification_bloc.dart';
+import 'package:mycrewmanager/features/invitation/data/data_sources/invitation_remote_impl.dart';
+import 'package:mycrewmanager/features/invitation/data/data_sources/invitation_remote_interface.dart';
+import 'package:mycrewmanager/features/invitation/data/repositories/invitation_repository_impl.dart';
+import 'package:mycrewmanager/features/invitation/domain/repository/invitation_repository.dart';
+import 'package:mycrewmanager/features/invitation/presentation/bloc/invitation_bloc.dart';
+
+final serviceLocator = GetIt.I;
+final logger = Logger();
+
+Future<void> initDependencies() async {
+
+  _initAuth();
+  _initProject();
+  _initChat();
+  _initNotification();
+  _initInvitation();
+
+  final dio = Dio();
+  
+  serviceLocator
+    ..registerLazySingleton<TokenStorage>(() => TokenStorage())
+    ..registerLazySingleton(() => ApiClient(dio: dio, tokenStorage: serviceLocator<TokenStorage>()).dio)
+    ..registerFactory(() => InternetConnection())
+    ..registerFactory<ConnectionChecker>(
+      () => ConnectionCheckerImpl(serviceLocator()),
+    );
+}
+
+void _initAuth() {
+  serviceLocator
+      //Data source
+      ..registerFactory<AuthRemoteDataSource>(
+      () => AuthRemoteDataSource(serviceLocator<Dio>()),
+    )
+      //Use cases
+      ..registerFactory(() => UserLogin(serviceLocator()))
+      ..registerFactory(() => UserSignup(serviceLocator()))
+      ..registerFactory(() => UserLogout(serviceLocator()))
+
+      //Repository
+      ..registerFactory<AuthRepository>(
+        () => AuthRepositoryImpl(serviceLocator(), serviceLocator()),
+      )
+      // BLoC
+      ..registerLazySingleton(
+        () => AuthBloc(
+        userLogin: serviceLocator(),
+        userSignup: serviceLocator(),
+        userLogout: serviceLocator(),
+        tokenStorage: serviceLocator<TokenStorage>()
+      ),
+    );
+}
+
+void _initChat() {
+  serviceLocator
+      ..registerFactory<ChatRemoteDataSource>(() => ChatRemoteDataSource(serviceLocator<Dio>()))
+      ..registerLazySingleton<ChatRepositoryImpl>(() => ChatRepositoryImpl(serviceLocator<ChatRemoteDataSource>()))
+      ..registerLazySingleton<ChatWsService>(() => ChatWsService(serviceLocator<TokenStorage>()));
+}
+
+void _initProject() {
+  serviceLocator
+      //Data source
+      ..registerFactory<ProjectRemoteDataSource>(
+      () => ProjectRemoteDataSource(serviceLocator<Dio>()),
+    )
+          //Use cases
+          ..registerFactory(() => GetProjects(serviceLocator()))
+          ..registerFactory(() => GetMyProjects(serviceLocator()))
+          ..registerFactory(() => CreateProject(serviceLocator()))
+          ..registerFactory(() => GetProjectBacklog(serviceLocator()))
+          ..registerFactory(() => UpdateProject(serviceLocator()))
+          ..registerFactory(() => DeleteProject(serviceLocator()))
+          ..registerFactory(() => GetProjectMembers(serviceLocator()))
+          ..registerFactory(() => GetProjectTasks(serviceLocator()))
+          ..registerFactory(() => GetUserAssignedTasks(serviceLocator()))
+          ..registerFactory(() => GetRecentCompletedTasks(serviceLocator()))
+          ..registerFactory(() => UpdateTaskStatus(serviceLocator()))
+          ..registerFactory(() => CreateMember(serviceLocator()))
+          ..registerFactory(() => DeleteMember(serviceLocator()))
+
+      //Repository
+      ..registerFactory<ProjectRepository>(
+        () => ProjectRepositoryImpl(serviceLocator(), serviceLocator()),
+      )
+      // BLoC
+      ..registerLazySingleton(
+        () => ProjectBloc(
+        getProjects: serviceLocator(),
+        getMyProjects: serviceLocator(),
+        createProject: serviceLocator(),
+        getProjectBacklog: serviceLocator(),
+        updateProject: serviceLocator(),
+        deleteProject: serviceLocator(),
+      ),
+    );
+}
+
+void _initNotification() {
+  serviceLocator
+      //Data source
+      ..registerFactory<NotificationRemoteDataSource>(
+      () => NotificationRemoteDataSourceImpl(serviceLocator<Dio>()),
+    )
+      //Repository
+      ..registerFactory<NotificationRepository>(
+        () => NotificationRepositoryImpl(serviceLocator(), serviceLocator()),
+      )
+      //WebSocket Service
+      ..registerLazySingleton<NotificationWsService>(() => NotificationWsService())
+      // BLoC
+      ..registerLazySingleton(
+        () => NotificationBloc(
+        notificationRepository: serviceLocator(),
+        wsService: serviceLocator<NotificationWsService>(),
+      ),
+    );
+}
+
+void _initInvitation() {
+  serviceLocator
+      //Data source
+      ..registerFactory<InvitationRemoteDataSourceInterface>(
+      () => InvitationRemoteDataSourceImpl(serviceLocator<Dio>()),
+    )
+      //Repository
+      ..registerFactory<InvitationRepository>(
+        () => InvitationRepositoryImpl(serviceLocator(), serviceLocator()),
+      )
+      // BLoC
+      ..registerLazySingleton(
+        () => InvitationBloc(
+        invitationRepository: serviceLocator(),
+      ),
+    );
+}

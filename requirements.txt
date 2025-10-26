@@ -1,0 +1,45 @@
+## Core Django stack (combined)
+Django>=5.2.4
+djangorestframework>=3.14.0
+psycopg2-binary>=2.9.9
+django-cors-headers>=4.3.1
+python-decouple
+python-dotenv
+djangorestframework-simplejwt>=5.3.1
+channels
+channels-redis
+
+# HuggingFace + LangChain
+transformers
+huggingface_hub
+langchain
+langchain-huggingface
+langchain-community
+
+# PyTorch (CUDA 12.8 for RTX 4050 — install manually)
+# torch, torchvision, torchaudio should be installed via:
+# pip install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cu128
+
+# LLM Dependencies
+datasets
+peft
+trl
+accelerate
+sentencepiece
+bitsandbytes
+
+# Donut OCR
+donut-python
+pytorch-lightning==2.2.3
+timm==0.5.4
+pillow
+
+# PDF Parser
+pdfplumber
+
+# Optional (Not yet supported in Python 3.13)
+# onnxruntime
+
+# Tokenizer/protobuf deps for Transformers
+protobuf>=4.25.0
+google>=3.0.0

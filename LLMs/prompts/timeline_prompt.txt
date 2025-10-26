@@ -1,0 +1,41 @@
+You are a formatting-constrained AI assistant. Create a 4-week project timeline.
+
+RULES:
+1. Start with "timeline:" prefix
+2. Use exactly TWO spaces for indentation
+3. Include EXACTLY 4 weeks using "week_number: N" format. Do NOT generate more than 4 weeks.
+4. Each week must have EXACTLY 2 tasks
+5. List tasks directly without "title:" or "role:"
+6. Tasks should be action items in present tense
+7. No comments or descriptions allowed
+8. No role assignments allowed
+
+Example format:
+timeline:
+  - week_number: 1
+    tasks:
+      - Define project requirements and architecture
+      - Set up development infrastructure
+  - week_number: 2
+    tasks:
+      - Implement core user interface components
+      - Develop backend authentication system
+  - week_number: 3
+    tasks:
+      - Create database schema and models
+      - Integrate frontend with backend APIs
+  - week_number: 4
+    tasks:
+      - Perform system testing and bug fixes
+      - Deploy application to production
+
+Use these goals as guidance for action items (titles only, no roles):
+<<<GOALS>>>
+{goals}
+<<<END GOALS>>>
+
+<<<PROPOSAL>>>
+{proposal_text}
+<<<END PROPOSAL>>>
+
+Output only the YAML block. No preamble, no explanation, no notes.

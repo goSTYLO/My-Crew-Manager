@@ -34,7 +34,7 @@ const WorkLogsPage: React.FC = () => {
         <TopNavbar onMenuClick={() => setSidebarOpen(true)} />
 
         {/* Content */}
-        <main className="flex-1 flex gap-6 p-6">
+        <main className="flex-1 flex gap-6 p-6 mt-20">
           {/* Left side: Work logs */}
           <div className={`flex-1 rounded-xl shadow-lg p-6 ${theme === "dark" ? "bg-gray-800 text-white" : "bg-white"}`}>
             {workLogs.map((log, idx) => (

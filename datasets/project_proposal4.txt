@@ -1,0 +1,24 @@
+Project Title: Finder 4 — Lost & Found Tracker
+Objective:
+To create a simple web app that helps students report and recover lost items on campus. Users
+should be able to post found items, search for missing belongings, and contact each other
+securely.
+Scope:
+The platform will include item posting, search functionality, and basic messaging between users.
+It should be mobile-friendly and easy to use.
+Team Composition:
+We’re a group of three students working on this for our web development class. Roles include
+frontend, backend, and design. We’ll meet weekly to check progress and share updates.
+--Example Features:
+features:
+- Lost Item Submission Form
+- Searchable Item Listings
+- Secure Contact System
+- Mobile-Friendly Interface
+--Example Roles:
+roles:
+- Frontend Developer
+- Backend Developer
+- UI/UX Designer
+
+

@@ -1,51 +1,36 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:sizer/sizer.dart';
-
-import '../core/app_export.dart' as app_export;
-import '../widgets/custom_error_widget.dart';
-import '../theme/app_theme.dart'; // Import AppTheme definition
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:mycrewmanager/core/theme/app_theme.dart';
+import 'package:mycrewmanager/features/authentication/presentation/bloc/auth_bloc.dart';
+import 'package:mycrewmanager/features/project/presentation/bloc/project_bloc.dart';
+import 'package:mycrewmanager/features/notification/presentation/bloc/notification_bloc.dart';
+import 'package:mycrewmanager/features/invitation/presentation/bloc/invitation_bloc.dart';
+import 'package:mycrewmanager/features/authentication/presentation/pages/splash_screen.dart';
+import 'package:mycrewmanager/init_dependencies.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // 🚨 CRITICAL: Custom error handling - DO NOT REMOVE
-  ErrorWidget.builder = (FlutterErrorDetails details) {
-    return CustomErrorWidget(
-      errorDetails: details,
-    );
-  };
-  // 🚨 CRITICAL: Device orientation lock - DO NOT REMOVE
-  Future.wait([
-    SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp])
-  ]).then((value) {
-    runApp(MyApp());
-  });
+  await initDependencies();
+  runApp(MultiBlocProvider(
+      providers: [
+        BlocProvider(create: (_) => serviceLocator<AuthBloc>()),
+        BlocProvider(create: (_) => serviceLocator<ProjectBloc>()),
+        BlocProvider(create: (_) => serviceLocator<NotificationBloc>()),
+        BlocProvider(create: (_) => serviceLocator<InvitationBloc>()),
+      ],
+      child: MainApp()));
 }
 
-class MyApp extends StatelessWidget {
+class MainApp extends StatelessWidget {
+  const MainApp({super.key});
+
   @override
   Widget build(BuildContext context) {
-    return Sizer(builder: (context, orientation, screenType) {
-      return MaterialApp(
-        title: 'mycrewmanager',
-        theme: AppTheme.lightTheme,
-        darkTheme: AppTheme.darkTheme,
-        themeMode: ThemeMode.light,
-        // 🚨 CRITICAL: NEVER REMOVE OR MODIFY
-        builder: (context, child) {
-          return MediaQuery(
-            data: MediaQuery.of(context).copyWith(
-              textScaler: TextScaler.linear(1.0),
-            ),
-            child: child!,
-          );
-        },
-        // 🚨 END CRITICAL SECTION
-        debugShowCheckedModeBanner: false,
-        routes: app_export.AppRoutes.routes,
-        initialRoute: app_export.AppRoutes.initial, // This will now start at login
-      );
-    });
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      title: "MyCrewManager",
+      theme: AppTheme.lightThemeMode,
+      home: const SplashScreen(),
+    );
   }
 }

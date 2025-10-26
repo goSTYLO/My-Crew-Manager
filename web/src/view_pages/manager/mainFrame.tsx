@@ -1,3 +1,4 @@
+//mainFrame.tsx
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search, Bell, Menu, X, FolderOpen, Folder  } from "lucide-react";
@@ -59,7 +60,7 @@ const Dashboard = () => {
         <TopNavbar onMenuClick={() => setSidebarOpen(true)} />
 
         {/* Dashboard Content */}
-        <main className="flex-1 p-4 lg:p-6 overflow-auto space-y-6">
+        <main className="flex-1 p-4 lg:p-[100px] overflow-auto space-y-[40px]">
           <div className="flex items-center justify-between mb-6">
             <h2 className={`text-2xl font-semibold ${theme === "dark" ? "text-white" : "text-gray-800"}`}>Dashboard</h2>
           </div>

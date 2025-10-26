@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Real-time Testing</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .connected { background-color: #d4edda; color: #155724; }
+        .disconnected { background-color: #f8d7da; color: #721c24; }
+        .connecting { background-color: #fff3cd; color: #856404; }
+        .log {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+            height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .log-entry {
+            margin: 2px 0;
+            padding: 2px 0;
+        }
+        .log-info { color: #0066cc; }
+        .log-success { color: #28a745; }
+        .log-error { color: #dc3545; }
+        .log-warning { color: #ffc107; }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background-color: #0056b3; }
+        button:disabled { background-color: #6c757d; cursor: not-allowed; }
+        .controls {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #e9ecef;
+            border-radius: 4px;
+        }
+        input[type="text"] {
+            padding: 8px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            margin: 5px;
+            width: 200px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔌 WebSocket Real-time System Test</h1>
+        <p>This tool helps test the WebSocket connection and real-time functionality of the My Crew Manager application.</p>
+        
+        <div id="status" class="status disconnected">
+            Status: Disconnected
+        </div>
+        
+        <div class="controls">
+            <h3>Connection Controls</h3>
+            <button id="connectBtn" onclick="connectWebSocket()">Connect</button>
+            <button id="disconnectBtn" onclick="disconnectWebSocket()" disabled>Disconnect</button>
+            <button onclick="clearLog()">Clear Log</button>
+        </div>
+        
+        <div class="controls">
+            <h3>Test Authentication</h3>
+            <input type="text" id="tokenInput" placeholder="Enter JWT token from localStorage">
+            <button onclick="testAuth()">Test Auth</button>
+            <button onclick="getTokenFromStorage()">Get Token from Storage</button>
+        </div>
+        
+        <div class="controls">
+            <h3>Test API Endpoints</h3>
+            <button onclick="testAPI()">Test API Connection</button>
+            <button onclick="testNotifications()">Test Notifications</button>
+        </div>
+        
+        <h3>Connection Log</h3>
+        <div id="log" class="log"></div>
+    </div>
+
+    <script>
+        let ws = null;
+        let reconnectAttempts = 0;
+        const maxReconnectAttempts = 5;
+        const reconnectDelay = 3000;
+
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            entry.textContent = `[${timestamp}] ${message}`;
+            logDiv.appendChild(entry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function updateStatus(status, message) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.className = `status ${status}`;
+            statusDiv.textContent = `Status: ${message}`;
+        }
+
+        function connectWebSocket() {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                log('WebSocket already connected', 'warning');
+                return;
+            }
+
+            updateStatus('connecting', 'Connecting...');
+            log('Attempting to connect to WebSocket...', 'info');
+            
+            try {
+                ws = new WebSocket('ws://localhost:8000/ws/notifications/');
+                
+                ws.onopen = function(event) {
+                    log('WebSocket connected successfully!', 'success');
+                    updateStatus('connected', 'Connected');
+                    document.getElementById('connectBtn').disabled = true;
+                    document.getElementById('disconnectBtn').disabled = false;
+                    reconnectAttempts = 0;
+                };
+                
+                ws.onmessage = function(event) {
+                    log(`Received message: ${event.data}`, 'success');
+                    try {
+                        const data = JSON.parse(event.data);
+                        log(`Parsed data: ${JSON.stringify(data, null, 2)}`, 'info');
+                    } catch (e) {
+                        log(`Failed to parse JSON: ${e.message}`, 'error');
+                    }
+                };
+                
+                ws.onclose = function(event) {
+                    log(`WebSocket closed. Code: ${event.code}, Reason: ${event.reason}`, 'warning');
+                    updateStatus('disconnected', 'Disconnected');
+                    document.getElementById('connectBtn').disabled = false;
+                    document.getElementById('disconnectBtn').disabled = true;
+                    
+                    // Attempt to reconnect
+                    if (reconnectAttempts < maxReconnectAttempts) {
+                        reconnectAttempts++;
+                        log(`Attempting to reconnect (${reconnectAttempts}/${maxReconnectAttempts})...`, 'info');
+                        setTimeout(connectWebSocket, reconnectDelay);
+                    } else {
+                        log('Max reconnection attempts reached', 'error');
+                    }
+                };
+                
+                ws.onerror = function(error) {
+                    log(`WebSocket error: ${error}`, 'error');
+                    updateStatus('disconnected', 'Error');
+                };
+                
+            } catch (error) {
+                log(`Failed to create WebSocket: ${error.message}`, 'error');
+                updateStatus('disconnected', 'Connection Failed');
+            }
+        }
+
+        function disconnectWebSocket() {
+            if (ws) {
+                ws.close();
+                ws = null;
+                log('WebSocket disconnected manually', 'info');
+            }
+        }
+
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+        }
+
+        function getTokenFromStorage() {
+            const token = localStorage.getItem('access') || localStorage.getItem('token');
+            if (token) {
+                document.getElementById('tokenInput').value = token;
+                log('Token retrieved from localStorage', 'success');
+            } else {
+                log('No token found in localStorage', 'warning');
+            }
+        }
+
+        function testAuth() {
+            const token = document.getElementById('tokenInput').value;
+            if (!token) {
+                log('Please enter a token first', 'error');
+                return;
+            }
+
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                const authMessage = {
+                    type: 'auth',
+                    token: token
+                };
+                ws.send(JSON.stringify(authMessage));
+                log('Authentication message sent', 'info');
+            } else {
+                log('WebSocket not connected', 'error');
+            }
+        }
+
+        async function testAPI() {
+            try {
+                log('Testing API connection...', 'info');
+                const response = await fetch('http://localhost:8000/api/ai/');
+                if (response.ok) {
+                    const data = await response.json();
+                    log(`API connection successful: ${JSON.stringify(data, null, 2)}`, 'success');
+                } else {
+                    log(`API connection failed: ${response.status} ${response.statusText}`, 'error');
+                }
+            } catch (error) {
+                log(`API test error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testNotifications() {
+            const token = document.getElementById('tokenInput').value;
+            if (!token) {
+                log('Please enter a token first', 'error');
+                return;
+            }
+
+            try {
+                log('Testing notifications API...', 'info');
+                const response = await fetch('http://localhost:8000/api/ai/notifications/', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    log(`Notifications API successful: ${JSON.stringify(data, null, 2)}`, 'success');
+                } else {
+                    log(`Notifications API failed: ${response.status} ${response.statusText}`, 'error');
+                }
+            } catch (error) {
+                log(`Notifications test error: ${error.message}`, 'error');
+            }
+        }
+
+        // Auto-connect on page load
+        window.onload = function() {
+            log('WebSocket test page loaded', 'info');
+            log('Click "Connect" to start testing', 'info');
+        };
+    </script>
+</body>
+</html>

@@ -3,10 +3,12 @@ import Sidebar from "../../components/sidebarLayout";
 import SettingsNavigation from "../../components/sidebarNavLayout";
 import TopNavbar from "../../components/topbarLayouot";
 import { useTheme } from "../../components/themeContext";
+import { useToast } from "../../components/ToastContext";
 
 const GeneralSettings = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { theme } = useTheme();
+  const { showSuccess } = useToast();
 
   const [projectName, setProjectName] = useState("MyCrewManager");
   const [description, setDescription] = useState("Project management and team collaboration platform");
@@ -25,7 +27,7 @@ const GeneralSettings = () => {
       dateFormat,
       workingHours,
     });
-    alert("General settings saved!");
+    showSuccess("Settings Saved!", "General settings saved successfully!");
   };
 
   return (
@@ -40,7 +42,7 @@ const GeneralSettings = () => {
       <div className="flex-1 flex flex-col min-w-0">
         <TopNavbar onMenuClick={() => setSidebarOpen(true)} />
 
-        <main className="flex-1 p-6">
+        <main className="flex-1 p-4 lg:p-[100px] overflow-auto space-y-[40px]">
           <div className="grid grid-cols-12 gap-6 mb-6">
             {/* Settings Sidebar */}
             <div className="col-span-2">
