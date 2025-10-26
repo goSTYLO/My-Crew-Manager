@@ -38,6 +38,32 @@ A comprehensive project management platform with AI-powered features, real-time 
 
 ## 🏗️ Architecture
 
+### Project Structure
+```
+My-Crew-Manager/
+├── backend/                      # All Django/Python backend code
+│   ├── apps/                     # Django applications
+│   │   ├── ai_api/              # AI-powered project management
+│   │   ├── chat/                # Real-time messaging
+│   │   ├── project_management/  # Traditional project management
+│   │   └── users/               # User authentication
+│   ├── core/                     # Shared utilities and services
+│   │   ├── services/            # Shared services (broadcast, notification)
+│   │   ├── utils/               # Common utilities
+│   │   └── middleware/          # Custom middleware (if any)
+│   ├── llms/                     # AI/LLM integration
+│   ├── config/                   # Django project settings
+│   ├── data/                     # Data files and outputs
+│   │   ├── datasets/            # Training datasets
+│   │   ├── outputs/             # LLM outputs
+│   │   └── media/               # User uploads (profiles, proposals)
+│   ├── scripts/                  # Management and utility scripts
+│   └── docs/                     # Backend API documentation
+├── web/                          # React frontend
+├── mobile/                       # Flutter mobile app
+└── redis/                        # Redis server files (Windows)
+```
+
 ### Backend (Django)
 - **Django REST Framework** - RESTful API endpoints with pagination support
 - **Smart Polling API** - Optimized endpoints for efficient polling with timestamp filtering
@@ -46,6 +72,8 @@ A comprehensive project management platform with AI-powered features, real-time 
 - **Project Management Module** - Traditional project management features
 - **Chat Module** - Real-time messaging system with pagination and smart polling support
 - **Users Module** - User authentication and management
+- **LLM Integration** - AI/LLM modules for project analysis and backlog generation
+- **Shared Services** - Common services for broadcasting and notifications
 
 ### Frontend
 - **React Web App** - Modern web interface with TypeScript
@@ -129,13 +157,13 @@ const unsubscribe = subscribe('project_update', (data) => {
 #### Backend Testing
 ```bash
 # Test WebSocket connection authentication
-python manage.py test ai_api.tests.NotificationWebSocketTests
+python backend/manage.py test ai_api.tests.NotificationWebSocketTests
 
 # Test event broadcasting to multiple users
-python manage.py test ai_api.tests.BroadcastServiceTests
+python backend/manage.py test ai_api.tests.BroadcastServiceTests
 
 # Test project member filtering
-python manage.py test ai_api.tests.ProjectMemberFilteringTests
+python backend/manage.py test ai_api.tests.ProjectMemberFilteringTests
 ```
 
 #### Frontend Testing
@@ -168,7 +196,7 @@ python manage.py test ai_api.tests.ProjectMemberFilteringTests
 1. **Setup Multiple Sessions**:
    ```bash
    # Start Django server
-   python manage.py runserver
+   python backend/manage.py runserver
    
    # Open multiple browser windows with different user accounts
    # Navigate to same project in each window
@@ -411,10 +439,10 @@ Response (403 Forbidden):
 #### Cleanup Old Declined Invitations
 ```bash
 # Delete declined invitations older than 30 days
-python manage.py purge_old_invitations --days=30
+python backend/manage.py purge_old_invitations --days=30
 
 # Preview what would be deleted (dry run)
-python manage.py purge_old_invitations --days=30 --dry-run
+python backend/manage.py purge_old_invitations --days=30 --dry-run
 ```
 
 ## 🛠️ Installation & Setup
@@ -430,17 +458,20 @@ python manage.py purge_old_invitations --days=30 --dry-run
 git clone <repository-url>
 cd My-Crew-Manager
 
+# Navigate to backend directory
+cd backend
+
 # Install Python dependencies
 pip install -r requirements.txt
 
 # Run migrations
-python manage.py migrate
+python backend/manage.py migrate
 
 # Create superuser
-python manage.py createsuperuser
+python backend/manage.py createsuperuser
 
 # Start development server
-python manage.py runserver
+python backend/manage.py runserver
 ```
 
 ### Frontend Setup
@@ -559,7 +590,7 @@ The centralized IP configuration system allows you to access the application fro
 
 4. **Start Django with Network Access**:
    ```bash
-   python manage.py runserver 0.0.0.0:8000
+   python backend/manage.py runserver 0.0.0.0:8000
    ```
 
 5. **Access from Any Device on Network**:
@@ -594,7 +625,7 @@ To switch back to localhost-only access:
 
 3. **Start Django Locally**:
    ```bash
-   python manage.py runserver
+   python backend/manage.py runserver
    ```
 
 #### Important Notes
@@ -651,18 +682,18 @@ To switch back to localhost-only access:
 ### Backend Tests
 ```bash
 # Run all tests
-python manage.py test
+python backend/manage.py test
 
 # Run specific app tests
-python manage.py test ai_api
-python manage.py test chat
+python backend/manage.py test ai_api
+python backend/manage.py test chat
 
 # Run notification system tests specifically
-python manage.py test ai_api.tests.NotificationModelTests
-python manage.py test ai_api.tests.NotificationServiceTests
-python manage.py test ai_api.tests.NotificationAPITests
-python manage.py test ai_api.tests.ProjectInvitationNotificationTests
-python manage.py test ai_api.tests.NotificationWebSocketTests
+python backend/manage.py test ai_api.tests.NotificationModelTests
+python backend/manage.py test ai_api.tests.NotificationServiceTests
+python backend/manage.py test ai_api.tests.NotificationAPITests
+python backend/manage.py test ai_api.tests.ProjectInvitationNotificationTests
+python backend/manage.py test ai_api.tests.NotificationWebSocketTests
 
 # Run with coverage
 coverage run --source='ai_api' manage.py test ai_api.tests
@@ -687,13 +718,13 @@ The notification system includes a comprehensive test suite (`ai_api/tests.py`) 
 #### Automated Testing
 ```bash
 # Test notification polling endpoints
-python manage.py test ai_api.tests.NotificationViewSetTests
+python backend/manage.py test ai_api.tests.NotificationViewSetTests
 
 # Test chat message pagination
-python manage.py test chat.tests.MessageViewSetTests
+python backend/manage.py test chat.tests.MessageViewSetTests
 
 # Test timestamp filtering
-python manage.py test ai_api.tests.NotificationTimestampFilteringTests
+python backend/manage.py test ai_api.tests.NotificationTimestampFilteringTests
 ```
 
 #### Manual Testing Checklist
@@ -720,16 +751,16 @@ python manage.py test ai_api.tests.NotificationTimestampFilteringTests
 #### Automated Backend Tests
 ```bash
 # Test WebSocket connection and authentication
-python manage.py test ai_api.tests.NotificationWebSocketTests
+python backend/manage.py test ai_api.tests.NotificationWebSocketTests
 
 # Test broadcast service functionality
-python manage.py test ai_api.tests.BroadcastServiceTests
+python backend/manage.py test ai_api.tests.BroadcastServiceTests
 
 # Test project member filtering for events
-python manage.py test ai_api.tests.ProjectMemberFilteringTests
+python backend/manage.py test ai_api.tests.ProjectMemberFilteringTests
 
 # Test all real-time event types
-python manage.py test ai_api.tests.RealtimeEventTests
+python backend/manage.py test ai_api.tests.RealtimeEventTests
 ```
 
 #### Manual Integration Testing
@@ -738,7 +769,7 @@ python manage.py test ai_api.tests.RealtimeEventTests
 1. **Multi-User Collaboration Testing**:
    ```bash
    # Setup test environment
-   python manage.py runserver
+   python backend/manage.py runserver
    
    # Open multiple browser windows with different user accounts
    # Navigate to same project in each window

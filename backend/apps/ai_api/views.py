@@ -1,0 +1,1392 @@
+#view.py
+from rest_framework.viewsets import ModelViewSet
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from rest_framework.parsers import MultiPartParser
+from rest_framework import status
+from django.shortcuts import get_object_or_404
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.exceptions import PermissionDenied
+
+from .models import (
+    Project, Proposal,
+    ProjectFeature, ProjectRole, ProjectGoal,
+    TimelineWeek, TimelineItem,
+    Epic, SubEpic, UserStory, StoryTask, ProjectMember, ProjectInvitation,
+    Notification, Repository,
+)
+from .serializers import (
+    ProjectSerializer, ProposalSerializer,
+    ProjectFeatureSerializer, ProjectRoleSerializer, ProjectGoalSerializer,
+    TimelineWeekSerializer, TimelineItemSerializer,
+    EpicSerializer, SubEpicSerializer, UserStorySerializer, StoryTaskSerializer,
+    ProjectMemberSerializer, ProjectInvitationSerializer, ProjectInvitationActionSerializer,
+    NotificationSerializer, RepositorySerializer,
+)
+
+# Real LLM pipelines
+from backend.llms.project_llm import run_pipeline_from_text, model_to_dict
+from backend.llms.backlog_llm import run_backlog_pipeline
+from backend.llms.llm_cache import clear_cache_and_free_memory, get_memory_usage, start_auto_cleanup
+from backend.apps.ai_api.tasks import task_manager, TaskCancelledException
+from backend.core.services.broadcast_service import BroadcastService
+
+import pdfplumber
+import threading
+
+
+class ProjectViewSet(ModelViewSet):
+    queryset = Project.objects.all()
+    serializer_class = ProjectSerializer
+    permission_classes = [IsAuthenticated]
+
+    def perform_create(self, serializer):
+        project = serializer.save(created_by=self.request.user)
+        # Automatically add creator as a project member with Owner role
+        ProjectMember.objects.create(
+            project=project,
+            user=self.request.user,
+            role='Owner'
+        )
+        # Broadcast project creation
+        BroadcastService.broadcast_project_update(project, 'created', self.request.user)
+
+    @action(detail=True, methods=["put"], url_path="ingest-proposal/(?P<proposal_id>[^/.]+)")
+    def ingest_proposal(self, request, pk=None, proposal_id=None):
+        project = self.get_object()
+        proposal = get_object_or_404(Proposal, id=proposal_id, project=project)
+
+        if not proposal.parsed_text:
+            return Response({"error": "Proposal has no parsed text"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            # Run real LLM pipeline
+            project_model = run_pipeline_from_text(proposal.parsed_text)
+            output = model_to_dict(project_model)
+
+            # Optionally persist minimal fields on our local Project
+            title_override = request.data.get("title")
+            if title_override:
+                output["title"] = title_override
+            project.title = output.get("title") or project.title
+            project.summary = output.get("summary") or project.summary
+            project.save(update_fields=["title", "summary"])
+
+            # Persist features
+            ProjectFeature.objects.filter(project=project).delete()
+            for feat in output.get("features", [])[:10]:
+                ProjectFeature.objects.create(project=project, title=str(feat)[:512])
+
+            # Persist roles
+            ProjectRole.objects.filter(project=project).delete()
+            for role in output.get("roles", [])[:20]:
+                ProjectRole.objects.create(project=project, role=str(role)[:255])
+
+            # Persist goals
+            ProjectGoal.objects.filter(project=project).delete()
+            for g in output.get("goals", [])[:20]:
+                ProjectGoal.objects.create(
+                    project=project,
+                    title=str(g.get("title", ""))[:512],
+                    role=(g.get("role") or "")[:255]
+                )
+
+            # Persist timeline
+            TimelineWeek.objects.filter(project=project).delete()
+            for week in output.get("timeline", [])[:12]:
+                tw = TimelineWeek.objects.create(project=project, week_number=int(week.get("week_number", 0) or 0))
+                for item in week.get("goals", [])[:20]:
+                    TimelineItem.objects.create(week=tw, title=str(item)[:512])
+
+            return Response({
+                "message": "Project enriched with LLM output",
+                "project_id": project.id,
+                "llm": output
+            })
+            
+        except Exception as e:
+            print(f"Analysis failed: {str(e)}")
+            return Response({
+                "error": f"Analysis failed: {str(e)}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=True, methods=["get"], url_path="current-proposal")
+    def current_proposal(self, request, pk=None):
+        project = self.get_object()
+        proposal = project.proposals.order_by('-uploaded_at').first()
+        if proposal:
+            serializer = ProposalSerializer(proposal)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response({"message": "No proposal found"}, status=status.HTTP_404_NOT_FOUND)
+
+    @action(detail=True, methods=["put"], url_path="generate-backlog")
+    def generate_backlog(self, request, pk=None):
+        project = self.get_object()
+        # Use latest proposal for this project
+        proposal = project.proposals.order_by('-uploaded_at').first()
+        if not proposal or not proposal.parsed_text:
+            return Response({"error": "No parsed proposal found for project"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            context = {
+                "project_title": project.title or "",
+            }
+            backlog_model = run_backlog_pipeline(proposal.parsed_text, context)
+
+            # Convert backlog model to dict
+            backlog_dict = {
+                "epics": [
+                    {
+                        "title": epic.title,
+                        "description": getattr(epic, "description", ""),
+                        "sub_epics": [
+                            {
+                                "title": sub.title,
+                                "user_stories": [
+                                    {
+                                        "title": us.title,
+                                        "tasks": [t.title for t in us.tasks],
+                                    }
+                                    for us in sub.user_stories
+                                ],
+                            }
+                            for sub in epic.sub_epics
+                        ],
+                    }
+                    for epic in backlog_model.epics
+                ]
+            }
+
+            # Persist backlog structures
+            Epic.objects.filter(project=project, ai=True).delete()
+            for epic in backlog_model.epics[:20]:
+                e = Epic.objects.create(
+                    project=project,
+                    title=str(epic.title)[:512],
+                    description=getattr(epic, "description", "")
+                )
+                for sub in epic.sub_epics[:20]:
+                    se = SubEpic.objects.create(epic=e, title=str(sub.title)[:512])
+                    for us in sub.user_stories[:20]:
+                        u = UserStory.objects.create(sub_epic=se, title=str(us.title)[:512])
+                        for t in us.tasks[:50]:
+                            StoryTask.objects.create(user_story=u, title=str(t.title)[:512])
+
+            # Broadcast backlog regeneration
+            BroadcastService.broadcast_backlog_regenerated(project, self.request.user)
+            
+            return Response({
+                "message": "Backlog generated successfully",
+                "backlog": backlog_dict
+            })
+            
+        except Exception as e:
+            print(f"Backlog generation failed: {str(e)}")
+            return Response({
+                "error": f"Backlog generation failed: {str(e)}"
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+    @action(detail=True, methods=["put"], url_path="generate-overview")
+    def generate_overview(self, request, pk=None):
+        project = self.get_object()
+        # Use latest proposal for this project
+        proposal = project.proposals.order_by('-uploaded_at').first()
+        if not proposal or not proposal.parsed_text:
+            return Response({"error": "No parsed proposal found for project"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Generate project overview using LLM
+        project_model = run_pipeline_from_text(proposal.parsed_text)
+        output = model_to_dict(project_model)
+
+        # Update project title and summary if they exist in the output
+        if output.get('title'):
+            project.title = output['title']
+        if output.get('summary'):
+            project.summary = output['summary']
+        project.save()
+
+        # Clear existing features, roles, goals, and timeline
+        ProjectFeature.objects.filter(project=project).delete()
+        ProjectRole.objects.filter(project=project).delete()
+        ProjectGoal.objects.filter(project=project).delete()
+        TimelineWeek.objects.filter(project=project).delete()
+
+        # Create new features
+        for feature in output.get('features', []):
+            feature_title = feature if isinstance(feature, str) else feature.get('title', '')
+            ProjectFeature.objects.create(
+                project=project,
+                title=feature_title[:512]
+            )
+
+        # Create new roles
+        for role in output.get('roles', []):
+            role_name = role if isinstance(role, str) else role.get('role', '')
+            ProjectRole.objects.create(
+                project=project,
+                role=role_name[:255]
+            )
+
+        # Create new goals
+        for goal in output.get('goals', []):
+            if isinstance(goal, str):
+                goal_title = goal
+                goal_role = ''
+            else:
+                goal_title = goal.get('title', '')
+                goal_role = goal.get('role', '')
+            ProjectGoal.objects.create(
+                project=project,
+                title=goal_title[:512],
+                role=goal_role[:255]
+            )
+
+        # Create new timeline
+        for week_data in output.get('timeline', []):
+            week = TimelineWeek.objects.create(
+                project=project,
+                week_number=week_data.get('week_number', 1)
+            )
+            # Handle both 'goals' (from LLM) and 'items' (from frontend) formats
+            timeline_items = week_data.get('goals', []) or week_data.get('items', [])
+            for item in timeline_items:
+                if isinstance(item, str):
+                    item_title = item
+                else:
+                    item_title = item.get('title', '')
+                TimelineItem.objects.create(
+                    week=week,
+                    title=item_title[:512]
+                )
+
+        # Broadcast overview regeneration
+        BroadcastService.broadcast_overview_regenerated(project, self.request.user)
+        
+        return Response({
+            "message": "Project overview generated successfully",
+            "overview": output,
+        }, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=["get"], url_path="backlog")
+    def backlog(self, request, pk=None):
+        """Return the project's backlog as a nested structure: epics -> sub_epics -> user_stories -> tasks"""
+        project = self.get_object()
+
+        epics = Epic.objects.filter(project=project).order_by('id')
+        result = []
+        for e in epics:
+            sub_epics = []
+            for se in e.sub_epics.all().order_by('id'):
+                user_stories = []
+                for us in se.user_stories.all().order_by('id'):
+                    tasks = []
+                    for t in us.tasks.all().order_by('id'):
+                        assignee = t.assignee
+                        tasks.append({
+                            'id': t.id,
+                            'title': t.title,
+                            'status': t.status,
+                            'ai': t.ai,
+                            'assignee': t.assignee.id if t.assignee else None,
+                            'assignee_details': (
+                                {
+                                    'id': assignee.id,
+                                    'user_name': getattr(assignee, 'user_name', None),
+                                    'user_email': getattr(assignee, 'user_email', None),
+                                }
+                                if assignee is not None else None
+                            ),
+                            'commit_title': t.commit_title,
+                            'commit_branch': t.commit_branch,
+                        })
+                    user_stories.append({
+                        'id': us.id,
+                        'title': us.title,
+                        'ai': us.ai,
+                        'is_complete': us.is_complete,
+                        'tasks': tasks,
+                    })
+                sub_epics.append({
+                    'id': se.id,
+                    'title': se.title,
+                    'ai': se.ai,
+                    'is_complete': se.is_complete,
+                    'user_stories': user_stories,
+                })
+            result.append({
+                'id': e.id,
+                'title': e.title,
+                'description': e.description,
+                'ai': e.ai,
+                'is_complete': e.is_complete,
+                'sub_epics': sub_epics,
+            })
+
+        return Response({'project_id': project.id, 'epics': result}, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=["get"], url_path="my-projects")
+    def my_projects(self, request):
+        """Return projects where the current user is the creator OR a member"""
+        from django.db.models import Q
+        
+        # Get project IDs where the user is a member
+        member_project_ids = ProjectMember.objects.filter(
+            user=request.user
+        ).values_list('project_id', flat=True)
+        
+        # Get projects where user is creator OR member
+        projects = Project.objects.filter(
+            Q(id__in=member_project_ids) | Q(created_by=request.user)
+        ).distinct().order_by('-created_at')
+        
+        # Serialize and return
+        serializer = self.get_serializer(projects, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=["get"], url_path="statistics")
+    def statistics(self, request, pk=None):
+        """Return statistics for a project: member count, task count, sprint count"""
+        project = self.get_object()
+        
+        # Count members
+        member_count = ProjectMember.objects.filter(project=project).count()
+        
+        # Count all StoryTasks across all epics/sub-epics/user-stories
+        task_count = StoryTask.objects.filter(
+            user_story__sub_epic__epic__project=project
+        ).count()
+        
+        # Count TimelineWeeks (sprints)
+        sprint_count = TimelineWeek.objects.filter(project=project).count()
+        
+        return Response({
+            'member_count': member_count,
+            'task_count': task_count,
+            'sprint_count': sprint_count,
+        }, status=status.HTTP_200_OK)
+
+    def perform_update(self, serializer):
+        project = serializer.save()
+        # Broadcast project update
+        BroadcastService.broadcast_project_update(project, 'updated', self.request.user)
+
+    @action(detail=False, methods=["post"], url_path="clear-llm-cache")
+    def clear_llm_cache(self, request):
+        """
+        Clear LLM cache and free GPU memory.
+        Useful for freeing VRAM when not using LLM features.
+        """
+        try:
+            memory_before = get_memory_usage()
+            clear_cache_and_free_memory()
+            memory_after = get_memory_usage()
+            
+            return Response({
+                "message": "LLM cache cleared successfully",
+                "memory_before": memory_before,
+                "memory_after": memory_after,
+                "memory_freed_mb": memory_before['allocated_mb'] - memory_after['allocated_mb']
+            })
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=False, methods=["get"], url_path="memory-usage")
+    def memory_usage(self, request):
+        """
+        Get current GPU memory usage.
+        """
+        try:
+            memory_info = get_memory_usage()
+            return Response(memory_info)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=False, methods=["post"], url_path="start-auto-cleanup")
+    def start_auto_cleanup(self, request):
+        """
+        Start the auto-cleanup background thread.
+        """
+        try:
+            start_auto_cleanup()
+            return Response({
+                "message": "Auto-cleanup started successfully",
+                "cleanup_interval_seconds": 1800  # 30 minutes
+            })
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class ProposalViewSet(ModelViewSet):
+    queryset = Proposal.objects.all()
+    serializer_class = ProposalSerializer
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser]
+
+    def create(self, request, *args, **kwargs):
+        file = request.FILES.get("file")
+        project_id = request.data.get("project_id")
+
+        if not file or not project_id:
+            return Response({"error": "Missing file or project_id"}, status=status.HTTP_400_BAD_REQUEST)
+
+        project = get_object_or_404(Project, id=project_id)
+
+        if not file.name.lower().endswith(".pdf"):
+            return Response({"error": "Only PDF files are supported"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            with pdfplumber.open(file) as pdf:
+                text = "\n".join(page.extract_text() or "" for page in pdf.pages)
+        except Exception as e:
+            return Response({"error": f"PDF parsing failed: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        proposal = Proposal.objects.create(
+            project=project,
+            file=file,
+            parsed_text=text,
+            uploaded_by=request.user if request.user.is_authenticated else None
+        )
+
+        return Response({
+            "message": "Proposal uploaded and parsed successfully",
+            "proposal_id": proposal.id,
+            "project_id": project.id,
+            "parsed_text_preview": text[:300] + "..." if len(text) > 300 else text
+        }, status=status.HTTP_201_CREATED)
+
+
+
+class ProjectFeatureViewSet(ModelViewSet):
+    queryset = ProjectFeature.objects.all()
+    serializer_class = ProjectFeatureSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        project_id = self.request.query_params.get('project_id')
+        if project_id:
+            return self.queryset.filter(project_id=project_id)
+        return self.queryset
+
+
+class ProjectRoleViewSet(ModelViewSet):
+    queryset = ProjectRole.objects.all()
+    serializer_class = ProjectRoleSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        project_id = self.request.query_params.get('project_id')
+        if project_id:
+            return self.queryset.filter(project_id=project_id)
+        return self.queryset
+
+
+class ProjectGoalViewSet(ModelViewSet):
+    queryset = ProjectGoal.objects.all()
+    serializer_class = ProjectGoalSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        project_id = self.request.query_params.get('project_id')
+        if project_id:
+            return self.queryset.filter(project_id=project_id)
+        return self.queryset
+
+
+class TimelineWeekViewSet(ModelViewSet):
+    queryset = TimelineWeek.objects.all()
+    serializer_class = TimelineWeekSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        project_id = self.request.query_params.get('project_id')
+        if project_id:
+            return self.queryset.filter(project_id=project_id)
+        return self.queryset
+
+
+class TimelineItemViewSet(ModelViewSet):
+    queryset = TimelineItem.objects.all()
+    serializer_class = TimelineItemSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        week_id = self.request.query_params.get('week_id')
+        if week_id:
+            return self.queryset.filter(week_id=week_id)
+        return self.queryset
+
+
+class EpicViewSet(ModelViewSet):
+    queryset = Epic.objects.all()
+    serializer_class = EpicSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        project_id = self.request.query_params.get('project_id')
+        if project_id:
+            return self.queryset.filter(project_id=project_id)
+        return self.queryset
+
+    def perform_create(self, serializer):
+        epic = serializer.save()
+        # Broadcast epic creation
+        BroadcastService.broadcast_epic_update(epic, 'created', self.request.user)
+
+    def perform_update(self, serializer):
+        epic = serializer.save()
+        # Broadcast epic update
+        BroadcastService.broadcast_epic_update(epic, 'updated', self.request.user)
+
+    def perform_destroy(self, instance):
+        # Broadcast epic deletion before destroying
+        BroadcastService.broadcast_epic_update(instance, 'deleted', self.request.user)
+        instance.delete()
+
+
+class SubEpicViewSet(ModelViewSet):
+    queryset = SubEpic.objects.all()
+    serializer_class = SubEpicSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        epic_id = self.request.query_params.get('epic_id')
+        if epic_id:
+            return self.queryset.filter(epic_id=epic_id)
+        return self.queryset
+
+    def perform_create(self, serializer):
+        sub_epic = serializer.save()
+        # Broadcast sub-epic creation
+        BroadcastService.broadcast_sub_epic_update(sub_epic, 'created', self.request.user)
+
+    def perform_update(self, serializer):
+        sub_epic = serializer.save()
+        # Broadcast sub-epic update
+        BroadcastService.broadcast_sub_epic_update(sub_epic, 'updated', self.request.user)
+
+    def perform_destroy(self, instance):
+        # Broadcast sub-epic deletion before destroying
+        BroadcastService.broadcast_sub_epic_update(instance, 'deleted', self.request.user)
+        instance.delete()
+
+
+class UserStoryViewSet(ModelViewSet):
+    queryset = UserStory.objects.all()
+    serializer_class = UserStorySerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        sub_epic_id = self.request.query_params.get('sub_epic_id')
+        if sub_epic_id:
+            return self.queryset.filter(sub_epic_id=sub_epic_id)
+        return self.queryset
+
+    def perform_create(self, serializer):
+        user_story = serializer.save()
+        # Broadcast user story creation
+        BroadcastService.broadcast_user_story_update(user_story, 'created', self.request.user)
+
+    def perform_update(self, serializer):
+        user_story = serializer.save()
+        # Broadcast user story update
+        BroadcastService.broadcast_user_story_update(user_story, 'updated', self.request.user)
+
+    def perform_destroy(self, instance):
+        # Broadcast user story deletion before destroying
+        BroadcastService.broadcast_user_story_update(instance, 'deleted', self.request.user)
+        instance.delete()
+
+
+class StoryTaskViewSet(ModelViewSet):
+    queryset = StoryTask.objects.all()
+    serializer_class = StoryTaskSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        user_story_id = self.request.query_params.get('user_story_id')
+        if user_story_id:
+            return self.queryset.filter(user_story_id=user_story_id)
+        return self.queryset
+
+    @action(detail=False, methods=["get"], url_path="user-assigned")
+    def user_assigned_tasks(self, request):
+        """Get all tasks assigned to the current user across all projects"""
+        try:
+            current_user = request.user
+            
+            # Get all tasks assigned to the current user
+            # We need to find tasks where the assignee's user matches the current user
+            assigned_tasks = StoryTask.objects.filter(
+                assignee__user=current_user
+            ).select_related(
+                'assignee',
+                'user_story__sub_epic__epic__project'
+            ).order_by('-id')
+            
+            # Format the response to match the mobile app's expected structure
+            tasks_data = []
+            for task in assigned_tasks:
+                assignee = task.assignee
+                project = task.user_story.sub_epic.epic.project
+                
+                tasks_data.append({
+                    'id': task.id,
+                    'title': task.title,
+                    'status': task.status,
+                    'user_story_id': task.user_story.id,
+                    'is_ai': task.ai,
+                    'assignee_id': assignee.id if assignee else None,
+                    'assignee_name': assignee.user_email if assignee else None,  # Use email for consistency
+                    'project_id': project.id,
+                    'project_title': project.title,
+                    'epic_title': task.user_story.sub_epic.epic.title,
+                    'user_story_title': task.user_story.title,
+                })
+            
+            return Response({
+                'tasks': tasks_data,
+                'total_count': len(tasks_data),
+                'user_email': current_user.email,
+                'user_name': current_user.name,
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response(
+                {"error": f"Failed to fetch user tasks: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    @action(detail=False, methods=["get"], url_path="recent-completed")
+    def recent_completed_tasks(self, request):
+        """Get recent completed tasks with user information for activity feed"""
+        try:
+            # First, let's check if there are any StoryTask objects at all
+            total_tasks = StoryTask.objects.count()
+            
+            # Get recently completed tasks across all projects where user is a member
+            completed_tasks = StoryTask.objects.filter(
+                status='completed',
+                assignee__isnull=False
+            ).select_related(
+                'assignee',
+                'assignee__user',
+                'user_story__sub_epic__epic__project'
+            ).order_by('-id')[:10]  # Get last 10 completed tasks
+            
+            # Format the response for activity feed
+            activities_data = []
+            for task in completed_tasks:
+                try:
+                    assignee = task.assignee
+                    if assignee and assignee.user:  # Only include tasks with valid assignees
+                        # Since there's no updated_at field, we'll use a mock timestamp based on task ID
+                        from datetime import datetime, timedelta
+                        mock_timestamp = datetime.now() - timedelta(hours=task.id % 24)
+                        
+                        # Safe field access with fallbacks
+                        user_name = getattr(assignee, 'user_name', None) or getattr(assignee.user, 'name', 'Unknown User')
+                        user_email = getattr(assignee, 'user_email', None) or getattr(assignee.user, 'email', 'unknown@example.com')
+                        project_title = getattr(task.user_story.sub_epic.epic.project, 'title', 'Unknown Project')
+                        
+                        activities_data.append({
+                            'id': task.id,
+                            'title': task.title or 'Untitled Task',
+                            'status': task.status or 'completed',
+                            'completed_at': mock_timestamp.isoformat(),
+                            'user_id': str(assignee.user.user_id),
+                            'user_name': user_name,
+                            'user_email': user_email,
+                            'project_title': project_title,
+                        })
+                except Exception as task_error:
+                    # Skip this task if there's an error processing it
+                    print(f"Error processing task {task.id}: {task_error}")
+                    continue
+            
+            # Always return success, even if no activities
+            return Response({
+                'activities': activities_data,
+                'total_count': len(activities_data),
+                'total_tasks_in_db': total_tasks,
+                'message': 'No completed tasks found' if len(activities_data) == 0 else f'Found {len(activities_data)} activities'
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            import traceback
+            error_details = {
+                "error": f"Failed to fetch recent activities: {str(e)}",
+                "traceback": traceback.format_exc(),
+                "activities": [],  # Return empty list on error
+                "total_count": 0
+            }
+            return Response(error_details, status=status.HTTP_200_OK)  # Return 200 with error details
+
+    def create(self, request, *args, **kwargs):
+        try:
+            # Get the user story and check if the current user is the project creator
+            user_story_id = request.data.get('user_story')
+            if not user_story_id:
+                return Response(
+                    {"error": "User story ID is required"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            try:
+                user_story = UserStory.objects.get(id=user_story_id)
+                project = user_story.sub_epic.epic.project
+            except (UserStory.DoesNotExist, AttributeError):
+                return Response(
+                    {"error": "User story not found"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            # Check if the current user is the project creator
+            if project.created_by != request.user:
+                return Response(
+                    {"error": "Only the project creator can add tasks"},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            
+            return super().create(request, *args, **kwargs)
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+    @action(detail=False, methods=["post"], url_path="bulk-assign")
+    def bulk_assign(self, request):
+        try:
+            assignments = request.data.get('assignments', [])
+            if not isinstance(assignments, list):
+                return Response({"error": "assignments must be a list"}, status=status.HTTP_400_BAD_REQUEST)
+
+            updated = 0
+            for item in assignments:
+                task_id = item.get('task_id')
+                assignee_id = item.get('assignee_id')
+                if not task_id:
+                    continue
+                try:
+                    task = StoryTask.objects.get(id=task_id)
+                except StoryTask.DoesNotExist:
+                    continue
+                if assignee_id is None:
+                    task.assignee = None
+                else:
+                    try:
+                        member = ProjectMember.objects.get(id=assignee_id)
+                    except ProjectMember.DoesNotExist:
+                        continue
+                    # Optional: ensure member belongs to same project
+                    if member.project_id != task.user_story.sub_epic.epic.project_id:
+                        continue
+                    task.assignee = member
+                task.save(update_fields=["assignee"])
+                updated += 1
+
+            return Response({"updated": updated}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    def update(self, request, *args, **kwargs):
+        """Update a task with validation for assignee and commit requirements"""
+        try:
+            task = self.get_object()
+            project = task.user_story.sub_epic.epic.project
+            
+            # Validate assignee if provided
+            assignee_id = request.data.get('assignee')
+            if assignee_id is not None:
+                try:
+                    assignee = ProjectMember.objects.get(id=assignee_id)
+                    # Ensure assignee belongs to the same project
+                    if assignee.project_id != project.id:
+                        return Response(
+                            {"error": "Assignee must be a member of the same project"},
+                            status=status.HTTP_400_BAD_REQUEST
+                        )
+                except ProjectMember.DoesNotExist:
+                    return Response(
+                        {"error": "Invalid assignee ID"},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+            
+            # Validate commit requirements when marking as done
+            if request.data.get('status') == 'done':
+                if not request.data.get('commit_title'):
+                    return Response(
+                        {"error": "Commit title is required when marking task as done"},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+            
+            return super().update(request, *args, **kwargs)
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+    def partial_update(self, request, *args, **kwargs):
+        """Partial update with same validation as full update"""
+        return self.update(request, *args, **kwargs)
+
+    def destroy(self, request, *args, **kwargs):
+        try:
+            # Get the task and check if the current user is the project creator
+            task = self.get_object()
+            project = task.user_story.sub_epic.epic.project
+            
+            # Check if the current user is the project creator
+            if project.created_by != request.user:
+                return Response(
+                    {"error": "Only the project creator can remove tasks"},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            
+            return super().destroy(request, *args, **kwargs)
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+    def perform_create(self, serializer):
+        task = serializer.save()
+        
+        # Create notification if task has an assignee
+        if task.assignee:
+            project = task.user_story.sub_epic.epic.project
+            
+            # Determine recipients (assignee + creator, excluding duplicates and actor)
+            recipients = set()
+            if task.assignee.user:
+                recipients.add(task.assignee.user)
+            if project.created_by != self.request.user:
+                recipients.add(project.created_by)
+            recipients.discard(self.request.user)  # Don't notify the actor
+            
+            # Create task_assigned notification for each recipient
+            from .services.notification_service import NotificationService
+            for recipient in recipients:
+                NotificationService.create_notification(
+                    recipient=recipient,
+                    notification_type='task_assigned',
+                    title=f'Task Assigned: {task.title}',
+                    message=f'{self.request.user.name} assigned you to "{task.title}"',
+                    content_object=task,
+                    action_url=f'/project-details/{project.id}',
+                    actor=self.request.user
+                )
+        
+        # Broadcast task creation
+        BroadcastService.broadcast_task_update(task, 'created', self.request.user)
+
+    def perform_update(self, serializer):
+        old_instance = self.get_object()
+        task = serializer.save()
+        project = task.user_story.sub_epic.epic.project
+        
+        # Determine recipients (assignee + creator, excluding duplicates and actor)
+        recipients = set()
+        if task.assignee and task.assignee.user:
+            recipients.add(task.assignee.user)
+        if project.created_by != self.request.user:
+            recipients.add(project.created_by)
+        recipients.discard(self.request.user)  # Don't notify the actor
+        
+        # Create notifications based on what changed
+        from .services.notification_service import NotificationService
+        
+        # Check for assignment change
+        if old_instance.assignee != task.assignee and task.assignee:
+            for recipient in recipients:
+                NotificationService.create_notification(
+                    recipient=recipient,
+                    notification_type='task_assigned',
+                    title=f'Task Assigned: {task.title}',
+                    message=f'{self.request.user.name} assigned you to "{task.title}"',
+                    content_object=task,
+                    action_url=f'/project-details/{project.id}',
+                    actor=self.request.user
+                )
+        
+        # Check for completion
+        elif old_instance.status != 'done' and task.status == 'done':
+            for recipient in recipients:
+                NotificationService.create_notification(
+                    recipient=recipient,
+                    notification_type='task_completed',
+                    title=f'Task Completed: {task.title}',
+                    message=f'{self.request.user.name} completed "{task.title}"',
+                    content_object=task,
+                    action_url=f'/project-details/{project.id}',
+                    actor=self.request.user
+                )
+        
+        # Other updates (if any field changed)
+        elif old_instance.title != task.title or old_instance.status != task.status:
+            for recipient in recipients:
+                NotificationService.create_notification(
+                    recipient=recipient,
+                    notification_type='task_updated',
+                    title=f'Task Updated: {task.title}',
+                    message=f'{self.request.user.name} updated "{task.title}"',
+                    content_object=task,
+                    action_url=f'/project-details/{project.id}',
+                    actor=self.request.user
+                )
+        
+        # Broadcast task update
+        BroadcastService.broadcast_task_update(task, 'updated', self.request.user)
+
+    def perform_destroy(self, instance):
+        # Broadcast task deletion before destroying
+        BroadcastService.broadcast_task_update(instance, 'deleted', self.request.user)
+        instance.delete()
+
+
+class ProjectMemberViewSet(ModelViewSet):
+    queryset = ProjectMember.objects.all()
+    serializer_class = ProjectMemberSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        project_id = self.request.query_params.get('project_id')
+        if project_id:
+            return self.queryset.filter(project_id=project_id)
+        return self.queryset
+
+    def create(self, request, *args, **kwargs):
+        return Response(
+            {
+                "error": "Direct member creation is not allowed. Please use the project invitation system.",
+                "hint": "Send an invitation via POST /api/ai/invitations/"
+            },
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    def destroy(self, request, *args, **kwargs):
+        try:
+            # Get the project member and check if the current user is the project creator
+            member = self.get_object()
+            project = member.project
+            
+            # Check if the current user is the project creator
+            if project.created_by != request.user:
+                return Response(
+                    {"error": "Only the project creator can remove members"},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            
+            # Store user info before deletion for cleanup
+            removed_user = member.user
+            
+            # Delete the member
+            super().destroy(request, *args, **kwargs)
+            
+            # Clean up any existing invitations for this user to this project
+            # This allows them to be invited again in the future
+            deleted_invitations = ProjectInvitation.objects.filter(
+                project=project,
+                invitee=removed_user
+            ).delete()
+            
+            print(f"Removed member {removed_user.name} from project {project.title}")
+            print(f"Deleted {deleted_invitations[0]} related invitations")
+            
+            # Notify all remaining project members that someone left
+            remaining_members = ProjectMember.objects.filter(
+                project=project
+            ).exclude(id=member.id)
+            
+            from .services.notification_service import NotificationService
+            for remaining_member in remaining_members:
+                NotificationService.create_notification(
+                    recipient=remaining_member.user,
+                    notification_type='member_left',
+                    title=f'Member Left: {removed_user.name}',
+                    message=f'{removed_user.name} was removed from {project.title}',
+                    content_object=project,
+                    action_url=f'/project-details/{project.id}',
+                    actor=request.user
+                )
+            
+            # Broadcast member removal
+            BroadcastService.broadcast_member_update(member, 'removed', request.user)
+            
+            return Response({
+                "message": "Member removed successfully",
+                "deleted_invitations": deleted_invitations[0]
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+
+class ProjectInvitationViewSet(ModelViewSet):
+    queryset = ProjectInvitation.objects.all()
+    serializer_class = ProjectInvitationSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        project_id = self.request.query_params.get('project_id')
+        if project_id:
+            return self.queryset.filter(project_id=project_id)
+        
+        # For accept/decline actions, only show invitations for the current user
+        if self.action in ['accept_invitation', 'decline_invitation']:
+            return self.queryset.filter(invitee=self.request.user)
+        
+        return self.queryset
+
+    def perform_create(self, serializer):
+        serializer.save(invited_by=self.request.user)
+
+    def create(self, request, *args, **kwargs):
+        try:
+            # Get the project and check permissions
+            project_id = request.data.get('project')
+            if not project_id:
+                return Response(
+                    {"error": "Project ID is required"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            try:
+                project = Project.objects.get(id=project_id)
+            except Project.DoesNotExist:
+                return Response(
+                    {"error": "Project not found"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            # Check if the current user can invite (project creator only for now)
+            if project.created_by != request.user:
+                return Response(
+                    {"error": "Only the project creator can send invitations"},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            
+            # Call parent create (perform_create will handle setting invited_by)
+            response = super().create(request, *args, **kwargs)
+            
+            # Create notification if invitation was successfully created
+            if response.status_code == 201:
+                invitation = ProjectInvitation.objects.get(id=response.data['id'])
+                
+                # Create notification
+                from .services.notification_service import NotificationService
+                NotificationService.create_notification(
+                    recipient=invitation.invitee,
+                    notification_type='project_invitation',
+                    title=f'Project Invitation: {invitation.project.title}',
+                    message=f'{invitation.invited_by.name} invited you to join {invitation.project.title}',
+                    content_object=invitation,
+                    action_url=f'/projects/{invitation.project.id}/invitations',
+                    actor=invitation.invited_by
+                )
+            
+            return response
+        except Exception as e:
+            if 'unique' in str(e).lower():
+                return Response(
+                    {"error": "A pending invitation already exists for this user"},
+                    status=status.HTTP_409_CONFLICT
+                )
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+    @action(detail=True, methods=['post'], url_path='accept')
+    def accept_invitation(self, request, pk=None):
+        """Accept a project invitation"""
+        try:
+            # Debug: Check what invitations are available for this user
+            user_invitations = ProjectInvitation.objects.filter(invitee=request.user)
+            print(f"User {request.user.user_id} has {user_invitations.count()} invitations: {list(user_invitations.values_list('id', 'status'))}")
+            print(f"Trying to accept invitation ID: {pk}")
+            
+            invitation = self.get_object()
+            print(f"Accepting invitation {invitation.id}: project={invitation.project.id}, invitee={invitation.invitee.user_id}, status={invitation.status}")
+            
+            # Check if the current user is the invitee
+            if invitation.invitee != request.user:
+                return Response(
+                    {"error": "You can only accept invitations sent to you"},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            
+            # Check if invitation is still pending
+            if invitation.status != 'pending':
+                return Response(
+                    {"error": f"Invitation has already been {invitation.status}"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Transactionally accept invitation and create membership
+            from django.db import transaction
+            from django.utils import timezone
+            
+            with transaction.atomic():
+                # Update invitation status without triggering model validation
+                # Use update() to bypass clean() method which would fail during acceptance
+                ProjectInvitation.objects.filter(id=invitation.id).update(
+                    status='accepted',
+                    updated_at=timezone.now()
+                )
+                
+                # Create project membership if it doesn't exist
+                # The ProjectMember.save() method will automatically populate user_name and user_email
+                try:
+                    project_member, created = ProjectMember.objects.get_or_create(
+                        project=invitation.project,
+                        user=invitation.invitee,
+                        defaults={
+                            'role': invitation.role  # Use the role from the invitation
+                        }
+                    )
+                    print(f"ProjectMember {'created' if created else 'retrieved'}: {project_member}")
+                except Exception as member_error:
+                    print(f"Error creating ProjectMember: {member_error}")
+                    raise member_error
+                
+                # Clean up any other pending invitations for this user to this project
+                # This prevents duplicate invitations and ensures clean state
+                other_invitations = ProjectInvitation.objects.filter(
+                    project=invitation.project,
+                    invitee=invitation.invitee,
+                    status='pending'
+                ).exclude(id=invitation.id)
+                
+                deleted_count = other_invitations.count()
+                other_invitations.delete()
+                
+                if deleted_count > 0:
+                    print(f"Cleaned up {deleted_count} duplicate pending invitations for {invitation.invitee.name} to project {invitation.project.title}")
+                
+                # Mark related notifications as read when invitation is accepted
+                from django.contrib.contenttypes.models import ContentType
+                invitation_content_type = ContentType.objects.get_for_model(ProjectInvitation)
+                print(f"Looking for notifications with content_type={invitation_content_type}, object_id={invitation.id}, recipient={invitation.invitee.user_id}")
+                
+                related_notifications = Notification.objects.filter(
+                    recipient=invitation.invitee,
+                    content_type=invitation_content_type,
+                    object_id=invitation.id,
+                    is_read=False
+                )
+                print(f"Found {related_notifications.count()} related notifications to mark as read")
+                
+                updated_notifications = related_notifications.update(is_read=True, read_at=timezone.now())
+                print(f"Marked {updated_notifications} related notifications as read")
+                
+                # Broadcast member joined if membership was created
+                if created:
+                    BroadcastService.broadcast_member_update(project_member, 'joined', request.user)
+                    
+                    # Notify all existing project members that someone joined
+                    existing_members = ProjectMember.objects.filter(
+                        project=invitation.project
+                    ).exclude(user=invitation.invitee)
+                    
+                    from .services.notification_service import NotificationService
+                    for member in existing_members:
+                        NotificationService.create_notification(
+                            recipient=member.user,
+                            notification_type='member_joined',
+                            title=f'New Member: {invitation.invitee.name}',
+                            message=f'{invitation.invitee.name} joined {invitation.project.title}',
+                            content_object=invitation.project,
+                            action_url=f'/project-details/{invitation.project.id}',
+                            actor=invitation.invitee
+                        )
+            
+            return Response({
+                "message": "Invitation accepted successfully",
+                "membership_created": created,
+                "project_id": invitation.project.id,
+                "project_title": invitation.project.title
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            import traceback
+            error_details = {
+                "error": str(e),
+                "error_type": type(e).__name__,
+                "traceback": traceback.format_exc()
+            }
+            print(f"Accept invitation error: {error_details}")
+            
+            # If it's a 404 error, provide more helpful message
+            if "No ProjectInvitation matches" in str(e):
+                user_invitations = ProjectInvitation.objects.filter(invitee=request.user)
+                available_ids = list(user_invitations.values_list('id', flat=True))
+                error_details["helpful_message"] = f"User {request.user.user_id} can only access invitations: {available_ids}. Requested ID {pk} is not available."
+            
+            return Response(
+                error_details,
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+    @action(detail=True, methods=['post'], url_path='decline')
+    def decline_invitation(self, request, pk=None):
+        """Decline a project invitation"""
+        try:
+            invitation = self.get_object()
+            
+            # Check if the current user is the invitee
+            if invitation.invitee != request.user:
+                return Response(
+                    {"error": "You can only decline invitations sent to you"},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            
+            # Check if invitation is still pending
+            if invitation.status != 'pending':
+                return Response(
+                    {"error": f"Invitation has already been {invitation.status}"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Update invitation status without triggering model validation
+            from django.utils import timezone
+            ProjectInvitation.objects.filter(id=invitation.id).update(
+                status='declined',
+                updated_at=timezone.now()
+            )
+            
+            # Mark related notifications as read when invitation is declined
+            from django.contrib.contenttypes.models import ContentType
+            invitation_content_type = ContentType.objects.get_for_model(ProjectInvitation)
+            print(f"Looking for notifications with content_type={invitation_content_type}, object_id={invitation.id}, recipient={invitation.invitee.user_id}")
+            
+            related_notifications = Notification.objects.filter(
+                recipient=invitation.invitee,
+                content_type=invitation_content_type,
+                object_id=invitation.id,
+                is_read=False
+            )
+            print(f"Found {related_notifications.count()} related notifications to mark as read")
+            
+            updated_notifications = related_notifications.update(is_read=True, read_at=timezone.now())
+            print(f"Marked {updated_notifications} related notifications as read")
+            
+            return Response({
+                "message": "Invitation declined successfully",
+                "project_id": invitation.project.id,
+                "project_title": invitation.project.title
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+    @action(detail=False, methods=['get'], url_path='my-invitations')
+    def my_invitations(self, request):
+        """Get all invitations for the current user"""
+        try:
+            invitations = ProjectInvitation.objects.filter(
+                invitee=request.user,
+                status='pending'
+            ).select_related('project', 'invited_by').order_by('-created_at')
+            
+            serializer = self.get_serializer(invitations, many=True)
+            return Response({
+                "invitations": serializer.data,
+                "count": len(serializer.data)
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+
+class NotificationViewSet(ModelViewSet):
+    serializer_class = NotificationSerializer
+    permission_classes = [IsAuthenticated]
+    
+    def get_queryset(self):
+        # Get all notifications for the user (not just unread)
+        queryset = Notification.objects.filter(recipient=self.request.user)
+        
+        # Support timestamp filtering for polling
+        since_timestamp = self.request.query_params.get('since')
+        if since_timestamp:
+            try:
+                from datetime import datetime
+                since_date = datetime.fromisoformat(since_timestamp.replace('Z', '+00:00'))
+                queryset = queryset.filter(created_at__gt=since_date)
+            except ValueError:
+                # Invalid timestamp format, ignore the filter
+                pass
+        
+        return queryset.order_by('-created_at')
+    
+    @action(detail=False, methods=['get'])
+    def unread_count(self, request):
+        count = self.get_queryset().filter(is_read=False).count()
+        return Response({'unread_count': count})
+    
+    @action(detail=True, methods=['post'])
+    def mark_read(self, request, pk=None):
+        from .services.notification_service import NotificationService
+        notification = self.get_object()
+        NotificationService.mark_as_read(notification.id, request.user)
+        return Response({'status': 'marked as read'})
+    
+    @action(detail=False, methods=['post'])
+    def mark_all_read(self, request):
+        from .services.notification_service import NotificationService
+        NotificationService.mark_all_as_read(request.user)
+        return Response({'status': 'all marked as read'})
+
+
+class RepositoryViewSet(ModelViewSet):
+    queryset = Repository.objects.all()
+    serializer_class = RepositorySerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        project_id = self.request.query_params.get('project_id')
+        if project_id:
+            return Repository.objects.filter(project_id=project_id)
+        # Allow access to all repositories for project creators
+        # This is needed for DELETE operations that don't include project_id
+        return Repository.objects.filter(project__created_by=self.request.user)
+
+    def perform_create(self, serializer):
+        # Only allow project creators to create repositories
+        project = serializer.validated_data['project']
+        if project.created_by != self.request.user:
+            raise PermissionDenied("Only project creators can add repositories")
+        repository = serializer.save()
+        # Broadcast repository creation
+        BroadcastService.broadcast_repository_update(repository, 'created', self.request.user)
+
+    def perform_update(self, serializer):
+        # Only allow project creators to update repositories
+        repository = self.get_object()
+        if repository.project.created_by != self.request.user:
+            raise PermissionDenied("Only project creators can update repositories")
+        repository = serializer.save()
+        # Broadcast repository update
+        BroadcastService.broadcast_repository_update(repository, 'updated', self.request.user)
+
+    def perform_destroy(self, instance):
+        # Only allow project creators to delete repositories
+        if instance.project.created_by != self.request.user:
+            raise PermissionDenied("Only project creators can delete repositories")
+        # Broadcast repository deletion before destroying
+        BroadcastService.broadcast_repository_update(instance, 'deleted', self.request.user)
+        instance.delete()
+
