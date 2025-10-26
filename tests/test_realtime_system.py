@@ -10,7 +10,7 @@ This script tests the comprehensive real-time collaboration system including:
 - Multi-user collaboration scenarios
 
 Usage:
-    python test_realtime_system.py
+    python tests/test_realtime_system.py
 """
 
 import asyncio

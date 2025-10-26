@@ -4,7 +4,7 @@ Test script for AI API notification endpoints.
 This script tests all notification types by making API calls and verifying notifications are created.
 
 Usage:
-    python test_notifications.py
+    python tests/test_notifications.py
 
 Requirements:
     - Django server running on localhost:8000

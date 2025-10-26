@@ -4,7 +4,7 @@ Setup script to help configure the notification test script.
 This script will help you get JWT tokens and user IDs for testing.
 
 Usage:
-    python setup_test_data.py
+    python tests/setup_test_data.py
 
 Requirements:
     - Django server running on localhost:8000
@@ -109,7 +109,7 @@ def main():
     print("📝 Generated Test Configuration:")
     print("=" * 50)
     print()
-    print("Copy this configuration into test_notifications.py:")
+    print("Copy this configuration into tests/test_notifications.py:")
     print()
     print("TEST_CONFIG = {")
     print(f'    "user1_token": "{user_data[0]["token"]}",  # {user_data[0]["email"]}')
@@ -124,7 +124,7 @@ def main():
     print('    "repository_id": None,  # Will be set after repository creation')
     print("}")
     print()
-    print("✅ Setup complete! Now you can run: python test_notifications.py")
+    print("✅ Setup complete! Now you can run: python tests/test_notifications.py")
 
 if __name__ == "__main__":
     main()

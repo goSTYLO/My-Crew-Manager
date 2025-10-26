@@ -720,16 +720,16 @@ The notification system includes a complete testing suite with multiple tools fo
 
 ```bash
 # Test all notification types with real API calls
-python test_notifications.py
+python tests/test_notifications.py
 
 # Get authentication tokens and user IDs for testing
-python setup_test_data.py
+python tests/setup_test_data.py
 
 # Check notifications directly in database
 python check_notifications.py
 
 # Test authentication endpoints
-python test_auth.py
+python tests/test_auth.py
 ```
 
 #### Test Coverage
@@ -1029,11 +1029,11 @@ For support and questions:
   - **TopNavbar Integration**: Enhanced to show toasts for important notification types
   - **Toast Priority**: Only high-priority events show toast notifications for better UX
 - ✅ **Comprehensive Testing Suite**: Created complete notification testing infrastructure
-  - **Test Script**: `test_notifications.py` with 14 comprehensive notification tests
-  - **Setup Script**: `setup_test_data.py` for obtaining authentication tokens and user IDs
+  - **Test Script**: `tests/test_notifications.py` with 14 comprehensive notification tests
+  - **Setup Script**: `tests/setup_test_data.py` for obtaining authentication tokens and user IDs
   - **Database Checker**: `check_notifications.py` for direct notification inspection
-  - **Authentication Testing**: `test_auth.py` for verifying login endpoints
-  - **Documentation**: `NOTIFICATION_TESTING_README.md` with complete testing instructions
+  - **Authentication Testing**: `tests/test_auth.py` for verifying login endpoints
+  - **Documentation**: `tests/NOTIFICATION_TESTING_README.md` with complete testing instructions
   - **Test Coverage**: All notification types tested with real API calls and database verification
 - ✅ **Production Ready**: Notification system fully tested and verified working
   - **Backend Verification**: All 14 notification types successfully create database records

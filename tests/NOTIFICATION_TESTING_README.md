@@ -4,26 +4,26 @@ This guide explains how to test the comprehensive notification system implemente
 
 ## 📁 Test Scripts
 
-### 1. `setup_test_data.py` - Configuration Setup
+### 1. `tests/setup_test_data.py` - Configuration Setup
 **Purpose**: Get JWT tokens and user IDs needed for testing.
 
 **Usage**:
 ```bash
-python setup_test_data.py
+python tests/setup_test_data.py
 ```
 
 **What it does**:
 - Prompts for email/password of 2 users
 - Gets JWT tokens for authentication
 - Retrieves user IDs and names
-- Generates configuration for `test_notifications.py`
+- Generates configuration for `tests/test_notifications.py`
 
-### 2. `test_notifications.py` - Main Test Script
+### 2. `tests/test_notifications.py` - Main Test Script
 **Purpose**: Tests all notification endpoints by making API calls and verifying notifications are created.
 
 **Usage**:
 ```bash
-python test_notifications.py
+python tests/test_notifications.py
 ```
 
 **What it tests**:
@@ -60,20 +60,20 @@ python check_notifications.py
 2. Ensure you have at least 2 users in your database
 3. **Optional**: Test authentication first:
    ```bash
-   python test_auth.py
+   python tests/test_auth.py
    ```
 4. Run the setup script:
    ```bash
-   python setup_test_data.py
+   python tests/setup_test_data.py
    ```
 
 ### Step 2: Configure Test Script
-1. Copy the generated configuration from `setup_test_data.py` output
-2. Paste it into `test_notifications.py` (replace the `TEST_CONFIG` section)
+1. Copy the generated configuration from `tests/setup_test_data.py` output
+2. Paste it into `tests/test_notifications.py` (replace the `TEST_CONFIG` section)
 
 ### Step 3: Run Tests
 ```bash
-python test_notifications.py
+python tests/test_notifications.py
 ```
 
 ### Step 4: Debug (if needed)
@@ -135,8 +135,8 @@ Success Rate: 100.0%
 ### Common Issues
 
 #### 1. "Configuration not updated"
-**Problem**: JWT tokens not set in `test_notifications.py`
-**Solution**: Run `setup_test_data.py` and copy the generated config
+**Problem**: JWT tokens not set in `tests/test_notifications.py`
+**Solution**: Run `tests/setup_test_data.py` and copy the generated config
 
 #### 2. "Login failed: 404"
 **Problem**: Authentication endpoint not found
@@ -235,4 +235,4 @@ The test script uses timestamps to create unique names, so you can run it multip
 
 - Database will accumulate test data
 - You may want to clean up test projects periodically
-- JWT tokens may expire (run `setup_test_data.py` again if needed)
+- JWT tokens may expire (run `tests/setup_test_data.py` again if needed)
