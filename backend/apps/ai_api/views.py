@@ -30,6 +30,7 @@ from backend.llms.backlog_llm import run_backlog_pipeline
 from backend.llms.llm_cache import clear_cache_and_free_memory, get_memory_usage, start_auto_cleanup
 from backend.apps.ai_api.tasks import task_manager, TaskCancelledException
 from backend.core.services.broadcast_service import BroadcastService
+from backend.core.services.notification_service import NotificationService
 
 import pdfplumber
 import threading
@@ -175,6 +176,22 @@ class ProjectViewSet(ModelViewSet):
             # Broadcast backlog regeneration
             BroadcastService.broadcast_backlog_regenerated(project, self.request.user)
             
+            # Notify all project members except actor
+            try:
+                members = ProjectMember.objects.filter(project=project).exclude(user=self.request.user)
+                for member in members:
+                    NotificationService.create_notification(
+                        recipient=member.user,
+                        notification_type='project_update',
+                        title=f'Backlog Regenerated: {project.title}',
+                        message=f'{self.request.user.name} regenerated the project backlog',
+                        content_object=project,
+                        action_url=f'/project-details/{project.id}',
+                        actor=self.request.user
+                    )
+            except Exception as e:
+                print(f"Error creating backlog regeneration notifications: {e}")
+            
             return Response({
                 "message": "Backlog generated successfully",
                 "backlog": backlog_dict
@@ -262,6 +279,22 @@ class ProjectViewSet(ModelViewSet):
 
         # Broadcast overview regeneration
         BroadcastService.broadcast_overview_regenerated(project, self.request.user)
+        
+        # Notify all project members except actor
+        try:
+            members = ProjectMember.objects.filter(project=project).exclude(user=self.request.user)
+            for member in members:
+                NotificationService.create_notification(
+                    recipient=member.user,
+                    notification_type='project_update',
+                    title=f'Overview Regenerated: {project.title}',
+                    message=f'{self.request.user.name} regenerated the project overview',
+                    content_object=project,
+                    action_url=f'/project-details/{project.id}',
+                    actor=self.request.user
+                )
+        except Exception as e:
+            print(f"Error creating overview regeneration notifications: {e}")
         
         return Response({
             "message": "Project overview generated successfully",
@@ -368,6 +401,23 @@ class ProjectViewSet(ModelViewSet):
 
     def perform_update(self, serializer):
         project = serializer.save()
+        
+        # Notify all project members except actor
+        try:
+            members = ProjectMember.objects.filter(project=project).exclude(user=self.request.user)
+            for member in members:
+                NotificationService.create_notification(
+                    recipient=member.user,
+                    notification_type='project_update',
+                    title=f'Project Updated: {project.title}',
+                    message=f'{self.request.user.name} updated the project details',
+                    content_object=project,
+                    action_url=f'/project-details/{project.id}',
+                    actor=self.request.user
+                )
+        except Exception as e:
+            print(f"Error creating project_update notifications: {e}")
+        
         # Broadcast project update
         BroadcastService.broadcast_project_update(project, 'updated', self.request.user)
 
@@ -530,6 +580,23 @@ class EpicViewSet(ModelViewSet):
 
     def perform_create(self, serializer):
         epic = serializer.save()
+        
+        # Notify all project members except actor
+        try:
+            members = ProjectMember.objects.filter(project=epic.project).exclude(user=self.request.user)
+            for member in members:
+                NotificationService.create_notification(
+                    recipient=member.user,
+                    notification_type='project_update',
+                    title=f'New Epic: {epic.title}',
+                    message=f'{self.request.user.name} created a new epic in {epic.project.title}',
+                    content_object=epic,
+                    action_url=f'/project-details/{epic.project.id}',
+                    actor=self.request.user
+                )
+        except Exception as e:
+            print(f"Error creating epic creation notifications: {e}")
+        
         # Broadcast epic creation
         BroadcastService.broadcast_epic_update(epic, 'created', self.request.user)
 
@@ -539,6 +606,22 @@ class EpicViewSet(ModelViewSet):
         BroadcastService.broadcast_epic_update(epic, 'updated', self.request.user)
 
     def perform_destroy(self, instance):
+        # Notify all project members except actor before deletion
+        try:
+            members = ProjectMember.objects.filter(project=instance.project).exclude(user=self.request.user)
+            for member in members:
+                NotificationService.create_notification(
+                    recipient=member.user,
+                    notification_type='project_update',
+                    title=f'Epic Deleted: {instance.title}',
+                    message=f'{self.request.user.name} deleted an epic from {instance.project.title}',
+                    content_object=instance.project,  # Epic will be deleted, link to project
+                    action_url=f'/project-details/{instance.project.id}',
+                    actor=self.request.user
+                )
+        except Exception as e:
+            print(f"Error creating epic deletion notifications: {e}")
+        
         # Broadcast epic deletion before destroying
         BroadcastService.broadcast_epic_update(instance, 'deleted', self.request.user)
         instance.delete()
@@ -557,6 +640,24 @@ class SubEpicViewSet(ModelViewSet):
 
     def perform_create(self, serializer):
         sub_epic = serializer.save()
+        
+        # Notify all project members except actor
+        try:
+            project = sub_epic.epic.project
+            members = ProjectMember.objects.filter(project=project).exclude(user=self.request.user)
+            for member in members:
+                NotificationService.create_notification(
+                    recipient=member.user,
+                    notification_type='project_update',
+                    title=f'New Sub-Epic: {sub_epic.title}',
+                    message=f'{self.request.user.name} created a new sub-epic in {project.title}',
+                    content_object=sub_epic,
+                    action_url=f'/project-details/{project.id}',
+                    actor=self.request.user
+                )
+        except Exception as e:
+            print(f"Error creating sub-epic creation notifications: {e}")
+        
         # Broadcast sub-epic creation
         BroadcastService.broadcast_sub_epic_update(sub_epic, 'created', self.request.user)
 
@@ -566,6 +667,23 @@ class SubEpicViewSet(ModelViewSet):
         BroadcastService.broadcast_sub_epic_update(sub_epic, 'updated', self.request.user)
 
     def perform_destroy(self, instance):
+        # Notify all project members except actor before deletion
+        try:
+            project = instance.epic.project
+            members = ProjectMember.objects.filter(project=project).exclude(user=self.request.user)
+            for member in members:
+                NotificationService.create_notification(
+                    recipient=member.user,
+                    notification_type='project_update',
+                    title=f'Sub-Epic Deleted: {instance.title}',
+                    message=f'{self.request.user.name} deleted a sub-epic from {project.title}',
+                    content_object=project,  # Sub-epic will be deleted, link to project
+                    action_url=f'/project-details/{project.id}',
+                    actor=self.request.user
+                )
+        except Exception as e:
+            print(f"Error creating sub-epic deletion notifications: {e}")
+        
         # Broadcast sub-epic deletion before destroying
         BroadcastService.broadcast_sub_epic_update(instance, 'deleted', self.request.user)
         instance.delete()
@@ -584,6 +702,24 @@ class UserStoryViewSet(ModelViewSet):
 
     def perform_create(self, serializer):
         user_story = serializer.save()
+        
+        # Notify all project members except actor
+        try:
+            project = user_story.sub_epic.epic.project
+            members = ProjectMember.objects.filter(project=project).exclude(user=self.request.user)
+            for member in members:
+                NotificationService.create_notification(
+                    recipient=member.user,
+                    notification_type='project_update',
+                    title=f'New User Story: {user_story.title}',
+                    message=f'{self.request.user.name} created a new user story in {project.title}',
+                    content_object=user_story,
+                    action_url=f'/project-details/{project.id}',
+                    actor=self.request.user
+                )
+        except Exception as e:
+            print(f"Error creating user story creation notifications: {e}")
+        
         # Broadcast user story creation
         BroadcastService.broadcast_user_story_update(user_story, 'created', self.request.user)
 
@@ -593,6 +729,23 @@ class UserStoryViewSet(ModelViewSet):
         BroadcastService.broadcast_user_story_update(user_story, 'updated', self.request.user)
 
     def perform_destroy(self, instance):
+        # Notify all project members except actor before deletion
+        try:
+            project = instance.sub_epic.epic.project
+            members = ProjectMember.objects.filter(project=project).exclude(user=self.request.user)
+            for member in members:
+                NotificationService.create_notification(
+                    recipient=member.user,
+                    notification_type='project_update',
+                    title=f'User Story Deleted: {instance.title}',
+                    message=f'{self.request.user.name} deleted a user story from {project.title}',
+                    content_object=project,  # User story will be deleted, link to project
+                    action_url=f'/project-details/{project.id}',
+                    actor=self.request.user
+                )
+        except Exception as e:
+            print(f"Error creating user story deletion notifications: {e}")
+        
         # Broadcast user story deletion before destroying
         BroadcastService.broadcast_user_story_update(instance, 'deleted', self.request.user)
         instance.delete()
@@ -859,26 +1012,31 @@ class StoryTaskViewSet(ModelViewSet):
         if task.assignee:
             project = task.user_story.sub_epic.epic.project
             
-            # Determine recipients (assignee + creator, excluding duplicates and actor)
+            # Determine recipients
             recipients = set()
             if task.assignee.user:
                 recipients.add(task.assignee.user)
             if project.created_by != self.request.user:
                 recipients.add(project.created_by)
-            recipients.discard(self.request.user)  # Don't notify the actor
+            recipients.discard(self.request.user)
             
             # Create task_assigned notification for each recipient
-            from .services.notification_service import NotificationService
-            for recipient in recipients:
-                NotificationService.create_notification(
-                    recipient=recipient,
-                    notification_type='task_assigned',
-                    title=f'Task Assigned: {task.title}',
-                    message=f'{self.request.user.name} assigned you to "{task.title}"',
-                    content_object=task,
-                    action_url=f'/project-details/{project.id}',
-                    actor=self.request.user
-                )
+            try:
+                for recipient in recipients:
+                    notification = NotificationService.create_notification(
+                        recipient=recipient,
+                        notification_type='task_assigned',
+                        title=f'Task Assigned: {task.title}',
+                        message=f'{self.request.user.name} assigned you to "{task.title}"',
+                        content_object=task,
+                        action_url=f'/project-details/{project.id}',
+                        actor=self.request.user
+                    )
+                    print(f"✓ Created notification {notification.id} for {recipient.name}")
+            except Exception as e:
+                print(f"✗ Error creating task_assigned notification: {e}")
+                import traceback
+                traceback.print_exc()
         
         # Broadcast task creation
         BroadcastService.broadcast_task_update(task, 'created', self.request.user)
@@ -897,8 +1055,6 @@ class StoryTaskViewSet(ModelViewSet):
         recipients.discard(self.request.user)  # Don't notify the actor
         
         # Create notifications based on what changed
-        from .services.notification_service import NotificationService
-        
         # Check for assignment change
         if old_instance.assignee != task.assignee and task.assignee:
             for recipient in recipients:
@@ -1001,7 +1157,6 @@ class ProjectMemberViewSet(ModelViewSet):
                 project=project
             ).exclude(id=member.id)
             
-            from .services.notification_service import NotificationService
             for remaining_member in remaining_members:
                 NotificationService.create_notification(
                     recipient=remaining_member.user,
@@ -1080,7 +1235,6 @@ class ProjectInvitationViewSet(ModelViewSet):
                 invitation = ProjectInvitation.objects.get(id=response.data['id'])
                 
                 # Create notification
-                from .services.notification_service import NotificationService
                 NotificationService.create_notification(
                     recipient=invitation.invitee,
                     notification_type='project_invitation',
@@ -1195,7 +1349,6 @@ class ProjectInvitationViewSet(ModelViewSet):
                         project=invitation.project
                     ).exclude(user=invitation.invitee)
                     
-                    from .services.notification_service import NotificationService
                     for member in existing_members:
                         NotificationService.create_notification(
                             recipient=member.user,
@@ -1339,14 +1492,12 @@ class NotificationViewSet(ModelViewSet):
     
     @action(detail=True, methods=['post'])
     def mark_read(self, request, pk=None):
-        from .services.notification_service import NotificationService
         notification = self.get_object()
         NotificationService.mark_as_read(notification.id, request.user)
         return Response({'status': 'marked as read'})
     
     @action(detail=False, methods=['post'])
     def mark_all_read(self, request):
-        from .services.notification_service import NotificationService
         NotificationService.mark_all_as_read(request.user)
         return Response({'status': 'all marked as read'})
 
@@ -1370,6 +1521,23 @@ class RepositoryViewSet(ModelViewSet):
         if project.created_by != self.request.user:
             raise PermissionDenied("Only project creators can add repositories")
         repository = serializer.save()
+        
+        # Notify all project members except actor
+        try:
+            members = ProjectMember.objects.filter(project=project).exclude(user=self.request.user)
+            for member in members:
+                NotificationService.create_notification(
+                    recipient=member.user,
+                    notification_type='project_update',
+                    title=f'Repository Added: {repository.name}',
+                    message=f'{self.request.user.name} added a repository to {project.title}',
+                    content_object=repository,
+                    action_url=f'/project-details/{project.id}',
+                    actor=self.request.user
+                )
+        except Exception as e:
+            print(f"Error creating repository creation notifications: {e}")
+        
         # Broadcast repository creation
         BroadcastService.broadcast_repository_update(repository, 'created', self.request.user)
 
@@ -1379,6 +1547,23 @@ class RepositoryViewSet(ModelViewSet):
         if repository.project.created_by != self.request.user:
             raise PermissionDenied("Only project creators can update repositories")
         repository = serializer.save()
+        
+        # Notify all project members except actor
+        try:
+            members = ProjectMember.objects.filter(project=repository.project).exclude(user=self.request.user)
+            for member in members:
+                NotificationService.create_notification(
+                    recipient=member.user,
+                    notification_type='project_update',
+                    title=f'Repository Updated: {repository.name}',
+                    message=f'{self.request.user.name} updated a repository in {repository.project.title}',
+                    content_object=repository,
+                    action_url=f'/project-details/{repository.project.id}',
+                    actor=self.request.user
+                )
+        except Exception as e:
+            print(f"Error creating repository update notifications: {e}")
+        
         # Broadcast repository update
         BroadcastService.broadcast_repository_update(repository, 'updated', self.request.user)
 
@@ -1386,6 +1571,23 @@ class RepositoryViewSet(ModelViewSet):
         # Only allow project creators to delete repositories
         if instance.project.created_by != self.request.user:
             raise PermissionDenied("Only project creators can delete repositories")
+        
+        # Notify all project members except actor before deletion
+        try:
+            members = ProjectMember.objects.filter(project=instance.project).exclude(user=self.request.user)
+            for member in members:
+                NotificationService.create_notification(
+                    recipient=member.user,
+                    notification_type='project_update',
+                    title=f'Repository Deleted: {instance.name}',
+                    message=f'{self.request.user.name} deleted a repository from {instance.project.title}',
+                    content_object=instance.project,  # Repository will be deleted, link to project
+                    action_url=f'/project-details/{instance.project.id}',
+                    actor=self.request.user
+                )
+        except Exception as e:
+            print(f"Error creating repository deletion notifications: {e}")
+        
         # Broadcast repository deletion before destroying
         BroadcastService.broadcast_repository_update(instance, 'deleted', self.request.user)
         instance.delete()

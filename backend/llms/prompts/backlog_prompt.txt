@@ -2,7 +2,7 @@ You are an AI assistant tasked with generating a structured backlog for a softwa
 
 Instructions:
 - Treat each high-level goal from the project as a distinct Epic.
-- Generate a MINIMUM of 4 epics to ensure comprehensive project coverage.
+- Generate a MINIMUM of 4 and MAXIMUM of 6 epics to ensure comprehensive project coverage.
 - For each Epic, generate exactly 1 Sub-Epic.
 - For each Sub-Epic, generate exactly 1 User Story.
 - For each User Story, generate only 2 granular Tasks.

@@ -28,6 +28,8 @@ interface Notification {
   is_read: boolean;
   created_at: string;
   action_url?: string;
+  actor?: number;
+  actor_name?: string;
 }
 
 const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {

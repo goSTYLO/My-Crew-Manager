@@ -401,6 +401,46 @@ import backend.apps.chat.routing
 from backend.apps.ai_api.routing import websocket_urlpatterns
 ```
 
+### Issue 6: NotificationService Import Errors
+**Cause**: Notification service moved to `backend/core/services/` but imports not updated.
+
+**Error**: `ModuleNotFoundError: No module named 'backend.apps.ai_api.services.notification_service'`
+
+**Solution**: Update all imports from old location to new location:
+
+**Files to update**:
+- `backend/apps/ai_api/views.py`
+- `backend/apps/ai_api/tests.py`
+
+**Import changes**:
+```python
+# OLD (incorrect):
+from .services.notification_service import NotificationService
+from ai_api.services.notification_service import NotificationService
+
+# NEW (correct):
+from backend.core.services.notification_service import NotificationService
+```
+
+**Test patch decorators**:
+```python
+# OLD (incorrect):
+@patch('ai_api.services.notification_service.NotificationService.send_realtime_notification')
+
+# NEW (correct):
+@patch('backend.core.services.notification_service.NotificationService.send_realtime_notification')
+```
+
+**Verification**:
+```bash
+# Test import works
+python backend/manage.py shell -c "from backend.core.services.notification_service import NotificationService; print('✅ Import successful')"
+
+# Test API endpoint
+curl -I http://localhost:8000/api/ai/invitations/
+# Should return 401 Unauthorized (not 500 Internal Server Error)
+```
+
 ## 📝 Command Reference
 
 ### New Command Structure
@@ -431,6 +471,35 @@ python backend/manage.py migrate
 # Start server
 python backend/manage.py runserver
 ```
+
+## 🐛 Post-Migration Bug Fixes
+
+### Bug Fix 1: NotificationService Import Errors (Fixed: October 26, 2025)
+
+**Issue**: After the backend reorganization, the `NotificationService` was moved from `backend/apps/ai_api/services/notification_service.py` to `backend/core/services/notification_service.py`, but several files still had imports pointing to the old location.
+
+**Error Encountered**:
+```
+POST http://localhost:8000/api/ai/invitations/ 400 (Bad Request)
+{error: "No module named 'backend.apps.ai_api.services.notification_service'"}
+```
+
+**Files Fixed**:
+1. **`backend/apps/ai_api/views.py`**:
+   - Updated 7 import statements from `from .services.notification_service import NotificationService`
+   - To: `from backend.core.services.notification_service import NotificationService`
+
+2. **`backend/apps/ai_api/tests.py`**:
+   - Updated 1 import statement
+   - Updated 4 `@patch` decorators to use new import path
+
+**Verification**:
+- ✅ Django system check passes
+- ✅ NotificationService imports successfully
+- ✅ API endpoint `/api/ai/invitations/` responds correctly (401 Unauthorized instead of 500 Internal Server Error)
+- ✅ Django server starts without import errors
+
+**Root Cause**: During the reorganization, the notification service was moved to the shared `backend/core/services/` directory, but the import statements in dependent files were not updated to reflect the new location.
 
 ## 🎯 Benefits Achieved
 

@@ -520,7 +520,6 @@ class _MemberCircle extends StatelessWidget {
   const _MemberCircle({
     required this.label,
     required this.color,
-    this.textColor = Colors.white,
   });
 
   @override

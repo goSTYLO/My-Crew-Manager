@@ -28,6 +28,8 @@ interface Notification {
   is_read: boolean;
   created_at: string;
   action_url?: string;
+  actor?: number;
+  actor_name?: string;
 }
 
 const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
@@ -58,7 +60,10 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
 
       if (response.ok) {
         const data = await response.json();
-        setNotifications(data.results || data);
+        console.log('🔔 TopNavbar: Initial fetch response:', data);
+        const notifications = data.results || data;
+        console.log('🔔 TopNavbar: Initial notifications:', notifications);
+        setNotifications(notifications);
       }
     } catch (error) {
       console.error('Error fetching notifications:', error);
@@ -121,8 +126,13 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
   useNotificationPolling({
     enabled: true,
     onNewNotifications: (newNotifications) => {
+      console.log('🔔 TopNavbar: Received new notifications:', newNotifications);
       // Add new notifications to the list
-      setNotifications(prev => [...newNotifications, ...prev]);
+      setNotifications(prev => {
+        const updated = [...newNotifications, ...prev];
+        console.log('🔔 TopNavbar: Updated notifications list:', updated);
+        return updated;
+      });
       
       // Show toast for important notifications
       const importantTypes = [
@@ -143,7 +153,7 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
       });
     },
     onError: (error) => {
-      console.error('Notification polling error:', error);
+      console.error('🔔 TopNavbar: Notification polling error:', error);
     }
   });
 

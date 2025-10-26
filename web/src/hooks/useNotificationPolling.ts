@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { API_BASE_URL } from '../config/api';
 
 interface Notification {
   id: number;
@@ -8,6 +9,8 @@ interface Notification {
   is_read: boolean;
   created_at: string;
   action_url?: string;
+  actor?: number;
+  actor_name?: string;
 }
 
 interface UseNotificationPollingOptions {
@@ -52,13 +55,8 @@ export const useNotificationPolling = ({
 
   // Get current polling interval
   const getCurrentInterval = useCallback(() => {
-    if (!isVisibleRef.current) {
-      return 30000; // 30 seconds when tab hidden
-    }
-    if (isUserActive()) {
-      return 3000; // 3 seconds when active
-    }
-    return 15000; // 15 seconds when idle
+    // Simplified for debugging - always use 5 seconds
+    return 5000; // 5 seconds for debugging
   }, []);
 
   // Fetch notifications
@@ -71,7 +69,7 @@ export const useNotificationPolling = ({
 
     try {
       const since = lastFetchRef.current.toISOString();
-      const response = await fetch(`/api/ai/notifications/?since=${since}`, {
+      const response = await fetch(`${API_BASE_URL}/api/ai/notifications/?since=${since}`, {
         headers: {
           'Authorization': `Token ${token}`,
           'Content-Type': 'application/json',
@@ -83,10 +81,12 @@ export const useNotificationPolling = ({
       }
 
       const data = await response.json();
-      const notifications = data.results || data.notifications || [];
+      const notifications = data.results || data.notifications || data || [];
+
+      console.log('🔔 Polling response:', { data, notifications });
 
       if (notifications.length > 0) {
-        console.log(`🔔 Polling: Found ${notifications.length} new notifications`);
+        console.log(`🔔 Polling: Found ${notifications.length} new notifications:`, notifications);
         onNewNotifications?.(notifications);
         setLastUpdate(new Date());
       } else {
