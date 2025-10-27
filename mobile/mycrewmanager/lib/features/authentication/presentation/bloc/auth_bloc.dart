@@ -44,11 +44,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
     await res.fold(
       (failure) async {
-        logger.d("❌ LOGIN FAILED: ${failure.message}");
         emit(AuthFailure(failure.message));
       },
       (user) async {
-        logger.d("✅ LOGIN SUCCESS: ${user.name}");
         await _tokenStorage.saveToken(user.token);
         
         // Fetch complete user data including profile picture
@@ -92,11 +90,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
     await res.fold(
       (failure) async {
-        logger.d("❌ SIGNUP FAILED: ${failure.message}");
         emit(AuthFailure(failure.message));
       },
       (user) async {
-        logger.d("✅ SIGNUP SUCCESS: ${user.name}");
         await _tokenStorage.saveToken(user.token);
         
         // Fetch complete user data including profile picture
@@ -150,11 +146,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
     await res.fold(
       (failure) async {
-        logger.d("❌ LOGOUT FAILED: ${failure.message}");
         emit(AuthFailure(failure.message));
       },
       (_) async {
-        logger.d("✅ LOGOUT SUCCESS");
         await _tokenStorage.clearToken();
         emit(AuthLoggedOut());
       }

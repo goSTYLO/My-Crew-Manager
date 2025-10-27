@@ -55,11 +55,6 @@ class AuthRepositoryImpl implements AuthRepository {
       return right(res);
     } on DioException catch (e) {
       // Better error handling with detailed messages
-      print('🔴 DioException: ${e.type}');
-      print('🔴 Error message: ${e.message}');
-      print('🔴 Response status: ${e.response?.statusCode}');
-      print('🔴 Response data: ${e.response?.data}');
-      
       if (e.type == DioExceptionType.connectionTimeout || 
           e.type == DioExceptionType.receiveTimeout) {
         return left(Failure("Connection timeout. Please check if the server is running with Daphne."));

@@ -30,7 +30,6 @@ class ApiClient {
               error.response?.statusCode == 502 ||
               error.response?.statusCode == 503) {
             // Retry once after a delay
-            print('⚠️ Request failed, retrying once...');
             await Future.delayed(Duration(seconds: 2));
             try {
               final response = await dio.fetch(error.requestOptions);
@@ -41,16 +40,6 @@ class ApiClient {
           }
           return handler.next(error);
         },
-      ),
-    );
-
-    // Add logging for debugging
-    dio.interceptors.add(
-      LogInterceptor(
-        requestBody: true,
-        responseBody: true,
-        error: true,
-        logPrint: (obj) => print('🌐 HTTP: $obj'),
       ),
     );
   }

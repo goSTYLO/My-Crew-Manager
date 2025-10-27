@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:web_socket_channel/web_socket_channel.dart';
-import 'package:mycrewmanager/init_dependencies.dart';
 import 'package:mycrewmanager/features/notification/data/models/notification_model.dart';
 
 class NotificationWsService {
@@ -37,7 +36,6 @@ class NotificationWsService {
       
       _isConnected = true;
     } catch (e) {
-      logger.d("❌ Failed to connect to notification WebSocket: $e");
       _isConnected = false;
       _scheduleReconnect();
     }
@@ -53,12 +51,11 @@ class NotificationWsService {
         _notificationController?.add(notification);
       }
     } catch (e) {
-      logger.d("❌ Error processing notification message: $e");
+      // Silently handle notification processing errors
     }
   }
 
   void _onError(dynamic error) {
-    logger.d("❌ Notification WebSocket error: $error");
     _isConnected = false;
     _scheduleReconnect();
   }

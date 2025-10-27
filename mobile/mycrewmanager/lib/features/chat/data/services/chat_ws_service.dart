@@ -45,10 +45,7 @@ class ChatWsService {
           throw Exception('WebSocket connection timeout - ensure Daphne is running on 0.0.0.0:8000');
         },
       );
-      print('✅ WebSocket connected to room $roomId');
     } catch (e) {
-      print('❌ WebSocket connection failed: $e');
-      print('💡 Make sure: 1) Redis is running 2) Daphne is running with: python -m daphne -b 0.0.0.0 -p 8000 config.asgi:application');
       rethrow;
     }
     _socket!.listen((event) {
