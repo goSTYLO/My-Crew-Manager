@@ -32,3 +32,4 @@ __pycache__/
 # OS specific
 .DS_Store
 .env
+/backend/apps/ai_api/migrations
