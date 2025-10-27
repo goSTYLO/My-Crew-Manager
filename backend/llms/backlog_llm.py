@@ -1,9 +1,9 @@
 import os
 import re
 from typing import Dict, Optional
-from backend.apps.ai_api.tasks import CancellationToken, TaskCancelledException
-from backend.llms.models import BacklogModel, EpicModel, SubEpicModel, UserStoryModel, TaskModel
-from backend.llms.llm_cache import get_cached_backlog_llm
+from apps.ai_api.tasks import CancellationToken, TaskCancelledException
+from llms.models import BacklogModel, EpicModel, SubEpicModel, UserStoryModel, TaskModel
+from llms.llm_cache import get_cached_backlog_llm
 
 def build_prompt(section: str, proposal_text: str, context: Dict = None) -> str:
     root_dir = os.path.dirname(__file__)

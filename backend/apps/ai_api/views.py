@@ -25,12 +25,12 @@ from .serializers import (
 )
 
 # Real LLM pipelines
-from backend.llms.project_llm import run_pipeline_from_text, model_to_dict
-from backend.llms.backlog_llm import run_backlog_pipeline
-from backend.llms.llm_cache import clear_cache_and_free_memory, get_memory_usage, start_auto_cleanup
-from backend.apps.ai_api.tasks import task_manager, TaskCancelledException
-from backend.core.services.broadcast_service import BroadcastService
-from backend.core.services.notification_service import NotificationService
+from llms.project_llm import run_pipeline_from_text, model_to_dict
+from llms.backlog_llm import run_backlog_pipeline
+from llms.llm_cache import clear_cache_and_free_memory, get_memory_usage, start_auto_cleanup
+from apps.ai_api.tasks import task_manager, TaskCancelledException
+from core.services.broadcast_service import BroadcastService
+from core.services.notification_service import NotificationService
 
 import pdfplumber
 import threading

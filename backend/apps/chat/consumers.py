@@ -15,8 +15,15 @@ class ChatConsumer(AsyncWebsocketConsumer):
         self.room_id = self.scope['url_route']['kwargs']['room_id']
         self.room_group_name = f'chat_{self.room_id}'
         
-        # Check if user is authenticated and is a member of the room
+        # Check if user is authenticated
+        if not self.scope['user'].is_authenticated:
+            print(f"Chat WebSocket: User not authenticated for room {self.room_id}")
+            await self.close()
+            return
+        
+        # Check if user is a member of the room
         if not await self.is_authenticated_and_member():
+            print(f"Chat WebSocket: User {self.scope['user'].user_id} not a member of room {self.room_id}")
             await self.close()
             return
         
@@ -34,7 +41,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             {
                 'type': 'user_joined',
                 'user': self.scope['user'].name,
-                'user_id': self.scope['user'].pk,
+                'user_id': self.scope['user'].user_id,
             }
         )
 
@@ -45,15 +52,16 @@ class ChatConsumer(AsyncWebsocketConsumer):
             self.channel_name
         )
         
-        # Send user left message
-        await self.channel_layer.group_send(
-            self.room_group_name,
-            {
-                'type': 'user_left',
-                'user': self.scope['user'].name,
-                'user_id': self.scope['user'].pk,
-            }
-        )
+        # Send user left message only if user is authenticated
+        if self.scope['user'].is_authenticated:
+            await self.channel_layer.group_send(
+                self.room_group_name,
+                {
+                    'type': 'user_left',
+                    'user': self.scope['user'].name,
+                    'user_id': self.scope['user'].user_id,
+                }
+            )
 
     async def receive(self, text_data):
         try:
@@ -86,7 +94,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             {
                 'type': 'typing',
                 'user': self.scope['user'].username,
-                'user_id': self.scope['user'].id,
+                'user_id': self.scope['user'].user_id,
             }
         )
 
@@ -96,7 +104,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             {
                 'type': 'stop_typing',
                 'user': self.scope['user'].username,
-                'user_id': self.scope['user'].id,
+                'user_id': self.scope['user'].user_id,
             }
         )
 
@@ -183,12 +191,30 @@ class ChatNotificationConsumer(AsyncWebsocketConsumer):
     """Consumer for global chat notifications (new messages, mentions, etc.)"""
     
     async def connect(self):
+        print(f"Notification WebSocket: Starting connection...")
+        
+        # Check authentication
         if not self.scope['user'].is_authenticated:
+            print(f"Notification WebSocket: User not authenticated")
             await self.close()
             return
         
-        self.user_id = self.scope['user'].id
+        print(f"Notification WebSocket: User authenticated: {self.scope['user'].email}")
+        
+        # Get user ID safely
+        try:
+            self.user_id = getattr(self.scope['user'], 'user_id', None)
+            if not self.user_id:
+                print(f"Notification WebSocket: No user_id found")
+                await self.close()
+                return
+        except Exception as e:
+            print(f"Notification WebSocket: Error getting user_id: {e}")
+            await self.close()
+            return
+        
         self.notification_group_name = f'user_{self.user_id}_notifications'
+        print(f"Notification WebSocket: User {self.user_id} connecting to notifications")
         
         # Join user's notification group
         await self.channel_layer.group_add(
@@ -197,13 +223,15 @@ class ChatNotificationConsumer(AsyncWebsocketConsumer):
         )
         
         await self.accept()
+        print(f"Notification WebSocket: Connection accepted for user {self.user_id}")
 
     async def disconnect(self, close_code):
-        # Leave notification group
-        await self.channel_layer.group_discard(
-            self.notification_group_name,
-            self.channel_name
-        )
+        # Leave notification group only if it was set during connect
+        if hasattr(self, 'notification_group_name'):
+            await self.channel_layer.group_discard(
+                self.notification_group_name,
+                self.channel_name
+            )
 
     async def receive(self, text_data):
         # This consumer is mainly for receiving notifications

@@ -1,7 +1,7 @@
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 from django.contrib.contenttypes.models import ContentType
-from backend.apps.ai_api.models import ProjectMember, Project, Epic, SubEpic, UserStory, StoryTask, Repository
+from apps.ai_api.models import ProjectMember, Project, Epic, SubEpic, UserStory, StoryTask, Repository
 from .notification_service import NotificationService
 
 
@@ -17,48 +17,44 @@ class BroadcastService:
     def broadcast_to_project(project_id, event_type, action, data, actor):
         """Broadcast an event to all project members"""
         try:
-            # Get all project member user IDs
             user_ids = BroadcastService.get_project_member_user_ids(project_id)
             
             if not user_ids:
-                print(f"No members found for project {project_id}")
                 return
             
-            # Prepare the event payload
+            # Simplified event payload
             event_payload = {
                 'type': event_type,
                 'action': action,
                 'project_id': project_id,
                 'data': data,
                 'actor': {
-                    'id': actor.id if hasattr(actor, 'id') else actor.user_id,
+                    'id': actor.user_id if hasattr(actor, 'user_id') else actor.id,
                     'name': actor.name if hasattr(actor, 'name') else str(actor)
-                },
-                'timestamp': data.get('updated_at') or data.get('created_at') if isinstance(data, dict) else None
+                }
             }
             
-            # Send to each project member's WebSocket channel
             channel_layer = get_channel_layer()
             for user_id in user_ids:
-                group_name = f'user_{user_id}_notifications'
+                group_name = f'user_{user_id}_updates'
                 async_to_sync(channel_layer.group_send)(
                     group_name,
                     {
-                        'type': event_type,
-                        'payload': event_payload
+                        'type': 'project_event',  # Single handler type
+                        'data': event_payload
                     }
                 )
             
-            print(f"Broadcasted {event_type} ({action}) to {len(user_ids)} project members")
+            print(f"Broadcasted {event_type} to {len(user_ids)} members")
             
         except Exception as e:
-            print(f"Error broadcasting to project {project_id}: {e}")
+            print(f"Broadcast error: {e}")
     
     # Project-related broadcasts
     @staticmethod
     def broadcast_project_update(project, action, actor):
         """Broadcast project metadata changes"""
-        from backend.apps.ai_api.serializers import ProjectSerializer
+        from apps.ai_api.serializers import ProjectSerializer
         serializer = ProjectSerializer(project)
         BroadcastService.broadcast_to_project(
             project.id, 'project_update', action, serializer.data, actor
@@ -84,7 +80,7 @@ class BroadcastService:
     @staticmethod
     def broadcast_epic_update(epic, action, actor):
         """Broadcast epic changes"""
-        from backend.apps.ai_api.serializers import EpicSerializer
+        from apps.ai_api.serializers import EpicSerializer
         serializer = EpicSerializer(epic)
         BroadcastService.broadcast_to_project(
             epic.project.id, 'epic_update', action, serializer.data, actor
@@ -94,7 +90,7 @@ class BroadcastService:
     @staticmethod
     def broadcast_sub_epic_update(sub_epic, action, actor):
         """Broadcast sub-epic changes"""
-        from backend.apps.ai_api.serializers import SubEpicSerializer
+        from apps.ai_api.serializers import SubEpicSerializer
         serializer = SubEpicSerializer(sub_epic)
         BroadcastService.broadcast_to_project(
             sub_epic.epic.project.id, 'sub_epic_update', action, serializer.data, actor
@@ -104,7 +100,7 @@ class BroadcastService:
     @staticmethod
     def broadcast_user_story_update(user_story, action, actor):
         """Broadcast user story changes"""
-        from backend.apps.ai_api.serializers import UserStorySerializer
+        from apps.ai_api.serializers import UserStorySerializer
         serializer = UserStorySerializer(user_story)
         BroadcastService.broadcast_to_project(
             user_story.sub_epic.epic.project.id, 'user_story_update', action, serializer.data, actor
@@ -114,7 +110,7 @@ class BroadcastService:
     @staticmethod
     def broadcast_task_update(task, action, actor):
         """Broadcast task changes"""
-        from backend.apps.ai_api.serializers import StoryTaskSerializer
+        from apps.ai_api.serializers import StoryTaskSerializer
         serializer = StoryTaskSerializer(task)
         BroadcastService.broadcast_to_project(
             task.user_story.sub_epic.epic.project.id, 'task_update', action, serializer.data, actor
@@ -124,7 +120,7 @@ class BroadcastService:
     @staticmethod
     def broadcast_member_update(project_member, action, actor):
         """Broadcast member changes"""
-        from backend.apps.ai_api.serializers import ProjectMemberSerializer
+        from apps.ai_api.serializers import ProjectMemberSerializer
         serializer = ProjectMemberSerializer(project_member)
         BroadcastService.broadcast_to_project(
             project_member.project.id, 'member_update', action, serializer.data, actor
@@ -134,7 +130,7 @@ class BroadcastService:
     @staticmethod
     def broadcast_repository_update(repository, action, actor):
         """Broadcast repository changes"""
-        from backend.apps.ai_api.serializers import RepositorySerializer
+        from apps.ai_api.serializers import RepositorySerializer
         serializer = RepositorySerializer(repository)
         BroadcastService.broadcast_to_project(
             repository.project.id, 'repository_update', action, serializer.data, actor

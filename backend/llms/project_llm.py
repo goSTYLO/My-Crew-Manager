@@ -1,14 +1,14 @@
 import os
 import re
-from backend.llms.models import (
+from llms.models import (
     ProjectModel,
     TeamMemberModel,
     TimelineWeekModel,
     TimelineGoalModel
 )
 from typing import Dict, Optional
-from backend.apps.ai_api.tasks import CancellationToken, TaskCancelledException
-from backend.llms.llm_cache import get_cached_llm
+from apps.ai_api.tasks import CancellationToken, TaskCancelledException
+from llms.llm_cache import get_cached_llm
 
 def build_prompt(section: str, proposal_text: str, context: Dict = None) -> str:
     root_dir = os.path.dirname(__file__)

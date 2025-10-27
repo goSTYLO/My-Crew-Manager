@@ -1,7 +1,7 @@
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 from django.contrib.contenttypes.models import ContentType
-from backend.apps.ai_api.models import Notification
+from apps.ai_api.models import Notification
 
 
 class NotificationService:

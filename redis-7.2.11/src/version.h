@@ -1,0 +1,2 @@
+#define REDIS_VERSION "7.2.11"
+#define REDIS_VERSION_NUM 0x0007020b

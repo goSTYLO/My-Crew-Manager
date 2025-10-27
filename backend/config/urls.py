@@ -17,9 +17,9 @@ def room(request):
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/user/', include('backend.apps.users.urls')),
-    path('api/chat/', include('backend.apps.chat.urls')),
-    path('api/ai/', include('backend.apps.ai_api.urls')),
+    path('api/user/', include('apps.users.urls')),
+    path('api/chat/', include('apps.chat.urls')),
+    path('api/ai/', include('apps.ai_api.urls')),
 ]
 
 # Serve media and static files in development

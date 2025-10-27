@@ -1,189 +1,65 @@
 import json
 from channels.generic.websocket import AsyncWebsocketConsumer
+from channels.db import database_sync_to_async
 from django.contrib.auth import get_user_model
-from rest_framework_simplejwt.tokens import AccessToken
-from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
+from rest_framework.authtoken.models import Token
 
 User = get_user_model()
 
-
-class NotificationConsumer(AsyncWebsocketConsumer):
+class ProjectUpdatesConsumer(AsyncWebsocketConsumer):
     async def connect(self):
-        # Accept the connection first to allow authentication message
+        # Extract token from query string
+        query_string = self.scope.get('query_string', b'').decode()
+        token = None
+        
+        for param in query_string.split('&'):
+            if param.startswith('token='):
+                token = param.split('=')[1]
+                break
+        
+        if not token:
+            await self.close()
+            return
+        
+        # Authenticate user using DRF token
+        user = await self.authenticate_token(token)
+        if not user:
+            await self.close()
+            return
+        
+        self.user_id = user.user_id
+        self.group_name = f'user_{self.user_id}_updates'
+        
+        # Join user's personal group
+        await self.channel_layer.group_add(
+            self.group_name,
+            self.channel_name
+        )
+        
         await self.accept()
         
-        # Set initial state
-        self.user = None
-        self.user_id = None
-        self.notification_group_name = None
-        self.authenticated = False
+        # Send connection success
+        await self.send(text_data=json.dumps({
+            'type': 'connected',
+            'user_id': self.user_id
+        }))
     
-    async def receive(self, text_data):
+    @database_sync_to_async
+    def authenticate_token(self, token):
         try:
-            data = json.loads(text_data)
-            
-            # Handle authentication message
-            if data.get('type') == 'auth' and data.get('token'):
-                await self.authenticate_user(data['token'])
-            else:
-                # Handle other message types if authenticated
-                if self.authenticated:
-                    await self.handle_message(data)
-                else:
-                    await self.send(text_data=json.dumps({
-                        'type': 'error',
-                        'message': 'Authentication required'
-                    }))
-                    
-        except json.JSONDecodeError:
-            await self.send(text_data=json.dumps({
-                'type': 'error',
-                'message': 'Invalid JSON'
-            }))
-        except Exception as e:
-            await self.send(text_data=json.dumps({
-                'type': 'error',
-                'message': f'Error: {str(e)}'
-            }))
-    
-    async def authenticate_user(self, token):
-        """Authenticate user using JWT token"""
-        try:
-            # Validate the JWT token
-            access_token = AccessToken(token)
-            user_id = access_token['user_id']
-            
-            # Get the user
-            self.user = await self.get_user_by_id(user_id)
-            if not self.user:
-                await self.send(text_data=json.dumps({
-                    'type': 'error',
-                    'message': 'User not found'
-                }))
-                await self.close()
-                return
-            
-            # Set up user-specific group
-            self.user_id = self.user.user_id
-            self.notification_group_name = f'user_{self.user_id}_notifications'
-            
-            # Add to user's notification group
-            await self.channel_layer.group_add(
-                self.notification_group_name,
-                self.channel_name
-            )
-            
-            self.authenticated = True
-            
-            # Send authentication success message
-            await self.send(text_data=json.dumps({
-                'type': 'auth_success',
-                'message': 'Authentication successful',
-                'user_id': self.user_id
-            }))
-            
-        except (InvalidToken, TokenError) as e:
-            await self.send(text_data=json.dumps({
-                'type': 'error',
-                'message': 'Invalid token'
-            }))
-            await self.close()
-        except Exception as e:
-            await self.send(text_data=json.dumps({
-                'type': 'error',
-                'message': f'Authentication error: {str(e)}'
-            }))
-            await self.close()
-    
-    async def get_user_by_id(self, user_id):
-        """Get user by ID (async wrapper)"""
-        try:
-            return User.objects.get(user_id=user_id)
-        except User.DoesNotExist:
+            # Use DRF Token authentication
+            token_obj = Token.objects.get(key=token)
+            return token_obj.user
+        except Token.DoesNotExist:
             return None
     
-    async def handle_message(self, data):
-        """Handle authenticated messages"""
-        # For now, just echo back the message
-        await self.send(text_data=json.dumps({
-            'type': 'message_received',
-            'data': data
-        }))
-    
     async def disconnect(self, close_code):
-        if self.notification_group_name:
+        if hasattr(self, 'group_name'):
             await self.channel_layer.group_discard(
-                self.notification_group_name,
+                self.group_name,
                 self.channel_name
             )
     
-    async def notification_message(self, event):
-        """Send notification to WebSocket"""
-        await self.send(text_data=json.dumps({
-            'type': 'notification',
-            'notification': event['notification']
-        }))
-    
-    # Real-time project update handlers
-    async def project_update(self, event):
-        """Send project update to WebSocket"""
-        await self.send(text_data=json.dumps({
-            'type': 'project_update',
-            'payload': event['payload']
-        }))
-    
-    async def epic_update(self, event):
-        """Send epic update to WebSocket"""
-        await self.send(text_data=json.dumps({
-            'type': 'epic_update',
-            'payload': event['payload']
-        }))
-    
-    async def sub_epic_update(self, event):
-        """Send sub-epic update to WebSocket"""
-        await self.send(text_data=json.dumps({
-            'type': 'sub_epic_update',
-            'payload': event['payload']
-        }))
-    
-    async def user_story_update(self, event):
-        """Send user story update to WebSocket"""
-        await self.send(text_data=json.dumps({
-            'type': 'user_story_update',
-            'payload': event['payload']
-        }))
-    
-    async def task_update(self, event):
-        """Send task update to WebSocket"""
-        await self.send(text_data=json.dumps({
-            'type': 'task_update',
-            'payload': event['payload']
-        }))
-    
-    async def member_update(self, event):
-        """Send member update to WebSocket"""
-        await self.send(text_data=json.dumps({
-            'type': 'member_update',
-            'payload': event['payload']
-        }))
-    
-    async def repository_update(self, event):
-        """Send repository update to WebSocket"""
-        await self.send(text_data=json.dumps({
-            'type': 'repository_update',
-            'payload': event['payload']
-        }))
-    
-    async def backlog_regenerated(self, event):
-        """Send backlog regeneration notification to WebSocket"""
-        await self.send(text_data=json.dumps({
-            'type': 'backlog_regenerated',
-            'payload': event['payload']
-        }))
-    
-    async def overview_regenerated(self, event):
-        """Send overview regeneration notification to WebSocket"""
-        await self.send(text_data=json.dumps({
-            'type': 'overview_regenerated',
-            'payload': event['payload']
-        }))
+    # Handler for all project update events
+    async def project_event(self, event):
+        await self.send(text_data=json.dumps(event['data']))

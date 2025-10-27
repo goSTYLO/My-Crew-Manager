@@ -50,9 +50,9 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
     'channels',
-    'backend.apps.users.apps.UsersConfig',
-    'backend.apps.chat.apps.ChatConfig',
-    'backend.apps.ai_api.apps.AiApiConfig',
+    'apps.users.apps.UsersConfig',
+    'apps.chat.apps.ChatConfig',
+    'apps.ai_api.apps.AiApiConfig',
 ]
 
 MIDDLEWARE = [
@@ -66,7 +66,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-ROOT_URLCONF = 'backend.config.urls'
+ROOT_URLCONF = 'config.urls'
 
 TEMPLATES = [
     {
@@ -93,7 +93,7 @@ REST_FRAMEWORK = {
 }
 
 
-WSGI_APPLICATION = 'backend.config.wsgi.application'
+WSGI_APPLICATION = 'config.wsgi.application'
 
 
 # Database
@@ -160,15 +160,12 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'users.User'
 
 # Channels configuration
-ASGI_APPLICATION = 'backend.config.asgi.application'
+ASGI_APPLICATION = 'config.asgi.application'
 
 # Channel layers configuration
 CHANNEL_LAYERS = {
     'default': {
-        'BACKEND': 'channels_redis.core.RedisChannelLayer',
-        'CONFIG': {
-            "hosts": [('127.0.0.1', 6379)],
-        },
+        'BACKEND': 'channels.layers.InMemoryChannelLayer'
     },
 }
 

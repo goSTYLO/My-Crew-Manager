@@ -11,16 +11,20 @@ import os
 from django.core.asgi import get_asgi_application
 from channels.routing import ProtocolTypeRouter, URLRouter
 from channels.auth import AuthMiddlewareStack
-from backend.apps.chat.auth import TokenAuthMiddlewareStack
-import backend.apps.chat.routing
-from backend.apps.ai_api.routing import websocket_urlpatterns as ai_websocket_urlpatterns
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.config.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 
+# Initialize Django ASGI application early to ensure the AppRegistry
+# is populated before importing code that may import ORM models.
 django_asgi_app = get_asgi_application()
 
+# Now that Django is initialized, we can safely import our custom middleware and routing
+from apps.chat.auth import TokenAuthMiddlewareStack
+import apps.chat.routing
+from apps.ai_api.routing import websocket_urlpatterns as ai_websocket_urlpatterns
+
 # Combine all WebSocket URL patterns
-websocket_urlpatterns = backend.apps.chat.routing.websocket_urlpatterns + ai_websocket_urlpatterns
+websocket_urlpatterns = apps.chat.routing.websocket_urlpatterns + ai_websocket_urlpatterns
 
 application = ProtocolTypeRouter({
     "http": django_asgi_app,

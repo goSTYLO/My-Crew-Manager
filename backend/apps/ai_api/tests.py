@@ -11,7 +11,7 @@ from datetime import datetime
 
 from .models import Project, ProjectInvitation, Notification, ProjectMember
 from .consumers import NotificationConsumer
-from backend.core.services.notification_service import NotificationService
+from core.services.notification_service import NotificationService
 
 User = get_user_model()
 
@@ -136,7 +136,7 @@ class NotificationServiceTests(TestCase):
             created_by=self.user
         )
     
-    @patch('backend.core.services.notification_service.NotificationService.send_realtime_notification')
+    @patch('core.services.notification_service.NotificationService.send_realtime_notification')
     def test_create_notification_creates_database_record(self, mock_send):
         """Test create_notification creates database record"""
         notification = NotificationService.create_notification(
@@ -155,7 +155,7 @@ class NotificationServiceTests(TestCase):
         # Verify it was saved to database
         self.assertTrue(Notification.objects.filter(id=notification.id).exists())
     
-    @patch('backend.core.services.notification_service.NotificationService.send_realtime_notification')
+    @patch('core.services.notification_service.NotificationService.send_realtime_notification')
     def test_create_notification_triggers_websocket_send(self, mock_send):
         """Test create_notification triggers WebSocket send"""
         NotificationService.create_notification(
@@ -206,7 +206,7 @@ class NotificationServiceTests(TestCase):
         unread_count = Notification.objects.filter(recipient=self.user, is_read=False).count()
         self.assertEqual(unread_count, 0)
     
-    @patch('backend.core.services.notification_service.async_to_sync')
+    @patch('core.services.notification_service.async_to_sync')
     def test_websocket_payload_structure(self, mock_async_to_sync):
         """Test WebSocket payload has correct structure"""
         notification = Notification.objects.create(
@@ -373,7 +373,7 @@ class ProjectInvitationNotificationTests(APITestCase):
             created_by=self.inviter
         )
     
-    @patch('backend.core.services.notification_service.NotificationService.send_realtime_notification')
+    @patch('core.services.notification_service.NotificationService.send_realtime_notification')
     def test_invitation_creation_triggers_notification(self, mock_send):
         """Test invitation creation triggers notification"""
         self.client.force_authenticate(user=self.inviter)
