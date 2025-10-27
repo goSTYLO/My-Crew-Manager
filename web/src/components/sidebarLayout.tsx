@@ -31,7 +31,7 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
       const token = sessionStorage.getItem("token");
   
       // Call the logout API endpoint
-      await fetch(`${API_BASE_URL}/api/user/logout/`, {
+      await fetch(`${API_BASE_URL}/user/logout/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

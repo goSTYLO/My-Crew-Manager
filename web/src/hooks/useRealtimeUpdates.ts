@@ -20,7 +20,7 @@ interface UseRealtimeUpdatesOptions {
 }
 
 export const useRealtimeUpdates = ({ projectId, callbacks }: UseRealtimeUpdatesOptions) => {
-  const { subscribe, unsubscribe } = useWebSocket();
+  const { subscribe } = useWebSocket();
 
   // Create stable callback references
   const stableCallbacks = useCallback(() => {
@@ -109,19 +109,23 @@ export const useRealtimeUpdates = ({ projectId, callbacks }: UseRealtimeUpdatesO
 
   useEffect(() => {
     const handlers = stableCallbacks();
-
-    // Subscribe to all event types
-    Object.entries(handlers).forEach(([eventType, handler]) => {
-      subscribe(eventType, handler);
-    });
-
-    // Cleanup: unsubscribe from all event types
-    return () => {
-      Object.entries(handlers).forEach(([eventType, handler]) => {
-        unsubscribe(eventType, handler);
-      });
+    
+    // Create a single handler that routes messages based on type
+    const messageHandler = (message: any) => {
+      const eventType = message.type || message.action;
+      const handler = handlers[eventType];
+      if (handler && typeof handler === 'function') {
+        handler(message);
+      }
     };
-  }, [subscribe, unsubscribe, stableCallbacks]);
+    
+    const unsubscribe = subscribe(messageHandler);
+
+    // Cleanup: call unsubscribe function
+    return () => {
+      unsubscribe();
+    };
+  }, [subscribe, stableCallbacks]);
 
   // Return connection status and utility functions
   const { connectionStatus, getConnectionStatus } = useWebSocket();

@@ -46,7 +46,7 @@ const EditProjectModal: React.FC<EditProjectModalProps> = ({
   const [error, setError] = useState<string | null>(null);
 
   // API Configuration
-  const PROJECT_MANAGEMENT_API_BASE_URL = `${API_BASE_URL}/api/ai`;
+  const PROJECT_MANAGEMENT_API_BASE_URL = `${API_BASE_URL}/ai`;
 
   // Update form data when project changes
   useEffect(() => {
@@ -303,7 +303,7 @@ const Projects = () => {
   const { theme } = useTheme(); // <-- use theme
 
   // API Configuration
-  const PROJECT_MANAGEMENT_API_BASE_URL = `${API_BASE_URL}/api/ai`;
+  const PROJECT_MANAGEMENT_API_BASE_URL = `${API_BASE_URL}/ai`;
 
   // Fetch projects from database
   const fetchProjects = async () => {

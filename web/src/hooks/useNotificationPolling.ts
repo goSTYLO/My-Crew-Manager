@@ -69,7 +69,7 @@ export const useNotificationPolling = ({
 
     try {
       const since = lastFetchRef.current.toISOString();
-      const response = await fetch(`${API_BASE_URL}/api/ai/notifications/?since=${since}`, {
+      const response = await fetch(`${API_BASE_URL}/ai/notifications/?since=${since}`, {
         headers: {
           'Authorization': `Token ${token}`,
           'Content-Type': 'application/json',
@@ -118,7 +118,7 @@ export const useNotificationPolling = ({
       clearInterval(intervalRef.current);
     }
 
-    console.log('🔔 Starting notification polling');
+    // console.log('🔔 Starting notification polling');
     setIsPolling(true);
 
     // Initial fetch
@@ -135,7 +135,7 @@ export const useNotificationPolling = ({
       clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
-    console.log('🔔 Stopped notification polling');
+    // console.log('🔔 Stopped notification polling');
     setIsPolling(false);
   }, []);
 
@@ -145,10 +145,10 @@ export const useNotificationPolling = ({
       isVisibleRef.current = !document.hidden;
       if (enabled) {
         if (isVisibleRef.current) {
-          console.log('🔔 Tab visible, resuming notification polling');
+          // console.log('🔔 Tab visible, resuming notification polling');
           startPolling();
         } else {
-          console.log('🔔 Tab hidden, pausing notification polling');
+          // console.log('🔔 Tab hidden, pausing notification polling');
           stopPolling();
         }
       }

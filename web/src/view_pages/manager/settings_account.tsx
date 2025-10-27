@@ -101,7 +101,7 @@ const AccountSettings = () => {
             }
         
             try {
-                const response = await fetch(`${API_BASE_URL}/api/user/me/`, {
+                const response = await fetch(`${API_BASE_URL}/user/me/`, {
                 headers: {
                     Authorization: `Token ${token}`,
                     "Content-Type": "application/json",
@@ -208,7 +208,7 @@ const AccountSettings = () => {
             formData.append("password", password);
         }
     
-        const response = await fetch(`${API_BASE_URL}/api/user/me/`, {
+        const response = await fetch(`${API_BASE_URL}/user/me/`, {
             method: "PUT",
             headers: {
             Authorization: `Token ${token}`,

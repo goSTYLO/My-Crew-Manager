@@ -26,7 +26,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     role = models.CharField(max_length=50, blank=True, null=True)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
-    profile_picture = models.ImageField(upload_to='profiles/', blank=True, null=True)
+    profile_picture = models.TextField(blank=True, null=True)  # Store base64 string
     created_at = models.DateTimeField(auto_now_add=True)
 
     USERNAME_FIELD = 'email'

@@ -38,7 +38,8 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ children }
   }, []);
 
   const connect = useCallback(() => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
+    if (wsRef.current?.readyState === WebSocket.OPEN || wsRef.current?.readyState === WebSocket.CONNECTING) {
+      console.log('WebSocket already connecting or connected, skipping');
       return;
     }
 
@@ -52,7 +53,8 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ children }
     setConnectionStatus('connecting');
 
     try {
-      const wsUrl = `${API_BASE_URL.replace('http', 'ws')}/ws/project-updates/?token=${token}`;
+      const wsUrl = `${API_BASE_URL.replace('/api', '').replace('http', 'ws')}/ws/project-updates/?token=${token}`;
+      console.log('Creating WebSocket connection to:', wsUrl);
       wsRef.current = new WebSocket(wsUrl);
 
       wsRef.current.onopen = () => {
@@ -86,6 +88,7 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ children }
 
       wsRef.current.onerror = (error) => {
         console.error('Project Updates WebSocket error:', error);
+        console.log('WebSocket readyState:', wsRef.current?.readyState);
         setConnectionStatus('disconnected');
       };
 

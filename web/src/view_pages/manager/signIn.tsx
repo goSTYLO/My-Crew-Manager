@@ -41,7 +41,7 @@ class LoginController {
 
     console.log("🔄 Sending login request with:", { email: user.email });
 
-    const response = await fetch(`${API_BASE_URL}/api/user/login/`, {
+    const response = await fetch(`${API_BASE_URL}/user/login/`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

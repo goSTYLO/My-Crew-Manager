@@ -8,6 +8,9 @@ from django.contrib.auth import authenticate
 from .models import User
 from .serializers import UserSignupSerializer
 from .serializers import UserSerializer
+from PIL import Image
+import base64
+from io import BytesIO
 
 class SignupView(APIView):
     def post(self, request):
@@ -78,16 +81,33 @@ class UserDetailView(APIView):
         if 'role' in data:
             user.role = data['role']
         
-        # Handle profile picture upload
+        # Handle profile picture upload with compression
         if 'profile_picture' in request.FILES:
-            # Delete old profile picture if exists
-            if user.profile_picture:
-                try:
-                    user.profile_picture.delete(save=False)
-                except:
-                    pass
+            image_file = request.FILES['profile_picture']
             
-            user.profile_picture = request.FILES['profile_picture']
+            try:
+                # Open and compress image
+                img = Image.open(image_file)
+                
+                # Convert to RGB if necessary
+                if img.mode in ('RGBA', 'LA', 'P'):
+                    img = img.convert('RGB')
+                
+                # Resize to 150x150 thumbnail
+                img.thumbnail((150, 150), Image.Resampling.LANCZOS)
+                
+                # Compress to JPEG
+                buffer = BytesIO()
+                img.save(buffer, format='JPEG', quality=85, optimize=True)
+                buffer.seek(0)
+                
+                # Convert to base64
+                img_base64 = base64.b64encode(buffer.read()).decode('utf-8')
+                user.profile_picture = f"data:image/jpeg;base64,{img_base64}"
+                
+            except Exception as e:
+                return Response({'error': f'Image processing failed: {str(e)}'}, 
+                              status=status.HTTP_400_BAD_REQUEST)
         
         # Only update password if provided
         if 'password' in data and data['password']:

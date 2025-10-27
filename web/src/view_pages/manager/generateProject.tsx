@@ -193,7 +193,7 @@ const App: React.FC = () => {
       try {
         const token = getAuthToken();
         
-        const sessionTest = await fetch(`${API_BASE_URL}/api/ai/projects/`, {
+        const sessionTest = await fetch(`${API_BASE_URL}/ai/projects/`, {
           credentials: 'include',
         });
         
@@ -208,8 +208,8 @@ const App: React.FC = () => {
           return;
         }
         
-        const bearerTest = await fetch(`${API_BASE_URL}/api/ai/projects/`, {
-          headers: { 'Authorization': `Bearer ${token}` },
+        const bearerTest = await fetch(`${API_BASE_URL}/ai/projects/`, {
+          headers: { 'Authorization': `Token ${token}` },
           credentials: 'include',
         });
         
@@ -219,7 +219,7 @@ const App: React.FC = () => {
           return;
         }
         
-        const tokenTest = await fetch(`${API_BASE_URL}/api/ai/projects/`, {
+        const tokenTest = await fetch(`${API_BASE_URL}/ai/projects/`, {
           headers: { 'Authorization': `Token ${token}` },
           credentials: 'include',
         });
@@ -299,7 +299,7 @@ const App: React.FC = () => {
         summary: projectSummary || 'No summary provided',
       };
 
-      const projectResponse = await fetch(`${API_BASE_URL}/api/ai/projects/`, {
+      const projectResponse = await fetch(`${API_BASE_URL}/ai/projects/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -351,7 +351,7 @@ const App: React.FC = () => {
       formData.append('file', uploadedFile);
       formData.append('project_id', createdProjectId);
 
-      const response = await fetch(`${API_BASE_URL}/api/ai/proposals/`, {
+      const response = await fetch(`${API_BASE_URL}/ai/proposals/`, {
         method: 'POST',
         headers: {
           'Authorization': `${authFormat} ${token}`,
@@ -429,7 +429,7 @@ const App: React.FC = () => {
 
     try {
       const response = await fetch(
-        `${API_BASE_URL}/api/ai/projects/${createdProjectId}/ingest-proposal/${uploadedProposalId}/`,
+        `${API_BASE_URL}/ai/projects/${createdProjectId}/ingest-proposal/${uploadedProposalId}/`,
         {
           method: 'PUT',
           headers: {
@@ -538,7 +538,7 @@ const App: React.FC = () => {
     try {
       // Save roles/members
       for (const member of members.filter(m => !m.ai)) {
-        await fetch(`${API_BASE_URL}/api/ai/project-members/`, {
+        await fetch(`${API_BASE_URL}/ai/project-members/`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -555,7 +555,7 @@ const App: React.FC = () => {
 
       // Save features
       for (const feature of features.filter(f => !f.ai)) {
-        await fetch(`${API_BASE_URL}/api/ai/project-features/`, {
+        await fetch(`${API_BASE_URL}/ai/project-features/`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -570,7 +570,7 @@ const App: React.FC = () => {
 
       // Save goals
       for (const goal of goals.filter(g => !g.ai)) {
-        await fetch(`${API_BASE_URL}/api/ai/project-goals/`, {
+        await fetch(`${API_BASE_URL}/ai/project-goals/`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -741,7 +741,7 @@ const App: React.FC = () => {
 
     try {
       const response = await fetch(
-        `${API_BASE_URL}/api/ai/projects/${createdProjectId}/generate-backlog/`,
+        `${API_BASE_URL}/ai/projects/${createdProjectId}/generate-backlog/`,
         {
           method: 'PUT',
           headers: {
@@ -784,7 +784,7 @@ const App: React.FC = () => {
 
     try {
       const response = await fetch(
-        `${API_BASE_URL}/api/ai/projects/${createdProjectId}/backlog/`,
+        `${API_BASE_URL}/ai/projects/${createdProjectId}/backlog/`,
         {
           headers: { 'Authorization': `${authFormat} ${token}` },
           credentials: 'include',
@@ -853,7 +853,7 @@ const App: React.FC = () => {
     if (!token || !createdProjectId) return;
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/ai/epics/`, {
+      const response = await fetch(`${API_BASE_URL}/ai/epics/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -880,7 +880,7 @@ const App: React.FC = () => {
     if (!token) return;
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/ai/epics/${epicId}/`, {
+      const response = await fetch(`${API_BASE_URL}/ai/epics/${epicId}/`, {
         method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
@@ -902,7 +902,7 @@ const App: React.FC = () => {
     if (!token) return;
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/ai/epics/${epicId}/`, {
+      const response = await fetch(`${API_BASE_URL}/ai/epics/${epicId}/`, {
         method: 'DELETE',
         headers: { 'Authorization': `${authFormat} ${token}` },
       });
@@ -921,7 +921,7 @@ const App: React.FC = () => {
     if (!token) return;
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/ai/sub-epics/`, {
+      const response = await fetch(`${API_BASE_URL}/ai/sub-epics/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -947,7 +947,7 @@ const App: React.FC = () => {
     if (!token) return;
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/ai/sub-epics/${subEpicId}/`, {
+      const response = await fetch(`${API_BASE_URL}/ai/sub-epics/${subEpicId}/`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -969,7 +969,7 @@ const App: React.FC = () => {
     if (!token) return;
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/ai/sub-epics/${subEpicId}/`, {
+      const response = await fetch(`${API_BASE_URL}/ai/sub-epics/${subEpicId}/`, {
         method: 'DELETE',
         headers: { 'Authorization': `${authFormat} ${token}` },
       });
@@ -988,7 +988,7 @@ const App: React.FC = () => {
     if (!token) return;
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/ai/user-stories/`, {
+      const response = await fetch(`${API_BASE_URL}/ai/user-stories/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1014,7 +1014,7 @@ const App: React.FC = () => {
     if (!token) return;
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/ai/user-stories/${userStoryId}/`, {
+      const response = await fetch(`${API_BASE_URL}/ai/user-stories/${userStoryId}/`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -1036,7 +1036,7 @@ const App: React.FC = () => {
     if (!token) return;
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/ai/user-stories/${userStoryId}/`, {
+      const response = await fetch(`${API_BASE_URL}/ai/user-stories/${userStoryId}/`, {
         method: 'DELETE',
         headers: { 'Authorization': `${authFormat} ${token}` },
       });
@@ -1055,7 +1055,7 @@ const App: React.FC = () => {
     if (!token) return;
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/ai/story-tasks/`, {
+      const response = await fetch(`${API_BASE_URL}/ai/story-tasks/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1083,7 +1083,7 @@ const App: React.FC = () => {
     if (!token) return;
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/ai/story-tasks/${taskId}/`, {
+      const response = await fetch(`${API_BASE_URL}/ai/story-tasks/${taskId}/`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -1108,7 +1108,7 @@ const App: React.FC = () => {
     if (!token) return;
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/ai/story-tasks/${taskId}/`, {
+      const response = await fetch(`${API_BASE_URL}/ai/story-tasks/${taskId}/`, {
         method: 'DELETE',
         headers: { 'Authorization': `${authFormat} ${token}` },
       });
@@ -1126,7 +1126,7 @@ const App: React.FC = () => {
     if (!token) return;
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/ai/story-tasks/${taskId}/`, {
+      const response = await fetch(`${API_BASE_URL}/ai/story-tasks/${taskId}/`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -1196,7 +1196,7 @@ const App: React.FC = () => {
         try {
           // Look up user by email first
           const usersResponse = await fetch(
-            `${API_BASE_URL}/api/user/?email=${encodeURIComponent(invitation.email)}`,
+            `${API_BASE_URL}/user/?email=${encodeURIComponent(invitation.email)}`,
             {
               headers: { 'Authorization': `Token ${token}` },
               credentials: 'include',
@@ -1220,7 +1220,7 @@ const App: React.FC = () => {
           const user = users[0];
           
           // Create invitation with user ID
-          const response = await fetch(`${API_BASE_URL}/api/ai/invitations/`, {
+          const response = await fetch(`${API_BASE_URL}/ai/invitations/`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

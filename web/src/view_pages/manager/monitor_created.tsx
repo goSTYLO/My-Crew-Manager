@@ -97,7 +97,7 @@ export default function ProjectDetailsUI() {
   const navigate = useNavigate();
   
   // API Configuration
-  const AI_API_BASE_URL = `${API_BASE_URL}/api/ai`;
+  const AI_API_BASE_URL = `${API_BASE_URL}/ai`;
 
   // API Utility Functions
   const getAuthHeaders = () => {
@@ -809,10 +809,10 @@ export default function ProjectDetailsUI() {
     try {
       // First, look up user by email
       const usersResponse = await fetch(
-        `${API_BASE_URL}/api/user/?email=${encodeURIComponent(inviteForm.email)}`,
+        `${API_BASE_URL}/user/?email=${encodeURIComponent(inviteForm.email)}`,
         {
           headers: { 
-            'Authorization': `Token ${token}`,
+            'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
           },
           credentials: 'include',
@@ -854,7 +854,7 @@ export default function ProjectDetailsUI() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Token ${token}`,
+          'Authorization': `Bearer ${token}`,
         },
         credentials: 'include',
         body: JSON.stringify({
@@ -1705,7 +1705,7 @@ export default function ProjectDetailsUI() {
       const response = await fetch(`${AI_API_BASE_URL}/proposals/`, {
         method: 'POST',
         headers: {
-          'Authorization': `Token ${token}`,
+          'Authorization': `Bearer ${token}`,
         },
         body: formData,
       });

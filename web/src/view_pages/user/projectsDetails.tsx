@@ -23,8 +23,8 @@ import ProposalViewer from "../../components/ProposalViewer";
 import { useToast } from "../../components/ToastContext";
 
 // API configuration
-const API_BASE_URL = 'http://localhost:8000';
-const AI_API_BASE_URL = `${API_BASE_URL}/api/ai`;
+const API_BASE_URL = 'http://localhost:8000/api';
+const AI_API_BASE_URL = `${API_BASE_URL}/ai`;
 
 const getAuthToken = () => {
   return sessionStorage.getItem('token');

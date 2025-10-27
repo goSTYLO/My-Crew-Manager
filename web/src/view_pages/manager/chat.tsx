@@ -5,10 +5,7 @@ import Sidebar from "../../components/sidebarLayout";
 import TopNavbar from "../../components/topbarLayouot";
 import { useTheme } from "../../components/themeContext";
 import { useChatPolling } from "../../hooks/useChatPolling";
-
-// API Configuration
-const API_BASE_URL = import.meta.env.REACT_APP_API_URL || 'http://localhost:8000/api/chat';
-const WS_BASE_URL = import.meta.env.REACT_APP_WS_URL || 'ws://localhost:8000/ws/chat';
+import { API_BASE_URL } from "../../config/api";
 
 // Types
 interface Contact {
@@ -111,14 +108,14 @@ const ChatApp = () => {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
-  // Chat polling for real-time updates
+  // Chat polling for real-time updates - DISABLED for WebSocket testing
   const chatPolling = useChatPolling({
     roomId: selectedChat?.toString(),
-    enabled: !!currentUserId && !!selectedChat, // Only enable polling after currentUserId and selectedChat are set
+    enabled: false, // Disabled to test WebSocket broadcasting
     onNewMessages: (newMessages) => {
       if (selectedChat && newMessages.length > 0) {
-        console.log(`💬 [chat] Received ${newMessages.length} new messages via polling`);
-        console.log(`💬 [chat] Current user ID: ${currentUserId}`);
+        // console.log(`💬 [chat] Received ${newMessages.length} new messages via polling`);
+        // console.log(`💬 [chat] Current user ID: ${currentUserId}`);
         console.log(`💬 [chat] Selected chat: ${selectedChat}`);
         
         const convertedMessages: Message[] = newMessages.map((msg: ApiMessage) => {
@@ -160,7 +157,7 @@ const ChatApp = () => {
       }
     },
     onRoomUpdate: (rooms) => {
-      console.log(`💬 Received ${rooms.length} rooms via polling`);
+      // console.log(`💬 Received ${rooms.length} rooms via polling`);
       
       const updatedContacts = rooms.map((room: any) => ({
         id: room.room_id,
@@ -203,7 +200,7 @@ const ChatApp = () => {
         return null;
       }
       
-      const response = await fetch('/api/user/me/', {
+      const response = await fetch(`${API_BASE_URL}/user/me/`, {
         headers: {
           'Authorization': `Token ${token}`,
         },
@@ -232,9 +229,13 @@ const ChatApp = () => {
       throw new Error('No authentication token found. Please login first.');
     }
 
-    console.log('🔵 API Call:', `${API_BASE_URL}${endpoint}`);
+    // Ensure chat endpoints use the correct path
+    const chatEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+    const fullUrl = `${API_BASE_URL}/chat${chatEndpoint}`;
     
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    console.log('🔵 API Call:', fullUrl);
+    
+    const response = await fetch(fullUrl, {
       ...options,
       headers: {
         'Content-Type': 'application/json',
@@ -261,7 +262,12 @@ const ChatApp = () => {
       if (user) {
         console.log('✅ Current user loaded, starting chat initialization...');
         await fetchRooms();
-        console.log('💬 Chat initialized with polling (WebSocket disabled)');
+        
+        // Connect to notification WebSocket for real-time updates
+        console.log('🔔 Connecting to notification WebSocket...');
+        connectNotificationWebSocket();
+        
+        console.log('💬 Chat initialized with WebSocket real-time updates');
       } else {
         setError('Please login to use chat');
       }
@@ -309,8 +315,8 @@ const ChatApp = () => {
 
   // Debug polling state
   useEffect(() => {
-    console.log(`💬 [chat] Polling state changed: enabled=${!!currentUserId && !!selectedChat}, currentUserId=${currentUserId}, selectedChat=${selectedChat}`);
-    console.log(`💬 [chat] Chat polling status: isPolling=${chatPolling.isPolling}, lastUpdate=${chatPolling.lastUpdate}`);
+    // console.log(`💬 [chat] Polling state changed: enabled=${!!currentUserId && !!selectedChat}, currentUserId=${currentUserId}, selectedChat=${selectedChat}`);
+    // console.log(`💬 [chat] Chat polling status: isPolling=${chatPolling.isPolling}, lastUpdate=${chatPolling.lastUpdate}`);
   }, [currentUserId, selectedChat, chatPolling.isPolling, chatPolling.lastUpdate]);
 
   // Fetch rooms from API
@@ -449,7 +455,9 @@ const ChatApp = () => {
       wsRef.current.close();
     }
 
-    const wsUrl = `${WS_BASE_URL}/${roomId}/?token=${token}`;
+    // Use API_BASE_URL and convert http to ws, remove /api prefix
+    const baseUrl = API_BASE_URL.replace('/api', '').replace('http', 'ws');
+    const wsUrl = `${baseUrl}/ws/chat/${roomId}/?token=${token}`;
     console.log('🔌 Attempting WebSocket connection:', wsUrl);
     
     try {
@@ -484,7 +492,7 @@ const ChatApp = () => {
       
       ws.onerror = (error) => {
         console.error('❌ WebSocket error (This is normal if backend WebSocket is not configured yet):', error);
-        console.log('💡 Messages will still work via REST API polling');
+        // console.log('💡 Messages will still work via REST API polling');
       };
       
       ws.onclose = (event) => {
@@ -511,8 +519,9 @@ const ChatApp = () => {
       return;
     }
 
-    // According to routing.py: ws/chat/notifications/
-    const wsUrl = `ws://localhost:8000/ws/chat/notifications/?token=${token}`;
+    // Use API_BASE_URL and convert http to ws, remove /api prefix
+    const baseUrl = API_BASE_URL.replace('/api', '').replace('http', 'ws');
+    const wsUrl = `${baseUrl}/ws/chat/notifications/?token=${token}`;
     console.log('🔔 Connecting to notification WebSocket:', wsUrl);
     
     const ws = new WebSocket(wsUrl);
@@ -665,6 +674,10 @@ const ChatApp = () => {
     } else {
       console.log(`💬 Messages already loaded for room ${id}`);
     }
+    
+    // Connect to WebSocket for real-time updates
+    console.log(`🔌 Connecting to WebSocket for room ${id}`);
+    connectRoomWebSocket(id);
     
     // Reset unread count
     setContacts(prev => prev.map(contact => 
@@ -1069,11 +1082,11 @@ const ChatApp = () => {
       
       // Try multiple endpoint formats based on common Django REST patterns
       const endpoints = [
-        `http://localhost:8000/api/chat/messages/${messageId}/`,
-        `${API_BASE_URL}/rooms/${selectedChat}/messages/${messageId}/delete/`,
-        `${API_BASE_URL}/messages/${messageId}/delete/`,
-        `${API_BASE_URL}/rooms/${selectedChat}/messages/${messageId}/`,
-        `http://localhost:8000/api/messages/${messageId}/`,
+        `${API_BASE_URL}/chat/messages/${messageId}/`,
+        `${API_BASE_URL}/chat/rooms/${selectedChat}/messages/${messageId}/delete/`,
+        `${API_BASE_URL}/chat/messages/${messageId}/delete/`,
+        `${API_BASE_URL}/chat/rooms/${selectedChat}/messages/${messageId}/`,
+        `${API_BASE_URL}/chat/messages/${messageId}/`,
       ];
       
       let success = false;

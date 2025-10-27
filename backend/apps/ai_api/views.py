@@ -15,6 +15,15 @@ from .models import (
     Epic, SubEpic, UserStory, StoryTask, ProjectMember, ProjectInvitation,
     Notification, Repository,
 )
+
+def get_notification_action_url(recipient, project_id):
+    """
+    Generate the correct action URL for notifications based on the recipient's role.
+    """
+    if recipient.role == 'manager':
+        return f'/project-details/{project_id}'
+    else:
+        return f'/user-project/{project_id}'
 from .serializers import (
     ProjectSerializer, ProposalSerializer,
     ProjectFeatureSerializer, ProjectRoleSerializer, ProjectGoalSerializer,
@@ -186,7 +195,7 @@ class ProjectViewSet(ModelViewSet):
                         title=f'Backlog Regenerated: {project.title}',
                         message=f'{self.request.user.name} regenerated the project backlog',
                         content_object=project,
-                        action_url=f'/project-details/{project.id}',
+                        action_url=get_notification_action_url(member.user, project.id),
                         actor=self.request.user
                     )
             except Exception as e:
@@ -290,7 +299,7 @@ class ProjectViewSet(ModelViewSet):
                     title=f'Overview Regenerated: {project.title}',
                     message=f'{self.request.user.name} regenerated the project overview',
                     content_object=project,
-                    action_url=f'/project-details/{project.id}',
+                    action_url=get_notification_action_url(member.user, project.id),
                     actor=self.request.user
                 )
         except Exception as e:
@@ -412,7 +421,7 @@ class ProjectViewSet(ModelViewSet):
                     title=f'Project Updated: {project.title}',
                     message=f'{self.request.user.name} updated the project details',
                     content_object=project,
-                    action_url=f'/project-details/{project.id}',
+                    action_url=get_notification_action_url(member.user, project.id),
                     actor=self.request.user
                 )
         except Exception as e:
@@ -591,7 +600,7 @@ class EpicViewSet(ModelViewSet):
                     title=f'New Epic: {epic.title}',
                     message=f'{self.request.user.name} created a new epic in {epic.project.title}',
                     content_object=epic,
-                    action_url=f'/project-details/{epic.project.id}',
+                    action_url=get_notification_action_url(member.user, epic.project.id),
                     actor=self.request.user
                 )
         except Exception as e:
@@ -616,7 +625,7 @@ class EpicViewSet(ModelViewSet):
                     title=f'Epic Deleted: {instance.title}',
                     message=f'{self.request.user.name} deleted an epic from {instance.project.title}',
                     content_object=instance.project,  # Epic will be deleted, link to project
-                    action_url=f'/project-details/{instance.project.id}',
+                    action_url=get_notification_action_url(member.user, instance.project.id),
                     actor=self.request.user
                 )
         except Exception as e:
@@ -652,7 +661,7 @@ class SubEpicViewSet(ModelViewSet):
                     title=f'New Sub-Epic: {sub_epic.title}',
                     message=f'{self.request.user.name} created a new sub-epic in {project.title}',
                     content_object=sub_epic,
-                    action_url=f'/project-details/{project.id}',
+                    action_url=get_notification_action_url(member.user, project.id),
                     actor=self.request.user
                 )
         except Exception as e:
@@ -678,7 +687,7 @@ class SubEpicViewSet(ModelViewSet):
                     title=f'Sub-Epic Deleted: {instance.title}',
                     message=f'{self.request.user.name} deleted a sub-epic from {project.title}',
                     content_object=project,  # Sub-epic will be deleted, link to project
-                    action_url=f'/project-details/{project.id}',
+                    action_url=get_notification_action_url(member.user, project.id),
                     actor=self.request.user
                 )
         except Exception as e:
@@ -714,7 +723,7 @@ class UserStoryViewSet(ModelViewSet):
                     title=f'New User Story: {user_story.title}',
                     message=f'{self.request.user.name} created a new user story in {project.title}',
                     content_object=user_story,
-                    action_url=f'/project-details/{project.id}',
+                    action_url=get_notification_action_url(member.user, project.id),
                     actor=self.request.user
                 )
         except Exception as e:
@@ -740,7 +749,7 @@ class UserStoryViewSet(ModelViewSet):
                     title=f'User Story Deleted: {instance.title}',
                     message=f'{self.request.user.name} deleted a user story from {project.title}',
                     content_object=project,  # User story will be deleted, link to project
-                    action_url=f'/project-details/{project.id}',
+                    action_url=get_notification_action_url(member.user, project.id),
                     actor=self.request.user
                 )
         except Exception as e:
@@ -1029,7 +1038,7 @@ class StoryTaskViewSet(ModelViewSet):
                         title=f'Task Assigned: {task.title}',
                         message=f'{self.request.user.name} assigned you to "{task.title}"',
                         content_object=task,
-                        action_url=f'/project-details/{project.id}',
+                        action_url=get_notification_action_url(recipient, project.id),
                         actor=self.request.user
                     )
                     print(f"✓ Created notification {notification.id} for {recipient.name}")
@@ -1064,7 +1073,7 @@ class StoryTaskViewSet(ModelViewSet):
                     title=f'Task Assigned: {task.title}',
                     message=f'{self.request.user.name} assigned you to "{task.title}"',
                     content_object=task,
-                    action_url=f'/project-details/{project.id}',
+                    action_url=get_notification_action_url(recipient, project.id),
                     actor=self.request.user
                 )
         
@@ -1077,7 +1086,7 @@ class StoryTaskViewSet(ModelViewSet):
                     title=f'Task Completed: {task.title}',
                     message=f'{self.request.user.name} completed "{task.title}"',
                     content_object=task,
-                    action_url=f'/project-details/{project.id}',
+                    action_url=get_notification_action_url(recipient, project.id),
                     actor=self.request.user
                 )
         
@@ -1090,7 +1099,7 @@ class StoryTaskViewSet(ModelViewSet):
                     title=f'Task Updated: {task.title}',
                     message=f'{self.request.user.name} updated "{task.title}"',
                     content_object=task,
-                    action_url=f'/project-details/{project.id}',
+                    action_url=get_notification_action_url(recipient, project.id),
                     actor=self.request.user
                 )
         
@@ -1164,7 +1173,7 @@ class ProjectMemberViewSet(ModelViewSet):
                     title=f'Member Left: {removed_user.name}',
                     message=f'{removed_user.name} was removed from {project.title}',
                     content_object=project,
-                    action_url=f'/project-details/{project.id}',
+                    action_url=get_notification_action_url(remaining_member.user, project.id),
                     actor=request.user
                 )
             
@@ -1241,7 +1250,7 @@ class ProjectInvitationViewSet(ModelViewSet):
                     title=f'Project Invitation: {invitation.project.title}',
                     message=f'{invitation.invited_by.name} invited you to join {invitation.project.title}',
                     content_object=invitation,
-                    action_url=f'/projects/{invitation.project.id}/invitations',
+                    action_url='/project-invitation',
                     actor=invitation.invited_by
                 )
             
@@ -1356,7 +1365,7 @@ class ProjectInvitationViewSet(ModelViewSet):
                             title=f'New Member: {invitation.invitee.name}',
                             message=f'{invitation.invitee.name} joined {invitation.project.title}',
                             content_object=invitation.project,
-                            action_url=f'/project-details/{invitation.project.id}',
+                            action_url=get_notification_action_url(member.user, invitation.project.id),
                             actor=invitation.invitee
                         )
             
@@ -1532,7 +1541,7 @@ class RepositoryViewSet(ModelViewSet):
                     title=f'Repository Added: {repository.name}',
                     message=f'{self.request.user.name} added a repository to {project.title}',
                     content_object=repository,
-                    action_url=f'/project-details/{project.id}',
+                    action_url=get_notification_action_url(member.user, project.id),
                     actor=self.request.user
                 )
         except Exception as e:
@@ -1558,7 +1567,7 @@ class RepositoryViewSet(ModelViewSet):
                     title=f'Repository Updated: {repository.name}',
                     message=f'{self.request.user.name} updated a repository in {repository.project.title}',
                     content_object=repository,
-                    action_url=f'/project-details/{repository.project.id}',
+                    action_url=get_notification_action_url(member.user, repository.project.id),
                     actor=self.request.user
                 )
         except Exception as e:
@@ -1582,7 +1591,7 @@ class RepositoryViewSet(ModelViewSet):
                     title=f'Repository Deleted: {instance.name}',
                     message=f'{self.request.user.name} deleted a repository from {instance.project.title}',
                     content_object=instance.project,  # Repository will be deleted, link to project
-                    action_url=f'/project-details/{instance.project.id}',
+                    action_url=get_notification_action_url(member.user, instance.project.id),
                     actor=self.request.user
                 )
         except Exception as e:

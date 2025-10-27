@@ -36,12 +36,37 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
   const navigate = useNavigate();
   const [showNotifications, setShowNotifications] = useState(false);
   const [userData, setUserData] = useState<UserData | null>(null);
+
+  // Helper function to transform notification URLs based on user role
+  const transformNotificationUrl = (actionUrl: string, userRole: string | null) => {
+    if (!actionUrl) return actionUrl;
+    
+    // If user is a developer and URL is for manager page, transform it
+    if (userRole !== 'manager' && actionUrl.startsWith('/project-details/')) {
+      const projectId = actionUrl.split('/project-details/')[1];
+      return `/user-project/${projectId}`;
+    }
+    
+    // If user is a manager and URL is for developer page, transform it
+    if (userRole === 'manager' && actionUrl.startsWith('/user-project/')) {
+      const projectId = actionUrl.split('/user-project/')[1];
+      return `/project-details/${projectId}`;
+    }
+    
+    // Return original URL if no transformation needed
+    return actionUrl;
+  };
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const profileDropdownRef = useRef<HTMLDivElement>(null);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loadingNotifications, setLoadingNotifications] = useState(false);
+  const [showAllNotificationsModal, setShowAllNotificationsModal] = useState(false);
+  const [allNotifications, setAllNotifications] = useState<Notification[]>([]);
+  const [notifPage, setNotifPage] = useState(1);
+  const [loadingAllNotifications, setLoadingAllNotifications] = useState(false);
+  const notificationsPerPage = 20;
   const { showRealtimeUpdate } = useToast();
 
   // Fetch notifications from API
@@ -66,6 +91,33 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
       console.error('Error fetching notifications:', error);
     } finally {
       setLoadingNotifications(false);
+    }
+  };
+
+  // Fetch all notifications for modal
+  const fetchAllNotifications = async () => {
+    try {
+      setLoadingAllNotifications(true);
+      const token = sessionStorage.getItem('token') || sessionStorage.getItem('access');
+      if (!token) return;
+
+      const response = await fetch(`${API_BASE_URL}/ai/notifications/?page=${notifPage}&limit=${notificationsPerPage}`, {
+        headers: {
+          'Authorization': `Token ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setAllNotifications(data.results || data);
+      } else {
+        console.error('Failed to fetch all notifications');
+      }
+    } catch (error) {
+      console.error('Error fetching all notifications:', error);
+    } finally {
+      setLoadingAllNotifications(false);
     }
   };
 
@@ -119,9 +171,9 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
     }
   };
 
-  // Smart polling for notifications
+  // Smart polling for notifications - DISABLED for WebSocket testing
   useNotificationPolling({
-    enabled: true,
+    enabled: false, // Disabled to test WebSocket broadcasting
     onNewNotifications: (newNotifications) => {
       // Add new notifications to the list
       setNotifications(prev => [...newNotifications, ...prev]);
@@ -171,6 +223,13 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
     fetchNotifications();
   }, []);
 
+  // Fetch all notifications when modal opens
+  useEffect(() => {
+    if (showAllNotificationsModal) {
+      fetchAllNotifications();
+    }
+  }, [showAllNotificationsModal, notifPage]);
+
   const handleLogout = async () => {
     setIsLoggingOut(true);
     setShowLogoutConfirm(false);
@@ -178,7 +237,7 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
     try {
       const token = sessionStorage.getItem("token");
 
-      await fetch(`${API_BASE_URL}/api/user/logout/`, {
+      await fetch(`${API_BASE_URL}/user/logout/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -229,7 +288,7 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
       }
   
       try {
-        const response = await fetch(`${API_BASE_URL}/api/user/me/`, {
+        const response = await fetch(`${API_BASE_URL}/user/me/`, {
           headers: {
             Authorization: `Token ${token}`,
             "Content-Type": "application/json",
@@ -414,7 +473,8 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
                             markNotificationAsRead(note.id);
                           }
                           if (note.action_url) {
-                            navigate(note.action_url);
+                            const transformedUrl = transformNotificationUrl(note.action_url, userData?.role);
+                            navigate(transformedUrl);
                           }
                         }}
                       >
@@ -433,7 +493,10 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
                   )}
                 </ul>
                 <div className="p-3 border-t border-gray-200 text-center">
-                  <button className="text-blue-600 text-sm font-medium hover:underline">
+                  <button 
+                    className="text-blue-600 text-sm font-medium hover:underline"
+                    onClick={() => setShowAllNotificationsModal(true)}
+                  >
                     View All
                   </button>
                 </div>
@@ -594,6 +657,102 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
           </button>
         </div>
       </div>
+
+      {/* View All Notifications Modal */}
+      {showAllNotificationsModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[80vh] flex flex-col">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h2 className="text-xl font-semibold text-gray-800">All Notifications</h2>
+              <div className="flex items-center space-x-4">
+                <button
+                  onClick={markAllAsRead}
+                  className="px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors"
+                >
+                  Mark All as Read
+                </button>
+                <button
+                  onClick={() => setShowAllNotificationsModal(false)}
+                  className="text-gray-500 hover:text-gray-700 text-2xl"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-6">
+              {loadingAllNotifications ? (
+                <div className="text-center py-8 text-gray-500">
+                  Loading notifications...
+                </div>
+              ) : allNotifications.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  No notifications found
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {allNotifications.map((note) => (
+                    <div
+                      key={note.id}
+                      className={`p-4 rounded-lg border transition-colors cursor-pointer ${
+                        note.is_read
+                          ? "bg-gray-50 border-gray-200 text-gray-600"
+                          : "bg-blue-50 border-blue-200 text-gray-800 hover:bg-blue-100"
+                      }`}
+                      onClick={() => {
+                        if (!note.is_read) {
+                          markNotificationAsRead(note.id);
+                        }
+                        if (note.action_url) {
+                          const transformedUrl = transformNotificationUrl(note.action_url, userData?.role);
+                          navigate(transformedUrl);
+                          setShowAllNotificationsModal(false);
+                        }
+                      }}
+                    >
+                      <div className="flex items-start space-x-3">
+                        {!note.is_read && (
+                          <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
+                        )}
+                        <div className="flex-1">
+                          <div className="font-medium text-gray-900">{note.title}</div>
+                          <div className="text-gray-600 mt-1">{note.message}</div>
+                          <div className="text-xs text-gray-400 mt-2">
+                            {new Date(note.created_at).toLocaleString()}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Pagination */}
+            {allNotifications.length > 0 && (
+              <div className="flex items-center justify-between p-4 border-t border-gray-200">
+                <button
+                  onClick={() => setNotifPage(prev => Math.max(1, prev - 1))}
+                  disabled={notifPage === 1}
+                  className="px-4 py-2 text-sm rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-gray-100 hover:bg-gray-200"
+                >
+                  Previous
+                </button>
+                <span className="text-sm text-gray-600">
+                  Page {notifPage}
+                </span>
+                <button
+                  onClick={() => setNotifPage(prev => prev + 1)}
+                  disabled={allNotifications.length < notificationsPerPage}
+                  className="px-4 py-2 text-sm rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-gray-100 hover:bg-gray-200"
+                >
+                  Next
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </header>
   );
 };
