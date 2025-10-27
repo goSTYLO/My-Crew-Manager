@@ -32,3 +32,5 @@ __pycache__/
 # OS specific
 .DS_Store
 .env
+backend/apps/ai_api/migrations/0005_epic_is_complete_project_updated_at_and_more.py
+/backend/apps/ai_api/migrations

@@ -812,7 +812,7 @@ export default function ProjectDetailsUI() {
         `${API_BASE_URL}/user/?email=${encodeURIComponent(inviteForm.email)}`,
         {
           headers: { 
-            'Authorization': `Bearer ${token}`,
+            'Authorization': `Token ${token}`,
             'Content-Type': 'application/json'
           },
           credentials: 'include',
@@ -854,7 +854,7 @@ export default function ProjectDetailsUI() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Token ${token}`,
         },
         credentials: 'include',
         body: JSON.stringify({
@@ -1705,7 +1705,7 @@ export default function ProjectDetailsUI() {
       const response = await fetch(`${AI_API_BASE_URL}/proposals/`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Token ${token}`,
         },
         body: formData,
       });
