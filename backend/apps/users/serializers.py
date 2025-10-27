@@ -23,7 +23,7 @@ class UserSignupSerializer(serializers.ModelSerializer):
         return user
     
 class UserSerializer(serializers.ModelSerializer):
-    profile_picture = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    profile_picture = serializers.ImageField(required=False, allow_null=True)
     
     class Meta:
         model = User 

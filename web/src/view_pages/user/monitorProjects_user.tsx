@@ -607,7 +607,7 @@ const MonitorProjectsUser = () => {
       <div className="flex-1 flex flex-col min-w-0">
         <TopNavbar onMenuClick={() => setSidebarOpen(true)} />
 
-        <main className="flex-1 p-4 lg:p-[100px] overflow-auto space-y-[40px]">
+        <main className="flex-1 p-4 lg:p-[100px] overflow-auto space-y-[40px] pt-20">
           {/* Header with search and invitation button */}
           <div className="flex items-center justify-between mb-6">
             <h2 className={`text-2xl font-semibold ${theme === 'dark' ? 'text-gray-100' : 'text-gray-800'}`}>

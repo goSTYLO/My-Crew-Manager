@@ -693,7 +693,7 @@ const ProjectDetails: React.FC = () => {
       <div className="flex-1 flex flex-col min-w-0">
         <TopNavbar onMenuClick={() => setSidebarOpen(true)} />
         
-        <main className="flex-1 p-4 lg:p-[100px] overflow-auto space-y-[40px]">
+        <main className="flex-1 p-4 lg:p-[100px] overflow-auto space-y-[40px] pt-20">
           {/* Header */}
           <header className="mb-8">
             <button

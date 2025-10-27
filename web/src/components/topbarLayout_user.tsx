@@ -352,7 +352,7 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
 
   return (
     <header
-      className={`fixed top-0 left-0 w-full shadow-sm border-b px-4 lg:px-6 py-4 ${
+      className={`fixed top-0 left-0 w-full shadow-sm border-b px-4 lg:px-6 py-4 z-[10000] ${
         theme === "dark"
           ? "bg-gray-800 border-gray-700"
           : "bg-white border-gray-200"
@@ -437,7 +437,7 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
             {showNotifications && (
               <div
                 ref={dropdownRef}
-                className="absolute right-0 mt-3 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50"
+                className="absolute right-0 mt-3 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-[9999]"
               >
                 <div className="flex items-center justify-between p-4 border-b border-gray-200">
                   <h3 className="text-sm font-semibold text-gray-700">
@@ -558,7 +558,7 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
 
             {/* Dropdown */}
             {showProfileDropdown && (
-              <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50 p-2">
+              <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-[9999] p-2">
                 <button
                   className="w-full flex items-center gap-2 text-left px-4 py-2 text-sm hover:bg-gray-100"
                   onClick={() => navigate("/account-settings")}

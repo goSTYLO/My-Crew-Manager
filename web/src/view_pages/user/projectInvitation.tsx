@@ -575,7 +575,7 @@ const ProjectInvitation = () => {
       </header>
       <TopNavbar onMenuClick={() => setSidebarOpen(true)} />
 
-      <main className="flex-1 p-4 lg:p-[100px] overflow-auto space-y-[40px]">
+      <main className="flex-1 p-4 lg:p-[100px] overflow-auto space-y-[40px] pt-20">
         <div className="mb-6 flex items-center gap-2">
           <button
             onClick={() => navigate('/projects-user')}
