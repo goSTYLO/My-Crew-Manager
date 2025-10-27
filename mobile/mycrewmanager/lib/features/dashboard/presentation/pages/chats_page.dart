@@ -32,6 +32,7 @@ class ChatsPage extends StatefulWidget {
 
 class _ChatsPageState extends State<ChatsPage> {
   final TextEditingController _controller = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
   final _repo = GetIt.I<ChatRepositoryImpl>();
   final _ws = GetIt.I<ChatWsService>();
   final List<MessageModel> _messages = [];
@@ -45,6 +46,20 @@ class _ChatsPageState extends State<ChatsPage> {
     super.initState();
     _loadMessages();
     _connectWs();
+  }
+
+  void _scrollToBottom({bool animated = true}) {
+    if (_scrollController.hasClients) {
+      if (animated) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      } else {
+        _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+      }
+    }
   }
 
   Future<void> _loadMessages({int offset = 0, int limit = 100}) async {
@@ -62,6 +77,14 @@ class _ChatsPageState extends State<ChatsPage> {
           _messages.addAll(msgs);
         }
       });
+      
+      // Scroll to bottom after loading messages
+      if (offset == 0) {
+        // For initial load, scroll immediately without animation
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _scrollToBottom(animated: false);
+        });
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -111,6 +134,10 @@ class _ChatsPageState extends State<ChatsPage> {
                   
                   if (!messageExists) {
                     _messages.add(msg);
+                    // Scroll to bottom when new message is added
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      _scrollToBottom();
+                    });
                   } else {
                   }
                 });
@@ -144,6 +171,7 @@ class _ChatsPageState extends State<ChatsPage> {
     _wsSubscription?.cancel();
     _ws.disconnect();
     _controller.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -222,6 +250,7 @@ class _ChatsPageState extends State<ChatsPage> {
                         itemBuilder: (_, __) => const ChatMessageSkeleton(),
                       )
                     : ListView.builder(
+                  controller: _scrollController,
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   itemCount: _messages.length,
                   itemBuilder: (context, i) {
@@ -427,6 +456,11 @@ class _ChatsPageState extends State<ChatsPage> {
       _messages.add(optimisticMessage);
     });
     
+    // Scroll to bottom when adding optimistic message
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _scrollToBottom();
+    });
+    
     _controller.clear();
     
     try {
@@ -571,6 +605,7 @@ class _ChatsPageState extends State<ChatsPage> {
         ),
       ),
     );
+    
     if (created == true) {
       final email = controller.text.trim();
       if (email.isEmpty) return;

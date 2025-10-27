@@ -37,6 +37,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
   String _error = '';
   String _search = '';
   bool _wsConnected = false;
+  Map<int, int> _unreadCounts = {}; // roomId -> unread count
 
   @override
   void initState() {
@@ -74,15 +75,120 @@ class _MessagesScreenState extends State<MessagesScreen> {
           final type = event['type'] as String?;
           if (type == 'room_invitation' || type == 'direct_room_created') {
             _loadRooms();
+          } else if (type == 'new_message') {
+            _handleNewMessage(event);
           }
         }
       });
     } catch (_) {}
   }
 
+  void _handleNewMessage(Map<String, dynamic> event) {
+    final roomId = event['room_id'] as int?;
+    final message = event['message'] as Map<String, dynamic>?;
+    final sender = event['sender'] as String?;
+    
+    if (roomId == null || message == null || sender == null) return;
+    
+    // Get current user info to check if this is our own message
+    final authState = context.read<AuthBloc>().state;
+    String? currentUserId;
+    if (authState is AuthSuccess) {
+      currentUserId = authState.user.id;
+    }
+    
+    // Don't show notification for our own messages
+    final senderId = message['sender_id'] as int?;
+    if (senderId != null && currentUserId != null && senderId.toString() == currentUserId) {
+      return;
+    }
+    
+    // Check if we're currently viewing this room
+    final currentRoute = ModalRoute.of(context)?.settings.name;
+    final isViewingThisRoom = currentRoute?.contains('chat/$roomId') == true;
+    
+    // Update unread count
+    setState(() {
+      _unreadCounts[roomId] = (_unreadCounts[roomId] ?? 0) + 1;
+      
+      // Update the room in the list with new unread count
+      final roomIndex = _rooms.indexWhere((room) => room.roomId == roomId);
+      if (roomIndex != -1) {
+        _rooms[roomIndex] = _rooms[roomIndex].copyWith(
+          unreadCount: _unreadCounts[roomId] ?? 0,
+        );
+      }
+    });
+    
+    // Show toast notification if not viewing this room
+    if (!isViewingThisRoom) {
+      final messageContent = message['content'] as String? ?? '';
+      final preview = messageContent.length > 50 
+          ? '${messageContent.substring(0, 50)}...' 
+          : messageContent;
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.message, color: Colors.white),
+              SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      sender,
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    Text(preview),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: const Color(0xFF6C63FF),
+          duration: Duration(seconds: 4),
+          action: SnackBarAction(
+            label: 'View',
+            textColor: Colors.white,
+            onPressed: () {
+              // Find the room to get name and avatar
+              final room = _rooms.firstWhere(
+                (r) => r.roomId == roomId,
+                orElse: () => RoomModel(
+                  roomId: roomId,
+                  name: 'Room $roomId',
+                  isPrivate: true,
+                  createdById: 0,
+                  createdAt: '',
+                  membersCount: 0,
+                ),
+              );
+              
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ChatsPage(
+                    roomId: roomId,
+                    name: room.name ?? 'Direct',
+                    avatarUrl: 'https://ui-avatars.com/api/?name=${Uri.encodeComponent(room.name ?? 'D')}',
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      );
+    }
+  }
+
 
 
   Widget _buildChatItem(RoomModel room) {
+    final unreadCount = _unreadCounts[room.roomId] ?? 0;
+    
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -98,21 +204,50 @@ class _MessagesScreenState extends State<MessagesScreen> {
       child: ListTile(
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        leading: CircleAvatar(
-          radius: 24,
-          backgroundColor: const Color(0xFF6C63FF).withOpacity(0.1),
-          child: Icon(
-            room.name != null ? Icons.group : Icons.person,
-            color: const Color(0xFF6C63FF),
-            size: 24,
-          ),
+        leading: Stack(
+          children: [
+            CircleAvatar(
+              radius: 24,
+              backgroundColor: const Color(0xFF6C63FF).withOpacity(0.1),
+              child: Icon(
+                room.name != null ? Icons.group : Icons.person,
+                color: const Color(0xFF6C63FF),
+                size: 24,
+              ),
+            ),
+            if (unreadCount > 0)
+              Positioned(
+                right: 0,
+                top: 0,
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: const BoxDecoration(
+                    color: Colors.red,
+                    shape: BoxShape.circle,
+                  ),
+                  constraints: const BoxConstraints(
+                    minWidth: 20,
+                    minHeight: 20,
+                  ),
+                  child: Text(
+                    unreadCount > 99 ? '99+' : unreadCount.toString(),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+          ],
         ),
         title: Text(
           room.name ?? 'Direct',
-          style: const TextStyle(
-            fontWeight: FontWeight.w600,
+          style: TextStyle(
+            fontWeight: unreadCount > 0 ? FontWeight.bold : FontWeight.w600,
             fontSize: 16,
-            color: Color(0xFF181929),
+            color: const Color(0xFF181929),
           ),
         ),
         subtitle: Text(
@@ -123,6 +258,18 @@ class _MessagesScreenState extends State<MessagesScreen> {
           ),
         ),
         onTap: () {
+          // Clear unread count when entering the room
+          if (unreadCount > 0) {
+            setState(() {
+              _unreadCounts[room.roomId] = 0;
+              // Update the room in the list
+              final roomIndex = _rooms.indexWhere((r) => r.roomId == room.roomId);
+              if (roomIndex != -1) {
+                _rooms[roomIndex] = _rooms[roomIndex].copyWith(unreadCount: 0);
+              }
+            });
+          }
+          
           Navigator.of(context).push(
             ChatsPage.route(
               name: room.name ?? 'Direct',

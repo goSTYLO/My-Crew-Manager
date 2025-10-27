@@ -54,7 +54,26 @@ class AuthRepositoryImpl implements AuthRepository {
       final res = await fn();
       return right(res);
     } on DioException catch (e) {
-      return left(Failure("Incorrect Email or Password"));
+      // Better error handling with detailed messages
+      print('🔴 DioException: ${e.type}');
+      print('🔴 Error message: ${e.message}');
+      print('🔴 Response status: ${e.response?.statusCode}');
+      print('🔴 Response data: ${e.response?.data}');
+      
+      if (e.type == DioExceptionType.connectionTimeout || 
+          e.type == DioExceptionType.receiveTimeout) {
+        return left(Failure("Connection timeout. Please check if the server is running with Daphne."));
+      }
+      
+      if (e.response?.statusCode == 401) {
+        return left(Failure("Incorrect Email or Password"));
+      }
+      
+      if (e.response?.statusCode == 500) {
+        return left(Failure("Server error. The backend may need Redis running."));
+      }
+      
+      return left(Failure("Connection error: ${e.message ?? 'Unknown error'}"));
     } on ServerException catch (e) {
       return left(Failure(e.message));
     }
@@ -84,7 +103,7 @@ class AuthRepositoryImpl implements AuthRepository {
         }
       );
       return right(message);
-    } on DioException catch(e) {
+    } on DioException {
       return left(Failure("Error. Try Again!"));
     } on ServerException catch (e) {
       return left(Failure(e.message));
@@ -99,7 +118,7 @@ class AuthRepositoryImpl implements AuthRepository {
       }
       await remoteDataSource.logout();
       return right(null);
-    } on DioException catch(e) {
+    } on DioException {
       return left(Failure("Logout failed. Try Again!"));
     } on ServerException catch (e) {
       return left(Failure(e.message));
