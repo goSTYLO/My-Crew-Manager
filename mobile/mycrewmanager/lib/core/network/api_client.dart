@@ -13,12 +13,34 @@ class ApiClient {
     dio.options
       ..baseUrl = Constants.baseUrl
       ..contentType = 'application/json'
-      ..connectTimeout = const Duration(seconds: 10)
-      ..receiveTimeout = const Duration(seconds: 10);
+      ..connectTimeout = const Duration(seconds: 30)
+      ..receiveTimeout = const Duration(seconds: 30)
+      ..sendTimeout = const Duration(seconds: 30);
 
     dio.interceptors.addAll([
       TokenInterceptor(_tokenStorage),
-      LogInterceptor(requestBody: true, responseBody: true),
     ]);
+
+    // Add retry interceptor for transient failures
+    dio.interceptors.add(
+      InterceptorsWrapper(
+        onError: (error, handler) async {
+          if (error.type == DioExceptionType.connectionTimeout ||
+              error.type == DioExceptionType.receiveTimeout ||
+              error.response?.statusCode == 502 ||
+              error.response?.statusCode == 503) {
+            // Retry once after a delay
+            await Future.delayed(Duration(seconds: 2));
+            try {
+              final response = await dio.fetch(error.requestOptions);
+              return handler.resolve(response);
+            } catch (e) {
+              return handler.next(error);
+            }
+          }
+          return handler.next(error);
+        },
+      ),
+    );
   }
 }

@@ -11,16 +11,18 @@ class UpdateTaskStatus implements UseCase<ProjectTask, UpdateTaskStatusParams> {
 
   @override
   Future<Either<Failure, ProjectTask>> call(UpdateTaskStatusParams params) async {
-    return await projectRepository.updateTaskStatus(params.taskId, params.status);
+    return await projectRepository.updateTaskStatus(params.taskId, params.status, commitTitle: params.commitTitle);
   }
 }
 
 class UpdateTaskStatusParams {
   final int taskId;
   final String status;
+  final String? commitTitle;
 
   UpdateTaskStatusParams({
     required this.taskId,
     required this.status,
+    this.commitTitle,
   });
 }

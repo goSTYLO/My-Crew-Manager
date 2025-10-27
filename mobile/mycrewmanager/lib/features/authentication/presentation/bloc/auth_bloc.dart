@@ -7,6 +7,9 @@ import 'package:mycrewmanager/features/authentication/domain/usecases/user_login
 import 'package:mycrewmanager/features/authentication/domain/usecases/user_signup.dart';
 import 'package:mycrewmanager/features/authentication/domain/usecases/user_logout.dart';
 import 'package:mycrewmanager/core/usecase/usercase.dart';
+import 'package:mycrewmanager/init_dependencies.dart' as deps;
+import 'package:mycrewmanager/features/chat/data/services/chat_ws_service.dart';
+import 'package:mycrewmanager/features/notification/data/services/notification_ws_service.dart';
 import 'package:dio/dio.dart';
 
 part 'auth_event.dart';
@@ -24,16 +27,16 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         _userLogout = userLogout,
         _tokenStorage = tokenStorage,
         super(AuthInitial()) {
-    on<AuthEvent>((_, emit) => emit(AuthLoading()));
     on<AuthLogin>(_onAuthLogin);
     on<AuthSignUp>(_onAuthSignup);
     on<UpdateUserRole>(_onUpdateUserRole);
     on<AuthLogout>(_onAuthLogout);
     on<AuthIsUserLoggedIn>(_onAuthIsUserLoggedIn);
+    on<RefreshUserData>(_onRefreshUserData);
   }
 
   void _onAuthLogin(AuthLogin event, Emitter<AuthState> emit) async {
-    logger.d("🔐 Starting login process for: ${event.email}");
+    emit(AuthLoading());
     
     final res = await _userLogin(
       UserLoginParams(email: event.email, password: event.password),
@@ -41,11 +44,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
     await res.fold(
       (failure) async {
-        logger.d("❌ LOGIN FAILED: ${failure.message}");
         emit(AuthFailure(failure.message));
       },
       (user) async {
-        logger.d("✅ LOGIN SUCCESS: ${user.name} - Token: ${user.token}");
         await _tokenStorage.saveToken(user.token);
         
         // Fetch complete user data including profile picture
@@ -67,16 +68,13 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
               profilePicture: userData['profile_picture'],
             );
             
-            logger.d("✅ Complete user data loaded: ${completeUser.name}");
             emit(AuthSuccess(completeUser));
           } else {
             // Fallback to basic user data if complete data fetch fails
-            logger.d("⚠️ Could not fetch complete user data, using basic data");
             emit(AuthSuccess(user));
           }
         } catch (e) {
           // Fallback to basic user data if complete data fetch fails
-          logger.d("⚠️ Error fetching complete user data: $e, using basic data");
           emit(AuthSuccess(user));
         }
       },
@@ -84,7 +82,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   }
 
   void _onAuthSignup(AuthSignUp event, Emitter<AuthState> emit) async {
-    logger.d("🔐 Starting signup process for: ${event.email}");
+    emit(AuthLoading());
     
     final res = await _userSignup(
       UserSignupParams(name: event.name, email: event.email, password: event.password, role: event.role)
@@ -92,11 +90,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
     await res.fold(
       (failure) async {
-        logger.d("❌ SIGNUP FAILED: ${failure.message}");
         emit(AuthFailure(failure.message));
       },
       (user) async {
-        logger.d("✅ SIGNUP SUCCESS: ${user.name} - Token: ${user.token}");
         await _tokenStorage.saveToken(user.token);
         
         // Fetch complete user data including profile picture
@@ -118,16 +114,13 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
               profilePicture: userData['profile_picture'],
             );
             
-            logger.d("✅ Complete user data loaded: ${completeUser.name}");
             emit(AuthSuccess(completeUser));
           } else {
             // Fallback to basic user data if complete data fetch fails
-            logger.d("⚠️ Could not fetch complete user data, using basic data");
             emit(AuthSuccess(user));
           }
         } catch (e) {
           // Fallback to basic user data if complete data fetch fails
-          logger.d("⚠️ Error fetching complete user data: $e, using basic data");
           emit(AuthSuccess(user));
         }
       }
@@ -135,17 +128,27 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   }
 
   void _onAuthLogout(AuthLogout event, Emitter<AuthState> emit) async {
-    logger.d("🔐 Starting logout process");
+    emit(AuthLoading());
+    
+    // Disconnect WebSocket services before logout
+    try {
+      final chatWsService = deps.serviceLocator<ChatWsService>();
+      final notificationWsService = deps.serviceLocator<NotificationWsService>();
+      
+      await chatWsService.disconnect();
+      notificationWsService.disconnect();
+      
+    } catch (e) {
+      // Continue with logout even if WebSocket cleanup fails
+    }
     
     final res = await _userLogout(NoParams());
 
     await res.fold(
       (failure) async {
-        logger.d("❌ LOGOUT FAILED: ${failure.message}");
         emit(AuthFailure(failure.message));
       },
       (_) async {
-        logger.d("✅ LOGOUT SUCCESS");
         await _tokenStorage.clearToken();
         emit(AuthLoggedOut());
       }
@@ -153,12 +156,11 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   }
 
   void _onAuthIsUserLoggedIn(AuthIsUserLoggedIn event, Emitter<AuthState> emit) async {
-    logger.d("🔍 Checking if user is already logged in");
+    emit(AuthLoading());
     
     final token = await _tokenStorage.getToken();
     
     if (token == null) {
-      logger.d("❌ No token found, user not logged in");
       emit(AuthLoggedOut());
       return;
     }
@@ -182,15 +184,12 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           profilePicture: userData['profile_picture'],
         );
         
-        logger.d("✅ User already logged in: ${user.name}");
         emit(AuthSuccess(user));
       } else {
-        logger.d("❌ Token invalid, clearing token");
         await _tokenStorage.clearToken();
         emit(AuthLoggedOut());
       }
     } catch (e) {
-      logger.d("❌ Error checking user status: $e");
       await _tokenStorage.clearToken();
       emit(AuthLoggedOut());
     }
@@ -208,7 +207,42 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         token: currentState.user.token,
         role: event.role,
       );
-      emit(AuthRoleUpdated(updatedUser));
+      emit(AuthSuccess(updatedUser));
+    }
+  }
+
+  void _onRefreshUserData(RefreshUserData event, Emitter<AuthState> emit) async {
+    
+    final currentState = state;
+    if (currentState is! AuthSuccess) {
+      return;
+    }
+
+    try {
+      final dio = Dio();
+      dio.options.headers['Authorization'] = 'Token ${currentState.user.token}';
+      dio.options.baseUrl = Constants.baseUrl;
+      
+      final response = await dio.get('user/me/');
+      
+      if (response.statusCode == 200) {
+        final userData = response.data;
+        
+        final updatedUser = User(
+          id: userData['user_id']?.toString() ?? currentState.user.id,
+          email: userData['email'] ?? currentState.user.email,
+          name: userData['name'] ?? currentState.user.name,
+          token: currentState.user.token,
+          role: userData['role'] ?? currentState.user.role,
+          profilePicture: userData['profile_picture'] ?? currentState.user.profilePicture,
+        );
+        
+        emit(AuthSuccess(updatedUser));
+      } else {
+        // Don't emit anything on failure to preserve current state
+      }
+    } catch (e) {
+      // Don't emit anything on error to preserve current state
     }
   }
 

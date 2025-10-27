@@ -95,10 +95,15 @@ interface Project {
 
 interface ProjectInvitation {
   id: number;
-  project: Project;
-  invitee: User;
-  invited_by: User;
+  project: number; // Just the project ID from backend
+  project_title: string; // Project title from backend
+  invitee: number; // Just the invitee ID from backend
+  invitee_name: string; // Invitee name from backend
+  invitee_email: string; // Invitee email from backend
+  invited_by: number; // Just the invited_by ID from backend
+  invited_by_name: string; // Invited by name from backend
   status: 'pending' | 'accepted' | 'declined' | 'expired';
+  role: string; // Role the user is invited with
   message: string;
   created_at: string;
   updated_at: string;
@@ -112,6 +117,8 @@ interface EnrichedProjectInvitation extends ProjectInvitation {
   members?: ProjectMember[];
   proposal?: Proposal;
   repositories?: Repository[];
+  project_title?: string;
+  project_summary?: string;
 }
 
 // API Functions
@@ -479,19 +486,34 @@ const ProjectInvitation = () => {
         const enrichedInvitations = await Promise.all(
           invitationsData.map(async (invitation) => {
             try {
-              // Check if project and project.id exist before making API call
-              if (!invitation.project || !invitation.project.id) {
+              // Check if project ID exists before making API call
+              if (!invitation.project) {
                 console.warn('Invalid project data in invitation:', invitation);
                 return invitation;
               }
               
-              const details = await invitationAPI.getProjectDetails(invitation.project.id);
+              // First get basic project info (title, summary)
+              const projectResponse = await fetch(`${API_BASE_URL}/ai/projects/${invitation.project}/`, {
+                headers: apiHeaders()
+              });
+              
+              let projectDetails = {};
+              if (projectResponse.ok) {
+                const projectData = await projectResponse.json();
+                projectDetails = {
+                  project_summary: projectData.summary
+                };
+              }
+              
+              // Then get additional project details
+              const details = await invitationAPI.getProjectDetails(invitation.project);
               return {
                 ...invitation,
+                ...projectDetails,
                 ...details
               };
             } catch (err) {
-              console.error(`Error loading details for project ${invitation.project?.id || 'unknown'}:`, err);
+              console.error(`Error loading details for project ${invitation.project || 'unknown'}:`, err);
               return invitation;
             }
           })
@@ -553,7 +575,7 @@ const ProjectInvitation = () => {
       </header>
       <TopNavbar onMenuClick={() => setSidebarOpen(true)} />
 
-      <main className="flex-1 p-4 lg:p-[100px] overflow-auto space-y-[40px]">
+      <main className="flex-1 p-4 lg:p-[100px] overflow-auto space-y-[40px] pt-20">
         <div className="mb-6 flex items-center gap-2">
           <button
             onClick={() => navigate('/projects-user')}
@@ -625,16 +647,16 @@ const ProjectInvitation = () => {
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center space-x-3">
                     <div className="w-12 h-12 bg-blue-500 text-white rounded-lg flex items-center justify-center text-lg font-medium">
-                      {invitation.invited_by?.avatar || (invitation.invited_by?.name ? invitation.invited_by.name.substring(0, 2).toUpperCase() : '??')}
+                      {invitation.invited_by_name ? invitation.invited_by_name.substring(0, 2).toUpperCase() : '??'}
                     </div>
                     <div>
                       <h3 className={`text-lg font-semibold ${
                         theme === "dark" ? "text-white" : "text-gray-900"
-                      }`}>{invitation.project?.title || 'Untitled Project'}</h3>
+                      }`}>{invitation.project_title || 'Untitled Project'}</h3>
                       <p className={`text-sm ${
                         theme === "dark" ? "text-gray-400" : "text-gray-600"
                       }`}>
-                        Invited by <span className="font-medium">{invitation.invited_by?.name || 'Unknown User'}</span> •{' '}
+                        Invited by <span className="font-medium">{invitation.invited_by_name || 'Unknown User'}</span> •{' '}
                         {formatDate(invitation.created_at)}
                       </p>
                     </div>
@@ -646,7 +668,7 @@ const ProjectInvitation = () => {
 
                 <p className={`mb-4 ${
                   theme === "dark" ? "text-gray-300" : "text-gray-700"
-                }`}>{invitation.project?.summary || 'No description available'}</p>
+                }`}>{invitation.project_summary || 'No description available'}</p>
 
                 {invitation.message && (
                   <div className={`mb-4 p-3 rounded-lg border-l-4 border-blue-500 ${
@@ -663,15 +685,15 @@ const ProjectInvitation = () => {
                 }`}>
                   <div className="flex items-center space-x-2">
                     <Users className="w-4 h-4" />
-                    <span>{invitation.project?.member_count || 0} members</span>
+                    <span>{invitation.members?.length || 0} members</span>
                   </div>
                   <div className="flex items-center space-x-2">
                     <FolderOpen className="w-4 h-4" />
-                    <span>{invitation.project?.task_count || 0} tasks</span>
+                    <span>Project Tasks</span>
                   </div>
                   <div className="flex items-center space-x-2">
                     <Calendar className="w-4 h-4" />
-                    <span>Created {formatDate(invitation.project?.created_at || invitation.created_at)}</span>
+                    <span>Created {formatDate(invitation.created_at)}</span>
                   </div>
                   {invitation.proposal && (
                     <div className="flex items-center space-x-2 text-green-600">

@@ -5,7 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:http/http.dart' as http;
 import 'package:mycrewmanager/features/dashboard/presentation/pages/manage_members_page.dart';
 import 'package:mycrewmanager/features/dashboard/presentation/pages/tasks_page.dart';
-import 'package:mycrewmanager/features/project/presentation/pages/backlog_overview_page.dart';
+import 'package:mycrewmanager/features/project/presentation/pages/project_backlog_page.dart';
 import 'package:mycrewmanager/features/project/domain/entities/project.dart';
 import 'package:mycrewmanager/features/project/domain/entities/member.dart';
 import 'package:mycrewmanager/features/project/domain/usecases/get_project_members.dart';
@@ -359,6 +359,7 @@ class _ProjectOverviewPageState extends State<ProjectOverviewPage> {
                                       child: _MemberCircle(
                                         label: _getInitials(member.name),
                                         color: _getColorFromString(member.name),
+                                        textColor: Colors.white,
                                       ),
                                     )),
                                   ],
@@ -440,26 +441,6 @@ class _ProjectOverviewPageState extends State<ProjectOverviewPage> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                // View Backlog button
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      minimumSize: const Size.fromHeight(48),
-                      side: const BorderSide(color: Colors.black, width: 1.2),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    icon: const Icon(Icons.view_list_rounded, color: Colors.black),
-                    label: const Text(
-                      "View Backlog",
-                      style: TextStyle(color: Colors.black, fontWeight: FontWeight.w600, fontSize: 16),
-                    ),
-                    onPressed: () {
-                      Navigator.of(context).push(BacklogOverviewPage.route(project: widget.project));
-                    },
-                  ),
-                ),
-                const SizedBox(height: 12),
                 // Manage Members button (hidden for developers)
                 BlocBuilder<AuthBloc, AuthState>(
                   builder: (context, authState) {
@@ -494,6 +475,26 @@ class _ProjectOverviewPageState extends State<ProjectOverviewPage> {
                     );
                   },
                 ),
+                const SizedBox(height: 12),
+                // View Backlog button
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size.fromHeight(48),
+                      side: const BorderSide(color: Colors.black, width: 1.2),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    icon: const Icon(Icons.list_alt_rounded, color: Colors.black),
+                    label: const Text(
+                      "View Backlog",
+                      style: TextStyle(color: Colors.black, fontWeight: FontWeight.w600, fontSize: 16),
+                    ),
+                    onPressed: () {
+                      Navigator.of(context).push(ProjectBacklogPage.route(widget.project));
+                    },
+                  ),
+                ),
                 const SizedBox(height: 24),
               ],
             ),
@@ -520,7 +521,7 @@ class _MemberCircle extends StatelessWidget {
   const _MemberCircle({
     required this.label,
     required this.color,
-    this.textColor = Colors.white,
+    required this.textColor,
   });
 
   @override

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
 import 'package:mycrewmanager/features/chat/data/models/message_model.dart';
@@ -31,11 +32,14 @@ class ChatsPage extends StatefulWidget {
 
 class _ChatsPageState extends State<ChatsPage> {
   final TextEditingController _controller = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
   final _repo = GetIt.I<ChatRepositoryImpl>();
   final _ws = GetIt.I<ChatWsService>();
   final List<MessageModel> _messages = [];
   // Stream is listened immediately; no need to store
   bool _loading = true;
+  bool _sending = false;
+  StreamSubscription<dynamic>? _wsSubscription;
 
   @override
   void initState() {
@@ -44,38 +48,130 @@ class _ChatsPageState extends State<ChatsPage> {
     _connectWs();
   }
 
-  Future<void> _loadMessages() async {
+  void _scrollToBottom({bool animated = true}) {
+    if (_scrollController.hasClients) {
+      if (animated) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      } else {
+        _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+      }
+    }
+  }
+
+  Future<void> _loadMessages({int offset = 0, int limit = 100}) async {
     final roomId = widget.roomId;
     try {
-      final msgs = await _repo.listMessages(roomId);
+      final msgs = await _repo.listMessages(roomId, offset: offset, limit: limit);
       setState(() {
-        _messages
-          ..clear()
-          ..addAll(msgs);
+        if (offset == 0) {
+          // First load - replace all messages
+          _messages
+            ..clear()
+            ..addAll(msgs);
+        } else {
+          // Pagination load - add to existing messages
+          _messages.addAll(msgs);
+        }
       });
+      
+      // Scroll to bottom after loading messages
+      if (offset == 0) {
+        // For initial load, scroll immediately without animation
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _scrollToBottom(animated: false);
+        });
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
   }
 
   Future<void> _connectWs() async {
-    final stream = await _ws.connectToRoom(widget.roomId);
-    stream.listen((event) {
-      if (event is Map<String, dynamic>) {
-        final type = event['type'] as String?;
-        if (type == 'chat_message') {
-          final msg = MessageModel.fromJson(event['message'] as Map<String, dynamic>);
-          setState(() {
-            _messages.add(msg);
-          });
-        }
-      }
-    });
+    try {
+      final stream = await _ws.connectToRoom(widget.roomId);
+      
+      _wsSubscription = stream.listen(
+        (event) {
+          
+          if (!mounted) {
+            return;
+          }
+          
+          if (event is Map<String, dynamic>) {
+            final type = event['type'] as String?;
+            
+            if (type == 'chat_message') {
+              try {
+                final msg = MessageModel.fromJson(event['message'] as Map<String, dynamic>);
+                
+                setState(() {
+                  // Get current user ID for filtering
+                  String? currentUserId;
+                  final authState = context.read<AuthBloc>().state;
+                  if (authState is AuthSuccess) {
+                    currentUserId = authState.user.id;
+                  }
+                  
+                  // Find and remove any pending optimistic message from CURRENT USER only
+                  final now = DateTime.now();
+                  final removedCount = _messages.length;
+                  _messages.removeWhere((m) => 
+                    m.isPending && 
+                    m.content == msg.content &&
+                    m.senderId.toString() == currentUserId && // Only remove OUR optimistic messages
+                    now.difference(DateTime.parse(m.createdAt)).inSeconds < 10
+                  );
+                  
+                  if (removedCount != _messages.length) {
+                  }
+                  
+                  // Check if message already exists (by message_id)
+                  final messageExists = _messages.any((m) => m.messageId == msg.messageId && msg.messageId > 0);
+                  
+                  if (!messageExists) {
+                    _messages.add(msg);
+                    // Scroll to bottom when new message is added
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      _scrollToBottom();
+                    });
+                  } else {
+                  }
+                });
+              } catch (e) {
+              }
+            }
+          } else {
+          }
+        },
+        onError: (error) {
+        },
+        onDone: () {
+        },
+      );
+    } catch (e) {
+    }
+  }
+
+  @override
+  void didUpdateWidget(ChatsPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.roomId != widget.roomId) {
+      _wsSubscription?.cancel();
+      _loadMessages();
+      _connectWs();
+    }
   }
 
   @override
   void dispose() {
+    _wsSubscription?.cancel();
     _ws.disconnect();
+    _controller.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -154,6 +250,7 @@ class _ChatsPageState extends State<ChatsPage> {
                         itemBuilder: (_, __) => const ChatMessageSkeleton(),
                       )
                     : ListView.builder(
+                  controller: _scrollController,
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   itemCount: _messages.length,
                   itemBuilder: (context, i) {
@@ -247,12 +344,26 @@ class _ChatsPageState extends State<ChatsPage> {
                                     ),
                                   ),
                                 const SizedBox(height: 4),
-                                Text(
-                                  '${msg.senderUsername} • ${DateFormatter.formatChatDate(msg.createdAt)}',
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    color: Colors.black54,
-                                  ),
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      '${msg.senderUsername} • ${DateFormatter.formatChatDate(msg.createdAt)}',
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        color: Colors.black54,
+                                      ),
+                                    ),
+                                    if (msg.isPending)
+                                      Padding(
+                                        padding: const EdgeInsets.only(left: 4),
+                                        child: Icon(
+                                          Icons.schedule,
+                                          size: 12,
+                                          color: Colors.grey,
+                                        ),
+                                      ),
+                                  ],
                                 ),
                               ],
                             ),
@@ -287,12 +398,21 @@ class _ChatsPageState extends State<ChatsPage> {
                     const SizedBox(width: 8),
                     Container(
                       decoration: BoxDecoration(
-                        color: Colors.blue,
+                        color: _sending ? Colors.grey : Colors.blue,
                         borderRadius: BorderRadius.circular(24),
                       ),
                       child: IconButton(
-                        icon: const Icon(Icons.send, color: Colors.white),
-                        onPressed: _sendMessage,
+                        icon: _sending 
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : const Icon(Icons.send, color: Colors.white),
+                        onPressed: _sending ? null : _sendMessage,
                       ),
                     ),
                   ],
@@ -307,12 +427,65 @@ class _ChatsPageState extends State<ChatsPage> {
 
   Future<void> _sendMessage() async {
     final text = _controller.text.trim();
-    if (text.isEmpty) return;
-    final sent = await _repo.sendMessage(widget.roomId, text);
+    if (text.isEmpty || _sending) return;
+    
+    setState(() => _sending = true);
+    
+    // Generate temporary ID
+    final tempId = 'temp_${DateTime.now().millisecondsSinceEpoch}';
+    
+    // Get current user info
+    String? currentUserId;
+    String? currentUserName;
+    final authState = context.read<AuthBloc>().state;
+    if (authState is AuthSuccess) {
+      currentUserId = authState.user.id;
+      currentUserName = authState.user.name;
+    }
+    
+    // Add optimistic message immediately
+    final optimisticMessage = MessageModel.optimistic(
+      tempId: tempId,
+      roomId: widget.roomId,
+      senderId: int.parse(currentUserId ?? '0'),
+      senderUsername: currentUserName ?? 'You',
+      content: text,
+    );
+    
     setState(() {
-      _messages.add(sent);
+      _messages.add(optimisticMessage);
     });
+    
+    // Scroll to bottom when adding optimistic message
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _scrollToBottom();
+    });
+    
     _controller.clear();
+    
+    try {
+      // Send to server (no await for UI responsiveness)
+      _repo.sendMessage(widget.roomId, text).then((sentMessage) {
+        // Server returned the message, but we'll let WebSocket handle the replacement
+        // to ensure all clients get the same confirmed message
+      }).catchError((e) {
+        // If sending fails, mark the optimistic message as failed
+        if (mounted) {
+          setState(() {
+            final index = _messages.indexWhere((m) => m.tempId == tempId);
+            if (index != -1) {
+              // Could add a 'failed' state to the model, or remove it
+              _messages.removeAt(index);
+            }
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to send message: ${e.toString()}'))
+          );
+        }
+      });
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
   }
 
   Future<void> _showInviteDialog() async {
@@ -432,6 +605,7 @@ class _ChatsPageState extends State<ChatsPage> {
         ),
       ),
     );
+    
     if (created == true) {
       final email = controller.text.trim();
       if (email.isEmpty) return;

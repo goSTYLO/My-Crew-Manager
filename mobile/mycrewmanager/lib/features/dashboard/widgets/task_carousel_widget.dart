@@ -173,42 +173,6 @@ class _TaskCarouselWidgetState extends State<TaskCarouselWidget> with TickerProv
     TaskCacheManager.savePendingTasks(pendingTasks);
   }
 
-  void _onTaskTap(ProjectTask task) {
-    // Navigate to task details or show task options
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text(task.title),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Status: ${task.status}'),
-              Text('Assignee: ${task.assigneeName ?? 'Unassigned'}'),
-              Text('Story ID: ${task.userStoryId}'),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Close'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                // Here you could navigate to task details page
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Opening ${task.title}...')),
-                );
-              },
-              child: const Text('View Details'),
-            ),
-          ],
-        );
-      },
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -383,9 +347,7 @@ class _TaskCarouselWidgetState extends State<TaskCarouselWidget> with TickerProv
   }
 
   Widget _buildTaskCard(ProjectTask task) {
-    return GestureDetector(
-      onTap: () => _onTaskTap(task),
-      child: Container(
+    return Container(
         margin: const EdgeInsets.symmetric(horizontal: 4),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(14),
@@ -462,27 +424,9 @@ class _TaskCarouselWidgetState extends State<TaskCarouselWidget> with TickerProv
               ),
               const SizedBox(height: 8), // Reduced spacing
 
-              // Task details - combined into one row to save space
+              // Task details - story ID only
               Row(
                 children: [
-                  const Icon(
-                    Icons.person_outline,
-                    color: Color(0xFF7B7F9E),
-                    size: 14, // Reduced size
-                  ),
-                  const SizedBox(width: 4), // Reduced spacing
-                  Expanded(
-                    child: Text(
-                      task.assigneeName ?? 'Unassigned',
-                      style: const TextStyle(
-                        color: Color(0xFF7B7F9E),
-                        fontSize: 10, // Reduced font size
-                        fontWeight: FontWeight.w400,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  const SizedBox(width: 8), // Reduced spacing
                   const Icon(
                     Icons.article_outlined,
                     color: Color(0xFF7B7F9E),
@@ -499,30 +443,9 @@ class _TaskCarouselWidgetState extends State<TaskCarouselWidget> with TickerProv
                   ),
                 ],
               ),
-              const SizedBox(height: 8), // Reduced spacing
-
-              // Tap to view hint
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 6), // Reduced padding
-                decoration: BoxDecoration(
-                  color: const Color(0xFF6C63FF).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: const Text(
-                  'Tap to view details',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Color(0xFF6C63FF),
-                    fontSize: 10, // Reduced font size
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
             ],
           ),
         ),
-      ),
     );
   }
 

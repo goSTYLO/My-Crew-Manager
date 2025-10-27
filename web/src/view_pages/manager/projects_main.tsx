@@ -60,9 +60,10 @@ const ProjectTask = () => {
     const [showViewAllModal, setShowViewAllModal] = useState(false);
     const [modalCurrentPage, setModalCurrentPage] = useState(1);
     const projectsPerModalPage = 20;
+    const [searchQuery, setSearchQuery] = useState('');
 
     // API Configuration
-    const AI_API_BASE_URL = `${API_BASE_URL}/api/ai`;
+    const AI_API_BASE_URL = `${API_BASE_URL}/ai`;
 
     // Fetch projects from backend
     const fetchProjects = async () => {
@@ -160,6 +161,17 @@ const ProjectTask = () => {
       });
     };
 
+    // Filter projects based on search query
+    const filterProjects = (projectsList: any[]) => {
+      if (!searchQuery.trim()) return projectsList;
+      
+      const query = searchQuery.toLowerCase();
+      return projectsList.filter(project => 
+        project.title.toLowerCase().includes(query) ||
+        (project.description && project.description.toLowerCase().includes(query))
+      );
+    };
+
     // Handle user click to show modal
     const handleUserClick = (collaborator: Collaborator) => {
       setSelectedUser(collaborator);
@@ -231,7 +243,7 @@ const ProjectTask = () => {
         });
 
         // Fetch all users from the website
-        const usersResponse = await fetch(`${API_BASE_URL}/api/user/`, {
+        const usersResponse = await fetch(`${API_BASE_URL}/user/`, {
           headers: {
             'Authorization': `Token ${token}`,
             'Content-Type': 'application/json',
@@ -291,6 +303,12 @@ const ProjectTask = () => {
         }
     }, [timeFilter, projectBacklogs, projects]);
 
+    // Reset to page 1 on search change
+    useEffect(() => {
+        setCurrentPage(1);
+        setModalCurrentPage(1);
+    }, [searchQuery]);
+
     // Real-time updates for project changes
     useRealtimeUpdates({
       callbacks: {
@@ -315,10 +333,12 @@ const ProjectTask = () => {
     });
 
     // Pagination logic
-    const totalPages = Math.ceil(projects.length / projectsPerPage);
+    // Apply search filter before pagination
+    const filteredProjects = filterProjects(projects);
+    const totalPages = Math.ceil(filteredProjects.length / projectsPerPage);
     const startIndex = (currentPage - 1) * projectsPerPage;
     const endIndex = startIndex + projectsPerPage;
-    const currentProjects = projects.slice(startIndex, endIndex);
+    const currentProjects = filteredProjects.slice(startIndex, endIndex);
 
     // Pagination handlers
     const handlePageChange = (page: number) => {
@@ -338,10 +358,11 @@ const ProjectTask = () => {
     };
 
     // Modal pagination functions
-    const totalModalPages = Math.ceil(projects.length / projectsPerModalPage);
+    const modalFilteredProjects = filterProjects(projects);
+    const totalModalPages = Math.ceil(modalFilteredProjects.length / projectsPerModalPage);
     const modalStartIndex = (modalCurrentPage - 1) * projectsPerModalPage;
     const modalEndIndex = modalStartIndex + projectsPerModalPage;
-    const modalProjects = projects.slice(modalStartIndex, modalEndIndex);
+    const modalProjects = modalFilteredProjects.slice(modalStartIndex, modalEndIndex);
 
     const handleModalPageChange = (page: number) => {
         setModalCurrentPage(page);
@@ -379,7 +400,7 @@ const ProjectTask = () => {
     // Calculate dynamic data for charts
 
     return (
-      <div className={`flex min-h-screen w-full overflow-x-hidden ${theme === "dark" ? "bg-gray-900" : "bg-gray-50"}`}>
+      <div className={`flex min-h-screen w-full overflow-x-hidden overflow-y-auto ${theme === "dark" ? "bg-gray-900" : "bg-gray-50"}`}>
 
 
             {/* ✅ Reusable Sidebar */}
@@ -397,13 +418,27 @@ const ProjectTask = () => {
               <main className="flex-1 p-4 lg:p-[100px] overflow-y-auto overflow-x-hidden space-y-[40px] pt-20">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-3">
                   <h2 className={`text-2xl font-semibold ${theme === "dark" ? "text-white" : "text-gray-800"}`}>Projects</h2>
-                  <button 
-                    onClick={() => navigate("/create-project")} 
-                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors duration-200 shadow-sm"
-                  >
-                    <Plus className="w-5 h-5" />
-                    <span className="font-medium">Create Project</span>
-                  </button>
+                  <div className="flex items-center gap-3">
+                    <div className="relative">
+                      <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 ${theme === "dark" ? "text-gray-400" : "text-gray-500"}`} />
+                      <input
+                        type="text"
+                        placeholder="Search projects..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className={`pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-64 text-sm ${
+                          theme === "dark" ? "bg-gray-800 border-gray-700 text-white placeholder-gray-400" : "border-gray-300"
+                        }`}
+                      />
+                    </div>
+                    <button 
+                      onClick={() => navigate("/create-project")} 
+                      className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors duration-200 shadow-sm"
+                    >
+                      <Plus className="w-5 h-5" />
+                      <span className="font-medium">Create Project</span>
+                    </button>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-12 gap-6">
@@ -418,8 +453,8 @@ const ProjectTask = () => {
                       <div className="flex items-center gap-4">
                         <div className={`flex items-center space-x-2 text-sm ${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}>
                           <Folder className="w-4 h-4" />
-                          <span>{projects.length} projects</span>
-                          {projects.length > projectsPerPage && (
+                          <span>{filteredProjects.length} projects</span>
+                          {filteredProjects.length > projectsPerPage && (
                             <span className="text-xs">
                               (Page {currentPage} of {totalPages})
                             </span>
@@ -448,10 +483,10 @@ const ProjectTask = () => {
                             {error}
                           </div>
                         </div>
-                      ) : projects.length === 0 ? (
+                      ) : filteredProjects.length === 0 ? (
                         <div className="flex items-center justify-center h-full">
                           <div className={`text-sm ${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}>
-                            No projects found
+                            {searchQuery ? 'No projects match your search' : 'No projects found'}
                           </div>
                         </div>
                       ) : (
@@ -489,7 +524,7 @@ const ProjectTask = () => {
                     </div>
 
                     {/* Pagination Controls */}
-                    {projects.length > projectsPerPage && (
+                    {filteredProjects.length > projectsPerPage && (
                       <div className={`flex items-center justify-between mt-4 pt-4 border-t ${
                         theme === "dark" ? "border-gray-700" : "border-gray-200"
                       }`}>
@@ -507,21 +542,45 @@ const ProjectTask = () => {
                           Previous
                         </button>
                         <div className="flex items-center space-x-2">
-                          {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                            <button
-                              key={page}
-                              onClick={() => handlePageChange(page)}
-                              className={`px-3 py-1 text-sm rounded-md transition-colors ${
-                                currentPage === page
-                                  ? 'bg-blue-600 text-white'
-                                  : theme === "dark"
-                                  ? 'text-gray-300 hover:bg-gray-700'
-                                  : 'text-gray-600 hover:bg-gray-100'
-                              }`}
-                            >
-                              {page}
-                            </button>
-                          ))}
+                          {(() => {
+                            const getPaginationButtons = (currentPage: number, totalPages: number) => {
+                              if (totalPages <= 4) return Array.from({ length: totalPages }, (_, i) => i + 1);
+                              
+                              const buttons: (number | string)[] = [1];
+                              
+                              if (currentPage > 3) buttons.push('...');
+                              
+                              for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) {
+                                if (i !== 1 && i !== totalPages) buttons.push(i);
+                              }
+                              
+                              if (currentPage < totalPages - 2) buttons.push('...');
+                              
+                              if (totalPages > 1) buttons.push(totalPages);
+                              
+                              return buttons;
+                            };
+                            
+                            return getPaginationButtons(currentPage, totalPages).map((page, index) => (
+                              page === '...' ? (
+                                <span key={`ellipsis-${index}`} className="px-2 text-gray-500">...</span>
+                              ) : (
+                                <button
+                                  key={page}
+                                  onClick={() => handlePageChange(page as number)}
+                                  className={`px-3 py-1 text-sm rounded-md transition-colors ${
+                                    currentPage === page
+                                      ? 'bg-blue-600 text-white'
+                                      : theme === "dark"
+                                      ? 'text-gray-300 hover:bg-gray-700'
+                                      : 'text-gray-600 hover:bg-gray-100'
+                                  }`}
+                                >
+                                  {page}
+                                </button>
+                              )
+                            ));
+                          })()}
                         </div>
                         <button 
                           onClick={handleNextPage}
@@ -558,8 +617,8 @@ const ProjectTask = () => {
                     </div>
         
                     {/* Pie Chart */}
-                    <div className="flex flex-col lg:flex-row items-center justify-center h-auto lg:h-64 space-y-4 lg:space-y-0">
-                      <div className="w-full lg:w-2/3 h-64">
+                    <div className="flex flex-col lg:flex-row items-center justify-center h-auto lg:h-64 space-y-4 lg:space-y-0 relative z-10">
+                      <div className="w-full lg:w-2/3 h-64 relative z-10">
                         {loadingAnalytics ? (
                           <div className="flex items-center justify-center h-full">
                             <div className={`text-sm ${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}>
@@ -636,7 +695,7 @@ const ProjectTask = () => {
                         <option value="last_month">Last Month</option>
                       </select>
                     </div>
-                    <div className="h-64">
+                    <div className="h-64 relative z-10">
                       {loadingAnalytics ? (
                         <div className="flex items-center justify-center h-full">
                           <div className={`text-sm ${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}>
@@ -843,7 +902,7 @@ const ProjectTask = () => {
                     <h3 className={`text-xl font-semibold ${
                       theme === "dark" ? "text-white" : "text-gray-900"
                     }`}>
-                      All Projects ({projects.length})
+                      All Projects ({modalFilteredProjects.length})
                     </h3>
                     <button
                       onClick={() => setShowViewAllModal(false)}
@@ -918,26 +977,45 @@ const ProjectTask = () => {
                       Previous
                     </button>
                     <div className="flex items-center space-x-2">
-                      {Array.from({ length: Math.min(totalModalPages, 10) }, (_, i) => {
-                        if (totalModalPages <= 10) return i + 1;
-                        if (modalCurrentPage <= 5) return i + 1;
-                        if (modalCurrentPage >= totalModalPages - 4) return totalModalPages - 9 + i;
-                        return modalCurrentPage - 5 + i;
-                      }).map(page => (
-                        <button
-                          key={page}
-                          onClick={() => handleModalPageChange(page)}
-                          className={`px-3 py-1 text-sm rounded-md transition-colors ${
-                            modalCurrentPage === page
-                              ? 'bg-blue-600 text-white'
-                              : theme === "dark"
-                              ? 'text-gray-300 hover:bg-gray-700'
-                              : 'text-gray-600 hover:bg-gray-100'
-                          }`}
-                        >
-                          {page}
-                        </button>
-                      ))}
+                      {(() => {
+                        const getPaginationButtons = (currentPage: number, totalPages: number) => {
+                          if (totalPages <= 4) return Array.from({ length: totalPages }, (_, i) => i + 1);
+                          
+                          const buttons: (number | string)[] = [1];
+                          
+                          if (currentPage > 3) buttons.push('...');
+                          
+                          for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) {
+                            if (i !== 1 && i !== totalPages) buttons.push(i);
+                          }
+                          
+                          if (currentPage < totalPages - 2) buttons.push('...');
+                          
+                          if (totalPages > 1) buttons.push(totalPages);
+                          
+                          return buttons;
+                        };
+                        
+                        return getPaginationButtons(modalCurrentPage, totalModalPages).map((page, index) => (
+                          page === '...' ? (
+                            <span key={`modal-ellipsis-${index}`} className="px-2 text-gray-500">...</span>
+                          ) : (
+                            <button
+                              key={page}
+                              onClick={() => handleModalPageChange(page as number)}
+                              className={`px-3 py-1 text-sm rounded-md transition-colors ${
+                                modalCurrentPage === page
+                                  ? 'bg-blue-600 text-white'
+                                  : theme === "dark"
+                                  ? 'text-gray-300 hover:bg-gray-700'
+                                  : 'text-gray-600 hover:bg-gray-100'
+                              }`}
+                            >
+                              {page}
+                            </button>
+                          )
+                        ));
+                      })()}
                     </div>
                     <button 
                       onClick={handleModalNextPage}

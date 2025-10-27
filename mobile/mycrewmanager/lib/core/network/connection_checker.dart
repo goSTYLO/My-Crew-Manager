@@ -11,10 +11,8 @@ class ConnectionCheckerImpl implements ConnectionChecker {
       InternetConnection().onStatusChange.listen((InternetStatus status) {
     switch (status) {
       case InternetStatus.connected:
-        logger.d("You are connected to the internet.");
         break;
       case InternetStatus.disconnected:
-        logger.d("You are disconnected to the internet.");
         break;
     }
   });

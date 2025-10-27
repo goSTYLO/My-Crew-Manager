@@ -31,7 +31,7 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
       const token = sessionStorage.getItem("token");
   
       // Call the logout API endpoint
-      await fetch(`${API_BASE_URL}/api/user/logout/`, {
+      await fetch(`${API_BASE_URL}/user/logout/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -63,7 +63,7 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
     { name: "Project", icon: FolderOpen, path: "/main-projects" },
     { name: "Team Chat", icon: MessageSquare, path: "/chat" },
     { name: "Leaderboard", icon: TrendingUp, path: "/leaderboard" },
-    { name: "Settings", icon: Settings, path: "/settings" },
+    { name: "Settings", icon: Settings, path: "/manager-settings" },
     { name: "Logout", icon: LogOut, action: () => setShowLogoutConfirm(true) },
   ];
 

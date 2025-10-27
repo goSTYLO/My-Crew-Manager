@@ -1,15 +1,20 @@
-import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
+import { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
+import { API_BASE_URL } from '../config/api';
 
 interface WebSocketMessage {
   type: string;
-  payload?: any;
-  notification?: any;
+  action: string;
+  project_id: number;
+  data: any;
+  actor: {
+    id: number;
+    name: string;
+  };
 }
 
 interface WebSocketContextType {
   connectionStatus: 'connecting' | 'connected' | 'disconnected' | 'reconnecting';
-  subscribe: (eventType: string, handler: (data: any) => void) => void;
-  unsubscribe: (eventType: string, handler: (data: any) => void) => void;
+  subscribe: (handler: (data: WebSocketMessage) => void) => () => void;
   getConnectionStatus: () => 'connecting' | 'connected' | 'disconnected' | 'reconnecting';
 }
 
@@ -22,24 +27,20 @@ interface WebSocketProviderProps {
 export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ children }) => {
   const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected' | 'reconnecting'>('disconnected');
   const wsRef = useRef<WebSocket | null>(null);
-  const eventHandlersRef = useRef<Map<string, Set<(data: any) => void>>>(new Map());
+  const handlersRef = useRef<Set<(data: WebSocketMessage) => void>>(new Set());
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectAttemptsRef = useRef(0);
   const maxReconnectAttempts = 5;
   const reconnectDelay = 3000; // 3 seconds
 
   const getAuthToken = useCallback(() => {
-    // Try to get token from sessionStorage
-    const token = sessionStorage.getItem('token');
-    const access = sessionStorage.getItem('access');
-    
-    // Prefer 'access' token if available, otherwise use 'token'
-    return access || token;
+    return sessionStorage.getItem('access') || sessionStorage.getItem('token');
   }, []);
 
   const connect = useCallback(() => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      return; // Already connected
+    if (wsRef.current?.readyState === WebSocket.OPEN || wsRef.current?.readyState === WebSocket.CONNECTING) {
+      console.log('WebSocket already connecting or connected, skipping');
+      return;
     }
 
     const token = getAuthToken();
@@ -50,70 +51,35 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ children }
     }
 
     setConnectionStatus('connecting');
-    
+
     try {
-      // Use the existing notifications WebSocket endpoint
-      const wsUrl = `ws://localhost:8000/ws/notifications/`;
+      const wsUrl = `${API_BASE_URL.replace('/api', '').replace('http', 'ws')}/ws/project-updates/?token=${token}`;
+      console.log('Creating WebSocket connection to:', wsUrl);
       wsRef.current = new WebSocket(wsUrl);
 
       wsRef.current.onopen = () => {
-        console.log('WebSocket connected');
+        console.log('Project Updates WebSocket connected');
         setConnectionStatus('connected');
         reconnectAttemptsRef.current = 0;
-        
-        // Send authentication token as first message
-        if (wsRef.current?.readyState === WebSocket.OPEN) {
-          wsRef.current.send(JSON.stringify({
-            type: 'auth',
-            token: token
-          }));
-        }
       };
 
       wsRef.current.onmessage = (event) => {
         try {
           const message: WebSocketMessage = JSON.parse(event.data);
-          
-          // Handle authentication success
-          if (message.type === 'auth_success') {
-            console.log('WebSocket authentication successful:', message.message);
-            return;
-          }
-          
-          // Handle error messages
-          if (message.type === 'error') {
-            console.error('WebSocket error:', message.message);
-            return;
-          }
-          
-          // Handle different message types
-          if (message.type === 'notification') {
-            // Handle notification messages
-            const handlers = eventHandlersRef.current.get('notification');
-            if (handlers) {
-              handlers.forEach(handler => handler(message.notification));
-            }
-          } else if (message.payload) {
-            // Handle real-time update messages
-            const handlers = eventHandlersRef.current.get(message.type);
-            if (handlers) {
-              handlers.forEach(handler => handler(message.payload));
-            }
-          }
+          console.log('📨 WebSocket message received:', message);
+          handlersRef.current.forEach(handler => handler(message));
         } catch (error) {
           console.error('Error parsing WebSocket message:', error);
         }
       };
 
       wsRef.current.onclose = (event) => {
-        console.log('WebSocket disconnected:', event.code, event.reason);
+        console.log('Project Updates WebSocket disconnected:', event.code, event.reason);
         setConnectionStatus('disconnected');
-        
-        // Attempt to reconnect if not a manual close
+
         if (event.code !== 1000 && reconnectAttemptsRef.current < maxReconnectAttempts) {
           setConnectionStatus('reconnecting');
           reconnectAttemptsRef.current++;
-          
           reconnectTimeoutRef.current = setTimeout(() => {
             console.log(`Attempting to reconnect (${reconnectAttemptsRef.current}/${maxReconnectAttempts})`);
             connect();
@@ -122,12 +88,13 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ children }
       };
 
       wsRef.current.onerror = (error) => {
-        console.error('WebSocket error:', error);
+        console.error('Project Updates WebSocket error:', error);
+        console.log('WebSocket readyState:', wsRef.current?.readyState);
         setConnectionStatus('disconnected');
       };
 
     } catch (error) {
-      console.error('Error creating WebSocket connection:', error);
+      console.error('Error creating Project Updates WebSocket connection:', error);
       setConnectionStatus('disconnected');
     }
   }, [getAuthToken]);
@@ -137,56 +104,35 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ children }
       clearTimeout(reconnectTimeoutRef.current);
       reconnectTimeoutRef.current = null;
     }
-    
     if (wsRef.current) {
       wsRef.current.close(1000, 'Manual disconnect');
       wsRef.current = null;
     }
-    
     setConnectionStatus('disconnected');
     reconnectAttemptsRef.current = 0;
   }, []);
 
-  const subscribe = useCallback((eventType: string, handler: (data: any) => void) => {
-    if (!eventHandlersRef.current.has(eventType)) {
-      eventHandlersRef.current.set(eventType, new Set());
-    }
-    eventHandlersRef.current.get(eventType)!.add(handler);
-  }, []);
-
-  const unsubscribe = useCallback((eventType: string, handler: (data: any) => void) => {
-    const handlers = eventHandlersRef.current.get(eventType);
-    if (handlers) {
-      handlers.delete(handler);
-      if (handlers.size === 0) {
-        eventHandlersRef.current.delete(eventType);
-      }
-    }
+  const subscribe = useCallback((handler: (data: WebSocketMessage) => void) => {
+    handlersRef.current.add(handler);
+    return () => {
+      handlersRef.current.delete(handler);
+    };
   }, []);
 
   const getConnectionStatus = useCallback(() => {
     return connectionStatus;
   }, [connectionStatus]);
 
-  // Connect on mount and when auth token changes
   useEffect(() => {
-    const token = getAuthToken();
-    if (token) {
-      connect();
-    }
-
+    connect();
     return () => {
       disconnect();
     };
-  }, [connect, disconnect, getAuthToken]);
-
-  // Note: Removed storage event listener since sessionStorage doesn't fire events across tabs
-  // This provides the desired tab isolation behavior
+  }, [connect, disconnect]);
 
   const contextValue: WebSocketContextType = {
     connectionStatus,
     subscribe,
-    unsubscribe,
     getConnectionStatus,
   };
 

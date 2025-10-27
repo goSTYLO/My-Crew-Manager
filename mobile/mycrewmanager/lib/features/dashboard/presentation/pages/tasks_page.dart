@@ -78,9 +78,7 @@ class _TasksPageState extends State<TasksPage> with SingleTickerProviderStateMix
         });
       },
       (tasksList) {
-        print('📥 Loaded ${tasksList.length} tasks from API');
         for (var task in tasksList) {
-          print('   Task: ${task.title} - Status: ${task.status} - Assignee: ${task.assigneeName}');
         }
         
         // If no tasks are loaded, use mock data for testing
@@ -137,7 +135,7 @@ class _TasksPageState extends State<TasksPage> with SingleTickerProviderStateMix
     {
       "title": "Code Review for Project A",
       "subtitle": "Sprint 1 • Backend",
-      "status": "Completed",
+      "status": "Done",
       "icon": Icons.trending_up,
       "iconColor": Colors.red,
       "members": [
@@ -161,7 +159,7 @@ class _TasksPageState extends State<TasksPage> with SingleTickerProviderStateMix
     {
       "title": "Backend Initialization",
       "subtitle": "Sprint 1 • Backend",
-      "status": "Completed",
+      "status": "Done",
       "icon": Icons.drag_indicator,
       "iconColor": Colors.amber,
       "members": [
@@ -207,29 +205,21 @@ class _TasksPageState extends State<TasksPage> with SingleTickerProviderStateMix
     
     // For "To Do" tab, show only pending tasks assigned to the current user
     if (status == "To Do") {
-      print('🔍 Filtering To Do tasks for user: $currentUserEmail ($currentUserName)');
-      print('📋 Total tasks: ${tasks.length}');
       
       final toDoTasks = filteredTasks.where((t) {
-        print('   Task: ${t.title}');
-        print('     Status: ${t.status}');
-        print('     Assignee: ${t.assigneeName}');
         
         // Check if task is pending
         if (t.status != "pending") {
-          print('     ❌ Not pending');
           return false;
         }
         
         // If no current user email, show all pending tasks (fallback)
         if (currentUserEmail == null) {
-          print('     ✅ No user email, showing all pending');
           return true;
         }
         
         // Check if task has an assignee
         if (t.assigneeName == null) {
-          print('     ❌ No assignee');
           return false;
         }
         
@@ -246,12 +236,10 @@ class _TasksPageState extends State<TasksPage> with SingleTickerProviderStateMix
              assigneeName == currentUserName ||
              (currentUserName != null && assigneeName.contains(currentUserName.split(' ').first)));
         
-        print('     Assignee match: $assigneeName == $currentUserEmail or $currentUserName = $isAssignedToUser');
         
         return isAssignedToUser;
       }).toList();
       
-      print('✅ Filtered To Do tasks: ${toDoTasks.length}');
       return toDoTasks;
     }
     
@@ -405,7 +393,7 @@ class _TasksPageState extends State<TasksPage> with SingleTickerProviderStateMix
 
   @override
   Widget build(BuildContext context) {
-    final tabLabels = ["All", "To Do", "Completed"]; // Removed "In Progress" tab
+    final tabLabels = ["All", "To Do", "Done"]; // Removed "In Progress" tab
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
         if (state is AuthLoggedOut) {
@@ -423,9 +411,7 @@ class _TasksPageState extends State<TasksPage> with SingleTickerProviderStateMix
         if (authState is AuthSuccess) {
           currentUserEmail = authState.user.email;
           currentUserName = authState.user.name;
-          print('👤 Current user: ${authState.user.name} (${authState.user.email})');
         } else {
-          print('❌ No authenticated user found, using test email for demo');
           // Use a test email for demonstration purposes
           currentUserEmail = 'test@example.com';
           currentUserName = 'Test User';
@@ -582,32 +568,42 @@ class _TasksPageState extends State<TasksPage> with SingleTickerProviderStateMix
                     children: tabLabels.map((tab) {
                       final filtered = getFilteredTasks(tab, currentUserEmail, currentUserName);
                       return filtered.isEmpty
-                          ? const Center(
-                              child: Text(
-                                'No tasks found',
-                                style: TextStyle(color: Colors.grey),
+                          ? RefreshIndicator(
+                              onRefresh: _loadTasks,
+                              child: const Center(
+                                child: Text(
+                                  'No tasks found',
+                                  style: TextStyle(color: Colors.grey),
+                                ),
                               ),
                             )
-                          : ListView.builder(
-              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
-              itemCount: filtered.length,
-              itemBuilder: (context, i) {
-                final t = filtered[i];
-                final assigneeLabel = t.assigneeName ?? 'Unassigned';
-                return _TaskCard(
-                  title: t.title,
-                  subtitle: assigneeLabel,
-                  status: t.status,
-                  icon: Icons.task_alt,
-                  iconColor: t.status.toLowerCase() == 'completed' ? Colors.green : Colors.blue,
-                  members: [],
-                  progress: t.status.toLowerCase() == 'completed' ? 1.0 : 0.0,
-                  onTap: () {
-                    Navigator.of(context).push(TaskOverviewPage.route(t));
-                  },
-                );
-              },
-            );
+                          : RefreshIndicator(
+                              onRefresh: _loadTasks,
+                              child: ListView.builder(
+                                padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+                                itemCount: filtered.length,
+                                itemBuilder: (context, i) {
+                                  final t = filtered[i];
+                                  final assigneeLabel = t.assigneeName ?? 'Unassigned';
+                                  return _TaskCard(
+                                    title: t.title,
+                                    subtitle: assigneeLabel,
+                                    status: t.status,
+                                    icon: Icons.task_alt,
+                                    iconColor: t.status.toLowerCase() == 'done' ? Colors.green : Colors.blue,
+                                    members: [],
+                                    progress: t.status.toLowerCase() == 'done' ? 1.0 : 0.0,
+                                    onTap: () async {
+                                      await Navigator.of(context).push(TaskOverviewPage.route(t));
+                                      // Refresh tasks list when returning from task overview
+                                      if (mounted) {
+                                        _loadTasks();
+                                      }
+                                    },
+                                  );
+                                },
+                              ),
+                            );
                     }).toList(),
                   ),
       ),
@@ -700,7 +696,7 @@ class _TaskCard extends StatelessWidget {
 
   Color getStatusColor() {
     switch (status.toLowerCase()) {
-      case "completed":
+      case "done":
         return Colors.green;
       case "in progress":
         return Colors.amber;
@@ -816,7 +812,7 @@ class _TaskCard extends StatelessWidget {
                   minHeight: 6,
                   backgroundColor: const Color(0xFFE8ECF4),
                   valueColor: AlwaysStoppedAnimation<Color>(
-                    status.toLowerCase() == "completed" ? Colors.green : status.toLowerCase() == "in progress" ? Colors.amber : Colors.black26,
+                    status.toLowerCase() == "done" ? Colors.green : status.toLowerCase() == "in progress" ? Colors.amber : Colors.black26,
                   ),
                 ),
           ],

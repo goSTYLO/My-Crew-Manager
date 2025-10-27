@@ -331,39 +331,39 @@ class _IncomingTaskWidgetState extends State<IncomingTaskWidget> {
     final taskIcon = _getTaskIcon(task.title);
 
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        CircleAvatar(
-          backgroundColor: const Color(0xFFF7F8FA),
-          radius: 22,
-          child: Icon(taskIcon, color: Colors.black54, size: 28),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                task.title,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 15,
-                  color: Color(0xFF181929),
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                dueText,
-                style: TextStyle(
-                  color: dueColor,
-                  fontWeight: FontWeight.w500,
-                  fontSize: 13,
-                ),
-              ),
-            ],
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          CircleAvatar(
+            backgroundColor: const Color(0xFFF7F8FA),
+            radius: 22,
+            child: Icon(taskIcon, color: Colors.black54, size: 28),
           ),
-        ),
-      ],
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  task.title,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 15,
+                    color: Color(0xFF181929),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  dueText,
+                  style: TextStyle(
+                    color: dueColor,
+                    fontWeight: FontWeight.w500,
+                    fontSize: 13,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
     );
   }
 }

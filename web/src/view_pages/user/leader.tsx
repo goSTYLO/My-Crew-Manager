@@ -108,7 +108,7 @@ const Performance = () => {
       <div className="flex-1 flex flex-col">
       <TopNavbar onMenuClick={() => setSidebarOpen(true)} />
         {/* Main Content Area */}
-        <main className="flex-1 p-4 lg:p-[100px] overflow-auto space-y-[40px]">
+        <main className="flex-1 p-4 lg:p-[100px] overflow-auto space-y-[40px] pt-20">
           {/* Performance Overview Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
             <div className={`rounded-xl shadow-sm border p-4 sm:p-6 ${theme === "dark" ? "bg-gray-800 border-gray-700 text-white" : "bg-white border-gray-200"}`}>

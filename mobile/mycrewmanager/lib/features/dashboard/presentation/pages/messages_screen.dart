@@ -37,7 +37,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
   String _error = '';
   String _search = '';
   bool _wsConnected = false;
-  bool _showFabMenu = false;
+  Map<int, int> _unreadCounts = {}; // roomId -> unread count
 
   @override
   void initState() {
@@ -75,268 +75,120 @@ class _MessagesScreenState extends State<MessagesScreen> {
           final type = event['type'] as String?;
           if (type == 'room_invitation' || type == 'direct_room_created') {
             _loadRooms();
+          } else if (type == 'new_message') {
+            _handleNewMessage(event);
           }
         }
       });
     } catch (_) {}
   }
 
-  Future<void> _showCreateGroupDialog() async {
-    final controller = TextEditingController();
-    final created = await showDialog<bool>(
-      context: context,
-      barrierDismissible: true,
-      builder: (ctx) => Dialog(
-        backgroundColor: Colors.transparent,
-        child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 24),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 20,
-                offset: const Offset(0, 8),
+  void _handleNewMessage(Map<String, dynamic> event) {
+    final roomId = event['room_id'] as int?;
+    final message = event['message'] as Map<String, dynamic>?;
+    final sender = event['sender'] as String?;
+    
+    if (roomId == null || message == null || sender == null) return;
+    
+    // Get current user info to check if this is our own message
+    final authState = context.read<AuthBloc>().state;
+    String? currentUserId;
+    if (authState is AuthSuccess) {
+      currentUserId = authState.user.id;
+    }
+    
+    // Don't show notification for our own messages
+    final senderId = message['sender_id'] as int?;
+    if (senderId != null && currentUserId != null && senderId.toString() == currentUserId) {
+      return;
+    }
+    
+    // Check if we're currently viewing this room
+    final currentRoute = ModalRoute.of(context)?.settings.name;
+    final isViewingThisRoom = currentRoute?.contains('chat/$roomId') == true;
+    
+    // Update unread count
+    setState(() {
+      _unreadCounts[roomId] = (_unreadCounts[roomId] ?? 0) + 1;
+      
+      // Update the room in the list with new unread count
+      final roomIndex = _rooms.indexWhere((room) => room.roomId == roomId);
+      if (roomIndex != -1) {
+        _rooms[roomIndex] = _rooms[roomIndex].copyWith(
+          unreadCount: _unreadCounts[roomId] ?? 0,
+        );
+      }
+    });
+    
+    // Show toast notification if not viewing this room
+    if (!isViewingThisRoom) {
+      final messageContent = message['content'] as String? ?? '';
+      final preview = messageContent.length > 50 
+          ? '${messageContent.substring(0, 50)}...' 
+          : messageContent;
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.message, color: Colors.white),
+              SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      sender,
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    Text(preview),
+                  ],
+                ),
               ),
             ],
           ),
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Title
-                const Text(
-                  'Create Group',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF181929),
+          backgroundColor: const Color(0xFF6C63FF),
+          duration: Duration(seconds: 4),
+          action: SnackBarAction(
+            label: 'View',
+            textColor: Colors.white,
+            onPressed: () {
+              // Find the room to get name and avatar
+              final room = _rooms.firstWhere(
+                (r) => r.roomId == roomId,
+                orElse: () => RoomModel(
+                  roomId: roomId,
+                  name: 'Room $roomId',
+                  isPrivate: true,
+                  createdById: 0,
+                  createdAt: '',
+                  membersCount: 0,
+                ),
+              );
+              
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ChatsPage(
+                    roomId: roomId,
+                    name: room.name ?? 'Direct',
+                    avatarUrl: 'https://ui-avatars.com/api/?name=${Uri.encodeComponent(room.name ?? 'D')}',
                   ),
                 ),
-                const SizedBox(height: 20),
-                // Input field
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: const Color(0xFFE8ECF4),
-                      width: 1,
-                    ),
-                  ),
-                  child: TextField(
-                    controller: controller,
-                    decoration: const InputDecoration(
-                      hintText: 'Group name',
-                      hintStyle: TextStyle(
-                        color: Color(0xFF7B7F9E),
-                        fontSize: 16,
-                      ),
-                      border: InputBorder.none,
-                      contentPadding: EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 16,
-                      ),
-                    ),
-                    style: const TextStyle(
-                      fontSize: 16,
-                      color: Color(0xFF181929),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                // Action buttons
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextButton(
-                        onPressed: () => Navigator.pop(ctx, false),
-                        style: TextButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                        ),
-                        child: const Text(
-                          'Cancel',
-                          style: TextStyle(
-                            color: Color(0xFF6C63FF),
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () => Navigator.pop(ctx, true),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF6C63FF),
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          elevation: 0,
-                        ),
-                        child: const Text(
-                          'Create',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+              );
+            },
           ),
         ),
-      ),
-    );
-
-    if (created == true) {
-      final name = controller.text.trim();
-      if (name.isEmpty) return;
-      try {
-        await _repo.createRoom(name);
-        _loadRooms();
-      } catch (_) {}
+      );
     }
   }
 
-  Future<void> _showCreateDirectDialog() async {
-    final controller = TextEditingController();
-    final created = await showDialog<bool>(
-      context: context,
-      barrierDismissible: true,
-      builder: (ctx) => Dialog(
-        backgroundColor: Colors.transparent,
-        child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 24),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 20,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Title
-                const Text(
-                  'Direct Chat',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF181929),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                // Input field
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: const Color(0xFFE8ECF4),
-                      width: 1,
-                    ),
-                  ),
-                  child: TextField(
-                    controller: controller,
-                    keyboardType: TextInputType.emailAddress,
-                    decoration: const InputDecoration(
-                      hintText: 'User email',
-                      hintStyle: TextStyle(
-                        color: Color(0xFF7B7F9E),
-                        fontSize: 16,
-                      ),
-                      border: InputBorder.none,
-                      contentPadding: EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 16,
-                      ),
-                    ),
-                    style: const TextStyle(
-                      fontSize: 16,
-                      color: Color(0xFF181929),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                // Action buttons
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextButton(
-                        onPressed: () => Navigator.pop(ctx, false),
-                        style: TextButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                        ),
-                        child: const Text(
-                          'Cancel',
-                          style: TextStyle(
-                            color: Color(0xFF6C63FF),
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () => Navigator.pop(ctx, true),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF6C63FF),
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          elevation: 0,
-                        ),
-                        child: const Text(
-                          'Start',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
 
-    if (created == true) {
-      final email = controller.text.trim();
-      if (email.isEmpty) return;
-      try {
-        await _repo.direct(email);
-        _loadRooms();
-      } catch (_) {}
-    }
-  }
 
   Widget _buildChatItem(RoomModel room) {
+    final unreadCount = _unreadCounts[room.roomId] ?? 0;
+    
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -352,21 +204,50 @@ class _MessagesScreenState extends State<MessagesScreen> {
       child: ListTile(
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        leading: CircleAvatar(
-          radius: 24,
-          backgroundColor: const Color(0xFF6C63FF).withOpacity(0.1),
-          child: Icon(
-            room.name != null ? Icons.group : Icons.person,
-            color: const Color(0xFF6C63FF),
-            size: 24,
-          ),
+        leading: Stack(
+          children: [
+            CircleAvatar(
+              radius: 24,
+              backgroundColor: const Color(0xFF6C63FF).withOpacity(0.1),
+              child: Icon(
+                room.name != null ? Icons.group : Icons.person,
+                color: const Color(0xFF6C63FF),
+                size: 24,
+              ),
+            ),
+            if (unreadCount > 0)
+              Positioned(
+                right: 0,
+                top: 0,
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: const BoxDecoration(
+                    color: Colors.red,
+                    shape: BoxShape.circle,
+                  ),
+                  constraints: const BoxConstraints(
+                    minWidth: 20,
+                    minHeight: 20,
+                  ),
+                  child: Text(
+                    unreadCount > 99 ? '99+' : unreadCount.toString(),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+          ],
         ),
         title: Text(
           room.name ?? 'Direct',
-          style: const TextStyle(
-            fontWeight: FontWeight.w600,
+          style: TextStyle(
+            fontWeight: unreadCount > 0 ? FontWeight.bold : FontWeight.w600,
             fontSize: 16,
-            color: Color(0xFF181929),
+            color: const Color(0xFF181929),
           ),
         ),
         subtitle: Text(
@@ -377,6 +258,18 @@ class _MessagesScreenState extends State<MessagesScreen> {
           ),
         ),
         onTap: () {
+          // Clear unread count when entering the room
+          if (unreadCount > 0) {
+            setState(() {
+              _unreadCounts[room.roomId] = 0;
+              // Update the room in the list
+              final roomIndex = _rooms.indexWhere((r) => r.roomId == room.roomId);
+              if (roomIndex != -1) {
+                _rooms[roomIndex] = _rooms[roomIndex].copyWith(unreadCount: 0);
+              }
+            });
+          }
+          
           Navigator.of(context).push(
             ChatsPage.route(
               name: room.name ?? 'Direct',
@@ -390,34 +283,6 @@ class _MessagesScreenState extends State<MessagesScreen> {
     );
   }
 
-  Widget _buildFabMenuItem({
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-        child: Row(
-          children: [
-            Icon(icon, color: const Color(0xFF6C63FF), size: 24),
-            const SizedBox(width: 16),
-            Text(
-              label,
-              style: const TextStyle(
-                color: Color(0xFF181929),
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -434,14 +299,6 @@ class _MessagesScreenState extends State<MessagesScreen> {
     return Scaffold(
       drawer: _buildAppDrawer(context),
       backgroundColor: const Color(0xFFF8F6FF),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => setState(() => _showFabMenu = !_showFabMenu),
-        backgroundColor: const Color(0xFF6C63FF),
-        child: Icon(
-          _showFabMenu ? Icons.close : Icons.add,
-          color: Colors.white,
-        ),
-      ),
       body: Stack(
         children: [
           SafeArea(
@@ -584,47 +441,6 @@ class _MessagesScreenState extends State<MessagesScreen> {
             ),
           ),
 
-           // FAB Popup Menu
-           if (_showFabMenu)
-             Positioned(
-               bottom: 100,
-               right: 16,
-               child: Container(
-                 width: 200,
-                 decoration: BoxDecoration(
-                   color: Colors.white,
-                   borderRadius: BorderRadius.circular(16),
-                   boxShadow: [
-                     BoxShadow(
-                       color: Colors.black.withOpacity(0.15),
-                       blurRadius: 25,
-                       offset: const Offset(0, 6),
-                     ),
-                   ],
-                 ),
-                 child: Column(
-                   mainAxisSize: MainAxisSize.min,
-                   children: [
-                     _buildFabMenuItem(
-                       icon: Icons.group,
-                       label: 'Create Group',
-                       onTap: () {
-                         setState(() => _showFabMenu = false);
-                         _showCreateGroupDialog();
-                       },
-                     ),
-                     _buildFabMenuItem(
-                       icon: Icons.person,
-                       label: 'Direct Chat',
-                       onTap: () {
-                         setState(() => _showFabMenu = false);
-                         _showCreateDirectDialog();
-                       },
-                     ),
-                   ],
-                 ),
-               ),
-             ),
         ],
       ),
     );
@@ -764,177 +580,6 @@ class _MessagesScreenState extends State<MessagesScreen> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    // Set status bar color to white and icons to dark
-    SystemChrome.setSystemUIOverlayStyle(
-      const SystemUiOverlayStyle(
-        statusBarColor: Colors.white, // Remove green, set to white
-        statusBarIconBrightness: Brightness.dark,
-        statusBarBrightness: Brightness.light,
-      ),
-    );
-
-    final filtered = _rooms
-        .where((r) => (r.name ?? 'Direct').toLowerCase().contains(search.toLowerCase()))
-        .toList();
-
-    return Scaffold(
-        drawer: _buildAppDrawer(context),
-      backgroundColor: Colors.white, // Set scaffold background to white
-      body: Container(
-        color: Colors.white,
-        padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
-        child: Column(
-          children: [
-            // Top bar
-            Padding(
-              padding: const EdgeInsets.only(
-                  left: 16, right: 16, top: 24, bottom: 8),
-              child: Row(
-                children: [
-                  Builder(
-                    builder: (context) => IconButton(
-                      icon: const Icon(Icons.menu),
-                      onPressed: () {
-                        Scaffold.of(context).openDrawer();
-                      },
-                    ),
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    icon: const Icon(Icons.notifications_none_outlined),
-                    onPressed: () {},
-                  ),
-                ],
-              ),
-            ),
-            // Title
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 24.0, vertical: 4),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'Message',
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF181929),
-                  ),
-                ),
-              ),
-            ),
-            // Search bar and filter
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      decoration: InputDecoration(
-                        hintText: 'Search Mentors',
-                        prefixIcon: const Icon(Icons.search),
-                        contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(
-                            color: Color(0xFFE8ECF4),
-                          ),
-                        ),
-                        filled: true,
-                        fillColor: const Color(0xFFF7F7FA),
-                        isDense: true,
-                      ),
-                      onChanged: (val) => setState(() => search = val),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            // Message list
-            if (_loading)
-              const Expanded(child: Center(child: CircularProgressIndicator()))
-            else if (_error.isNotEmpty)
-              Expanded(
-                child: Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(_error),
-                      const SizedBox(height: 8),
-                      ElevatedButton(onPressed: _loadRooms, child: const Text('Retry')),
-                    ],
-                  ),
-                ),
-              )
-            else
-              Expanded(
-              child: ListView.separated(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                itemCount: filtered.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 2),
-                itemBuilder: (context, i) {
-                  final room = filtered[i];
-                  return ListTile(
-                    leading: const CircleAvatar(radius: 24, child: Icon(Icons.group)),
-                    title: Text(
-                      room.name ?? 'Direct chat #${room.roomId}',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 15,
-                      ),
-                    ),
-                    subtitle: Text(
-                      'Members: ${room.membersCount}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: const Color(0xFF181929),
-                        fontWeight: FontWeight.w400,
-                      ),
-                    ),
-                    trailing: Text(room.createdAt.split('T').first, style: const TextStyle(fontSize: 11, color: Colors.black45)),
-                    onTap: () {
-                      // Navigate to chat detail with room info
-                      Navigator.of(context).push(
-                        ChatsPage.route(
-                          name: room.name ?? 'Direct',
-                          avatarUrl: 'https://ui-avatars.com/api/?name=${Uri.encodeComponent(room.name ?? 'D')}',
-                          roomId: room.roomId,
-                        ),
-                      );
-                    },
-                  );
-                },
-              ),
-            ),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: _showCreateGroupDialog,
-                    icon: const Icon(Icons.group_add),
-                    label: const Text('Create Group'),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: _showCreateDirectDialog,
-                    icon: const Icon(Icons.person_add),
-                    label: const Text('Direct Chat'),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          ],
-        ),
-      ),
-    );
-  }
 }
 
 // Drawer item widget

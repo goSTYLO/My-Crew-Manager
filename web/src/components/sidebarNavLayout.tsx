@@ -1,15 +1,13 @@
 import React from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Settings, User, Bell, Shield, Palette, Users } from "lucide-react";
+import { User, Bell, Shield, Palette} from "lucide-react";
 import { useTheme } from "./themeContext"; // Add this import
 
 export const tabs = [
-	{ id: "general", label: "General", icon: Settings, path: "/general" },
-	{ id: "account", label: "Account", icon: User, path: "/account-settings" },
+	{ id: "account1", label: "Account", icon: User, path: "/manager-settings" },
 	{ id: "notifications", label: "Notifications", icon: Bell, path: "/notifications" },
 	{ id: "security", label: "Security", icon: Shield, path: "/security" },
 	{ id: "appearance", label: "Appearance", icon: Palette, path: "/appearance" },
-	{ id: "team", label: "Team", icon: Users, path: "/team" },
 ];
 
 const SettingsNavigation: React.FC = () => {
@@ -20,7 +18,7 @@ const SettingsNavigation: React.FC = () => {
 	// Check if current path matches any tab
 	const activeTab = tabs.find((tab) => tab.path === location.pathname);
 	// If no tab matches, default to "general"
-	const activeTabId = activeTab ? activeTab.id : "general";
+	const activeTabId = activeTab ? activeTab.id : "account1";
 
 	return (
 		<div className={`rounded-lg shadow-sm border ${theme === "dark" ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"}`}>

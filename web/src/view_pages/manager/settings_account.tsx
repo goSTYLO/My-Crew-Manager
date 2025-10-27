@@ -101,7 +101,7 @@ const AccountSettings = () => {
             }
         
             try {
-                const response = await fetch(`${API_BASE_URL}/api/user/me/`, {
+                const response = await fetch(`${API_BASE_URL}/user/me/`, {
                 headers: {
                     Authorization: `Token ${token}`,
                     "Content-Type": "application/json",
@@ -208,7 +208,7 @@ const AccountSettings = () => {
             formData.append("password", password);
         }
     
-        const response = await fetch(`${API_BASE_URL}/api/user/me/`, {
+        const response = await fetch(`${API_BASE_URL}/user/me/`, {
             method: "PUT",
             headers: {
             Authorization: `Token ${token}`,
@@ -313,7 +313,7 @@ const AccountSettings = () => {
                                 </div>
                             )}
 
-                            <form className="grid grid-cols-2 gap-4" onSubmit={handleSaveChanges}>
+                            <form className="grid grid-cols-2 gap-8" onSubmit={handleSaveChanges}>
                                 <input 
                                     type="text" 
                                     placeholder="First Name" 
@@ -337,13 +337,7 @@ const AccountSettings = () => {
                                     onChange={(e) => setEmail(e.target.value)}
                                     required
                                 />
-                                <input 
-                                    type="password" 
-                                    placeholder="Change Password (leave blank to keep current)" 
-                                    className={`p-4 border rounded col-span-2 ${theme === "dark" ? "bg-gray-900 border-gray-700 text-white" : ""}`}
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                />
+                                
                                 <div className="grid grid-cols-2 gap-4 w-[203%] mx-auto">
                                     <label htmlFor="nationality-select" className="sr-only">
                                         Nationality

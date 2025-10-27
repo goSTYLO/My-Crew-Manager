@@ -23,6 +23,11 @@ class NotificationRemoteDataSourceImpl implements NotificationRemoteDataSource {
     return _baseDataSource.markAllAsRead();
   }
 
+  @override
+  Future<void> removeNotification(int notificationId) {
+    return _baseDataSource.removeNotification(notificationId);
+  }
+
   Future<Map<String, dynamic>> getUnreadCount() async {
     final response = await _dio.get('ai/notifications/unread_count/');
     return response.data as Map<String, dynamic>;

@@ -133,11 +133,24 @@ class ProjectRemoteDataSource {
     return response.data as Map<String, dynamic>;
   }
 
-  Future<TaskModel> updateTaskStatus(int taskId, String status) async {
-    final response = await dio.patch('ai/story-tasks/$taskId/', data: {
-      'status': status,
-    });
-    return TaskModel.fromJson(response.data);
+  Future<TaskModel> updateTaskStatus(int taskId, String status, {String? commitTitle}) async {
+    try {
+      
+      // Prepare request data
+      Map<String, dynamic> requestData = {'status': status};
+      
+      // Add commit_title if status is 'done' (required by backend)
+      if (status == 'done') {
+        requestData['commit_title'] = commitTitle ?? 'Task completed';
+      }
+      
+      final response = await dio.patch('ai/story-tasks/$taskId/', data: requestData);
+      return TaskModel.fromJson(response.data);
+    } catch (e) {
+      if (e is DioException) {
+      }
+      rethrow;
+    }
   }
 
   Future<int> bulkAssignTasks(List<Map<String, dynamic>> assignments) async {

@@ -181,7 +181,7 @@ export const useChatPolling = ({
       const rooms = data.results || data.rooms || [];
 
       if (rooms.length > 0) {
-        console.log(`💬 Polling: Found ${rooms.length} rooms`);
+        // console.log(`💬 Polling: Found ${rooms.length} rooms`);
         onRoomUpdate?.(rooms);
       }
 
@@ -196,20 +196,20 @@ export const useChatPolling = ({
   // Poll function - stable callback with no dependencies
   const poll = useCallback(() => {
     const timestamp = new Date().toLocaleTimeString();
-    console.log(`🔄 [${timestamp}] 💬 POLLING CYCLE: enabled=${enabled}, isVisible=${isVisibleRef.current}, roomId=${roomId}`);
+    // console.log(`🔄 [${timestamp}] 💬 POLLING CYCLE: enabled=${enabled}, isVisible=${isVisibleRef.current}, roomId=${roomId}`);
     
     if (!enabled || !isVisibleRef.current) {
-      console.log(`🔄 [${timestamp}] 💬 POLLING SKIPPED: not enabled or not visible`);
+      // console.log(`🔄 [${timestamp}] 💬 POLLING SKIPPED: not enabled or not visible`);
       return;
     }
 
     // Fetch messages for current room only
     if (roomId) {
       const afterId = lastMessageIdRef.current || undefined;
-      console.log(`🔄 [${timestamp}] 💬 POLLING MESSAGES: room ${roomId}, afterId: ${afterId}`);
+      // console.log(`🔄 [${timestamp}] 💬 POLLING MESSAGES: room ${roomId}, afterId: ${afterId}`);
       fetchMessages(roomId, afterId);
     } else {
-      console.log(`🔄 [${timestamp}] 💬 POLLING SKIPPED: no roomId selected`);
+      // console.log(`🔄 [${timestamp}] 💬 POLLING SKIPPED: no roomId selected`);
     }
   }, [enabled, roomId, fetchMessages]);
 
@@ -221,7 +221,7 @@ export const useChatPolling = ({
 
     const currentInterval = getCurrentInterval();
     const timestamp = new Date().toLocaleTimeString();
-    console.log(`🚀 [${timestamp}] 💬 STARTING POLLING: interval=${currentInterval}ms (${currentInterval/1000}s)`);
+    // console.log(`🚀 [${timestamp}] 💬 STARTING POLLING: interval=${currentInterval}ms (${currentInterval/1000}s)`);
     setIsPolling(true);
 
     // Initial fetch
@@ -229,7 +229,7 @@ export const useChatPolling = ({
 
     // Set up interval
     intervalRef.current = setInterval(poll, currentInterval);
-    console.log(`🚀 [${timestamp}] 💬 POLLING INTERVAL SET: ${currentInterval}ms (${currentInterval/1000}s)`);
+    // console.log(`🚀 [${timestamp}] 💬 POLLING INTERVAL SET: ${currentInterval}ms (${currentInterval/1000}s)`);
   }, [poll, getCurrentInterval]);
 
   // Stop polling
@@ -239,7 +239,7 @@ export const useChatPolling = ({
       intervalRef.current = null;
     }
     const timestamp = new Date().toLocaleTimeString();
-    console.log(`🛑 [${timestamp}] 💬 STOPPED POLLING`);
+    // console.log(`🛑 [${timestamp}] 💬 STOPPED POLLING`);
     setIsPolling(false);
   }, []);
 
@@ -292,10 +292,10 @@ export const useChatPolling = ({
       isVisibleRef.current = !document.hidden;
       if (enabled) {
         if (isVisibleRef.current) {
-          console.log('💬 Tab visible, resuming chat polling');
+          // console.log('💬 Tab visible, resuming chat polling');
           startPolling();
         } else {
-          console.log('💬 Tab hidden, pausing chat polling');
+          // console.log('💬 Tab hidden, pausing chat polling');
           stopPolling();
         }
       }
@@ -330,22 +330,22 @@ export const useChatPolling = ({
   // Start/stop polling based on enabled state
   useEffect(() => {
     const timestamp = new Date().toLocaleTimeString();
-    console.log(`🚀 [${timestamp}] 💬 useChatPolling: enabled=${enabled}, roomId=${roomId}`);
+    // console.log(`🚀 [${timestamp}] 💬 useChatPolling: enabled=${enabled}, roomId=${roomId}`);
     
     if (enabled) {
-      console.log(`🚀 [${timestamp}] 💬 useChatPolling: Starting polling for room ${roomId}`);
+      // console.log(`🚀 [${timestamp}] 💬 useChatPolling: Starting polling for room ${roomId}`);
       startPolling();
     } else {
-      console.log(`🚀 [${timestamp}] 💬 useChatPolling: Stopping polling (enabled=${enabled})`);
+      // console.log(`🚀 [${timestamp}] 💬 useChatPolling: Stopping polling (enabled=${enabled})`);
       if (!roomId) {
-        console.log(`🚀 [${timestamp}] 💬 useChatPolling: No room selected - polling disabled until room is selected`);
+        // console.log(`🚀 [${timestamp}] 💬 useChatPolling: No room selected - polling disabled until room is selected`);
       }
       stopPolling();
     }
 
     return () => {
       const cleanupTimestamp = new Date().toLocaleTimeString();
-      console.log(`🚀 [${cleanupTimestamp}] 💬 useChatPolling: Cleanup - stopping polling`);
+      // console.log(`🚀 [${cleanupTimestamp}] 💬 useChatPolling: Cleanup - stopping polling`);
       stopPolling();
     };
   }, [enabled, startPolling, stopPolling]); // Include all dependencies

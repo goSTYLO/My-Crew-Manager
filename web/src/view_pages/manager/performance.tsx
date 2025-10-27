@@ -160,7 +160,7 @@ const Performance = () => {
           </div>
 
           {/* Charts Row */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 relative z-10">
             {/* Work Log Card */}
             <div className={`rounded-xl shadow-sm border p-4 sm:p-6 ${theme === "dark" ? "bg-gray-800 border-gray-700 text-white" : "bg-white border-gray-200"}`}>
               <div className="flex items-center justify-between mb-4 sm:mb-6">
@@ -173,7 +173,7 @@ const Performance = () => {
               </div>
 
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6">
-                <div className="h-48 w-48 sm:h-56 sm:w-56 md:h-64 md:w-64">
+                <div className="h-48 w-48 sm:h-56 sm:w-56 md:h-64 md:w-64 relative z-10">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
@@ -221,7 +221,7 @@ const Performance = () => {
                   <option>This Month</option>
                 </select>
               </div>
-              <div className="h-48 sm:h-56 md:h-64">
+              <div className="h-48 sm:h-56 md:h-64 relative z-10">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={performanceData}>
                     <CartesianGrid strokeDasharray="3 3" stroke={theme === "dark" ? "#333" : "#f0f0f0"} />

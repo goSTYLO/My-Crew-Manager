@@ -1,0 +1,110 @@
+[
+  {
+    "test": "Django server",
+    "status": "PASS",
+    "details": "Server is running and accessible",
+    "timestamp": "2025-10-27T09:41:04.413686"
+  },
+  {
+    "test": "Create user Backend Test User 1",
+    "status": "PASS",
+    "details": "User created successfully",
+    "timestamp": "2025-10-27T09:41:05.159535"
+  },
+  {
+    "test": "Create user Backend Test User 2",
+    "status": "PASS",
+    "details": "User created successfully",
+    "timestamp": "2025-10-27T09:41:05.862749"
+  },
+  {
+    "test": "Authenticate backendtest1@example.com",
+    "status": "PASS",
+    "details": "Token obtained, User ID: None",
+    "timestamp": "2025-10-27T09:41:06.521863"
+  },
+  {
+    "test": "Authenticate backendtest2@example.com",
+    "status": "PASS",
+    "details": "Token obtained, User ID: None",
+    "timestamp": "2025-10-27T09:41:07.162016"
+  },
+  {
+    "test": "Redis connection",
+    "status": "PASS",
+    "details": "Redis is accessible through Django",
+    "timestamp": "2025-10-27T09:41:07.272302"
+  },
+  {
+    "test": "Get notifications",
+    "status": "PASS",
+    "details": "Retrieved 0 notifications",
+    "timestamp": "2025-10-27T09:41:07.381891"
+  },
+  {
+    "test": "Get unread count",
+    "status": "PASS",
+    "details": "Unread count: 0",
+    "timestamp": "2025-10-27T09:41:07.474524"
+  },
+  {
+    "test": "Get chat rooms",
+    "status": "PASS",
+    "details": "Retrieved 0 rooms",
+    "timestamp": "2025-10-27T09:41:07.567299"
+  },
+  {
+    "test": "Get chat messages",
+    "status": "FAIL",
+    "details": "Status: 403",
+    "timestamp": "2025-10-27T09:41:07.670609"
+  },
+  {
+    "test": "Create project",
+    "status": "PASS",
+    "details": "Project created with ID: 51",
+    "timestamp": "2025-10-27T09:41:07.770342"
+  },
+  {
+    "test": "Add project member",
+    "status": "FAIL",
+    "details": "Status: 403",
+    "timestamp": "2025-10-27T09:41:07.841089"
+  },
+  {
+    "test": "Update project",
+    "status": "PASS",
+    "details": "Project updated successfully",
+    "timestamp": "2025-10-27T09:41:07.941906"
+  },
+  {
+    "test": "Broadcasting test",
+    "status": "PASS",
+    "details": "Project update should trigger notifications to all members",
+    "timestamp": "2025-10-27T09:41:07.942222"
+  },
+  {
+    "test": "Chat WebSocket backendtest1@example.com",
+    "status": "FAIL",
+    "details": "Error: server rejected WebSocket connection: HTTP 404",
+    "timestamp": "2025-10-27T09:41:10.037053"
+  },
+  {
+    "test": "Notification WebSocket backendtest1@example.com",
+    "status": "FAIL",
+    "details": "Error: server rejected WebSocket connection: HTTP 404",
+    "timestamp": "2025-10-27T09:41:12.082204"
+  },
+  {
+    "test": "Chat WebSocket backendtest2@example.com",
+    "status": "FAIL",
+    "details": "Error: server rejected WebSocket connection: HTTP 404",
+    "timestamp": "2025-10-27T09:41:14.131240"
+  },
+  {
+    "test": "Notification WebSocket backendtest2@example.com",
+    "status": "FAIL",
+    "details": "Error: server rejected WebSocket connection: HTTP 404",
+    "timestamp": "2025-10-27T09:41:16.151235"
+  }
+]

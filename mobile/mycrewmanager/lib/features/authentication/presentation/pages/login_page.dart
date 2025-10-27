@@ -44,7 +44,6 @@ class _LoginPageState extends State<LoginPage> {
     // This will help us test the actual login flow
     final tokenStorage = serviceLocator<TokenStorage>();
     await tokenStorage.clearToken();
-    print("🧹 Cleared existing tokens for testing");
   }
 
   void _handleLogin() {

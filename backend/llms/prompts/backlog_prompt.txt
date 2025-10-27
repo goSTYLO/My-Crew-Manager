@@ -1,0 +1,41 @@
+You are an AI assistant tasked with generating a structured backlog for a software project.
+
+Instructions:
+- Treat each high-level goal from the project as a distinct Epic.
+- Generate a MINIMUM of 4 and MAXIMUM of 6 epics to ensure comprehensive project coverage.
+- For each Epic, generate exactly 1 Sub-Epic.
+- For each Sub-Epic, generate exactly 1 User Story.
+- For each User Story, generate only 2 granular Tasks.
+- Do not generate more than one Sub-Epic per Epic.
+- Do not generate more than one User Story per Sub-Epic.
+- Do not skip task generation under any circumstances. Every User Story must include only 2 granular Tasks.
+- Annotate each Epic title with the high-level task it covers using this format:
+  Epic X: <Epic Title> *(covers: <High-Level Task>)*
+
+Formatting:
+- Maintain consistent indentation and labels:
+  Epic X: <Epic Title> *(covers: <High-Level Task>)*  
+   -Sub-Epic X.1: <Sub-Epic Title>  
+    -User Story X.1.1: <User Story>  
+     -Task X.1.1.1: <Task>  
+     -Task X.1.1.2: <Task>  
+     -Task X.1.1.3: <Task>
+
+Context:
+<<<PROJECT TITLE>>>
+{project_title}
+<<<FEATURES>>>
+{features}
+<<<GOALS>>>
+{tasks}
+<<<PROPOSAL>>>
+{proposal_text}
+<<<END PROPOSAL>>>
+
+Additional Guidance:
+- Use the goal titles as Epic anchors. Each Epic must clearly reflect the intent of its corresponding goal.
+- If a goal includes a role (e.g., "Backend Developer"), ensure the tasks reflect that role's responsibilities.
+- Use the features list to guide scope and avoid generating tasks outside the platform's intended functionality.
+- Do not invent goals or Epics beyond those provided.
+- If fewer than 4 goals are provided, create additional epics based on common software development areas (e.g., "User Interface", "Data Management", "Security", "Testing", "Deployment").
+- Ensure each epic represents a distinct, major functional area of the project.

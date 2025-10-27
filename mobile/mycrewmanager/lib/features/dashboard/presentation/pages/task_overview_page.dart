@@ -41,30 +41,48 @@ class _TaskOverviewPageState extends State<TaskOverviewPage> {
     }
   }
 
-  bool _isCurrentUserAssignee(String? currentUserEmail, String? currentUserName) {
-    if (currentTask.assigneeName == null) {
+  bool _isCurrentUserAssignee(String? currentUserEmail, String? currentUserName, String? currentUserId) {
+    
+    if (currentTask.assigneeId == null && currentTask.assigneeName == null) {
       return false; // No assignee, so no one can mark it complete
     }
     
-    if (currentUserEmail == null && currentUserName == null) {
+    if (currentUserId == null && currentUserEmail == null && currentUserName == null) {
       return false; // No current user info
     }
     
-    final assigneeName = currentTask.assigneeName!;
+    // Primary check: Compare user ID with assignee ID
+    if (currentUserId != null && currentTask.assigneeId != null) {
+      final idMatch = currentUserId == currentTask.assigneeId.toString();
+      if (idMatch) {
+        return true;
+      }
+    }
     
-    // Check multiple matching criteria:
-    // 1. Exact email match
-    // 2. Exact name match
-    // 3. Name contains user's first name (fallback)
-    return assigneeName == currentUserEmail || 
-           assigneeName == currentUserName ||
-           (currentUserName != null && assigneeName.contains(currentUserName.split(' ').first));
+    // Fallback checks: Compare names/emails
+    final assigneeName = currentTask.assigneeName;
+    if (assigneeName != null) {
+      final emailMatch = assigneeName == currentUserEmail;
+      final nameMatch = assigneeName == currentUserName;
+      final firstNameMatch = currentUserName != null && assigneeName.contains(currentUserName.split(' ').first);
+      
+      
+      final isMatch = emailMatch || nameMatch || firstNameMatch;
+      return isMatch;
+    }
+    
+    return false;
   }
 
   Future<void> _markTaskAsComplete() async {
+    // Show dialog to get commit title
+    final commitTitle = await _showCommitTitleDialog();
+    if (commitTitle == null) return; // User cancelled
+
     final result = await _updateTaskStatus(UpdateTaskStatusParams(
       taskId: currentTask.id,
-      status: 'completed',
+      status: 'done',
+      commitTitle: commitTitle,
     ));
 
     result.fold(
@@ -85,6 +103,50 @@ class _TaskOverviewPageState extends State<TaskOverviewPage> {
     );
   }
 
+  Future<String?> _showCommitTitleDialog() async {
+    final TextEditingController commitController = TextEditingController();
+    commitController.text = 'Task completed: ${currentTask.title}';
+
+    return showDialog<String>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Mark Task as Complete'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Please provide a commit title for this task completion:'),
+              const SizedBox(height: 16),
+              TextField(
+                controller: commitController,
+                decoration: const InputDecoration(
+                  labelText: 'Commit Title',
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: 2,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final title = commitController.text.trim();
+                if (title.isNotEmpty) {
+                  Navigator.of(context).pop(title);
+                }
+              },
+              child: const Text('Complete Task'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -92,12 +154,14 @@ class _TaskOverviewPageState extends State<TaskOverviewPage> {
       builder: (context, authState) {
         String? currentUserEmail;
         String? currentUserName;
+        String? currentUserId;
         if (authState is AuthSuccess) {
           currentUserEmail = authState.user.email;
           currentUserName = authState.user.name;
+          currentUserId = authState.user.id;
         }
         
-        final isAssignee = _isCurrentUserAssignee(currentUserEmail, currentUserName);
+        final isAssignee = _isCurrentUserAssignee(currentUserEmail, currentUserName, currentUserId);
         
         return Scaffold(
           backgroundColor: Colors.white,
@@ -225,7 +289,7 @@ class _TaskOverviewPageState extends State<TaskOverviewPage> {
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                     decoration: BoxDecoration(
-                                      color: currentTask.status.toLowerCase() == 'completed' 
+                                      color: currentTask.status.toLowerCase() == 'done' 
                                           ? Colors.green.withOpacity(0.15)
                                           : Colors.blue.withOpacity(0.15),
                                       borderRadius: BorderRadius.circular(8),
@@ -234,27 +298,11 @@ class _TaskOverviewPageState extends State<TaskOverviewPage> {
                                       currentTask.status.toUpperCase(),
                                       style: TextStyle(
                                         fontWeight: FontWeight.w600, 
-                                        color: currentTask.status.toLowerCase() == 'completed' 
+                                        color: currentTask.status.toLowerCase() == 'done' 
                                             ? Colors.green 
                                             : Colors.blue,
                                       ),
                                     ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 6),
-                              Row(
-                                children: const [
-                                  Text(
-                                    "Priority:",
-                                    style: TextStyle(fontWeight: FontWeight.w500, color: Colors.black54),
-                                  ),
-                                  SizedBox(width: 8),
-                                  Icon(Icons.priority_high, color: Colors.red, size: 18),
-                                  SizedBox(width: 2),
-                                  Text(
-                                    "Highest Priority",
-                                    style: TextStyle(fontWeight: FontWeight.w600, color: Colors.red),
                                   ),
                                 ],
                               ),
@@ -267,21 +315,7 @@ class _TaskOverviewPageState extends State<TaskOverviewPage> {
                                   ),
                                   SizedBox(width: 8),
                                   Text(
-                                    "Epic",
-                                    style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 6),
-                              Row(
-                                children: const [
-                                  Text(
-                                    "Resolution:",
-                                    style: TextStyle(fontWeight: FontWeight.w500, color: Colors.black54),
-                                  ),
-                                  SizedBox(width: 8),
-                                  Text(
-                                    "Unresolved",
+                                    "Task",
                                     style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black),
                                   ),
                                 ],
@@ -344,7 +378,7 @@ class _TaskOverviewPageState extends State<TaskOverviewPage> {
                                     ),
                                   ),
                                 ),
-                              ] else if (currentTask.status.toLowerCase() == 'completed') ...[
+                              ] else if (currentTask.status.toLowerCase() == 'done') ...[
                                 // Show completion status for completed tasks
                                 Container(
                                   width: double.infinity,

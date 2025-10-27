@@ -147,7 +147,7 @@ class _TaskWidgetState extends State<TaskWidget> with TickerProviderStateMixin {
       ProjectTask(
         id: 3,
         title: "Setup Database",
-        status: "completed",
+        status: "done",
         userStoryId: 1,
         isAi: false,
         assigneeId: 1,
@@ -181,7 +181,7 @@ class _TaskWidgetState extends State<TaskWidget> with TickerProviderStateMixin {
         // Calculate task statistics
         final runningTasks = userTasks.where((task) => task.status == 'in_progress').length;
         final totalTasks = userTasks.length;
-        final completedTasks = userTasks.where((task) => task.status == 'completed').length;
+        final completedTasks = userTasks.where((task) => task.status == 'done').length;
         final progressPercentage = totalTasks > 0 ? completedTasks / totalTasks : 0.0;
 
         return Padding(

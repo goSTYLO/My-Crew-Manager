@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Upload, Users, Target, FileText, Plus, X, Sparkles, Check, ArrowRight, Calendar, Mail, RefreshCw, Send, ArrowLeft } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Upload, Users, Target, FileText, Plus, X, Sparkles, Check, ArrowRight, Calendar, Mail, RefreshCw, Send, ArrowLeft, Edit, Trash2 } from 'lucide-react';
 import TopNavbar from "../../components/topbarLayouot";
 import Sidebar from "../../components/sidebarLayout";
 import { useTheme } from "../../components/themeContext"; // <-- import ThemeContext
@@ -99,11 +99,13 @@ const App: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [createdProjectId, setCreatedProjectId] = useState<string | null>(null);
   const [uploadedProposalId, setUploadedProposalId] = useState<string | null>(null);
-  const [authFormat, setAuthFormat] = useState<'Bearer' | 'Token'>('Bearer');
+  const [authFormat, setAuthFormat] = useState<'Bearer' | 'Token'>('Token');
   
   // Skip tracking states
   const [analysisSkipped, setAnalysisSkipped] = useState(false);
   const [proposalSkipped, setProposalSkipped] = useState(false);
+  
+  // Editing mode states
   
   
   // Confirmation modal state
@@ -123,10 +125,49 @@ const App: React.FC = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [expandedEpics, setExpandedEpics] = useState<Set<string>>(new Set());
   const [expandedSubEpics, setExpandedSubEpics] = useState<Set<string>>(new Set());
+  const [backlogChangesSaved, setBacklogChangesSaved] = useState(true);
 
   // New states for invitations
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [newInvitation, setNewInvitation] = useState({ email: '', role: '' });
+
+  // Edit modal states for Review & Edit section
+  const [showEditMemberModal, setShowEditMemberModal] = useState(false);
+  const [editingMember, setEditingMember] = useState<Member | null>(null);
+  const [showEditFeatureModal, setShowEditFeatureModal] = useState(false);
+  const [editingFeature, setEditingFeature] = useState<Feature | null>(null);
+  const [showEditGoalModal, setShowEditGoalModal] = useState(false);
+  const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
+  const [showEditTimelineTaskModal, setShowEditTimelineTaskModal] = useState(false);
+  const [editingTimelineTask, setEditingTimelineTask] = useState<{ weekId: string; goalIndex: number; goal: string } | null>(null);
+
+  // Edit modal states for Backlog section
+  const [showEditEpicModal, setShowEditEpicModal] = useState(false);
+  const [editingEpic, setEditingEpic] = useState<Epic | null>(null);
+  const [showEditSubEpicModal, setShowEditSubEpicModal] = useState(false);
+  const [editingSubEpic, setEditingSubEpic] = useState<SubEpic | null>(null);
+  const [showEditUserStoryModal, setShowEditUserStoryModal] = useState(false);
+  const [editingUserStory, setEditingUserStory] = useState<UserStory | null>(null);
+  const [showEditTaskModal, setShowEditTaskModal] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+
+  // Delete confirmation states
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteItem, setDeleteItem] = useState<{ type: string; id: string; name: string } | null>(null);
+
+  // Add modal states for backlog items
+  const [showAddEpicModal, setShowAddEpicModal] = useState(false);
+  const [showAddSubEpicModal, setShowAddSubEpicModal] = useState(false);
+  const [showAddUserStoryModal, setShowAddUserStoryModal] = useState(false);
+  const [showAddTaskModal, setShowAddTaskModal] = useState(false);
+  const [newEpicTitle, setNewEpicTitle] = useState('');
+  const [newEpicDescription, setNewEpicDescription] = useState('');
+  const [newSubEpicTitle, setNewSubEpicTitle] = useState('');
+  const [newUserStoryTitle, setNewUserStoryTitle] = useState('');
+  const [newTaskTitle, setNewTaskTitle] = useState('');
+  const [selectedEpicId, setSelectedEpicId] = useState<string | null>(null);
+  const [selectedSubEpicId, setSelectedSubEpicId] = useState<string | null>(null);
+  const [selectedUserStoryId, setSelectedUserStoryId] = useState<string | null>(null);
 
   const [newMember, setNewMember] = useState({ role: '', user_name: '', user_email: '' });
   const [newFeature, setNewFeature] = useState({ title: '' });
@@ -193,13 +234,13 @@ const App: React.FC = () => {
       try {
         const token = getAuthToken();
         
-        const sessionTest = await fetch(`${API_BASE_URL}/api/ai/projects/`, {
+        const sessionTest = await fetch(`${API_BASE_URL}/ai/projects/`, {
           credentials: 'include',
         });
         
         if (sessionTest.ok) {
           console.log('✅ Using session/cookie authentication');
-          setAuthFormat('Bearer');
+          setAuthFormat('Token');
           return;
         }
         
@@ -208,18 +249,7 @@ const App: React.FC = () => {
           return;
         }
         
-        const bearerTest = await fetch(`${API_BASE_URL}/api/ai/projects/`, {
-          headers: { 'Authorization': `Bearer ${token}` },
-          credentials: 'include',
-        });
-        
-        if (bearerTest.ok) {
-          console.log('✅ Using Bearer token authentication');
-          setAuthFormat('Bearer');
-          return;
-        }
-        
-        const tokenTest = await fetch(`${API_BASE_URL}/api/ai/projects/`, {
+        const tokenTest = await fetch(`${API_BASE_URL}/ai/projects/`, {
           headers: { 'Authorization': `Token ${token}` },
           credentials: 'include',
         });
@@ -299,7 +329,7 @@ const App: React.FC = () => {
         summary: projectSummary || 'No summary provided',
       };
 
-      const projectResponse = await fetch(`${API_BASE_URL}/api/ai/projects/`, {
+      const projectResponse = await fetch(`${API_BASE_URL}/ai/projects/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -351,7 +381,7 @@ const App: React.FC = () => {
       formData.append('file', uploadedFile);
       formData.append('project_id', createdProjectId);
 
-      const response = await fetch(`${API_BASE_URL}/api/ai/proposals/`, {
+      const response = await fetch(`${API_BASE_URL}/ai/proposals/`, {
         method: 'POST',
         headers: {
           'Authorization': `${authFormat} ${token}`,
@@ -429,7 +459,7 @@ const App: React.FC = () => {
 
     try {
       const response = await fetch(
-        `${API_BASE_URL}/api/ai/projects/${createdProjectId}/ingest-proposal/${uploadedProposalId}/`,
+        `${API_BASE_URL}/ai/projects/${createdProjectId}/ingest-proposal/${uploadedProposalId}/`,
         {
           method: 'PUT',
           headers: {
@@ -536,9 +566,10 @@ const App: React.FC = () => {
     setLoadingState(null);
 
     try {
-      // Save roles/members
+      // Save roles/members and update local state with real IDs
+      const updatedMembers = [...members];
       for (const member of members.filter(m => !m.ai)) {
-        await fetch(`${API_BASE_URL}/api/ai/project-members/`, {
+        const response = await fetch(`${API_BASE_URL}/ai/project-members/`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -551,11 +582,22 @@ const App: React.FC = () => {
             user_email: member.user_email || ''
           }),
         });
+        
+        if (response.ok) {
+          const createdMember = await response.json();
+          // Update the member in local state with the real ID
+          const memberIndex = updatedMembers.findIndex(m => m.id === member.id);
+          if (memberIndex !== -1) {
+            updatedMembers[memberIndex] = { ...member, id: createdMember.id };
+          }
+        }
       }
+      setMembers(updatedMembers);
 
-      // Save features
+      // Save features and update local state with real IDs
+      const updatedFeatures = [...features];
       for (const feature of features.filter(f => !f.ai)) {
-        await fetch(`${API_BASE_URL}/api/ai/project-features/`, {
+        const response = await fetch(`${API_BASE_URL}/ai/project-features/`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -566,11 +608,22 @@ const App: React.FC = () => {
             title: feature.title
           }),
         });
+        
+        if (response.ok) {
+          const createdFeature = await response.json();
+          // Update the feature in local state with the real ID
+          const featureIndex = updatedFeatures.findIndex(f => f.id === feature.id);
+          if (featureIndex !== -1) {
+            updatedFeatures[featureIndex] = { ...feature, id: createdFeature.id };
+          }
+        }
       }
+      setFeatures(updatedFeatures);
 
-      // Save goals
+      // Save goals and update local state with real IDs
+      const updatedGoals = [...goals];
       for (const goal of goals.filter(g => !g.ai)) {
-        await fetch(`${API_BASE_URL}/api/ai/project-goals/`, {
+        const response = await fetch(`${API_BASE_URL}/ai/project-goals/`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -582,7 +635,44 @@ const App: React.FC = () => {
             role: goal.role
           }),
         });
+        
+        if (response.ok) {
+          const createdGoal = await response.json();
+          // Update the goal in local state with the real ID
+          const goalIndex = updatedGoals.findIndex(g => g.id === goal.id);
+          if (goalIndex !== -1) {
+            updatedGoals[goalIndex] = { ...goal, id: createdGoal.id };
+          }
+        }
       }
+      setGoals(updatedGoals);
+
+      // Save timeline items and update local state with real IDs
+      const updatedTimeline = [...timeline];
+      for (const week of timeline.filter(w => !w.ai)) {
+        const response = await fetch(`${API_BASE_URL}/ai/project-timeline/`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `${authFormat} ${token}`,
+          },
+          body: JSON.stringify({
+            project: createdProjectId,
+            week_number: week.week_number,
+            goals: week.goals
+          }),
+        });
+        
+        if (response.ok) {
+          const createdTimeline = await response.json();
+          // Update the timeline week in local state with the real ID
+          const weekIndex = updatedTimeline.findIndex(w => w.id === week.id);
+          if (weekIndex !== -1) {
+            updatedTimeline[weekIndex] = { ...week, id: createdTimeline.id };
+          }
+        }
+      }
+      setTimeline(updatedTimeline);
 
       showSuccess('Changes Saved', 'Your edits have been saved successfully!');
       setCurrentStep('generate-backlog');
@@ -697,6 +787,12 @@ const App: React.FC = () => {
     setEpics(mockEpics);
     setSubEpics(mockSubEpics);
     setUserStories(mockUserStories);
+    
+    // Auto-expand all cards for mock data
+    const allEpicIds = new Set(mockEpics.map(epic => epic.id));
+    setExpandedEpics(allEpicIds);
+    const allSubEpicIds = new Set(mockSubEpics.map(subEpic => subEpic.id));
+    setExpandedSubEpics(allSubEpicIds);
   };
 
   // STEP 4: Generate Backlog and Save
@@ -741,7 +837,7 @@ const App: React.FC = () => {
 
     try {
       const response = await fetch(
-        `${API_BASE_URL}/api/ai/projects/${createdProjectId}/generate-backlog/`,
+        `${API_BASE_URL}/ai/projects/${createdProjectId}/generate-backlog/`,
         {
           method: 'PUT',
           headers: {
@@ -773,18 +869,18 @@ const App: React.FC = () => {
   const fetchBacklog = async () => {
     if (!createdProjectId) {
       console.error('No project ID available');
-      return;
+      return null;
     }
 
     const token = getAuthToken();
     if (!token) {
       showError('Authentication Required', 'Please log in again.');
-      return;
+      return null;
     }
 
     try {
       const response = await fetch(
-        `${API_BASE_URL}/api/ai/projects/${createdProjectId}/backlog/`,
+        `${API_BASE_URL}/ai/projects/${createdProjectId}/backlog/`,
         {
           headers: { 'Authorization': `${authFormat} ${token}` },
           credentials: 'include',
@@ -841,9 +937,11 @@ const App: React.FC = () => {
       );
       setExpandedSubEpics(allSubEpicIds);
 
+      return data; // Return the data for auto-expansion
     } catch (error) {
       console.error('Error fetching backlog:', error);
       showError('Fetch Failed', `Failed to fetch backlog: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      return null;
     }
   };
 
@@ -853,7 +951,7 @@ const App: React.FC = () => {
     if (!token || !createdProjectId) return;
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/ai/epics/`, {
+      const response = await fetch(`${API_BASE_URL}/ai/epics/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -880,7 +978,7 @@ const App: React.FC = () => {
     if (!token) return;
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/ai/epics/${epicId}/`, {
+      const response = await fetch(`${API_BASE_URL}/ai/epics/${epicId}/`, {
         method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
@@ -902,7 +1000,7 @@ const App: React.FC = () => {
     if (!token) return;
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/ai/epics/${epicId}/`, {
+      const response = await fetch(`${API_BASE_URL}/ai/epics/${epicId}/`, {
         method: 'DELETE',
         headers: { 'Authorization': `${authFormat} ${token}` },
       });
@@ -921,7 +1019,7 @@ const App: React.FC = () => {
     if (!token) return;
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/ai/sub-epics/`, {
+      const response = await fetch(`${API_BASE_URL}/ai/sub-epics/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -947,7 +1045,7 @@ const App: React.FC = () => {
     if (!token) return;
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/ai/sub-epics/${subEpicId}/`, {
+      const response = await fetch(`${API_BASE_URL}/ai/sub-epics/${subEpicId}/`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -969,7 +1067,7 @@ const App: React.FC = () => {
     if (!token) return;
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/ai/sub-epics/${subEpicId}/`, {
+      const response = await fetch(`${API_BASE_URL}/ai/sub-epics/${subEpicId}/`, {
         method: 'DELETE',
         headers: { 'Authorization': `${authFormat} ${token}` },
       });
@@ -988,7 +1086,7 @@ const App: React.FC = () => {
     if (!token) return;
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/ai/user-stories/`, {
+      const response = await fetch(`${API_BASE_URL}/ai/user-stories/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1014,7 +1112,7 @@ const App: React.FC = () => {
     if (!token) return;
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/ai/user-stories/${userStoryId}/`, {
+      const response = await fetch(`${API_BASE_URL}/ai/user-stories/${userStoryId}/`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -1036,7 +1134,7 @@ const App: React.FC = () => {
     if (!token) return;
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/ai/user-stories/${userStoryId}/`, {
+      const response = await fetch(`${API_BASE_URL}/ai/user-stories/${userStoryId}/`, {
         method: 'DELETE',
         headers: { 'Authorization': `${authFormat} ${token}` },
       });
@@ -1055,7 +1153,7 @@ const App: React.FC = () => {
     if (!token) return;
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/ai/story-tasks/`, {
+      const response = await fetch(`${API_BASE_URL}/ai/story-tasks/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1083,7 +1181,7 @@ const App: React.FC = () => {
     if (!token) return;
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/ai/story-tasks/${taskId}/`, {
+      const response = await fetch(`${API_BASE_URL}/ai/story-tasks/${taskId}/`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -1108,7 +1206,7 @@ const App: React.FC = () => {
     if (!token) return;
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/ai/story-tasks/${taskId}/`, {
+      const response = await fetch(`${API_BASE_URL}/ai/story-tasks/${taskId}/`, {
         method: 'DELETE',
         headers: { 'Authorization': `${authFormat} ${token}` },
       });
@@ -1126,7 +1224,7 @@ const App: React.FC = () => {
     if (!token) return;
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/ai/story-tasks/${taskId}/`, {
+      const response = await fetch(`${API_BASE_URL}/ai/story-tasks/${taskId}/`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -1146,6 +1244,57 @@ const App: React.FC = () => {
   // Refresh Backlog
   const refreshBacklog = () => {
     generateBacklogAndSave();
+  };
+
+  // Batch save all backlog changes (following monitor_created.tsx pattern)
+  const saveBacklogChanges = async () => {
+    const token = getAuthToken();
+    if (!token) return;
+
+    try {
+      const updatePromises = [];
+
+      // Update epics
+      for (const epic of epics) {
+        updatePromises.push(updateEpic(epic.id, { title: epic.title }));
+      }
+
+      // Update sub-epics
+      for (const subEpic of subEpics) {
+        updatePromises.push(updateSubEpic(subEpic.id, { title: subEpic.title }));
+      }
+
+      // Update user stories
+      for (const userStory of userStories) {
+        updatePromises.push(updateUserStory(userStory.id, { title: userStory.title }));
+      }
+
+      // Update tasks
+      for (const task of tasks) {
+        updatePromises.push(updateTask(task.id, { title: task.title }));
+      }
+
+      // Execute all updates in parallel
+      await Promise.all(updatePromises);
+      
+      // Refresh the backlog data to ensure we have the latest from the server
+      await fetchBacklog();
+      
+      // Mark changes as saved
+      setBacklogChangesSaved(true);
+      
+      // Keep cards expanded after saving
+      const allEpicIds = new Set(epics.map(epic => epic.id));
+      setExpandedEpics(allEpicIds);
+      const allSubEpicIds = new Set(subEpics.map(subEpic => subEpic.id));
+      setExpandedSubEpics(allSubEpicIds);
+      
+      
+      showSuccess('Changes Saved', 'All backlog changes have been saved successfully!');
+    } catch (error) {
+      console.error('Error saving backlog changes:', error);
+      showError('Save Failed', 'Failed to save some changes. Please try again.');
+    }
   };
 
   // Skip Generate Backlog
@@ -1196,7 +1345,7 @@ const App: React.FC = () => {
         try {
           // Look up user by email first
           const usersResponse = await fetch(
-            `${API_BASE_URL}/api/user/?email=${encodeURIComponent(invitation.email)}`,
+            `${API_BASE_URL}/user/?email=${encodeURIComponent(invitation.email)}`,
             {
               headers: { 'Authorization': `Token ${token}` },
               credentials: 'include',
@@ -1220,7 +1369,7 @@ const App: React.FC = () => {
           const user = users[0];
           
           // Create invitation with user ID
-          const response = await fetch(`${API_BASE_URL}/api/ai/invitations/`, {
+          const response = await fetch(`${API_BASE_URL}/ai/invitations/`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -1229,6 +1378,7 @@ const App: React.FC = () => {
             body: JSON.stringify({
               project: parseInt(createdProjectId!),
               invitee: parseInt(user.user_id),
+              role: invitation.role,
               message: `You've been invited as ${invitation.role}`
             }),
           });
@@ -1369,6 +1519,304 @@ const App: React.FC = () => {
   const removeFeature = (id: string) => setFeatures(features.filter(f => f.id !== id));
   const removeGoal = (id: string) => setGoals(goals.filter(g => g.id !== id));
 
+  // Update functions for Review & Edit section
+  const updateMember = async (memberId: string, updatedData: { role?: string; user_name?: string; user_email?: string }) => {
+    const token = getAuthToken();
+    if (!token || !createdProjectId) return;
+
+    // Check if this is a newly created member (not saved to backend yet)
+    const member = members.find(m => m.id === memberId);
+    if (!member) {
+      console.error('Member not found:', memberId);
+      return;
+    }
+    
+    // If this is a temporary UUID (not yet saved to DB), just update local state
+    if (member.id.length === 36) { // UUID length is 36 characters
+      setMembers(members.map(m => 
+        m.id === memberId ? { ...m, ...updatedData } : m
+      ));
+      showSuccess('Member Updated', 'Member details updated successfully!');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/ai/project-members/${memberId}/`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `${authFormat} ${token}`,
+        },
+        body: JSON.stringify(updatedData),
+      });
+
+      await handleApiResponse(response, 'update member');
+      
+      // Update local state
+      setMembers(members.map(m => 
+        m.id === memberId ? { ...m, ...updatedData } : m
+      ));
+      
+      showSuccess('Member Updated', 'Member details updated successfully!');
+    } catch (error) {
+      console.error('Error updating member:', error);
+      showError('Update Failed', `Failed to update member: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
+  const updateFeature = async (featureId: string, newTitle: string) => {
+    const token = getAuthToken();
+    if (!token || !createdProjectId) return;
+
+    // Check if this is a newly created feature (not saved to backend yet)
+    const feature = features.find(f => f.id === featureId);
+    if (!feature) {
+      console.error('Feature not found:', featureId);
+      return;
+    }
+    
+    // If this is a temporary UUID (not yet saved to DB), just update local state
+    if (feature.id.length === 36) { // UUID length is 36 characters
+      setFeatures(features.map(f => 
+        f.id === featureId ? { ...f, title: newTitle } : f
+      ));
+      showSuccess('Feature Updated', 'Feature updated successfully!');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/ai/project-features/${featureId}/`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `${authFormat} ${token}`,
+        },
+        body: JSON.stringify({ title: newTitle }),
+      });
+
+      await handleApiResponse(response, 'update feature');
+      
+      // Update local state
+      setFeatures(features.map(f => 
+        f.id === featureId ? { ...f, title: newTitle } : f
+      ));
+      
+      showSuccess('Feature Updated', 'Feature updated successfully!');
+    } catch (error) {
+      console.error('Error updating feature:', error);
+      showError('Update Failed', `Failed to update feature: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
+  const updateGoal = async (goalId: string, updatedData: { title?: string; role?: string }) => {
+    const token = getAuthToken();
+    if (!token || !createdProjectId) return;
+
+    // Check if this is a newly created goal (not saved to backend yet)
+    const goal = goals.find(g => g.id === goalId);
+    if (!goal) {
+      console.error('Goal not found:', goalId);
+      return;
+    }
+    
+    // If this is a temporary UUID (not yet saved to DB), just update local state
+    if (goal.id.length === 36) { // UUID length is 36 characters
+      setGoals(goals.map(g => 
+        g.id === goalId ? { ...g, ...updatedData } : g
+      ));
+      showSuccess('Goal Updated', 'Goal updated successfully!');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/ai/project-goals/${goalId}/`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `${authFormat} ${token}`,
+        },
+        body: JSON.stringify(updatedData),
+      });
+
+      await handleApiResponse(response, 'update goal');
+      
+      // Update local state
+      setGoals(goals.map(g => 
+        g.id === goalId ? { ...g, ...updatedData } : g
+      ));
+      
+      showSuccess('Goal Updated', 'Goal updated successfully!');
+    } catch (error) {
+      console.error('Error updating goal:', error);
+      showError('Update Failed', `Failed to update goal: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
+  const updateTimelineItem = async (weekId: string, goalIndex: number, newGoal: string) => {
+    // Update local state for timeline items
+    const updatedTimeline = timeline.map(week => {
+      if (week.id === weekId) {
+        const newGoals = [...week.goals];
+        newGoals[goalIndex] = newGoal;
+        return { ...week, goals: newGoals };
+      }
+      return week;
+    });
+    setTimeline(updatedTimeline);
+    showSuccess('Timeline Updated', 'Timeline item updated successfully!');
+  };
+
+  // Delete confirmation functions
+  const handleDeleteClick = (type: string, id: string, name: string) => {
+    setDeleteItem({ type, id, name });
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteItem) return;
+
+    const { type, id } = deleteItem;
+    
+    try {
+      switch (type) {
+        case 'member':
+          await deleteMember(id);
+          break;
+        case 'feature':
+          await deleteFeature(id);
+          break;
+        case 'goal':
+          await deleteGoal(id);
+          break;
+        case 'epic':
+          await deleteEpic(id);
+          break;
+        case 'subEpic':
+          await deleteSubEpic(id);
+          break;
+        case 'userStory':
+          await deleteUserStory(id);
+          break;
+        case 'task':
+          await deleteTask(id);
+          break;
+        default:
+          console.warn('Unknown delete type:', type);
+      }
+    } catch (error) {
+      console.error('Error deleting item:', error);
+    } finally {
+      setShowDeleteModal(false);
+      setDeleteItem(null);
+    }
+  };
+
+  // Delete functions for Review & Edit section
+  const deleteMember = async (memberId: string) => {
+    const token = getAuthToken();
+    if (!token) return;
+
+    // Check if this is a newly created member (not saved to backend yet)
+    const member = members.find(m => m.id === memberId);
+    if (!member) {
+      console.error('Member not found:', memberId);
+      return;
+    }
+    
+    // If this is a temporary UUID (not yet saved to DB), just update local state
+    if (member.id.length === 36) { // UUID length is 36 characters
+      setMembers(members.filter(m => m.id !== memberId));
+      showSuccess('Member Deleted', 'Member deleted successfully!');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/ai/project-members/${memberId}/`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `${authFormat} ${token}` },
+      });
+
+      await handleApiResponse(response, 'delete member');
+      
+      // Update local state
+      setMembers(members.filter(m => m.id !== memberId));
+      showSuccess('Member Deleted', 'Member deleted successfully!');
+    } catch (error) {
+      console.error('Error deleting member:', error);
+      showError('Delete Failed', `Failed to delete member: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
+  const deleteFeature = async (featureId: string) => {
+    const token = getAuthToken();
+    if (!token) return;
+
+    // Check if this is a newly created feature (not saved to backend yet)
+    const feature = features.find(f => f.id === featureId);
+    if (!feature) {
+      console.error('Feature not found:', featureId);
+      return;
+    }
+    
+    // If this is a temporary UUID (not yet saved to DB), just update local state
+    if (feature.id.length === 36) { // UUID length is 36 characters
+      setFeatures(features.filter(f => f.id !== featureId));
+      showSuccess('Feature Deleted', 'Feature deleted successfully!');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/ai/project-features/${featureId}/`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `${authFormat} ${token}` },
+      });
+
+      await handleApiResponse(response, 'delete feature');
+      
+      // Update local state
+      setFeatures(features.filter(f => f.id !== featureId));
+      showSuccess('Feature Deleted', 'Feature deleted successfully!');
+    } catch (error) {
+      console.error('Error deleting feature:', error);
+      showError('Delete Failed', `Failed to delete feature: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
+  const deleteGoal = async (goalId: string) => {
+    const token = getAuthToken();
+    if (!token) return;
+
+    // Check if this is a newly created goal (not saved to backend yet)
+    const goal = goals.find(g => g.id === goalId);
+    if (!goal) {
+      console.error('Goal not found:', goalId);
+      return;
+    }
+    
+    // If this is a temporary UUID (not yet saved to DB), just update local state
+    if (goal.id.length === 36) { // UUID length is 36 characters
+      setGoals(goals.filter(g => g.id !== goalId));
+      showSuccess('Goal Deleted', 'Goal deleted successfully!');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/ai/project-goals/${goalId}/`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `${authFormat} ${token}` },
+      });
+
+      await handleApiResponse(response, 'delete goal');
+      
+      // Update local state
+      setGoals(goals.filter(g => g.id !== goalId));
+      showSuccess('Goal Deleted', 'Goal deleted successfully!');
+    } catch (error) {
+      console.error('Error deleting goal:', error);
+      showError('Delete Failed', `Failed to delete goal: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
   // Toggle Epic Expansion
   const toggleEpic = (epicId: string) => {
     const newExpanded = new Set(expandedEpics);
@@ -1379,6 +1827,36 @@ const App: React.FC = () => {
     }
     setExpandedEpics(newExpanded);
   };
+
+  // Auto-expand all epics when backlog is loaded
+  const autoExpandAllEpics = () => {
+    const allEpicIds = new Set(epics.map(epic => epic.id));
+    setExpandedEpics(allEpicIds);
+    
+    // Also auto-expand all sub-epics
+    const allSubEpicIds = new Set(subEpics.map(subEpic => subEpic.id));
+    setExpandedSubEpics(allSubEpicIds);
+  };
+
+  // Ensure cards stay expanded during editing
+  const ensureCardsExpanded = () => {
+    const allEpicIds = new Set(epics.map(epic => epic.id));
+    setExpandedEpics(prev => new Set([...prev, ...allEpicIds]));
+    
+    const allSubEpicIds = new Set(subEpics.map(subEpic => subEpic.id));
+    setExpandedSubEpics(prev => new Set([...prev, ...allSubEpicIds]));
+  };
+
+  // Auto-expand cards when entering edit mode
+  useEffect(() => {
+    if (epics.length > 0) {
+      const allEpicIds = new Set(epics.map(epic => epic.id));
+      setExpandedEpics(allEpicIds);
+      
+      const allSubEpicIds = new Set(subEpics.map(subEpic => subEpic.id));
+      setExpandedSubEpics(allSubEpicIds);
+    }
+  }, [epics.length, subEpics.length]);
 
   // Toggle Sub Epic Expansion
   const toggleSubEpic = (subEpicId: string) => {
@@ -1391,6 +1869,130 @@ const App: React.FC = () => {
     setExpandedSubEpics(newExpanded);
   };
 
+
+  // Edit modal handlers
+  const openEditMember = (member: Member) => {
+    setEditingMember(member);
+    setShowEditMemberModal(true);
+  };
+
+  const openEditFeature = (feature: Feature) => {
+    setEditingFeature(feature);
+    setShowEditFeatureModal(true);
+  };
+
+  const openEditGoal = (goal: Goal) => {
+    setEditingGoal(goal);
+    setShowEditGoalModal(true);
+  };
+
+  const openEditTimelineTask = (weekId: string, goalIndex: number, goal: string) => {
+    setEditingTimelineTask({ weekId, goalIndex, goal });
+    setShowEditTimelineTaskModal(true);
+  };
+
+  const openEditEpic = (epic: Epic) => {
+    setEditingEpic(epic);
+    setShowEditEpicModal(true);
+  };
+
+  const openEditSubEpic = (subEpic: SubEpic) => {
+    setEditingSubEpic(subEpic);
+    setShowEditSubEpicModal(true);
+  };
+
+  const openEditUserStory = (userStory: UserStory) => {
+    setEditingUserStory(userStory);
+    setShowEditUserStoryModal(true);
+  };
+
+  const openEditTask = (task: Task) => {
+    setEditingTask(task);
+    setShowEditTaskModal(true);
+  };
+
+  // Add functions for backlog items
+  const openAddEpicModal = () => {
+    setNewEpicTitle('');
+    setNewEpicDescription('');
+    setShowAddEpicModal(true);
+  };
+
+  const openAddSubEpicModal = (epicId: string) => {
+    setSelectedEpicId(epicId);
+    setNewSubEpicTitle('');
+    setShowAddSubEpicModal(true);
+  };
+
+  const openAddUserStoryModal = (subEpicId: string) => {
+    setSelectedSubEpicId(subEpicId);
+    setShowAddUserStoryModal(true);
+  };
+
+  const openAddTaskModal = (userStoryId: string) => {
+    setSelectedUserStoryId(userStoryId);
+    setShowAddTaskModal(true);
+  };
+
+  const addEpic = async () => {
+    if (!newEpicTitle.trim()) return;
+
+    try {
+      await createEpic({ title: newEpicTitle.trim(), description: newEpicDescription.trim() });
+      setNewEpicTitle('');
+      setNewEpicDescription('');
+      setShowAddEpicModal(false);
+      showSuccess('Epic Added', 'Epic added successfully!');
+    } catch (error) {
+      console.error('Error adding epic:', error);
+      showError('Add Failed', 'Failed to add epic');
+    }
+  };
+
+  const addSubEpic = async () => {
+    if (!newSubEpicTitle.trim() || !selectedEpicId) return;
+
+    try {
+      await createSubEpic({ epic_id: selectedEpicId, title: newSubEpicTitle.trim() });
+      setNewSubEpicTitle('');
+      setSelectedEpicId(null);
+      setShowAddSubEpicModal(false);
+      showSuccess('Sub-Epic Added', 'Sub-epic added successfully!');
+    } catch (error) {
+      console.error('Error adding sub-epic:', error);
+      showError('Add Failed', 'Failed to add sub-epic');
+    }
+  };
+
+  const addUserStory = async () => {
+    if (!newUserStoryTitle.trim() || !selectedSubEpicId) return;
+
+    try {
+      await createUserStory({ sub_epic_id: selectedSubEpicId, title: newUserStoryTitle.trim() });
+      setNewUserStoryTitle('');
+      setSelectedSubEpicId(null);
+      setShowAddUserStoryModal(false);
+      showSuccess('User Story Added', 'User story added successfully!');
+    } catch (error) {
+      console.error('Error adding user story:', error);
+      showError('Add Failed', 'Failed to add user story');
+    }
+  };
+
+  const addTask = async () => {
+    if (!newTaskTitle.trim() || !selectedUserStoryId) return;
+
+    try {
+      await createTask({ user_story_id: selectedUserStoryId, title: newTaskTitle.trim() });
+      setNewTaskTitle('');
+      setSelectedUserStoryId(null);
+      setShowAddTaskModal(false);
+      showSuccess('Task Added', 'Task added successfully!');
+    } catch (error) {
+      console.error('Error adding task:', error);
+      showError('Add Failed', 'Failed to add task');
+    }
+  };
 
   // Step indicator component
   const StepIndicator = () => {
@@ -1651,9 +2253,15 @@ const App: React.FC = () => {
           {currentStep === 'analyze' && (
             <div className="space-y-6">
               {uploadedProposalId && (
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
-                  <p className="text-green-800 text-sm flex items-center gap-2">
-                    <Check size={16} className="text-green-600" />
+                <div className={`border rounded-lg p-4 mb-4 ${
+                  theme === "dark" 
+                    ? 'bg-gradient-to-r from-green-900/30 to-emerald-900/30 border-green-700' 
+                    : 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-200'
+                }`}>
+                  <p className={`text-sm flex items-center gap-2 ${
+                    theme === "dark" ? 'text-green-300' : 'text-green-800'
+                  }`}>
+                    <Check size={16} className={theme === "dark" ? "text-green-400" : "text-green-600"} />
                     Proposal uploaded successfully! Ready for AI analysis.
                   </p>
                 </div>
@@ -1733,7 +2341,9 @@ const App: React.FC = () => {
                     onChange={(e) => setAiGeneratedSummary(e.target.value)}
                     rows={4}
                     className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                      theme === "dark" ? "bg-purple-900 border-purple-700 text-white" : "bg-purple-50 border-gray-300"
+                      theme === "dark" 
+                        ? "bg-gradient-to-r from-purple-900/50 to-indigo-900/50 border-purple-700 text-white" 
+                        : "bg-gradient-to-r from-purple-50 to-indigo-50 border-gray-300"
                     }`}
                     disabled={loadingState !== null}
                   />
@@ -1753,23 +2363,43 @@ const App: React.FC = () => {
                   <div className="space-y-2 mb-3 max-h-60 sm:max-h-72 lg:max-h-80 xl:max-h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-800">
                     {members.map(member => (
                       <div key={member.id} className={`flex items-center justify-between p-3 rounded-lg ${
-                        member.ai ? 'bg-purple-50 border border-purple-200' : theme === "dark" ? 'bg-gray-900' : 'bg-gray-50'
+                        member.ai 
+                          ? (theme === "dark" 
+                              ? 'bg-gradient-to-r from-blue-900/40 to-indigo-900/40 border border-blue-700' 
+                              : 'bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200'
+                            ) 
+                          : theme === "dark" ? 'bg-gray-900 border border-gray-800' : 'bg-gray-50 border border-gray-200'
                       }`}>
                         <div>
-                          <span className={`font-medium ${theme === "dark" && !member.ai ? "text-white" : "text-gray-800"}`}>{member.role}</span>
+                          <span className={`font-medium ${
+                            theme === "dark" ? "text-white" : "text-gray-800"
+                          }`}>{member.role}</span>
                           {member.ai && (
-                            <span className="ml-2 text-xs text-purple-600 inline-flex items-center gap-1">
+                            <span className={`ml-2 text-xs inline-flex items-center gap-1 ${
+                              theme === "dark" ? "text-blue-300" : "text-purple-600"
+                            }`}>
                               <Sparkles size={12} /> AI Generated
                             </span>
                           )}
                         </div>
-                        <button 
-                          onClick={() => removeMember(member.id)} 
-                          className="text-red-500 hover:text-red-700"
-                          disabled={loadingState !== null}
-                        >
-                          <X size={16} />
-                        </button>
+                        <div className="flex items-center gap-3">
+                          <button 
+                            onClick={() => openEditMember(member)} 
+                            className="text-blue-500 hover:text-blue-700 p-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                            disabled={loadingState !== null}
+                            title="Edit member"
+                          >
+                            <Edit size={18} />
+                          </button>
+                          <button 
+                            onClick={() => handleDeleteClick('member', member.id, member.role)} 
+                            className="text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20"
+                            disabled={loadingState !== null}
+                            title="Delete member"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -1809,26 +2439,46 @@ const App: React.FC = () => {
                   <div className="space-y-2 mb-3 max-h-60 sm:max-h-72 lg:max-h-80 xl:max-h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-800">
                     {features.map(feature => (
                       <div key={feature.id} className={`p-3 rounded-lg ${
-                        feature.ai ? 'bg-purple-50 border border-purple-200' : theme === "dark" ? 'bg-gray-900' : 'bg-gray-50'
+                        feature.ai 
+                          ? (theme === "dark" 
+                              ? 'bg-gradient-to-r from-emerald-900/40 to-teal-900/40 border border-emerald-700' 
+                              : 'bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200'
+                            ) 
+                          : theme === "dark" ? 'bg-gray-900 border border-gray-800' : 'bg-gray-50 border border-gray-200'
                       }`}>
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
-                            <div className={`font-medium mb-1 ${theme === "dark" && !feature.ai ? "text-white" : "text-gray-800"}`}>
+                            <div className={`font-medium mb-1 ${
+                              theme === "dark" ? "text-white" : "text-gray-800"
+                            }`}>
                               {feature.title}
                               {feature.ai && (
-                                <span className="ml-2 text-xs text-purple-600 inline-flex items-center gap-1">
+                                <span className={`ml-2 text-xs inline-flex items-center gap-1 ${
+                                  theme === "dark" ? "text-emerald-300" : "text-purple-600"
+                                }`}>
                                   <Sparkles size={12} /> AI Generated
                                 </span>
                               )}
                             </div>
                           </div>
-                          <button 
-                            onClick={() => removeFeature(feature.id)} 
-                            className="text-red-500 hover:text-red-700 ml-2"
-                            disabled={loadingState !== null}
-                          >
-                            <X size={16} />
-                          </button>
+                          <div className="flex items-center gap-3">
+                            <button 
+                              onClick={() => openEditFeature(feature)} 
+                              className="text-blue-500 hover:text-blue-700 p-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                              disabled={loadingState !== null}
+                              title="Edit feature"
+                            >
+                              <Edit size={18} />
+                            </button>
+                            <button 
+                              onClick={() => handleDeleteClick('feature', feature.id, feature.title)} 
+                              className="text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20"
+                              disabled={loadingState !== null}
+                              title="Delete feature"
+                            >
+                              <Trash2 size={18} />
+                            </button>
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -1869,14 +2519,23 @@ const App: React.FC = () => {
                   <div className="space-y-2 mb-3 max-h-60 sm:max-h-72 lg:max-h-80 xl:max-h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-800">
                     {goals.map(goal => (
                       <div key={goal.id} className={`p-3 rounded-lg ${
-                        goal.ai ? 'bg-purple-50 border border-purple-200' : theme === "dark" ? 'bg-gray-900' : 'bg-gray-50'
+                        goal.ai 
+                          ? (theme === "dark" 
+                              ? 'bg-gradient-to-r from-orange-900/40 to-amber-900/40 border border-orange-700' 
+                              : 'bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200'
+                            ) 
+                          : theme === "dark" ? 'bg-gray-900 border border-gray-800' : 'bg-gray-50 border border-gray-200'
                       }`}>
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
-                            <div className={`font-medium ${theme === "dark" && !goal.ai ? "text-white" : "text-gray-800"}`}>
+                            <div className={`font-medium ${
+                              theme === "dark" ? "text-white" : "text-gray-800"
+                            }`}>
                               {goal.title}
                               {goal.ai && (
-                                <span className="ml-2 text-xs text-purple-600 inline-flex items-center gap-1">
+                                <span className={`ml-2 text-xs inline-flex items-center gap-1 ${
+                                  theme === "dark" ? "text-orange-300" : "text-purple-600"
+                                }`}>
                                   <Sparkles size={12} /> AI Generated
                                 </span>
                               )}
@@ -1887,13 +2546,24 @@ const App: React.FC = () => {
                               </div>
                             )}
                           </div>
-                          <button 
-                            onClick={() => removeGoal(goal.id)} 
-                            className="text-red-500 hover:text-red-700 ml-2"
-                            disabled={loadingState !== null}
-                          >
-                            <X size={16} />
-                          </button>
+                          <div className="flex items-center gap-3">
+                            <button 
+                              onClick={() => openEditGoal(goal)} 
+                              className="text-blue-500 hover:text-blue-700 p-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                              disabled={loadingState !== null}
+                              title="Edit goal"
+                            >
+                              <Edit size={18} />
+                            </button>
+                            <button 
+                              onClick={() => handleDeleteClick('goal', goal.id, goal.title)} 
+                              className="text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20"
+                              disabled={loadingState !== null}
+                              title="Delete goal"
+                            >
+                              <Trash2 size={18} />
+                            </button>
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -1946,13 +2616,22 @@ const App: React.FC = () => {
                   <div className="space-y-3 mb-3 max-h-80 sm:max-h-96 lg:max-h-[28rem] xl:max-h-[32rem] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-800">
                     {timeline.map(week => (
                       <div key={week.id} className={`p-4 rounded-lg ${
-                        week.ai ? 'bg-purple-50 border border-purple-200' : theme === "dark" ? 'bg-gray-900' : 'bg-gray-50'
+                        week.ai 
+                          ? (theme === "dark" 
+                              ? 'bg-gradient-to-r from-cyan-900/40 to-blue-900/40 border border-cyan-700' 
+                              : 'bg-gradient-to-r from-cyan-50 to-blue-50 border border-cyan-200'
+                            ) 
+                          : theme === "dark" ? 'bg-gray-900 border border-gray-800' : 'bg-gray-50 border border-gray-200'
                       }`}>
                         <div className="flex items-center justify-between mb-2">
-                          <h4 className={`font-semibold flex items-center gap-2 ${theme === "dark" && !week.ai ? "text-white" : "text-gray-800"}`}>
+                          <h4 className={`font-semibold flex items-center gap-2 ${
+                            theme === "dark" ? "text-white" : "text-gray-800"
+                          }`}>
                             Week {week.week_number}
                             {week.ai && (
-                              <span className="text-xs text-purple-600 inline-flex items-center gap-1">
+                              <span className={`text-xs inline-flex items-center gap-1 ${
+                                theme === "dark" ? "text-cyan-300" : "text-purple-600"
+                              }`}>
                                 <Sparkles size={12} /> AI Generated
                               </span>
                             )}
@@ -1964,13 +2643,24 @@ const App: React.FC = () => {
                               theme === "dark" ? "bg-gray-800" : "bg-white"
                             }`}>
                               <span className={`text-sm flex-1 ${theme === "dark" ? "text-gray-200" : "text-gray-700"}`}>{goal}</span>
-                              <button
-                                onClick={() => removeTimelineGoal(week.id, idx)}
-                                className="text-red-500 hover:text-red-700 ml-2"
-                                disabled={loadingState !== null}
-                              >
-                                <X size={14} />
-                              </button>
+                              <div className="flex items-center gap-1">
+                                <button
+                                  onClick={() => openEditTimelineTask(week.id, idx, goal)}
+                                  className="text-blue-500 hover:text-blue-700"
+                                  disabled={loadingState !== null}
+                                  title="Edit timeline task"
+                                >
+                                  <Edit size={14} />
+                                </button>
+                                <button
+                                  onClick={() => removeTimelineGoal(week.id, idx)}
+                                  className="text-red-500 hover:text-red-700"
+                                  disabled={loadingState !== null}
+                                  title="Delete timeline task"
+                                >
+                                  <X size={14} />
+                                </button>
+                              </div>
                             </div>
                           ))}
                         </div>
@@ -2104,16 +2794,12 @@ const App: React.FC = () => {
               </div>
 
               <div className="flex items-center justify-between mb-4">
-                <h2 className={`text-xl font-bold ${theme === "dark" ? "text-white" : "text-gray-800"}`}>Project Backlog</h2>
+                <div className="flex items-center gap-3">
+                  <h2 className={`text-xl font-bold ${theme === "dark" ? "text-white" : "text-gray-800"}`}>Project Backlog</h2>
+                </div>
                 <div className="flex gap-2">
                   <button
-                    onClick={() => {
-                      const title = prompt('Enter epic title:');
-                      const description = prompt('Enter epic description:');
-                      if (title) {
-                        createEpic({ title, description: description || '' });
-                      }
-                    }}
+                    onClick={openAddEpicModal}
                     disabled={loadingState !== null}
                     className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center gap-2"
                   >
@@ -2139,18 +2825,27 @@ const App: React.FC = () => {
                     <div
                       onClick={() => toggleEpic(epic.id)}
                       className={`p-4 cursor-pointer hover:bg-opacity-80 transition-colors ${
-                        epic.ai ? 'bg-purple-50' : theme === "dark" ? 'bg-gray-800' : 'bg-gray-100'
+                        epic.ai 
+                          ? (theme === "dark" 
+                              ? 'bg-gradient-to-r from-purple-900/50 to-indigo-900/50 border-purple-700' 
+                              : 'bg-gradient-to-r from-purple-50 to-indigo-50 border-purple-200'
+                            ) 
+                          : theme === "dark" ? 'bg-gray-800 border-gray-700' : 'bg-gray-100 border-gray-200'
                       }`}
                     >
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
                             <span className="text-xs font-semibold text-blue-600 bg-blue-100 px-2 py-1 rounded">EPIC</span>
-                            <h3 className={`font-bold text-lg ${theme === "dark" && !epic.ai ? "text-white" : "text-gray-800"}`}>
+                            <h3 className={`font-bold text-lg ${
+                              theme === "dark" ? "text-white" : "text-gray-800"
+                            }`}>
                               {epic.title}
                             </h3>
                             {epic.ai && (
-                              <span className="text-xs text-purple-600 inline-flex items-center gap-1">
+                              <span className={`text-xs inline-flex items-center gap-1 ${
+                                theme === "dark" ? "text-purple-300" : "text-purple-600"
+                              }`}>
                                 <Sparkles size={12} /> AI
                               </span>
                             )}
@@ -2159,80 +2854,195 @@ const App: React.FC = () => {
                             {epic.description}
                           </p>
                         </div>
-                        <div className={`text-2xl ${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}>
-                          {expandedEpics.has(epic.id) ? '−' : '+'}
+                        <div className="flex items-center gap-3">
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openEditEpic(epic);
+                            }} 
+                            className="text-blue-500 hover:text-blue-700 p-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                            disabled={loadingState !== null}
+                            title="Edit epic"
+                          >
+                            <Edit size={18} />
+                          </button>
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteClick('epic', epic.id, epic.title);
+                            }} 
+                            className="text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20"
+                            disabled={loadingState !== null}
+                            title="Delete epic"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                          <div className={`text-2xl ${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}>
+                            {expandedEpics.has(epic.id) ? '−' : '+'}
+                          </div>
                         </div>
                       </div>
                     </div>
 
                     {/* Sub Epics */}
                     {expandedEpics.has(epic.id) && (
-                      <div className={`p-4 space-y-3 ${theme === "dark" ? "bg-gray-900" : "bg-white"}`}>
+                      <div className={`p-4 space-y-3 ${
+                        theme === "dark" ? "bg-gray-900/50" : "bg-gray-50"
+                      }`}>
+                        <button 
+                          onClick={() => openAddSubEpicModal(epic.id)}
+                          className="w-full p-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-orange-500 hover:text-orange-500 hover:bg-orange-50 text-sm font-medium transition-all"
+                        >
+                          + Add Sub-Epic
+                        </button>
                         {subEpics.filter(se => se.epic_id === epic.id).map(subEpic => (
                           <div key={subEpic.id} className={`border rounded-lg ${theme === "dark" ? "border-gray-700" : "border-gray-200"}`}>
                             {/* Sub Epic Header */}
                             <div
                               onClick={() => toggleSubEpic(subEpic.id)}
                               className={`p-3 cursor-pointer hover:bg-opacity-80 transition-colors ${
-                                subEpic.ai ? 'bg-purple-50' : theme === "dark" ? 'bg-gray-800' : 'bg-gray-50'
+                                subEpic.ai 
+                                  ? (theme === "dark" 
+                                      ? 'bg-gradient-to-r from-emerald-900/50 to-teal-900/50 border-emerald-700' 
+                                      : 'bg-gradient-to-r from-emerald-50 to-teal-50 border-emerald-200'
+                                    )
+                                  : theme === "dark" ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'
                               }`}
                             >
                               <div className="flex items-start justify-between">
                                 <div className="flex-1">
                                   <div className="flex items-center gap-2">
                                     <span className="text-xs font-semibold text-green-600 bg-green-100 px-2 py-1 rounded">SUB-EPIC</span>
-                                    <h4 className={`font-semibold ${theme === "dark" && !subEpic.ai ? "text-white" : "text-gray-800"}`}>
+                                    <h4 className={`font-semibold ${
+                                      theme === "dark" ? "text-white" : "text-gray-800"
+                                    }`}>
                                       {subEpic.title}
                                     </h4>
                                     {subEpic.ai && (
-                                      <span className="text-xs text-purple-600 inline-flex items-center gap-1">
+                                      <span className={`text-xs inline-flex items-center gap-1 ${
+                                        theme === "dark" ? "text-emerald-300" : "text-purple-600"
+                                      }`}>
                                         <Sparkles size={12} /> AI
                                       </span>
                                     )}
                                   </div>
                                 </div>
-                                <div className={`text-xl ${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}>
-                                  {expandedSubEpics.has(subEpic.id) ? '−' : '+'}
+                                <div className="flex items-center gap-3">
+                                  <button 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      openEditSubEpic(subEpic);
+                                    }} 
+                                    className="text-blue-500 hover:text-blue-700 p-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                                    disabled={loadingState !== null}
+                                    title="Edit sub-epic"
+                                  >
+                                    <Edit size={16} />
+                                  </button>
+                                  <button 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDeleteClick('subEpic', subEpic.id, subEpic.title);
+                                    }} 
+                                    className="text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20"
+                                    disabled={loadingState !== null}
+                                    title="Delete sub-epic"
+                                  >
+                                    <Trash2 size={16} />
+                                  </button>
+                                  <div className={`text-xl ${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}>
+                                    {expandedSubEpics.has(subEpic.id) ? '−' : '+'}
+                                  </div>
                                 </div>
                               </div>
                             </div>
 
                             {/* User Stories */}
                             {expandedSubEpics.has(subEpic.id) && (
-                              <div className={`p-3 space-y-2 ${theme === "dark" ? "bg-gray-900" : "bg-gray-50"}`}>
+                              <div className={`p-3 space-y-2 ${
+                                theme === "dark" ? "bg-gray-900/50" : "bg-gray-50"
+                              }`}>
+                                <button 
+                                  onClick={() => openAddUserStoryModal(subEpic.id)}
+                                  className="w-full p-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-blue-500 hover:text-blue-500 hover:bg-blue-50 text-sm font-medium transition-all"
+                                >
+                                  + Add User Story
+                                </button>
                                 {userStories.filter(us => us.sub_epic_id === subEpic.id).map(story => (
                                   <div key={story.id} className={`border rounded-lg p-3 ${
-                                    story.ai ? 'bg-purple-50 border-purple-200' : theme === "dark" ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+                                    story.ai 
+                                      ? (theme === "dark" 
+                                          ? 'bg-gradient-to-r from-orange-900/50 to-amber-900/50 border-orange-700' 
+                                          : 'bg-gradient-to-r from-orange-50 to-amber-50 border-orange-200'
+                                        ) 
+                                      : theme === "dark" ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
                                   }`}>
                                     <div className="flex items-start gap-2 mb-2">
                                       <span className="text-xs font-semibold text-orange-600 bg-orange-100 px-2 py-1 rounded whitespace-nowrap">USER STORY</span>
                                       <div className="flex-1">
-                                        <p className={`font-medium ${theme === "dark" && !story.ai ? "text-white" : "text-gray-800"}`}>
+                                        <p className={`font-medium ${
+                                          theme === "dark" ? "text-white" : "text-gray-800"
+                                        }`}>
                                           {story.title}
                                         </p>
                                         {story.ai && (
-                                          <span className="text-xs text-purple-600 inline-flex items-center gap-1 mt-1">
+                                          <span className={`text-xs inline-flex items-center gap-1 mt-1 ${
+                                            theme === "dark" ? "text-orange-300" : "text-purple-600"
+                                          }`}>
                                             <Sparkles size={12} /> AI Generated
                                           </span>
                                         )}
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        <button 
+                                          onClick={() => openEditUserStory(story)} 
+                                          className="text-blue-500 hover:text-blue-700 p-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                                          disabled={loadingState !== null}
+                                          title="Edit user story"
+                                        >
+                                          <Edit size={16} />
+                                        </button>
+                                        <button 
+                                          onClick={() => handleDeleteClick('userStory', story.id, story.title)} 
+                                          className="text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20"
+                                          disabled={loadingState !== null}
+                                          title="Delete user story"
+                                        >
+                                          <Trash2 size={16} />
+                                        </button>
                                       </div>
                                     </div>
                                     
                                     {/* Tasks under this user story */}
                                     <div className="mt-3 space-y-2">
+                                      <button 
+                                        onClick={() => openAddTaskModal(story.id)}
+                                        className="w-full p-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-green-500 hover:text-green-500 hover:bg-green-50 text-sm font-medium transition-all"
+                                      >
+                                        + Add Task
+                                      </button>
                                       {tasks.filter(task => task.user_story_id === story.id).map(task => (
                                         <div key={task.id} className={`border rounded-lg p-2 ${
-                                          task.ai ? 'bg-blue-50 border-blue-200' : theme === "dark" ? 'bg-gray-700 border-gray-600' : 'bg-gray-100 border-gray-300'
+                                          task.ai 
+                                            ? (theme === "dark" 
+                                                ? 'bg-gradient-to-r from-blue-900/50 to-cyan-900/50 border-blue-700' 
+                                                : 'bg-gradient-to-r from-blue-50 to-cyan-50 border-blue-200'
+                                              ) 
+                                            : theme === "dark" ? 'bg-gray-700 border-gray-600' : 'bg-gray-100 border-gray-300'
                                         }`}>
                                           <div className="flex items-start justify-between">
                                             <div className="flex-1">
-                                    <div className="flex items-center gap-2">
+                                              <div className="flex items-center gap-2">
                                                 <span className="text-xs font-semibold text-blue-600 bg-blue-100 px-2 py-1 rounded">TASK</span>
-                                                <p className={`text-sm font-medium ${theme === "dark" && !task.ai ? "text-white" : "text-gray-800"}`}>
+                                                <p className={`text-sm font-medium ${
+                                                  theme === "dark" ? "text-white" : "text-gray-800"
+                                                }`}>
                                                   {task.title}
                                                 </p>
                                                 {task.ai && (
-                                                  <span className="text-xs text-blue-600 inline-flex items-center gap-1">
+                                                  <span className={`text-xs inline-flex items-center gap-1 ${
+                                                    theme === "dark" ? "text-blue-300" : "text-blue-600"
+                                                  }`}>
                                                     <Sparkles size={10} /> AI
                                                   </span>
                                                 )}
@@ -2248,28 +3058,22 @@ const App: React.FC = () => {
                                                 )}
                                               </div>
                                             </div>
-                                            <div className="flex items-center gap-1">
-                                      <select
-                                                value={task.assignee?.id || ''}
-                                                onChange={(e) => updateTaskAssignment(task.id, e.target.value || null)}
-                                                className={`text-xs px-2 py-1 border rounded ${
-                                                  theme === "dark" ? "bg-gray-800 border-gray-600 text-white" : "border-gray-300"
-                                        }`}
-                                        disabled={loadingState !== null}
-                                      >
-                                        <option value="">Unassigned</option>
-                                        {members.map(member => (
-                                                  <option key={member.id} value={member.id}>
-                                            {member.role}
-                                          </option>
-                                        ))}
-                                      </select>
+                                            <div className="flex items-center gap-2">
                                               <button
-                                                onClick={() => deleteTask(task.id)}
-                                                className="text-red-500 hover:text-red-700 text-xs"
+                                                onClick={() => openEditTask(task)}
+                                                className="text-blue-500 hover:text-blue-700 p-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20"
                                                 disabled={loadingState !== null}
+                                                title="Edit task"
                                               >
-                                                <X size={12} />
+                                                <Edit size={14} />
+                                              </button>
+                                              <button
+                                                onClick={() => handleDeleteClick('task', task.id, task.title)}
+                                                className="text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20"
+                                                disabled={loadingState !== null}
+                                                title="Delete task"
+                                              >
+                                                <Trash2 size={14} />
                                               </button>
                                             </div>
                                           </div>
@@ -2335,11 +3139,21 @@ const App: React.FC = () => {
                   Skip
                 </button>
                 <button
-                  onClick={() => setCurrentStep('invite')}
-                  disabled={loadingState !== null}
-                  className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  onClick={() => {
+                    if (!backlogChangesSaved) {
+                      showError('Unsaved Changes', 'Please save your backlog changes before continuing.');
+                      return;
+                    }
+                    setCurrentStep('invite');
+                  }}
+                  disabled={loadingState !== null || !backlogChangesSaved}
+                  className={`px-6 py-3 rounded-lg flex items-center gap-2 ${
+                    !backlogChangesSaved 
+                      ? 'bg-gray-400 text-gray-200 cursor-not-allowed' 
+                      : 'bg-green-600 text-white hover:bg-green-700'
+                  } disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
-                  Confirm & Continue
+                  {!backlogChangesSaved ? 'Save Changes First' : 'Confirm & Continue'}
                   <ArrowRight size={20} />
                 </button>
               </div>
@@ -2448,12 +3262,6 @@ const App: React.FC = () => {
                             {member.role}
                           </option>
                         ))}
-                        <option value="Frontend Developer">Frontend Developer</option>
-                        <option value="Backend Developer">Backend Developer</option>
-                        <option value="Full Stack Developer">Full Stack Developer</option>
-                        <option value="UI/UX Designer">UI/UX Designer</option>
-                        <option value="QA Engineer">QA Engineer</option>
-                        <option value="DevOps Engineer">DevOps Engineer</option>
                       </select>
                     </div>
                     <button
@@ -2572,6 +3380,806 @@ const App: React.FC = () => {
               }`}
             >
               {confirmModalData.confirmText || 'Confirm'}
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Edit Modals */}
+    {/* Edit Member Modal */}
+    {showEditMemberModal && editingMember && (
+      <div className={`fixed inset-0 flex items-center justify-center z-50 ${
+        theme === 'dark' ? 'bg-black bg-opacity-70' : 'bg-black bg-opacity-50'
+      }`}>
+        <div className={`rounded-xl p-6 w-full max-w-md mx-4 shadow-xl ${
+          theme === 'dark' ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'
+        }`}>
+          <h3 className={`text-lg font-semibold mb-4 ${
+            theme === 'dark' ? 'text-white' : 'text-gray-900'
+          }`}>
+            Edit Member
+          </h3>
+          <div className="space-y-4">
+            <div>
+              <label className={`block text-sm font-medium mb-1 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                Role
+              </label>
+              <input
+                type="text"
+                value={editingMember.role}
+                onChange={(e) => setEditingMember({ ...editingMember, role: e.target.value })}
+                className={`w-full px-3 py-2 border rounded-lg ${
+                  theme === 'dark' ? 'bg-gray-900 border-gray-700 text-white' : 'border-gray-300'
+                }`}
+              />
+            </div>
+            <div>
+              <label className={`block text-sm font-medium mb-1 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                Name (optional)
+              </label>
+              <input
+                type="text"
+                value={editingMember.user_name || ''}
+                onChange={(e) => setEditingMember({ ...editingMember, user_name: e.target.value })}
+                className={`w-full px-3 py-2 border rounded-lg ${
+                  theme === 'dark' ? 'bg-gray-900 border-gray-700 text-white' : 'border-gray-300'
+                }`}
+              />
+            </div>
+            <div>
+              <label className={`block text-sm font-medium mb-1 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                Email (optional)
+              </label>
+              <input
+                type="email"
+                value={editingMember.user_email || ''}
+                onChange={(e) => setEditingMember({ ...editingMember, user_email: e.target.value })}
+                className={`w-full px-3 py-2 border rounded-lg ${
+                  theme === 'dark' ? 'bg-gray-900 border-gray-700 text-white' : 'border-gray-300'
+                }`}
+              />
+            </div>
+          </div>
+          <div className="flex space-x-3 mt-6">
+            <button
+              onClick={() => setShowEditMemberModal(false)}
+              className={`flex-1 px-4 py-2 rounded-lg transition-colors ${
+                theme === 'dark' 
+                  ? 'bg-gray-600 text-white hover:bg-gray-700' 
+                  : 'bg-gray-500 text-white hover:bg-gray-600'
+              }`}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => {
+                updateMember(editingMember.id, {
+                  role: editingMember.role,
+                  user_name: editingMember.user_name,
+                  user_email: editingMember.user_email
+                });
+                setShowEditMemberModal(false);
+              }}
+              className={`flex-1 px-4 py-2 rounded-lg transition-colors ${
+                theme === 'dark' 
+                  ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                  : 'bg-blue-600 text-white hover:bg-blue-700'
+              }`}
+            >
+              Save
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Edit Feature Modal */}
+    {showEditFeatureModal && editingFeature && (
+      <div className={`fixed inset-0 flex items-center justify-center z-50 ${
+        theme === 'dark' ? 'bg-black bg-opacity-70' : 'bg-black bg-opacity-50'
+      }`}>
+        <div className={`rounded-xl p-6 w-full max-w-md mx-4 shadow-xl ${
+          theme === 'dark' ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'
+        }`}>
+          <h3 className={`text-lg font-semibold mb-4 ${
+            theme === 'dark' ? 'text-white' : 'text-gray-900'
+          }`}>
+            Edit Feature
+          </h3>
+          <div className="space-y-4">
+            <div>
+              <label className={`block text-sm font-medium mb-1 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                Title
+              </label>
+              <input
+                type="text"
+                value={editingFeature.title}
+                onChange={(e) => setEditingFeature({ ...editingFeature, title: e.target.value })}
+                className={`w-full px-3 py-2 border rounded-lg ${
+                  theme === 'dark' ? 'bg-gray-900 border-gray-700 text-white' : 'border-gray-300'
+                }`}
+              />
+            </div>
+          </div>
+          <div className="flex space-x-3 mt-6">
+            <button
+              onClick={() => setShowEditFeatureModal(false)}
+              className={`flex-1 px-4 py-2 rounded-lg transition-colors ${
+                theme === 'dark' 
+                  ? 'bg-gray-600 text-white hover:bg-gray-700' 
+                  : 'bg-gray-500 text-white hover:bg-gray-600'
+              }`}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => {
+                updateFeature(editingFeature.id, editingFeature.title);
+                setShowEditFeatureModal(false);
+              }}
+              className={`flex-1 px-4 py-2 rounded-lg transition-colors ${
+                theme === 'dark' 
+                  ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                  : 'bg-blue-600 text-white hover:bg-blue-700'
+              }`}
+            >
+              Save
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Edit Goal Modal */}
+    {showEditGoalModal && editingGoal && (
+      <div className={`fixed inset-0 flex items-center justify-center z-50 ${
+        theme === 'dark' ? 'bg-black bg-opacity-70' : 'bg-black bg-opacity-50'
+      }`}>
+        <div className={`rounded-xl p-6 w-full max-w-md mx-4 shadow-xl ${
+          theme === 'dark' ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'
+        }`}>
+          <h3 className={`text-lg font-semibold mb-4 ${
+            theme === 'dark' ? 'text-white' : 'text-gray-900'
+          }`}>
+            Edit Goal
+          </h3>
+          <div className="space-y-4">
+            <div>
+              <label className={`block text-sm font-medium mb-1 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                Title
+              </label>
+              <input
+                type="text"
+                value={editingGoal.title}
+                onChange={(e) => setEditingGoal({ ...editingGoal, title: e.target.value })}
+                className={`w-full px-3 py-2 border rounded-lg ${
+                  theme === 'dark' ? 'bg-gray-900 border-gray-700 text-white' : 'border-gray-300'
+                }`}
+              />
+            </div>
+            <div>
+              <label className={`block text-sm font-medium mb-1 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                Role
+              </label>
+              <input
+                type="text"
+                value={editingGoal.role}
+                onChange={(e) => setEditingGoal({ ...editingGoal, role: e.target.value })}
+                className={`w-full px-3 py-2 border rounded-lg ${
+                  theme === 'dark' ? 'bg-gray-900 border-gray-700 text-white' : 'border-gray-300'
+                }`}
+              />
+            </div>
+          </div>
+          <div className="flex space-x-3 mt-6">
+            <button
+              onClick={() => setShowEditGoalModal(false)}
+              className={`flex-1 px-4 py-2 rounded-lg transition-colors ${
+                theme === 'dark' 
+                  ? 'bg-gray-600 text-white hover:bg-gray-700' 
+                  : 'bg-gray-500 text-white hover:bg-gray-600'
+              }`}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => {
+                updateGoal(editingGoal.id, {
+                  title: editingGoal.title,
+                  role: editingGoal.role
+                });
+                setShowEditGoalModal(false);
+              }}
+              className={`flex-1 px-4 py-2 rounded-lg transition-colors ${
+                theme === 'dark' 
+                  ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                  : 'bg-blue-600 text-white hover:bg-blue-700'
+              }`}
+            >
+              Save
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Edit Timeline Task Modal */}
+    {showEditTimelineTaskModal && editingTimelineTask && (
+      <div className={`fixed inset-0 flex items-center justify-center z-50 ${
+        theme === 'dark' ? 'bg-black bg-opacity-70' : 'bg-black bg-opacity-50'
+      }`}>
+        <div className={`rounded-xl p-6 w-full max-w-md mx-4 shadow-xl ${
+          theme === 'dark' ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'
+        }`}>
+          <h3 className={`text-lg font-semibold mb-4 ${
+            theme === 'dark' ? 'text-white' : 'text-gray-900'
+          }`}>
+            Edit Timeline Task
+          </h3>
+          <div className="space-y-4">
+            <div>
+              <label className={`block text-sm font-medium mb-1 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                Task/Goal
+              </label>
+              <input
+                type="text"
+                value={editingTimelineTask.goal}
+                onChange={(e) => setEditingTimelineTask({ ...editingTimelineTask, goal: e.target.value })}
+                className={`w-full px-3 py-2 border rounded-lg ${
+                  theme === 'dark' ? 'bg-gray-900 border-gray-700 text-white' : 'border-gray-300'
+                }`}
+              />
+            </div>
+          </div>
+          <div className="flex space-x-3 mt-6">
+            <button
+              onClick={() => setShowEditTimelineTaskModal(false)}
+              className={`flex-1 px-4 py-2 rounded-lg transition-colors ${
+                theme === 'dark' 
+                  ? 'bg-gray-600 text-white hover:bg-gray-700' 
+                  : 'bg-gray-500 text-white hover:bg-gray-600'
+              }`}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => {
+                updateTimelineItem(editingTimelineTask.weekId, editingTimelineTask.goalIndex, editingTimelineTask.goal);
+                setShowEditTimelineTaskModal(false);
+              }}
+              className={`flex-1 px-4 py-2 rounded-lg transition-colors ${
+                theme === 'dark' 
+                  ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                  : 'bg-blue-600 text-white hover:bg-blue-700'
+              }`}
+            >
+              Save
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Edit Epic Modal */}
+    {showEditEpicModal && editingEpic && (
+      <div className={`fixed inset-0 flex items-center justify-center z-50 ${
+        theme === 'dark' ? 'bg-black bg-opacity-70' : 'bg-black bg-opacity-50'
+      }`}>
+        <div className={`rounded-xl p-6 w-full max-w-md mx-4 shadow-xl ${
+          theme === 'dark' ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'
+        }`}>
+          <h3 className={`text-lg font-semibold mb-4 ${
+            theme === 'dark' ? 'text-white' : 'text-gray-900'
+          }`}>
+            Edit Epic
+          </h3>
+          <div className="space-y-4">
+            <div>
+              <label className={`block text-sm font-medium mb-1 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                Title
+              </label>
+              <input
+                type="text"
+                value={editingEpic.title}
+                onChange={(e) => setEditingEpic({ ...editingEpic, title: e.target.value })}
+                className={`w-full px-3 py-2 border rounded-lg ${
+                  theme === 'dark' ? 'bg-gray-900 border-gray-700 text-white' : 'border-gray-300'
+                }`}
+              />
+            </div>
+            <div>
+              <label className={`block text-sm font-medium mb-1 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                Description
+              </label>
+              <textarea
+                value={editingEpic.description}
+                onChange={(e) => setEditingEpic({ ...editingEpic, description: e.target.value })}
+                rows={3}
+                className={`w-full px-3 py-2 border rounded-lg ${
+                  theme === 'dark' ? 'bg-gray-900 border-gray-700 text-white' : 'border-gray-300'
+                }`}
+              />
+            </div>
+          </div>
+          <div className="flex space-x-3 mt-6">
+            <button
+              onClick={() => setShowEditEpicModal(false)}
+              className={`flex-1 px-4 py-2 rounded-lg transition-colors ${
+                theme === 'dark' 
+                  ? 'bg-gray-600 text-white hover:bg-gray-700' 
+                  : 'bg-gray-500 text-white hover:bg-gray-600'
+              }`}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => {
+                updateEpic(editingEpic.id, {
+                  title: editingEpic.title,
+                  description: editingEpic.description
+                });
+                setShowEditEpicModal(false);
+              }}
+              className={`flex-1 px-4 py-2 rounded-lg transition-colors ${
+                theme === 'dark' 
+                  ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                  : 'bg-blue-600 text-white hover:bg-blue-700'
+              }`}
+            >
+              Save
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Edit Sub-Epic Modal */}
+    {showEditSubEpicModal && editingSubEpic && (
+      <div className={`fixed inset-0 flex items-center justify-center z-50 ${
+        theme === 'dark' ? 'bg-black bg-opacity-70' : 'bg-black bg-opacity-50'
+      }`}>
+        <div className={`rounded-xl p-6 w-full max-w-md mx-4 shadow-xl ${
+          theme === 'dark' ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'
+        }`}>
+          <h3 className={`text-lg font-semibold mb-4 ${
+            theme === 'dark' ? 'text-white' : 'text-gray-900'
+          }`}>
+            Edit Sub-Epic
+          </h3>
+          <div className="space-y-4">
+            <div>
+              <label className={`block text-sm font-medium mb-1 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                Title
+              </label>
+              <input
+                type="text"
+                value={editingSubEpic.title}
+                onChange={(e) => setEditingSubEpic({ ...editingSubEpic, title: e.target.value })}
+                className={`w-full px-3 py-2 border rounded-lg ${
+                  theme === 'dark' ? 'bg-gray-900 border-gray-700 text-white' : 'border-gray-300'
+                }`}
+              />
+            </div>
+          </div>
+          <div className="flex space-x-3 mt-6">
+            <button
+              onClick={() => setShowEditSubEpicModal(false)}
+              className={`flex-1 px-4 py-2 rounded-lg transition-colors ${
+                theme === 'dark' 
+                  ? 'bg-gray-600 text-white hover:bg-gray-700' 
+                  : 'bg-gray-500 text-white hover:bg-gray-600'
+              }`}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => {
+                updateSubEpic(editingSubEpic.id, {
+                  title: editingSubEpic.title
+                });
+                setShowEditSubEpicModal(false);
+              }}
+              className={`flex-1 px-4 py-2 rounded-lg transition-colors ${
+                theme === 'dark' 
+                  ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                  : 'bg-blue-600 text-white hover:bg-blue-700'
+              }`}
+            >
+              Save
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Edit User Story Modal */}
+    {showEditUserStoryModal && editingUserStory && (
+      <div className={`fixed inset-0 flex items-center justify-center z-50 ${
+        theme === 'dark' ? 'bg-black bg-opacity-70' : 'bg-black bg-opacity-50'
+      }`}>
+        <div className={`rounded-xl p-6 w-full max-w-md mx-4 shadow-xl ${
+          theme === 'dark' ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'
+        }`}>
+          <h3 className={`text-lg font-semibold mb-4 ${
+            theme === 'dark' ? 'text-white' : 'text-gray-900'
+          }`}>
+            Edit User Story
+          </h3>
+          <div className="space-y-4">
+            <div>
+              <label className={`block text-sm font-medium mb-1 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                Title
+              </label>
+              <input
+                type="text"
+                value={editingUserStory.title}
+                onChange={(e) => setEditingUserStory({ ...editingUserStory, title: e.target.value })}
+                className={`w-full px-3 py-2 border rounded-lg ${
+                  theme === 'dark' ? 'bg-gray-900 border-gray-700 text-white' : 'border-gray-300'
+                }`}
+              />
+            </div>
+          </div>
+          <div className="flex space-x-3 mt-6">
+            <button
+              onClick={() => setShowEditUserStoryModal(false)}
+              className={`flex-1 px-4 py-2 rounded-lg transition-colors ${
+                theme === 'dark' 
+                  ? 'bg-gray-600 text-white hover:bg-gray-700' 
+                  : 'bg-gray-500 text-white hover:bg-gray-600'
+              }`}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => {
+                updateUserStory(editingUserStory.id, {
+                  title: editingUserStory.title
+                });
+                setShowEditUserStoryModal(false);
+              }}
+              className={`flex-1 px-4 py-2 rounded-lg transition-colors ${
+                theme === 'dark' 
+                  ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                  : 'bg-blue-600 text-white hover:bg-blue-700'
+              }`}
+            >
+              Save
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Edit Task Modal */}
+    {showEditTaskModal && editingTask && (
+      <div className={`fixed inset-0 flex items-center justify-center z-50 ${
+        theme === 'dark' ? 'bg-black bg-opacity-70' : 'bg-black bg-opacity-50'
+      }`}>
+        <div className={`rounded-xl p-6 w-full max-w-md mx-4 shadow-xl ${
+          theme === 'dark' ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'
+        }`}>
+          <h3 className={`text-lg font-semibold mb-4 ${
+            theme === 'dark' ? 'text-white' : 'text-gray-900'
+          }`}>
+            Edit Task
+          </h3>
+          <div className="space-y-4">
+            <div>
+              <label className={`block text-sm font-medium mb-1 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                Title
+              </label>
+              <input
+                type="text"
+                value={editingTask.title}
+                onChange={(e) => setEditingTask({ ...editingTask, title: e.target.value })}
+                className={`w-full px-3 py-2 border rounded-lg ${
+                  theme === 'dark' ? 'bg-gray-900 border-gray-700 text-white' : 'border-gray-300'
+                }`}
+              />
+            </div>
+          </div>
+          <div className="flex space-x-3 mt-6">
+            <button
+              onClick={() => setShowEditTaskModal(false)}
+              className={`flex-1 px-4 py-2 rounded-lg transition-colors ${
+                theme === 'dark' 
+                  ? 'bg-gray-600 text-white hover:bg-gray-700' 
+                  : 'bg-gray-500 text-white hover:bg-gray-600'
+              }`}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => {
+                updateTask(editingTask.id, {
+                  title: editingTask.title
+                });
+                setShowEditTaskModal(false);
+              }}
+              className={`flex-1 px-4 py-2 rounded-lg transition-colors ${
+                theme === 'dark' 
+                  ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                  : 'bg-blue-600 text-white hover:bg-blue-700'
+              }`}
+            >
+              Save
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Add Sub-Epic Modal */}
+    {showAddSubEpicModal && (
+      <div className={`fixed inset-0 flex items-center justify-center z-50 ${
+        theme === 'dark' ? 'bg-black bg-opacity-70' : 'bg-black bg-opacity-50'
+      }`}>
+        <div className={`rounded-xl p-6 w-full max-w-md mx-4 shadow-xl ${
+          theme === 'dark' ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'
+        }`}>
+          <h3 className={`text-lg font-semibold mb-4 ${
+            theme === 'dark' ? 'text-white' : 'text-gray-900'
+          }`}>
+            Add New Sub-Epic
+          </h3>
+          <input
+            type="text"
+            value={newSubEpicTitle}
+            onChange={(e) => setNewSubEpicTitle(e.target.value)}
+            placeholder="Enter sub-epic title"
+            className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent mb-4 ${
+              theme === 'dark' 
+                ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
+                : 'border-gray-300'
+            }`}
+          />
+          <div className="flex space-x-3">
+            <button
+              onClick={() => {
+                setShowAddSubEpicModal(false);
+                setNewSubEpicTitle('');
+                setSelectedEpicId(null);
+              }}
+              className={`flex-1 px-4 py-2 rounded-lg transition-colors ${
+                theme === 'dark' 
+                  ? 'bg-gray-600 text-white hover:bg-gray-700' 
+                  : 'bg-gray-500 text-white hover:bg-gray-600'
+              }`}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={addSubEpic}
+              className={`flex-1 px-4 py-2 rounded-lg transition-colors ${
+                theme === 'dark' 
+                  ? 'bg-orange-600 text-white hover:bg-orange-700' 
+                  : 'bg-orange-600 text-white hover:bg-orange-700'
+              }`}
+            >
+              Add Sub-Epic
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Add User Story Modal */}
+    {showAddUserStoryModal && (
+      <div className={`fixed inset-0 flex items-center justify-center z-50 ${
+        theme === 'dark' ? 'bg-black bg-opacity-70' : 'bg-black bg-opacity-50'
+      }`}>
+        <div className={`rounded-xl p-6 w-full max-w-md mx-4 shadow-xl ${
+          theme === 'dark' ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'
+        }`}>
+          <h3 className={`text-lg font-semibold mb-4 ${
+            theme === 'dark' ? 'text-white' : 'text-gray-900'
+          }`}>
+            Add New User Story
+          </h3>
+          <input
+            type="text"
+            value={newUserStoryTitle}
+            onChange={(e) => setNewUserStoryTitle(e.target.value)}
+            placeholder="Enter user story title"
+            className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-4 ${
+              theme === 'dark' 
+                ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
+                : 'border-gray-300'
+            }`}
+          />
+          <div className="flex space-x-3">
+            <button
+              onClick={() => {
+                setShowAddUserStoryModal(false);
+                setNewUserStoryTitle('');
+                setSelectedSubEpicId(null);
+              }}
+              className={`flex-1 px-4 py-2 rounded-lg transition-colors ${
+                theme === 'dark' 
+                  ? 'bg-gray-600 text-white hover:bg-gray-700' 
+                  : 'bg-gray-500 text-white hover:bg-gray-600'
+              }`}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={addUserStory}
+              className={`flex-1 px-4 py-2 rounded-lg transition-colors ${
+                theme === 'dark' 
+                  ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                  : 'bg-blue-600 text-white hover:bg-blue-700'
+              }`}
+            >
+              Add User Story
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Add Task Modal */}
+    {showAddTaskModal && (
+      <div className={`fixed inset-0 flex items-center justify-center z-50 ${
+        theme === 'dark' ? 'bg-black bg-opacity-70' : 'bg-black bg-opacity-50'
+      }`}>
+        <div className={`rounded-xl p-6 w-full max-w-md mx-4 shadow-xl ${
+          theme === 'dark' ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'
+        }`}>
+          <h3 className={`text-lg font-semibold mb-4 ${
+            theme === 'dark' ? 'text-white' : 'text-gray-900'
+          }`}>
+            Add New Task
+          </h3>
+          <input
+            type="text"
+            value={newTaskTitle}
+            onChange={(e) => setNewTaskTitle(e.target.value)}
+            placeholder="Enter task title"
+            className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent mb-4 ${
+              theme === 'dark' 
+                ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
+                : 'border-gray-300'
+            }`}
+          />
+          <div className="flex space-x-3">
+            <button
+              onClick={() => {
+                setShowAddTaskModal(false);
+                setNewTaskTitle('');
+                setSelectedUserStoryId(null);
+              }}
+              className={`flex-1 px-4 py-2 rounded-lg transition-colors ${
+                theme === 'dark' 
+                  ? 'bg-gray-600 text-white hover:bg-gray-700' 
+                  : 'bg-gray-500 text-white hover:bg-gray-600'
+              }`}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={addTask}
+              className={`flex-1 px-4 py-2 rounded-lg transition-colors ${
+                theme === 'dark' 
+                  ? 'bg-green-600 text-white hover:bg-green-700' 
+                  : 'bg-green-600 text-white hover:bg-green-700'
+              }`}
+            >
+              Add Task
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Delete Confirmation Modal */}
+    {showDeleteModal && deleteItem && (
+      <div className={`fixed inset-0 flex items-center justify-center z-50 ${
+        theme === 'dark' ? 'bg-black bg-opacity-70' : 'bg-black bg-opacity-50'
+      }`}>
+        <div className={`rounded-xl p-6 w-full max-w-md mx-4 shadow-xl ${
+          theme === 'dark' ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'
+        }`}>
+          <h3 className={`text-lg font-semibold mb-4 ${
+            theme === 'dark' ? 'text-white' : 'text-gray-900'
+          }`}>
+            Confirm Delete
+          </h3>
+          <p className={`mb-6 ${
+            theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+          }`}>
+            Are you sure you want to delete "{deleteItem.name}"? This action cannot be undone.
+          </p>
+          <div className="flex space-x-3">
+            <button
+              onClick={() => setShowDeleteModal(false)}
+              className={`flex-1 px-4 py-2 rounded-lg transition-colors ${
+                theme === 'dark' 
+                  ? 'bg-gray-600 text-white hover:bg-gray-700' 
+                  : 'bg-gray-500 text-white hover:bg-gray-600'
+              }`}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={confirmDelete}
+              className={`flex-1 px-4 py-2 rounded-lg transition-colors ${
+                theme === 'dark' 
+                  ? 'bg-red-600 text-white hover:bg-red-700' 
+                  : 'bg-red-600 text-white hover:bg-red-700'
+              }`}
+            >
+              Delete
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Add Epic Modal */}
+    {showAddEpicModal && (
+      <div className={`fixed inset-0 flex items-center justify-center z-50 ${
+        theme === 'dark' ? 'bg-black bg-opacity-70' : 'bg-black bg-opacity-50'
+      }`}>
+        <div className={`rounded-xl p-6 w-full max-w-md mx-4 shadow-xl ${
+          theme === 'dark' ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'
+        }`}>
+          <h3 className={`text-lg font-semibold mb-4 ${
+            theme === 'dark' ? 'text-white' : 'text-gray-900'
+          }`}>
+            Add New Epic
+          </h3>
+          <div className="space-y-4">
+            <div>
+              <label className={`block text-sm font-medium mb-1 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                Title
+              </label>
+              <input
+                type="text"
+                value={newEpicTitle}
+                onChange={(e) => setNewEpicTitle(e.target.value)}
+                className={`w-full px-3 py-2 border rounded-lg ${
+                  theme === 'dark' ? 'bg-gray-900 border-gray-700 text-white' : 'border-gray-300'
+                }`}
+                placeholder="Enter epic title"
+              />
+            </div>
+            <div>
+              <label className={`block text-sm font-medium mb-1 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                Description
+              </label>
+              <textarea
+                value={newEpicDescription}
+                onChange={(e) => setNewEpicDescription(e.target.value)}
+                rows={3}
+                className={`w-full px-3 py-2 border rounded-lg ${
+                  theme === 'dark' ? 'bg-gray-900 border-gray-700 text-white' : 'border-gray-300'
+                }`}
+                placeholder="Enter epic description"
+              />
+            </div>
+          </div>
+          <div className="flex space-x-3 mt-6">
+            <button
+              onClick={() => setShowAddEpicModal(false)}
+              className={`flex-1 px-4 py-2 rounded-lg transition-colors ${
+                theme === 'dark' 
+                  ? 'bg-gray-600 text-white hover:bg-gray-700' 
+                  : 'bg-gray-500 text-white hover:bg-gray-600'
+              }`}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={addEpic}
+              className={`flex-1 px-4 py-2 rounded-lg transition-colors ${
+                theme === 'dark' 
+                  ? 'bg-green-600 text-white hover:bg-green-700' 
+                  : 'bg-green-600 text-white hover:bg-green-700'
+              }`}
+            >
+              Add Epic
             </button>
           </div>
         </div>

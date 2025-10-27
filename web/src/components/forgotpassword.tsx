@@ -96,7 +96,7 @@ export default function ForgotPasswordPage() {
     try {
       console.log("🔄 Sending password reset request for:", email);
 
-      const response = await fetch(`${API_BASE_URL}/api/user/reset-password/`, {
+      const response = await fetch(`${API_BASE_URL}/user/reset-password/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

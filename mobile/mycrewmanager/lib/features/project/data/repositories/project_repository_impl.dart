@@ -9,6 +9,7 @@ import 'package:mycrewmanager/features/project/domain/entities/project.dart';
 import 'package:mycrewmanager/features/project/domain/entities/member.dart';
 import 'package:mycrewmanager/features/project/domain/entities/task.dart';
 import 'package:mycrewmanager/features/project/domain/entities/activity.dart';
+import 'package:mycrewmanager/features/project/domain/entities/backlog.dart';
 import 'package:mycrewmanager/features/project/domain/repository/project_repository.dart';
 
 class ProjectRepositoryImpl implements ProjectRepository {
@@ -79,9 +80,12 @@ class ProjectRepositoryImpl implements ProjectRepository {
   }
 
   @override
-  Future<Either<Failure, Map<String, dynamic>>> getProjectBacklog(int id) async {
+  Future<Either<Failure, Backlog>> getProjectBacklog(int id) async {
     return _getData(
-      () async => await remoteDataSource.getProjectBacklog(id),
+      () async {
+        final data = await remoteDataSource.getProjectBacklog(id);
+        return Backlog.fromJson(data);
+      },
     );
   }
 
@@ -162,9 +166,9 @@ class ProjectRepositoryImpl implements ProjectRepository {
   }
 
   @override
-  Future<Either<Failure, ProjectTask>> updateTaskStatus(int taskId, String status) {
+  Future<Either<Failure, ProjectTask>> updateTaskStatus(int taskId, String status, {String? commitTitle}) {
     return _getData(
-      () async => await remoteDataSource.updateTaskStatus(taskId, status),
+      () async => await remoteDataSource.updateTaskStatus(taskId, status, commitTitle: commitTitle),
     );
   }
 

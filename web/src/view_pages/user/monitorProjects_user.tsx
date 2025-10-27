@@ -190,6 +190,23 @@ const projectAPI = {
   }
 };
 
+// ✅ AI Badge Component
+const AIBadge = ({ show, tooltipText = "AI Generated" }: { show: boolean; tooltipText?: string }) => {
+  if (!show) return null;
+  
+  return (
+    <span 
+      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ml-2 ${
+        'bg-purple-100 text-purple-800'
+      }`}
+      title={tooltipText}
+    >
+      <span>✨</span>
+      <span>AI</span>
+    </span>
+  );
+};
+
 // ✅ Project Status Badge Component
 const StatusBadge = ({ hasProposal, hasBacklog }: { 
   hasProposal: boolean; 
@@ -232,8 +249,11 @@ const ProjectCard = ({ project, theme, onDownloadFile }: {
     <div className={`${theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} rounded-xl shadow-sm border p-6 hover:shadow-md transition-shadow flex flex-col h-full min-h-[600px]`}>
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
-        <div className={`text-lg font-semibold ${theme === 'dark' ? 'text-gray-100' : 'text-gray-800'}`}>
-          {project.title}
+        <div className="flex items-center gap-2">
+          <div className={`text-lg font-semibold ${theme === 'dark' ? 'text-gray-100' : 'text-gray-800'}`}>
+            {project.title}
+          </div>
+          <AIBadge show={!!project.title} tooltipText="AI Generated Title" />
         </div>
         <StatusBadge 
           hasProposal={project.has_proposal} 
@@ -245,9 +265,12 @@ const ProjectCard = ({ project, theme, onDownloadFile }: {
 
       {/* Summary */}
       <div className="mb-4">
-        <p className={`text-sm leading-relaxed line-clamp-3 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}>
-          {project.summary || 'No description available'}
-        </p>
+        <div className="flex items-start gap-2">
+          <p className={`text-sm leading-relaxed line-clamp-3 flex-1 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}>
+            {project.summary || 'No description available'}
+          </p>
+          <AIBadge show={!!project.summary} tooltipText="AI Generated Summary" />
+        </div>
       </div>
 
       {/* Progress Indicators */}
@@ -607,14 +630,14 @@ const MonitorProjectsUser = () => {
       <div className="flex-1 flex flex-col min-w-0">
         <TopNavbar onMenuClick={() => setSidebarOpen(true)} />
 
-        <main className="flex-1 p-4 lg:p-[100px] overflow-auto space-y-[40px]">
+        <main className="flex-1 p-4 lg:p-[100px] overflow-auto space-y-[40px] pt-20">
           {/* Header with search and invitation button */}
           <div className="flex items-center justify-between mb-6">
             <h2 className={`text-2xl font-semibold ${theme === 'dark' ? 'text-gray-100' : 'text-gray-800'}`}>
               My Projects
             </h2>
             
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 relative z-10">
               {/* Search Input */}
               <div className="relative w-[400px]">
                 <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-400'}`} />
@@ -628,23 +651,28 @@ const MonitorProjectsUser = () => {
               </div>
 
               {/* Project Invitation Button */}
-              <button
-                onClick={() => navigate('/project-invitation')}
-                className={`relative flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
-                  theme === 'dark'
-                    ? 'bg-blue-600 hover:bg-blue-700 text-white'
-                    : 'bg-blue-500 hover:bg-blue-600 text-white'
-                }`}
-              >
-                <Mail className="w-5 h-5" />
-                <span>Project Invitations</span>
-                {/* Red Badge for Pending Invitations */}
+              <div className="relative">
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    navigate('/project-invitation');
+                  }}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+                    theme === 'dark'
+                      ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                      : 'bg-blue-500 hover:bg-blue-600 text-white'
+                  }`} >
+                  <Mail className="w-5 h-5" />
+                  <span>Project Invitations</span>
+                </button>
+                {/* Red Badge for Pending Invitations - moved outside button */}
                 {pendingInvitationsCount > 0 && (
-                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center min-w-[20px] animate-pulse">
+                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center min-w-[20px] animate-pulse pointer-events-none">
                     {pendingInvitationsCount > 99 ? '99+' : pendingInvitationsCount}
                   </span>
                 )}
-              </button>
+              </div>
             </div>
           </div>
 

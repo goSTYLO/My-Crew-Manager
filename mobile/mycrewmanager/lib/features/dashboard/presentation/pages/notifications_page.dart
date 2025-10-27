@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:get_it/get_it.dart';
 import 'package:mycrewmanager/features/dashboard/presentation/pages/dashboard_page.dart';
 import 'package:mycrewmanager/features/notification/presentation/bloc/notification_bloc.dart';
 import 'package:mycrewmanager/features/notification/presentation/bloc/notification_event.dart';
@@ -7,7 +8,9 @@ import 'package:mycrewmanager/features/notification/presentation/bloc/notificati
 import 'package:mycrewmanager/features/invitation/presentation/bloc/invitation_bloc.dart';
 import 'package:mycrewmanager/features/invitation/presentation/bloc/invitation_event.dart';
 import 'package:mycrewmanager/features/invitation/presentation/bloc/invitation_state.dart';
-import 'package:mycrewmanager/features/notification/domain/entities/notification.dart' as notification_entity;
+import 'package:mycrewmanager/features/chat/data/services/chat_ws_service.dart';
+import 'package:mycrewmanager/features/dashboard/presentation/pages/chats_page.dart';
+import 'package:mycrewmanager/features/authentication/presentation/bloc/auth_bloc.dart';
 
 class NotificationsPage extends StatefulWidget {
   const NotificationsPage({super.key});
@@ -19,17 +22,94 @@ class NotificationsPage extends StatefulWidget {
 }
 
 class _NotificationsPageState extends State<NotificationsPage> {
+  final _ws = GetIt.I<ChatWsService>();
+  final List<Map<String, dynamic>> _messageNotifications = [];
+  bool _wsConnected = false;
+
   @override
   void initState() {
     super.initState();
     // Load notifications and invitations when the page opens
     context.read<NotificationBloc>().add(const LoadNotifications());
     context.read<InvitationBloc>().add(const LoadInvitations());
+    _connectToMessageNotifications();
+  }
+
+  Future<void> _connectToMessageNotifications() async {
+    if (_wsConnected) return;
+    try {
+      final stream = await _ws.connectToNotifications();
+      _wsConnected = true;
+      
+      stream.listen((event) {
+        if (event is Map<String, dynamic>) {
+          final type = event['type'] as String?;
+          if (type == 'new_message') {
+            _handleNewMessageNotification(event);
+          }
+        }
+      }, onError: (error) {
+        _wsConnected = false;
+      }, onDone: () {
+        _wsConnected = false;
+      });
+    } catch (e) {
+      _wsConnected = false;
+    }
+  }
+
+  void _handleNewMessageNotification(Map<String, dynamic> event) {
+    final roomId = event['room_id'] as int?;
+    final message = event['message'] as Map<String, dynamic>?;
+    final sender = event['sender'] as String?;
+    
+    if (roomId == null || message == null || sender == null) {
+      return;
+    }
+    
+    // Get current user info to check if this is our own message
+    final authState = context.read<AuthBloc>().state;
+    String? currentUserId;
+    if (authState is AuthSuccess) {
+      currentUserId = authState.user.id;
+    }
+    
+    // Don't add notification for our own messages
+    final senderId = message['sender_id'] as int?;
+    if (senderId != null && currentUserId != null && senderId.toString() == currentUserId) {
+      return;
+    }
+    
+    final messageContent = message['content'] as String? ?? '';
+    final preview = messageContent.length > 100 
+        ? '${messageContent.substring(0, 100)}...' 
+        : messageContent;
+    
+    final messageNotification = {
+      'id': 'msg_${message['message_id']}_${DateTime.now().millisecondsSinceEpoch}',
+      'type': 'new_message',
+      'title': 'New message from $sender',
+      'message': preview,
+      'isRead': false,
+      'createdAt': DateTime.now(),
+      'actor': sender,
+      'roomId': roomId,
+      'messageId': message['message_id'],
+    };
+    
+    setState(() {
+      _messageNotifications.insert(0, messageNotification);
+      // Keep only last 50 message notifications to prevent memory issues
+      if (_messageNotifications.length > 50) {
+        _messageNotifications.removeRange(50, _messageNotifications.length);
+      }
+    });
   }
 
   void _clearAll() {
     context.read<NotificationBloc>().add(const MarkAllAsRead());
   }
+
 
   IconData _getNotificationIcon(String type) {
     switch (type) {
@@ -51,6 +131,8 @@ class _NotificationsPageState extends State<NotificationsPage> {
         return Icons.person_add_rounded;
       case 'member_left':
         return Icons.person_remove_rounded;
+      case 'new_message':
+        return Icons.message_rounded;
       default:
         return Icons.notifications_rounded;
     }
@@ -76,6 +158,8 @@ class _NotificationsPageState extends State<NotificationsPage> {
         return Colors.teal;
       case 'member_left':
         return Colors.brown;
+      case 'new_message':
+        return const Color(0xFF6C63FF);
       default:
         return Colors.blue;
     }
@@ -104,6 +188,8 @@ class _NotificationsPageState extends State<NotificationsPage> {
     } else {
       context.read<InvitationBloc>().add(DeclineInvitation(invitationId));
     }
+    // Reload notifications to apply filtering (accepted invitations will be filtered out)
+    context.read<NotificationBloc>().add(const LoadNotifications());
   }
 
   @override
@@ -241,7 +327,36 @@ class _NotificationsPageState extends State<NotificationsPage> {
                 ),
               );
             } else if (state is NotificationLoaded) {
-              if (state.notifications.isEmpty) {
+              // Combine regular notifications with message notifications
+              final allNotifications = <Map<String, dynamic>>[];
+              
+              // Add regular notifications
+              for (final notification in state.notifications) {
+                allNotifications.add({
+                  'id': notification.id,
+                  'type': notification.type,
+                  'title': notification.title,
+                  'message': notification.message,
+                  'isRead': notification.isRead,
+                  'createdAt': notification.createdAt,
+                  'actor': notification.actor,
+                  'objectId': notification.objectId,
+                  'actionUrl': notification.actionUrl,
+                  'isRegularNotification': true,
+                });
+              }
+              
+              // Add message notifications
+              allNotifications.addAll(_messageNotifications);
+              
+              // Sort by creation time (newest first)
+              allNotifications.sort((a, b) {
+                final aTime = a['createdAt'] as DateTime;
+                final bTime = b['createdAt'] as DateTime;
+                return bTime.compareTo(aTime);
+              });
+              
+              if (allNotifications.isEmpty) {
                 return Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -280,10 +395,10 @@ class _NotificationsPageState extends State<NotificationsPage> {
                 },
                 child: ListView.separated(
                   padding: const EdgeInsets.all(16),
-                  itemCount: state.notifications.length,
+                  itemCount: allNotifications.length,
                   separatorBuilder: (_, __) => const SizedBox(height: 14),
                   itemBuilder: (context, index) {
-                    final notification = state.notifications[index];
+                    final notification = allNotifications[index];
                     return _buildNotificationCard(notification);
                   },
                 ),
@@ -299,16 +414,22 @@ class _NotificationsPageState extends State<NotificationsPage> {
     );
   }
 
-  Widget _buildNotificationCard(notification_entity.Notification notification) {
-    final icon = _getNotificationIcon(notification.type);
-    final color = _getNotificationColor(notification.type);
-    final time = _formatTime(notification.createdAt);
+  Widget _buildNotificationCard(Map<String, dynamic> notification) {
+    final type = notification['type'] as String;
+    final icon = _getNotificationIcon(type);
+    final color = _getNotificationColor(type);
+    final time = _formatTime(notification['createdAt'] as DateTime);
+    final isRead = notification['isRead'] as bool;
+    final title = notification['title'] as String;
+    final message = notification['message'] as String;
+    final actor = notification['actor'] as String?;
+    final isRegularNotification = notification['isRegularNotification'] as bool? ?? false;
 
     return Container(
       decoration: BoxDecoration(
-        color: notification.isRead ? Colors.white : Colors.blue.withOpacity(0.05),
+        color: isRead ? Colors.white : Colors.blue.withOpacity(0.05),
         borderRadius: BorderRadius.circular(14),
-        border: notification.isRead 
+        border: isRead 
             ? null 
             : Border.all(color: Colors.blue.withOpacity(0.2), width: 1),
         boxShadow: [
@@ -325,9 +446,9 @@ class _NotificationsPageState extends State<NotificationsPage> {
           child: Icon(icon, color: color, size: 28),
         ),
         title: Text(
-          notification.title,
+          title,
           style: TextStyle(
-            fontWeight: notification.isRead ? FontWeight.w600 : FontWeight.w700,
+            fontWeight: isRead ? FontWeight.w600 : FontWeight.w700,
             fontSize: 15,
             color: const Color(0xFF181929),
           ),
@@ -336,17 +457,17 @@ class _NotificationsPageState extends State<NotificationsPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              notification.message,
+              message,
               style: const TextStyle(
                 fontSize: 13,
                 color: Color(0xFF7B7F9E),
                 fontWeight: FontWeight.w400,
               ),
             ),
-            if (notification.actor != null) ...[
+            if (actor != null) ...[
               const SizedBox(height: 4),
               Text(
-                'by ${notification.actor}',
+                'by $actor',
                 style: TextStyle(
                   fontSize: 12,
                   color: Colors.grey[600],
@@ -364,31 +485,62 @@ class _NotificationsPageState extends State<NotificationsPage> {
             ),
           ],
         ),
-        trailing: notification.type == 'project_invitation'
+        trailing: type == 'project_invitation' && isRegularNotification
             ? _buildInvitationActions(notification)
             : IconButton(
                 icon: Icon(
-                  notification.isRead ? Icons.more_vert : Icons.circle,
-                  color: notification.isRead ? Colors.black38 : Colors.blue,
-                  size: notification.isRead ? 24 : 12,
+                  isRead ? Icons.more_vert : Icons.circle,
+                  color: isRead ? Colors.black38 : Colors.blue,
+                  size: isRead ? 24 : 12,
                 ),
                 onPressed: () {
-                  if (!notification.isRead) {
-                    context.read<NotificationBloc>().add(MarkAsRead(notification.id));
+                  if (!isRead) {
+                    if (isRegularNotification) {
+                      context.read<NotificationBloc>().add(MarkAsRead(notification['id'] as int));
+                    } else {
+                      // Mark message notification as read
+                      setState(() {
+                        notification['isRead'] = true;
+                      });
+                    }
                   }
                 },
               ),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         onTap: () {
-          if (!notification.isRead) {
-            context.read<NotificationBloc>().add(MarkAsRead(notification.id));
+          if (!isRead) {
+            if (isRegularNotification) {
+              context.read<NotificationBloc>().add(MarkAsRead(notification['id'] as int));
+            } else {
+              // Mark message notification as read
+              setState(() {
+                notification['isRead'] = true;
+              });
+            }
+          }
+          
+          // Navigate to chat if it's a message notification
+          if (type == 'new_message' && !isRegularNotification) {
+            final roomId = notification['roomId'] as int?;
+            if (roomId != null) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ChatsPage(
+                    roomId: roomId,
+                    name: 'Chat Room',
+                    avatarUrl: 'https://ui-avatars.com/api/?name=C',
+                  ),
+                ),
+              );
+            }
           }
         },
       ),
     );
   }
 
-  Widget _buildInvitationActions(notification_entity.Notification notification) {
+  Widget _buildInvitationActions(Map<String, dynamic> notification) {
     return BlocBuilder<InvitationBloc, InvitationState>(
       builder: (context, invitationState) {
         if (invitationState is InvitationLoading) {
@@ -405,7 +557,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
             TextButton(
               onPressed: () {
                 // Use objectId which contains the invitation ID
-                final invitationId = notification.objectId;
+                final invitationId = notification['objectId'] as int?;
                 if (invitationId != null) {
                   _handleInvitationAction(invitationId, true);
                 }
@@ -426,7 +578,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
             TextButton(
               onPressed: () {
                 // Use objectId which contains the invitation ID
-                final invitationId = notification.objectId;
+                final invitationId = notification['objectId'] as int?;
                 if (invitationId != null) {
                   _handleInvitationAction(invitationId, false);
                 }

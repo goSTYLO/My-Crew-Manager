@@ -7,6 +7,8 @@ import { useTheme } from "./themeContext";
 import { API_BASE_URL } from "../config/api";
 import { useNotificationPolling } from "../hooks/useNotificationPolling";
 import { useToast } from "./ToastContext";
+import { useChatNotificationCount } from "../hooks/useChatNotificationCount";
+import { useWebSocket } from "../contexts/WebSocketContext";
 
 interface TopNavbarProps {
   onMenuClick: () => void;
@@ -28,19 +30,53 @@ interface Notification {
   is_read: boolean;
   created_at: string;
   action_url?: string;
+  actor?: number;
+  actor_name?: string;
 }
 
 const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
   const navigate = useNavigate();
   const [showNotifications, setShowNotifications] = useState(false);
   const [userData, setUserData] = useState<UserData | null>(null);
+
+  // Helper function to transform notification URLs based on user role
+  const transformNotificationUrl = (actionUrl: string, userRole: string | null, notificationType?: string) => {
+    if (!actionUrl) return actionUrl;
+    
+    // Special handling for project invitations - always go to invitation page
+    if (notificationType === 'project_invitation' || actionUrl.includes('invitation')) {
+      return '/project-invitation';
+    }
+    
+    // If user is a developer and URL is for manager page, transform it
+    if (userRole !== 'manager' && actionUrl.startsWith('/project-details/')) {
+      const projectId = actionUrl.split('/project-details/')[1];
+      return `/user-project/${projectId}`;
+    }
+    
+    // If user is a manager and URL is for developer page, transform it
+    if (userRole === 'manager' && actionUrl.startsWith('/user-project/')) {
+      const projectId = actionUrl.split('/user-project/')[1];
+      return `/project-details/${projectId}`;
+    }
+    
+    // Return original URL if no transformation needed
+    return actionUrl;
+  };
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const profileDropdownRef = useRef<HTMLDivElement>(null);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loadingNotifications, setLoadingNotifications] = useState(false);
+  const [showAllNotificationsModal, setShowAllNotificationsModal] = useState(false);
+  const [allNotifications, setAllNotifications] = useState<Notification[]>([]);
+  const [notifPage, setNotifPage] = useState(1);
+  const [loadingAllNotifications, setLoadingAllNotifications] = useState(false);
+  const notificationsPerPage = 20;
   const { showRealtimeUpdate } = useToast();
+  const { unreadCount, resetUnreadCount } = useChatNotificationCount();
+  const { subscribe } = useWebSocket();
 
   // Fetch notifications from API
   const fetchNotifications = async () => {
@@ -64,6 +100,33 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
       console.error('Error fetching notifications:', error);
     } finally {
       setLoadingNotifications(false);
+    }
+  };
+
+  // Fetch all notifications for modal
+  const fetchAllNotifications = async () => {
+    try {
+      setLoadingAllNotifications(true);
+      const token = sessionStorage.getItem('token') || sessionStorage.getItem('access');
+      if (!token) return;
+
+      const response = await fetch(`${API_BASE_URL}/ai/notifications/?page=${notifPage}&limit=${notificationsPerPage}`, {
+        headers: {
+          'Authorization': `Token ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setAllNotifications(data.results || data);
+      } else {
+        console.error('Failed to fetch all notifications');
+      }
+    } catch (error) {
+      console.error('Error fetching all notifications:', error);
+    } finally {
+      setLoadingAllNotifications(false);
     }
   };
 
@@ -117,9 +180,9 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
     }
   };
 
-  // Smart polling for notifications
+  // Smart polling for notifications - DISABLED for WebSocket testing
   useNotificationPolling({
-    enabled: true,
+    enabled: false, // Disabled to test WebSocket broadcasting
     onNewNotifications: (newNotifications) => {
       // Add new notifications to the list
       setNotifications(prev => [...newNotifications, ...prev]);
@@ -147,6 +210,38 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
     }
   });
 
+  // WebSocket subscription for real-time notifications
+  useEffect(() => {
+    const unsubscribe = subscribe((message) => {
+      // Handle notification messages - backend sends type: 'notification'
+      if (message.type === 'notification' || message.action === 'notification_created') {
+        console.log('🔔 Received WebSocket notification:', message);
+        // Refetch notifications to get the latest
+        fetchNotifications();
+        
+        // Show toast for the new notification
+        if (message.notification) {
+          const importantTypes = [
+            'task_assigned', 
+            'task_completed',
+            'project_invitation', 
+            'member_joined'
+          ];
+          
+          if (importantTypes.includes(message.notification.type)) {
+            showRealtimeUpdate(
+              message.notification.title,
+              message.notification.message,
+              message.notification.actor
+            );
+          }
+        }
+      }
+    });
+    
+    return () => unsubscribe();
+  }, [subscribe, fetchNotifications, showRealtimeUpdate]);
+
   // Listen for user updates dispatched from AccountSettings
   useEffect(() => {
     const handleUserUpdate = (event: CustomEvent) => {
@@ -169,6 +264,13 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
     fetchNotifications();
   }, []);
 
+  // Fetch all notifications when modal opens
+  useEffect(() => {
+    if (showAllNotificationsModal) {
+      fetchAllNotifications();
+    }
+  }, [showAllNotificationsModal, notifPage]);
+
   const handleLogout = async () => {
     setIsLoggingOut(true);
     setShowLogoutConfirm(false);
@@ -176,7 +278,7 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
     try {
       const token = sessionStorage.getItem("token");
 
-      await fetch(`${API_BASE_URL}/api/user/logout/`, {
+      await fetch(`${API_BASE_URL}/user/logout/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -220,14 +322,16 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
     const fetchUserData = async () => {
       const token = sessionStorage.getItem("token");
       console.log('🔍 TopNavbar - Token check:', token ? 'Found' : 'Not found');
+      console.log('📍 TopNavbar - Current pathname:', window.location.pathname);
       if (!token) {
         console.log('❌ TopNavbar - No token, redirecting to sign-in');
+        console.log('🔄 TopNavbar - About to navigate to /sign-in');
         navigate("/sign-in");
         return;
       }
   
       try {
-        const response = await fetch(`${API_BASE_URL}/api/user/me/`, {
+        const response = await fetch(`${API_BASE_URL}/user/me/`, {
           headers: {
             Authorization: `Token ${token}`,
             "Content-Type": "application/json",
@@ -251,11 +355,15 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
           setUserData(fixedData);
         } else {
           console.log('❌ TopNavbar - API call failed, status:', response.status);
+          console.log('🔄 TopNavbar - About to remove token and redirect to /sign-in');
           sessionStorage.removeItem("token");
           navigate("/sign-in");
         }
       } catch (error) {
-        console.error("Failed to fetch user data:", error);
+        console.error("❌ TopNavbar - Error fetching user data:", error);
+        console.log('🔄 TopNavbar - About to redirect to /sign-in due to error');
+        sessionStorage.removeItem("token");
+        navigate("/sign-in");
       }
     };
   
@@ -291,7 +399,7 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
 
   return (
     <header
-      className={`fixed top-0 left-0 w-full shadow-sm border-b px-4 lg:px-6 py-4 ${
+      className={`fixed top-0 left-0 w-full shadow-sm border-b px-4 lg:px-6 py-4 z-50 ${
         theme === "dark"
           ? "bg-gray-800 border-gray-700"
           : "bg-white border-gray-200"
@@ -332,31 +440,21 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
 
         {/* Right Side */}
         <div className="flex items-center space-x-4">
-          {/* Search */}
-          <div className="block relative">
-            <Search
-              className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 ${
-                theme === "dark" ? "text-gray-400" : "text-gray-400"
-              }`}
-            />
-            <input
-              type="text"
-              placeholder="Search for anything..."
-              className={`pl-10 pr-4 py-2 w-[500px] border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                theme === "dark"
-                  ? "bg-gray-900 border-gray-700 text-white"
-                  : "border-gray-300"
-              }`}
-            />
-          </div>
-
           {/* Chat */}
           <button
-            className="p-2 text-gray-500 hover:text-gray-700"
+            className="p-2 text-gray-500 hover:text-gray-700 relative"
             title="Team Chat"
-            onClick={() => navigate("/user-chat")}
+            onClick={() => {
+              resetUnreadCount();
+              navigate("/user-chat");
+            }}
           >
             <MessageSquare className="w-6 h-6" />
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 min-w-[20px] h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center px-1">
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </span>
+            )}
           </button>
 
           {/* Notifications */}
@@ -368,20 +466,24 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
               onClick={() => setShowNotifications((prev) => !prev)}
             >
               <Bell className="w-6 h-6" />
-              {notifications.some((note) => !note.is_read) && (
-                <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full"></span>
+              {notifications.filter((note) => !note.is_read).length > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-[1.25rem] h-5 bg-red-500 rounded-full flex items-center justify-center text-white text-xs font-bold px-1">
+                  {notifications.filter((note) => !note.is_read).length}
+                </span>
               )}
             </button>
 
             {showNotifications && (
-              <div
-                ref={dropdownRef}
-                className="absolute right-0 mt-3 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50"
-              >
+                  <div
+                  ref={dropdownRef}
+                  className={`absolute right-0 mt-3 w-80 rounded-lg shadow-lg border transition-colors duration-200 ${
+                    theme === "dark"
+                      ? "bg-gray-800 border-gray-700 text-gray-200"
+                      : "bg-white border-gray-200 text-gray-800"
+                  }`}
+                >
                 <div className="flex items-center justify-between p-4 border-b border-gray-200">
-                  <h3 className="text-sm font-semibold text-gray-700">
-                    Notifications
-                  </h3>
+                <h3 className={`text-sm font-semibold ${theme === "dark" ? "text-white" : "text-gray-700"}`}> Notifications </h3>
                   <button
                     className="text-xs text-blue-600 hover:underline"
                     onClick={markAllAsRead}
@@ -412,7 +514,8 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
                             markNotificationAsRead(note.id);
                           }
                           if (note.action_url) {
-                            navigate(note.action_url);
+                            const transformedUrl = transformNotificationUrl(note.action_url, userData?.role);
+                            navigate(transformedUrl);
                           }
                         }}
                       >
@@ -431,7 +534,13 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
                   )}
                 </ul>
                 <div className="p-3 border-t border-gray-200 text-center">
-                  <button className="text-blue-600 text-sm font-medium hover:underline">
+                  <button 
+                    className="text-blue-600 text-sm font-medium hover:underline"
+                    onClick={() => {
+                      setShowNotifications(false);  // Close dropdown first
+                      setShowAllNotificationsModal(true);
+                    }}
+                  >
                     View All
                   </button>
                 </div>
@@ -493,22 +602,40 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
 
             {/* Dropdown */}
             {showProfileDropdown && (
-              <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50 p-2">
+              <div
+              className={`absolute right-0 mt-2 w-48 rounded-lg shadow-lg border p-2${
+                theme === "dark"
+                  ? "bg-gray-900 border-gray-700 text-gray-200"
+                  : "bg-white border-gray-200 text-gray-800"
+              }`}
+            >
                 <button
-                  className="w-full flex items-center gap-2 text-left px-4 py-2 text-sm hover:bg-gray-100"
-                  onClick={() => navigate("/account-settings")}
-                >
-                  <User className="w-4 h-4 text-dark-500" />
-                  Profile
-                </button>
-                <hr />
-                <button
-                  className="w-full flex items-center gap-2 text-left px-4 py-2 text-sm hover:bg-gray-100 text-red-500"
-                  onClick={() => setShowLogoutConfirm(true)}
-                >
-                  <LogOut className="w-4 h-4 text-red-500" />
-                  Logout
-                </button>
+                    className={`w-full flex items-center gap-2 text-left px-4 py-2 text-sm rounded-md transition ${
+                      theme === "dark"
+                        ? "hover:bg-gray-800"
+                        : "hover:bg-gray-100"
+                    }`}
+                    onClick={() => navigate("/user-settings")}
+                  >
+                    <User
+                      className={`w-4 h-4 ${
+                        theme === "dark" ? "text-gray-300" : "text-gray-600"
+                      }`}
+                    />
+                    Profile
+                  </button>
+                  <hr className={theme === "dark" ? "border-gray-700" : "border-gray-200"} />
+                  <button
+                    className={`w-full flex items-center gap-2 text-left px-4 py-2 text-sm rounded-md transition ${
+                      theme === "dark"
+                        ? "text-red-400 hover:bg-gray-800"
+                        : "text-red-500 hover:bg-gray-100"
+                    }`}
+                    onClick={() => setShowLogoutConfirm(true)}
+                  >
+                    <LogOut className="w-4 h-4" />
+                    Logout
+                  </button>
 
                 {/* Logout Confirmation */}
                 {showLogoutConfirm && !isLoggingOut && (
@@ -592,6 +719,107 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
           </button>
         </div>
       </div>
+
+      {/* View All Notifications Modal */}
+      {showAllNotificationsModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[80vh] flex flex-col">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h2 className="text-xl font-semibold text-gray-800">All Notifications</h2>
+              <div className="flex items-center space-x-4">
+                <button
+                  onClick={markAllAsRead}
+                  className="px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors"
+                >
+                  Mark All as Read
+                </button>
+                <button
+                  onClick={() => setShowAllNotificationsModal(false)}
+                  className="text-gray-500 hover:text-gray-700 text-2xl"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-6">
+              {loadingAllNotifications ? (
+                <div className="text-center py-8 text-gray-500">
+                  Loading notifications...
+                </div>
+              ) : allNotifications.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  No notifications found
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {allNotifications.map((note) => (
+                    <div
+                      key={note.id}
+                      className={`p-4 rounded-lg border transition-colors cursor-pointer ${
+                        note.is_read
+                          ? "bg-gray-50 border-gray-200 text-gray-600"
+                          : "bg-blue-50 border-blue-200 text-gray-800 hover:bg-blue-100"
+                      }`}
+                      onClick={() => {
+                        console.log('🔔 Notification clicked:', note);
+                        console.log('📍 Action URL:', note.action_url);
+                        console.log('📋 Notification type:', note.notification_type);
+                        
+                        if (!note.is_read) {
+                          markNotificationAsRead(note.id);
+                        }
+                        if (note.action_url) {
+                          const transformedUrl = transformNotificationUrl(note.action_url, userData?.role, note.notification_type);
+                          console.log('🎯 Transformed URL:', transformedUrl);
+                          navigate(transformedUrl);
+                          setShowAllNotificationsModal(false);
+                        }
+                      }}
+                    >
+                      <div className="flex items-start space-x-3">
+                        {!note.is_read && (
+                          <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
+                        )}
+                        <div className="flex-1">
+                          <div className="font-medium text-gray-900">{note.title}</div>
+                          <div className="text-gray-600 mt-1">{note.message}</div>
+                          <div className="text-xs text-gray-400 mt-2">
+                            {new Date(note.created_at).toLocaleString()}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Pagination */}
+            {allNotifications.length > 0 && (
+              <div className="flex items-center justify-between p-4 border-t border-gray-200">
+                <button
+                  onClick={() => setNotifPage(prev => Math.max(1, prev - 1))}
+                  disabled={notifPage === 1}
+                  className="px-4 py-2 text-sm rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-gray-100 hover:bg-gray-200"
+                >
+                  Previous
+                </button>
+                <span className="text-sm text-gray-600">
+                  Page {notifPage}
+                </span>
+                <button
+                  onClick={() => setNotifPage(prev => prev + 1)}
+                  disabled={allNotifications.length < notificationsPerPage}
+                  className="px-4 py-2 text-sm rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-gray-100 hover:bg-gray-200"
+                >
+                  Next
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </header>
   );
 };

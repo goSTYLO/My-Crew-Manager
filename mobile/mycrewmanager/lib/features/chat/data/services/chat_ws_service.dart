@@ -15,14 +15,39 @@ class ChatWsService {
   Future<Stream<dynamic>> connectToRoom(int roomId) async {
     await disconnect();
     final token = await tokenStorage.getToken();
-    // Convert http://10.0.2.2:8000/api/ => ws://10.0.2.2:8000/ws/chat/{roomId}/?token=...
-    final httpBase = Constants.baseUrl; // ends with /api/
-    final origin = httpBase.replaceAll('/api/', '');
-    final wsBase = origin.replaceFirst('http', 'ws');
-    final uri = Uri.parse('${wsBase}ws/chat/$roomId/?token=$token');
+    
+    if (token == null) {
+      throw Exception('No authentication token available');
+    }
+    
+    // Parse the HTTP base URL properly
+    final httpUri = Uri.parse(Constants.baseUrl);
+    
+    // Construct WebSocket URI using Uri builder
+    final wsUri = Uri(
+      scheme: httpUri.scheme == 'https' ? 'wss' : 'ws',
+      host: httpUri.host,
+      port: httpUri.port,
+      path: '/ws/chat/$roomId/',
+      queryParameters: {'token': token},
+    );
+    
 
     _controller = StreamController.broadcast();
-    _socket = await WebSocket.connect(uri.toString());
+    
+    try {
+      _socket = await WebSocket.connect(
+        wsUri.toString(),
+        headers: {'Authorization': 'Token $token'},
+      ).timeout(
+        Duration(seconds: 10),
+        onTimeout: () {
+          throw Exception('WebSocket connection timeout - ensure Daphne is running on 0.0.0.0:8000');
+        },
+      );
+    } catch (e) {
+      rethrow;
+    }
     _socket!.listen((event) {
       try {
         final decoded = json.decode(event as String) as Map<String, dynamic>;
@@ -42,18 +67,44 @@ class ChatWsService {
   Future<Stream<dynamic>> connectToNotifications() async {
     await disconnect();
     final token = await tokenStorage.getToken();
-    final httpBase = Constants.baseUrl; // ends with /api/
-    final origin = httpBase.replaceAll('/api/', '');
-    final wsBase = origin.replaceFirst('http', 'ws');
-    final uri = Uri.parse('${wsBase}ws/chat/notifications/?token=$token');
-
+    
+    if (token == null) {
+      throw Exception('No authentication token available');
+    }
+    
+    // Parse the HTTP base URL properly
+    final httpUri = Uri.parse(Constants.baseUrl);
+    
+    // Construct WebSocket URI using Uri builder
+    final wsUri = Uri(
+      scheme: httpUri.scheme == 'https' ? 'wss' : 'ws',
+      host: httpUri.host,
+      port: httpUri.port,
+      path: '/ws/chat/notifications/',
+      queryParameters: {'token': token},
+    );
+    
     _controller = StreamController.broadcast();
-    _socket = await WebSocket.connect(uri.toString());
+    
+    try {
+      _socket = await WebSocket.connect(
+        wsUri.toString(),
+        headers: {'Authorization': 'Token $token'},
+      ).timeout(
+        Duration(seconds: 10),
+        onTimeout: () {
+          throw Exception('WebSocket connection timeout - ensure Daphne is running on 0.0.0.0:8000');
+        },
+      );
+    } catch (e) {
+      rethrow;
+    }
+    
     _socket!.listen((event) {
       try {
         final decoded = json.decode(event as String) as Map<String, dynamic>;
         _controller?.add(decoded);
-      } catch (_) {
+      } catch (e) {
         _controller?.add(event);
       }
     }, onDone: () {

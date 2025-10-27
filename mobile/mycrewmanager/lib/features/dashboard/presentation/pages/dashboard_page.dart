@@ -11,6 +11,7 @@ import 'package:mycrewmanager/features/dashboard/presentation/pages/tasks_page.d
 import 'package:mycrewmanager/features/dashboard/presentation/pages/notifications_page.dart';
 import 'package:mycrewmanager/features/dashboard/presentation/pages/projects_page.dart';
 import 'package:mycrewmanager/core/utils/role_formatter.dart';
+import 'package:mycrewmanager/core/constants/constants.dart';
 
 
 class DashboardPage extends StatefulWidget {
@@ -26,44 +27,55 @@ class DashboardPage extends StatefulWidget {
 class _DashboardPageState extends State<DashboardPage> {
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      drawer: _buildAppDrawer(context),
-      appBar: AppBar(
-        title: const Text('Dashboard'),
-        backgroundColor: Colors.white,
-        foregroundColor: const Color.fromARGB(255, 0, 0, 0),
-        actions: [
-        ],
-      ),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Colors.blue[50]!, Colors.white],
-          ),
+    return BlocListener<AuthBloc, AuthState>(
+      listener: (context, state) {
+        if (state is AuthLoggedOut) {
+          // Navigate to login page and clear all previous routes
+          Navigator.of(context).pushAndRemoveUntil(
+            LoginPage.route(),
+            (route) => false,
+          );
+        }
+      },
+      child: Scaffold(
+        drawer: _buildAppDrawer(context),
+        appBar: AppBar(
+          title: const Text('Dashboard'),
+          backgroundColor: Colors.white,
+          foregroundColor: const Color.fromARGB(255, 0, 0, 0),
+          actions: [
+          ],
         ),
-        child: SingleChildScrollView(
-          child: Column(
-            children: [
-              SizedBox(
-                width: 450, // Set your desired width
-                child: TaskWidget(),
-              ),
-              // --- Add TaskCarouselWidget below TaskWidget ---
-              SizedBox(
-                width: 450,
-                child: TaskCarouselWidget(),
-              ),
-              SizedBox(
-                width: 450,
-                child: IncomingTaskWidget(
-                  onViewAll: () {
-                    // Implement your "View All" logic here
-                  },
+        body: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [Colors.blue[50]!, Colors.white],
+            ),
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              children: [
+                SizedBox(
+                  width: 450, // Set your desired width
+                  child: TaskWidget(),
                 ),
-              )
-            ],
+                // --- Add TaskCarouselWidget below TaskWidget ---
+                SizedBox(
+                  width: 450,
+                  child: TaskCarouselWidget(),
+                ),
+                SizedBox(
+                  width: 450,
+                  child: IncomingTaskWidget(
+                    onViewAll: () {
+                      // Implement your "View All" logic here
+                    },
+                  ),
+                )
+              ],
+            ),
           ),
         ),
       ),
@@ -95,11 +107,18 @@ class _DashboardPageState extends State<DashboardPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Profile picture
-                      const CircleAvatar(
+                      CircleAvatar(
                         radius: 28,
-                        backgroundImage: AssetImage(
-                          'lib/core/assets/images/app_logo.png',
-                        ),
+                        backgroundImage: state is AuthSuccess && state.user.profilePicture != null
+                            ? NetworkImage(
+                                '${Constants.baseUrl.replaceAll('/api/', '')}${state.user.profilePicture!}',
+                              )
+                            : const AssetImage(
+                                'lib/core/assets/images/app_logo.png',
+                              ) as ImageProvider,
+                        onBackgroundImageError: (exception, stackTrace) {
+                          // Fallback to default image on error
+                        },
                       ),
                       const SizedBox(height: 10),
                       // Name
@@ -198,7 +217,8 @@ class _DashboardPageState extends State<DashboardPage> {
                             ),
                             onPressed: () {
                               Navigator.pop(context); // Close dialog
-                              Navigator.pushReplacement(context, LoginPage.route());
+                              // Dispatch logout event to AuthBloc
+                              context.read<AuthBloc>().add(AuthLogout());
                             },
                             child: const Text('Logout'),
                           ),
