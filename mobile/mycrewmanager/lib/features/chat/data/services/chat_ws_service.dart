@@ -15,14 +15,37 @@ class ChatWsService {
   Future<Stream<dynamic>> connectToRoom(int roomId) async {
     await disconnect();
     final token = await tokenStorage.getToken();
-    // Convert http://10.0.2.2:8000/api/ => ws://10.0.2.2:8000/ws/chat/{roomId}/?token=...
-    final httpBase = Constants.baseUrl; // ends with /api/
-    final origin = httpBase.replaceAll('/api/', '');
-    final wsBase = origin.replaceFirst('http', 'ws');
-    final uri = Uri.parse('${wsBase}ws/chat/$roomId/?token=$token');
+    print('🔑 Token: $token');
+    
+    if (token == null) {
+      throw Exception('No authentication token available');
+    }
+    
+    // Parse the HTTP base URL properly
+    final httpUri = Uri.parse(Constants.baseUrl);
+    print('🌐 HTTP URI: $httpUri');
+    
+    // Construct WebSocket URI using Uri builder
+    final wsUri = Uri(
+      scheme: httpUri.scheme == 'https' ? 'wss' : 'ws',
+      host: httpUri.host,
+      port: httpUri.port,
+      path: '/ws/chat/$roomId/',
+      queryParameters: {'token': token},
+    );
+    
+    print('🔗 WebSocket URL: $wsUri');
 
     _controller = StreamController.broadcast();
-    _socket = await WebSocket.connect(uri.toString());
+    
+    try {
+      _socket = await WebSocket.connect(wsUri.toString());
+      print('🎉 WebSocket connected successfully!');
+    } catch (e) {
+      print('❌ WebSocket connection failed: $e');
+      print('❌ Error type: ${e.runtimeType}');
+      rethrow;
+    }
     _socket!.listen((event) {
       try {
         final decoded = json.decode(event as String) as Map<String, dynamic>;

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
 import 'package:mycrewmanager/features/chat/data/models/message_model.dart';
@@ -37,6 +38,7 @@ class _ChatsPageState extends State<ChatsPage> {
   // Stream is listened immediately; no need to store
   bool _loading = true;
   bool _sending = false;
+  StreamSubscription<dynamic>? _wsSubscription;
 
   @override
   void initState() {
@@ -66,23 +68,97 @@ class _ChatsPageState extends State<ChatsPage> {
   }
 
   Future<void> _connectWs() async {
-    final stream = await _ws.connectToRoom(widget.roomId);
-    stream.listen((event) {
-      if (event is Map<String, dynamic>) {
-        final type = event['type'] as String?;
-        if (type == 'chat_message') {
-          final msg = MessageModel.fromJson(event['message'] as Map<String, dynamic>);
-          setState(() {
-            _messages.add(msg);
-          });
-        }
-      }
-    });
+    try {
+      print('📡 Connecting to WebSocket for room ${widget.roomId}...');
+      final stream = await _ws.connectToRoom(widget.roomId);
+      print('✅ WebSocket connected for room ${widget.roomId}');
+      
+      _wsSubscription = stream.listen(
+        (event) {
+          print('📨 WebSocket event received: ${event.toString()}');
+          
+          if (!mounted) {
+            print('⚠️ Widget not mounted, skipping event');
+            return;
+          }
+          
+          if (event is Map<String, dynamic>) {
+            final type = event['type'] as String?;
+            print('📩 Event type: $type');
+            
+            if (type == 'chat_message') {
+              print('💬 Processing chat_message event');
+              try {
+                final msg = MessageModel.fromJson(event['message'] as Map<String, dynamic>);
+                print('✅ Message parsed: ${msg.content} from ${msg.senderUsername}');
+                
+                setState(() {
+                  // Get current user ID for filtering
+                  String? currentUserId;
+                  final authState = context.read<AuthBloc>().state;
+                  if (authState is AuthSuccess) {
+                    currentUserId = authState.user.id;
+                  }
+                  
+                  // Find and remove any pending optimistic message from CURRENT USER only
+                  final now = DateTime.now();
+                  final removedCount = _messages.length;
+                  _messages.removeWhere((m) => 
+                    m.isPending && 
+                    m.content == msg.content &&
+                    m.senderId.toString() == currentUserId && // Only remove OUR optimistic messages
+                    now.difference(DateTime.parse(m.createdAt)).inSeconds < 10
+                  );
+                  
+                  if (removedCount != _messages.length) {
+                    print('🔄 Replaced optimistic message');
+                  }
+                  
+                  // Check if message already exists (by message_id)
+                  final messageExists = _messages.any((m) => m.messageId == msg.messageId && msg.messageId > 0);
+                  
+                  if (!messageExists) {
+                    _messages.add(msg);
+                    print('✅ Message added to list. Total messages: ${_messages.length}');
+                  } else {
+                    print('⚠️ Message already exists, skipping');
+                  }
+                });
+              } catch (e) {
+                print('❌ Error parsing message: $e');
+              }
+            }
+          } else {
+            print('⚠️ Event is not a Map: ${event.runtimeType}');
+          }
+        },
+        onError: (error) {
+          print('❌ WebSocket error: $error');
+        },
+        onDone: () {
+          print('🔌 WebSocket connection closed');
+        },
+      );
+    } catch (e) {
+      print('❌ Failed to connect WebSocket: $e');
+    }
+  }
+
+  @override
+  void didUpdateWidget(ChatsPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.roomId != widget.roomId) {
+      _wsSubscription?.cancel();
+      _loadMessages();
+      _connectWs();
+    }
   }
 
   @override
   void dispose() {
+    _wsSubscription?.cancel();
     _ws.disconnect();
+    _controller.dispose();
     super.dispose();
   }
 
@@ -254,12 +330,26 @@ class _ChatsPageState extends State<ChatsPage> {
                                     ),
                                   ),
                                 const SizedBox(height: 4),
-                                Text(
-                                  '${msg.senderUsername} • ${DateFormatter.formatChatDate(msg.createdAt)}',
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    color: Colors.black54,
-                                  ),
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      '${msg.senderUsername} • ${DateFormatter.formatChatDate(msg.createdAt)}',
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        color: Colors.black54,
+                                      ),
+                                    ),
+                                    if (msg.isPending)
+                                      Padding(
+                                        padding: const EdgeInsets.only(left: 4),
+                                        child: Icon(
+                                          Icons.schedule,
+                                          size: 12,
+                                          color: Colors.grey,
+                                        ),
+                                      ),
+                                  ],
                                 ),
                               ],
                             ),
@@ -326,16 +416,54 @@ class _ChatsPageState extends State<ChatsPage> {
     if (text.isEmpty || _sending) return;
     
     setState(() => _sending = true);
+    
+    // Generate temporary ID
+    final tempId = 'temp_${DateTime.now().millisecondsSinceEpoch}';
+    
+    // Get current user info
+    String? currentUserId;
+    String? currentUserName;
+    final authState = context.read<AuthBloc>().state;
+    if (authState is AuthSuccess) {
+      currentUserId = authState.user.id;
+      currentUserName = authState.user.name;
+    }
+    
+    // Add optimistic message immediately
+    final optimisticMessage = MessageModel.optimistic(
+      tempId: tempId,
+      roomId: widget.roomId,
+      senderId: int.parse(currentUserId ?? '0'),
+      senderUsername: currentUserName ?? 'You',
+      content: text,
+    );
+    
+    setState(() {
+      _messages.add(optimisticMessage);
+    });
+    
+    _controller.clear();
+    
     try {
-      await _repo.sendMessage(widget.roomId, text);
-      _controller.clear();
-      // Don't add message locally - let WebSocket handle it to avoid duplicates
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to send message: ${e.toString()}'))
-        );
-      }
+      // Send to server (no await for UI responsiveness)
+      _repo.sendMessage(widget.roomId, text).then((sentMessage) {
+        // Server returned the message, but we'll let WebSocket handle the replacement
+        // to ensure all clients get the same confirmed message
+      }).catchError((e) {
+        // If sending fails, mark the optimistic message as failed
+        if (mounted) {
+          setState(() {
+            final index = _messages.indexWhere((m) => m.tempId == tempId);
+            if (index != -1) {
+              // Could add a 'failed' state to the model, or remove it
+              _messages.removeAt(index);
+            }
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to send message: ${e.toString()}'))
+          );
+        }
+      });
     } finally {
       if (mounted) setState(() => _sending = false);
     }
