@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:mycrewmanager/features/project/presentation/pages/backlog_overview_page.dart';
+import 'package:mycrewmanager/features/project/presentation/pages/project_backlog_page.dart';
 import 'package:mycrewmanager/features/project/presentation/widgets/add_team_card.dart';
 import 'package:mycrewmanager/features/project/presentation/widgets/timeline_item.dart';
 
@@ -316,7 +316,7 @@ class _CreateProjectTabState extends State<CreateProjectTab> {
                   Expanded(
                     child: ElevatedButton(
                       onPressed: () {
-                        Navigator.push(context, BacklogOverviewPage.route(project: null));
+                        Navigator.push(context, ProjectBacklogPage.route(null));
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.black,

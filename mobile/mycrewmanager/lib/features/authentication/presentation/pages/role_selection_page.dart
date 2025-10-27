@@ -20,7 +20,7 @@ class _RoleSelectionPageState extends State<RoleSelectionPage> {
   Widget build(BuildContext context) {
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
-        if (state is AuthRoleUpdated) {
+        if (state is AuthSuccess) {
           // Navigate to dashboard
           Navigator.pushReplacement(
             context,

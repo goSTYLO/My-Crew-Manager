@@ -4,6 +4,7 @@ import 'package:mycrewmanager/features/project/domain/entities/project.dart';
 import 'package:mycrewmanager/features/project/domain/entities/member.dart';
 import 'package:mycrewmanager/features/project/domain/entities/task.dart';
 import 'package:mycrewmanager/features/project/domain/entities/activity.dart';
+import 'package:mycrewmanager/features/project/domain/entities/backlog.dart';
 
 abstract class ProjectRepository {
   Future<Either<Failure, List<Project>>> getProjects();
@@ -19,7 +20,7 @@ abstract class ProjectRepository {
     required String summary,
   });
   Future<Either<Failure, void>> deleteProject(int id);
-  Future<Either<Failure, Map<String, dynamic>>> getProjectBacklog(int id);
+  Future<Either<Failure, Backlog>> getProjectBacklog(int id);
   Future<Either<Failure, Map<String, dynamic>>> uploadProposal({
     required String filePath,
     required int projectId,
@@ -47,6 +48,6 @@ abstract class ProjectRepository {
   Future<Either<Failure, List<ProjectTask>>> getProjectTasks(int projectId);
   Future<Either<Failure, List<ProjectTask>>> getUserAssignedTasks();
   Future<Either<Failure, List<Activity>>> getRecentCompletedTasks();
-  Future<Either<Failure, ProjectTask>> updateTaskStatus(int taskId, String status);
+  Future<Either<Failure, ProjectTask>> updateTaskStatus(int taskId, String status, {String? commitTitle});
 }
 

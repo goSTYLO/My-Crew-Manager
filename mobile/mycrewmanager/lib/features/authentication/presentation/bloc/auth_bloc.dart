@@ -208,7 +208,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         token: currentState.user.token,
         role: event.role,
       );
-      emit(AuthRoleUpdated(updatedUser));
+      emit(AuthSuccess(updatedUser));
     }
   }
 
