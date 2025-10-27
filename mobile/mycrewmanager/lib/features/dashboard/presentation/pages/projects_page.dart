@@ -208,7 +208,6 @@ class _ProjectsPageState extends State<ProjectsPage> {
                               );
 
                               if (result != null) {
-                                print("Selected filters: $result");
                               }
                             },
                           ),

@@ -18,7 +18,6 @@ class ApiClient {
 
     dio.interceptors.addAll([
       TokenInterceptor(_tokenStorage),
-      LogInterceptor(requestBody: true, responseBody: true),
     ]);
   }
 }

@@ -42,29 +42,19 @@ class _TaskOverviewPageState extends State<TaskOverviewPage> {
   }
 
   bool _isCurrentUserAssignee(String? currentUserEmail, String? currentUserName, String? currentUserId) {
-    print("🔍 DEBUG: Checking assignee match");
-    print("🔍 Current User ID: '$currentUserId'");
-    print("🔍 Current User Email: '$currentUserEmail'");
-    print("🔍 Current User Name: '$currentUserName'");
-    print("🔍 Task Assignee ID: '${currentTask.assigneeId}'");
-    print("🔍 Task Assignee Name: '${currentTask.assigneeName}'");
     
     if (currentTask.assigneeId == null && currentTask.assigneeName == null) {
-      print("🔍 No assignee set for this task");
       return false; // No assignee, so no one can mark it complete
     }
     
     if (currentUserId == null && currentUserEmail == null && currentUserName == null) {
-      print("🔍 No current user info available");
       return false; // No current user info
     }
     
     // Primary check: Compare user ID with assignee ID
     if (currentUserId != null && currentTask.assigneeId != null) {
       final idMatch = currentUserId == currentTask.assigneeId.toString();
-      print("🔍 ID match: $idMatch");
       if (idMatch) {
-        print("🔍 Final result: true (ID match)");
         return true;
       }
     }
@@ -76,16 +66,11 @@ class _TaskOverviewPageState extends State<TaskOverviewPage> {
       final nameMatch = assigneeName == currentUserName;
       final firstNameMatch = currentUserName != null && assigneeName.contains(currentUserName.split(' ').first);
       
-      print("🔍 Email match: $emailMatch");
-      print("🔍 Name match: $nameMatch");
-      print("🔍 First name match: $firstNameMatch");
       
       final isMatch = emailMatch || nameMatch || firstNameMatch;
-      print("🔍 Final result: $isMatch");
       return isMatch;
     }
     
-    print("🔍 Final result: false (no matches found)");
     return false;
   }
 

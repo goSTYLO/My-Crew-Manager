@@ -1,6 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
-import 'package:mycrewmanager/core/constants/constants.dart';
 import 'package:mycrewmanager/features/project/domain/entities/project.dart';
 import 'package:mycrewmanager/features/project/domain/entities/backlog.dart';
 import 'package:mycrewmanager/features/project/domain/usecases/get_projects.dart';
@@ -49,7 +48,6 @@ class ProjectBloc extends Bloc<ProjectEvent, ProjectState> {
 
     await res.fold(
       (failure) async {
-        logger.d("Failed to get projects: ${failure.message}");
         emit(ProjectFailure(failure.message));
       },
       (projects) async {
@@ -63,7 +61,6 @@ class ProjectBloc extends Bloc<ProjectEvent, ProjectState> {
 
     await res.fold(
       (failure) async {
-        logger.d("Failed to get my projects: ${failure.message}");
         emit(ProjectFailure(failure.message));
       },
       (projects) async {
@@ -80,7 +77,6 @@ class ProjectBloc extends Bloc<ProjectEvent, ProjectState> {
 
     await res.fold(
       (failure) async {
-        logger.d("Failed to create project: ${failure.message}");
         emit(ProjectFailure(failure.message));
       },
       (project) async {
@@ -94,7 +90,6 @@ class ProjectBloc extends Bloc<ProjectEvent, ProjectState> {
 
     await res.fold(
       (failure) async {
-        logger.d("Failed to get backlog: ${failure.message}");
         emit(ProjectFailure(failure.message));
       },
       (backlog) async {
@@ -112,11 +107,9 @@ class ProjectBloc extends Bloc<ProjectEvent, ProjectState> {
 
     await res.fold(
       (failure) async {
-        logger.d("Failed to update project: ${failure.message}");
         emit(ProjectFailure(failure.message));
       },
       (project) async {
-        logger.d("Project updated successfully: ${project.title}");
         emit(ProjectUpdated(project: project));
       },
     );
@@ -127,11 +120,9 @@ class ProjectBloc extends Bloc<ProjectEvent, ProjectState> {
 
     await res.fold(
       (failure) async {
-        logger.d("Failed to delete project: ${failure.message}");
         emit(ProjectFailure(failure.message));
       },
       (_) async {
-        logger.d("Project deleted successfully: ${event.id}");
         emit(ProjectDeleted(projectId: event.id));
       },
     );

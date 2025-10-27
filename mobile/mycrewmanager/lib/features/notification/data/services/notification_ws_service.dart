@@ -25,7 +25,6 @@ class NotificationWsService {
 
   Future<void> _connect() async {
     try {
-      logger.d("🔌 Connecting to notification WebSocket...");
       
       final uri = Uri.parse('ws://localhost:8000/ws/notifications/');
       _channel = WebSocketChannel.connect(uri);
@@ -37,7 +36,6 @@ class NotificationWsService {
       );
       
       _isConnected = true;
-      logger.d("✅ Connected to notification WebSocket");
     } catch (e) {
       logger.d("❌ Failed to connect to notification WebSocket: $e");
       _isConnected = false;
@@ -47,14 +45,12 @@ class NotificationWsService {
 
   void _onMessage(dynamic message) {
     try {
-      logger.d("📨 Received notification WebSocket message: $message");
       
       final data = json.decode(message);
       
       if (data['type'] == 'notification' && data['notification'] != null) {
         final notification = NotificationModel.fromJson(data['notification']);
         _notificationController?.add(notification);
-        logger.d("✅ Notification added to stream: ${notification.title}");
       }
     } catch (e) {
       logger.d("❌ Error processing notification message: $e");
@@ -68,7 +64,6 @@ class NotificationWsService {
   }
 
   void _onDone() {
-    logger.d("🔌 Notification WebSocket connection closed");
     _isConnected = false;
     _scheduleReconnect();
   }
@@ -76,7 +71,6 @@ class NotificationWsService {
   void _scheduleReconnect() {
     if (_reconnectTimer?.isActive == true) return;
     
-    logger.d("🔄 Scheduling notification WebSocket reconnection in 5 seconds...");
     _reconnectTimer = Timer(const Duration(seconds: 5), () {
       if (_token != null) {
         _connect();
@@ -85,21 +79,17 @@ class NotificationWsService {
   }
 
   void disconnect() {
-    logger.d("🔌 Disconnecting from notification WebSocket...");
     _reconnectTimer?.cancel();
     _channel?.sink.close();
     _notificationController?.close();
     _isConnected = false;
     _token = null;
-    logger.d("✅ Disconnected from notification WebSocket");
   }
 
   void sendMessage(String message) {
     if (_isConnected && _channel != null) {
       _channel!.sink.add(message);
-      logger.d("📤 Sent notification WebSocket message: $message");
     } else {
-      logger.d("❌ Cannot send message: WebSocket not connected");
     }
   }
 }

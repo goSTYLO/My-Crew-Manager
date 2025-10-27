@@ -37,7 +37,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
   void _onAuthLogin(AuthLogin event, Emitter<AuthState> emit) async {
     emit(AuthLoading());
-    logger.d("🔐 Starting login process for: ${event.email}");
     
     final res = await _userLogin(
       UserLoginParams(email: event.email, password: event.password),
@@ -49,7 +48,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         emit(AuthFailure(failure.message));
       },
       (user) async {
-        logger.d("✅ LOGIN SUCCESS: ${user.name} - Token: ${user.token}");
+        logger.d("✅ LOGIN SUCCESS: ${user.name}");
         await _tokenStorage.saveToken(user.token);
         
         // Fetch complete user data including profile picture
@@ -71,16 +70,13 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
               profilePicture: userData['profile_picture'],
             );
             
-            logger.d("✅ Complete user data loaded: ${completeUser.name}");
             emit(AuthSuccess(completeUser));
           } else {
             // Fallback to basic user data if complete data fetch fails
-            logger.d("⚠️ Could not fetch complete user data, using basic data");
             emit(AuthSuccess(user));
           }
         } catch (e) {
           // Fallback to basic user data if complete data fetch fails
-          logger.d("⚠️ Error fetching complete user data: $e, using basic data");
           emit(AuthSuccess(user));
         }
       },
@@ -89,7 +85,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
   void _onAuthSignup(AuthSignUp event, Emitter<AuthState> emit) async {
     emit(AuthLoading());
-    logger.d("🔐 Starting signup process for: ${event.email}");
     
     final res = await _userSignup(
       UserSignupParams(name: event.name, email: event.email, password: event.password, role: event.role)
@@ -101,7 +96,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         emit(AuthFailure(failure.message));
       },
       (user) async {
-        logger.d("✅ SIGNUP SUCCESS: ${user.name} - Token: ${user.token}");
+        logger.d("✅ SIGNUP SUCCESS: ${user.name}");
         await _tokenStorage.saveToken(user.token);
         
         // Fetch complete user data including profile picture
@@ -123,16 +118,13 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
               profilePicture: userData['profile_picture'],
             );
             
-            logger.d("✅ Complete user data loaded: ${completeUser.name}");
             emit(AuthSuccess(completeUser));
           } else {
             // Fallback to basic user data if complete data fetch fails
-            logger.d("⚠️ Could not fetch complete user data, using basic data");
             emit(AuthSuccess(user));
           }
         } catch (e) {
           // Fallback to basic user data if complete data fetch fails
-          logger.d("⚠️ Error fetching complete user data: $e, using basic data");
           emit(AuthSuccess(user));
         }
       }
@@ -141,20 +133,16 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
   void _onAuthLogout(AuthLogout event, Emitter<AuthState> emit) async {
     emit(AuthLoading());
-    logger.d("🔐 Starting logout process");
     
     // Disconnect WebSocket services before logout
     try {
-      logger.d("🔌 Disconnecting WebSocket services...");
       final chatWsService = deps.serviceLocator<ChatWsService>();
       final notificationWsService = deps.serviceLocator<NotificationWsService>();
       
       await chatWsService.disconnect();
       notificationWsService.disconnect();
       
-      logger.d("✅ WebSocket services disconnected");
     } catch (e) {
-      logger.d("⚠️ Error disconnecting WebSocket services: $e");
       // Continue with logout even if WebSocket cleanup fails
     }
     
@@ -175,12 +163,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
   void _onAuthIsUserLoggedIn(AuthIsUserLoggedIn event, Emitter<AuthState> emit) async {
     emit(AuthLoading());
-    logger.d("🔍 Checking if user is already logged in");
     
     final token = await _tokenStorage.getToken();
     
     if (token == null) {
-      logger.d("❌ No token found, user not logged in");
       emit(AuthLoggedOut());
       return;
     }
@@ -204,15 +190,12 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           profilePicture: userData['profile_picture'],
         );
         
-        logger.d("✅ User already logged in: ${user.name}");
         emit(AuthSuccess(user));
       } else {
-        logger.d("❌ Token invalid, clearing token");
         await _tokenStorage.clearToken();
         emit(AuthLoggedOut());
       }
     } catch (e) {
-      logger.d("❌ Error checking user status: $e");
       await _tokenStorage.clearToken();
       emit(AuthLoggedOut());
     }
@@ -235,11 +218,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   }
 
   void _onRefreshUserData(RefreshUserData event, Emitter<AuthState> emit) async {
-    logger.d("🔄 Refreshing user data");
     
     final currentState = state;
     if (currentState is! AuthSuccess) {
-      logger.d("❌ No user logged in, cannot refresh data");
       return;
     }
 
@@ -252,7 +233,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       
       if (response.statusCode == 200) {
         final userData = response.data;
-        logger.d("📊 Received user data: $userData");
         
         final updatedUser = User(
           id: userData['user_id']?.toString() ?? currentState.user.id,
@@ -263,14 +243,11 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           profilePicture: userData['profile_picture'] ?? currentState.user.profilePicture,
         );
         
-        logger.d("✅ User data refreshed successfully: ${updatedUser.name}, profilePicture: ${updatedUser.profilePicture}");
         emit(AuthSuccess(updatedUser));
       } else {
-        logger.d("❌ Failed to refresh user data: ${response.statusCode}");
         // Don't emit anything on failure to preserve current state
       }
     } catch (e) {
-      logger.d("❌ Error refreshing user data: $e");
       // Don't emit anything on error to preserve current state
     }
   }

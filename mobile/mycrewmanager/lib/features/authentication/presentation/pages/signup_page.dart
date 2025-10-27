@@ -215,7 +215,6 @@ class _SignUpPageState extends State<SignUpPage> {
       body: BlocConsumer<AuthBloc, AuthState>(
         listener: (context, state) {
           if(state is AuthFailure) {
-            logger.d(state.message);
             
             // Check if the error is about email already existing
             if (state.message.toLowerCase().contains('email') && 

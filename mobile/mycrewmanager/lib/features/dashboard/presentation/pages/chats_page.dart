@@ -69,28 +69,21 @@ class _ChatsPageState extends State<ChatsPage> {
 
   Future<void> _connectWs() async {
     try {
-      print('📡 Connecting to WebSocket for room ${widget.roomId}...');
       final stream = await _ws.connectToRoom(widget.roomId);
-      print('✅ WebSocket connected for room ${widget.roomId}');
       
       _wsSubscription = stream.listen(
         (event) {
-          print('📨 WebSocket event received: ${event.toString()}');
           
           if (!mounted) {
-            print('⚠️ Widget not mounted, skipping event');
             return;
           }
           
           if (event is Map<String, dynamic>) {
             final type = event['type'] as String?;
-            print('📩 Event type: $type');
             
             if (type == 'chat_message') {
-              print('💬 Processing chat_message event');
               try {
                 final msg = MessageModel.fromJson(event['message'] as Map<String, dynamic>);
-                print('✅ Message parsed: ${msg.content} from ${msg.senderUsername}');
                 
                 setState(() {
                   // Get current user ID for filtering
@@ -111,7 +104,6 @@ class _ChatsPageState extends State<ChatsPage> {
                   );
                   
                   if (removedCount != _messages.length) {
-                    print('🔄 Replaced optimistic message');
                   }
                   
                   // Check if message already exists (by message_id)
@@ -119,28 +111,21 @@ class _ChatsPageState extends State<ChatsPage> {
                   
                   if (!messageExists) {
                     _messages.add(msg);
-                    print('✅ Message added to list. Total messages: ${_messages.length}');
                   } else {
-                    print('⚠️ Message already exists, skipping');
                   }
                 });
               } catch (e) {
-                print('❌ Error parsing message: $e');
               }
             }
           } else {
-            print('⚠️ Event is not a Map: ${event.runtimeType}');
           }
         },
         onError: (error) {
-          print('❌ WebSocket error: $error');
         },
         onDone: () {
-          print('🔌 WebSocket connection closed');
         },
       );
     } catch (e) {
-      print('❌ Failed to connect WebSocket: $e');
     }
   }
 

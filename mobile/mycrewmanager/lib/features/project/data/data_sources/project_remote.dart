@@ -135,7 +135,6 @@ class ProjectRemoteDataSource {
 
   Future<TaskModel> updateTaskStatus(int taskId, String status, {String? commitTitle}) async {
     try {
-      print('🔄 Updating task $taskId status to: $status');
       
       // Prepare request data
       Map<String, dynamic> requestData = {'status': status};
@@ -143,19 +142,12 @@ class ProjectRemoteDataSource {
       // Add commit_title if status is 'done' (required by backend)
       if (status == 'done') {
         requestData['commit_title'] = commitTitle ?? 'Task completed';
-        print('📝 Adding commit title: ${requestData['commit_title']}');
       }
       
       final response = await dio.patch('ai/story-tasks/$taskId/', data: requestData);
-      print('✅ Task status updated successfully');
       return TaskModel.fromJson(response.data);
     } catch (e) {
-      print('❌ Error updating task status: $e');
       if (e is DioException) {
-        print('📊 Response data: ${e.response?.data}');
-        print('📊 Status code: ${e.response?.statusCode}');
-        print('📊 Request data: ${e.requestOptions.data}');
-        print('📊 Request URL: ${e.requestOptions.uri}');
       }
       rethrow;
     }

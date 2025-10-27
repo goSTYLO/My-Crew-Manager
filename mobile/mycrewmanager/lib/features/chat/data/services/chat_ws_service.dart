@@ -15,7 +15,6 @@ class ChatWsService {
   Future<Stream<dynamic>> connectToRoom(int roomId) async {
     await disconnect();
     final token = await tokenStorage.getToken();
-    print('🔑 Token: $token');
     
     if (token == null) {
       throw Exception('No authentication token available');
@@ -23,7 +22,6 @@ class ChatWsService {
     
     // Parse the HTTP base URL properly
     final httpUri = Uri.parse(Constants.baseUrl);
-    print('🌐 HTTP URI: $httpUri');
     
     // Construct WebSocket URI using Uri builder
     final wsUri = Uri(
@@ -34,16 +32,13 @@ class ChatWsService {
       queryParameters: {'token': token},
     );
     
-    print('🔗 WebSocket URL: $wsUri');
 
     _controller = StreamController.broadcast();
     
     try {
       _socket = await WebSocket.connect(wsUri.toString());
-      print('🎉 WebSocket connected successfully!');
     } catch (e) {
       print('❌ WebSocket connection failed: $e');
-      print('❌ Error type: ${e.runtimeType}');
       rethrow;
     }
     _socket!.listen((event) {
