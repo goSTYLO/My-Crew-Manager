@@ -38,8 +38,13 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
   const [userData, setUserData] = useState<UserData | null>(null);
 
   // Helper function to transform notification URLs based on user role
-  const transformNotificationUrl = (actionUrl: string, userRole: string | null) => {
+  const transformNotificationUrl = (actionUrl: string, userRole: string | null, notificationType?: string) => {
     if (!actionUrl) return actionUrl;
+    
+    // Special handling for project invitations - always go to invitation page
+    if (notificationType === 'project_invitation' || actionUrl.includes('invitation')) {
+      return '/project-invitation';
+    }
     
     // If user is a developer and URL is for manager page, transform it
     if (userRole !== 'manager' && actionUrl.startsWith('/project-details/')) {
@@ -708,11 +713,16 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
                           : "bg-blue-50 border-blue-200 text-gray-800 hover:bg-blue-100"
                       }`}
                       onClick={() => {
+                        console.log('🔔 Notification clicked:', note);
+                        console.log('📍 Action URL:', note.action_url);
+                        console.log('📋 Notification type:', note.notification_type);
+                        
                         if (!note.is_read) {
                           markNotificationAsRead(note.id);
                         }
                         if (note.action_url) {
-                          const transformedUrl = transformNotificationUrl(note.action_url, userData?.role);
+                          const transformedUrl = transformNotificationUrl(note.action_url, userData?.role, note.notification_type);
+                          console.log('🎯 Transformed URL:', transformedUrl);
                           navigate(transformedUrl);
                           setShowAllNotificationsModal(false);
                         }

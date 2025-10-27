@@ -628,23 +628,30 @@ const MonitorProjectsUser = () => {
               </div>
 
               {/* Project Invitation Button */}
-              <button
-                onClick={() => navigate('/project-invitation')}
-                className={`relative flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
-                  theme === 'dark'
-                    ? 'bg-blue-600 hover:bg-blue-700 text-white'
-                    : 'bg-blue-500 hover:bg-blue-600 text-white'
-                }`}
-              >
-                <Mail className="w-5 h-5" />
-                <span>Project Invitations</span>
-                {/* Red Badge for Pending Invitations */}
+              <div className="relative">
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    navigate('/project-invitation');
+                  }}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+                    theme === 'dark'
+                      ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                      : 'bg-blue-500 hover:bg-blue-600 text-white'
+                  }`}
+                  style={{ zIndex: 1000 }}
+                >
+                  <Mail className="w-5 h-5" />
+                  <span>Project Invitations</span>
+                </button>
+                {/* Red Badge for Pending Invitations - moved outside button */}
                 {pendingInvitationsCount > 0 && (
-                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center min-w-[20px] animate-pulse">
+                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center min-w-[20px] animate-pulse pointer-events-none">
                     {pendingInvitationsCount > 99 ? '99+' : pendingInvitationsCount}
                   </span>
                 )}
-              </button>
+              </div>
             </div>
           </div>
 
