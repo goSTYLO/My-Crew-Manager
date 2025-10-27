@@ -4,10 +4,10 @@ import { User, Bell, Shield, Palette} from "lucide-react";
 import { useTheme } from "./themeContext"; // Add this import
 
 export const tabs = [
-	{ id: "account1", label: "Account", icon: User, path: "/manager-settings" },
-	{ id: "notifications", label: "Notifications", icon: Bell, path: "/notifications" },
-	{ id: "security", label: "Security", icon: Shield, path: "/security" },
-	{ id: "appearance", label: "Appearance", icon: Palette, path: "/appearance" },
+	{ id: "account", label: "Account", icon: User, path: "/user-settings" },
+	{ id: "notifications", label: "Notifications", icon: Bell, path: "/user-notifications" },
+	{ id: "security", label: "Security", icon: Shield, path: "/user-security" },
+	{ id: "appearance", label: "Appearance", icon: Palette, path: "/user-appearance" },
 ];
 
 const SettingsNavigation: React.FC = () => {
@@ -18,7 +18,7 @@ const SettingsNavigation: React.FC = () => {
 	// Check if current path matches any tab
 	const activeTab = tabs.find((tab) => tab.path === location.pathname);
 	// If no tab matches, default to "general"
-	const activeTabId = activeTab ? activeTab.id : "account1";
+	const activeTabId = activeTab ? activeTab.id : "account";
 
 	return (
 		<div className={`rounded-lg shadow-sm border ${theme === "dark" ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"}`}>

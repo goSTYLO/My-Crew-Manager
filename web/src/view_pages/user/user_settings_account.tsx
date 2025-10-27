@@ -1,8 +1,8 @@
 //settings_accouts.tsx
 import { useState, useEffect, useRef } from "react";
-import Sidebar from "../../components/sidebarLayout";
-import SettingsNavigation from "../../components/sidebarNavLayout";
-import TopNavbar from "../../components/topbarLayouot";
+import Sidebar from "../../components/sidebarUser";
+import TopNavbar from "../../components/topbarLayout_user";
+import SettingsNavigation from "../../components/sidebarNavLayout_user";
 import { useTheme } from "../../components/themeContext";
 import { useNavigate } from "react-router-dom";
 import { API_BASE_URL } from "../../config/api";
@@ -337,7 +337,6 @@ const AccountSettings = () => {
                                     onChange={(e) => setEmail(e.target.value)}
                                     required
                                 />
-                                
                                 <div className="grid grid-cols-2 gap-4 w-[203%] mx-auto">
                                     <label htmlFor="nationality-select" className="sr-only">
                                         Nationality

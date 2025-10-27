@@ -63,7 +63,7 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
     { name: "Project", icon: FolderOpen, path: "/projects-user" },
     { name: "Team Chat", icon: MessageSquare, path: "/user-chat" },
     { name: "Leaderboard", icon: TrendingUp, path: "/user-leaderboards" },
-    { name: "Settings", icon: Settings, path: "/settings" },
+    { name: "Settings", icon: Settings, path: "/user-settings" },
     { name: "Logout", icon: LogOut, action: () => setShowLogoutConfirm(true) },
   ];
 
@@ -86,7 +86,7 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
       {/* Sidebar overlay */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-30 z-50"
+          className="fixed inset-0 bg-black bg-opacity-30"
           onClick={() => setSidebarOpen(false)}
         />
       )}

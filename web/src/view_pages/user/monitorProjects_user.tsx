@@ -639,9 +639,7 @@ const MonitorProjectsUser = () => {
                     theme === 'dark'
                       ? 'bg-blue-600 hover:bg-blue-700 text-white'
                       : 'bg-blue-500 hover:bg-blue-600 text-white'
-                  }`}
-                  style={{ zIndex: 1000 }}
-                >
+                  }`} >
                   <Mail className="w-5 h-5" />
                   <span>Project Invitations</span>
                 </button>

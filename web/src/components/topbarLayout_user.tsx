@@ -363,7 +363,7 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
 
   return (
     <header
-      className={`fixed top-0 left-0 w-full shadow-sm border-b px-4 lg:px-6 py-4 z-[10000] ${
+      className={`fixed top-0 left-0 w-full shadow-sm border-b px-4 lg:px-6 py-4 ${
         theme === "dark"
           ? "bg-gray-800 border-gray-700"
           : "bg-white border-gray-200"
@@ -404,24 +404,6 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
 
         {/* Right Side */}
         <div className="flex items-center space-x-4">
-          {/* Search */}
-          <div className="block relative">
-            <Search
-              className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 ${
-                theme === "dark" ? "text-gray-400" : "text-gray-400"
-              }`}
-            />
-            <input
-              type="text"
-              placeholder="Search for anything..."
-              className={`pl-10 pr-4 py-2 w-[500px] border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                theme === "dark"
-                  ? "bg-gray-900 border-gray-700 text-white"
-                  : "border-gray-300"
-              }`}
-            />
-          </div>
-
           {/* Chat */}
           <button
             className="p-2 text-gray-500 hover:text-gray-700"
@@ -446,14 +428,16 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
             </button>
 
             {showNotifications && (
-              <div
-                ref={dropdownRef}
-                className="absolute right-0 mt-3 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-[9999]"
-              >
+                  <div
+                  ref={dropdownRef}
+                  className={`absolute right-0 mt-3 w-80 rounded-lg shadow-lg border transition-colors duration-200 ${
+                    theme === "dark"
+                      ? "bg-gray-800 border-gray-700 text-gray-200"
+                      : "bg-white border-gray-200 text-gray-800"
+                  }`}
+                >
                 <div className="flex items-center justify-between p-4 border-b border-gray-200">
-                  <h3 className="text-sm font-semibold text-gray-700">
-                    Notifications
-                  </h3>
+                <h3 className={`text-sm font-semibold ${theme === "dark" ? "text-white" : "text-gray-700"}`}> Notifications </h3>
                   <button
                     className="text-xs text-blue-600 hover:underline"
                     onClick={markAllAsRead}
@@ -569,22 +553,40 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
 
             {/* Dropdown */}
             {showProfileDropdown && (
-              <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-[9999] p-2">
+              <div
+              className={`absolute right-0 mt-2 w-48 rounded-lg shadow-lg border p-2${
+                theme === "dark"
+                  ? "bg-gray-900 border-gray-700 text-gray-200"
+                  : "bg-white border-gray-200 text-gray-800"
+              }`}
+            >
                 <button
-                  className="w-full flex items-center gap-2 text-left px-4 py-2 text-sm hover:bg-gray-100"
-                  onClick={() => navigate("/account-settings")}
-                >
-                  <User className="w-4 h-4 text-dark-500" />
-                  Profile
-                </button>
-                <hr />
-                <button
-                  className="w-full flex items-center gap-2 text-left px-4 py-2 text-sm hover:bg-gray-100 text-red-500"
-                  onClick={() => setShowLogoutConfirm(true)}
-                >
-                  <LogOut className="w-4 h-4 text-red-500" />
-                  Logout
-                </button>
+                    className={`w-full flex items-center gap-2 text-left px-4 py-2 text-sm rounded-md transition ${
+                      theme === "dark"
+                        ? "hover:bg-gray-800"
+                        : "hover:bg-gray-100"
+                    }`}
+                    onClick={() => navigate("/user-settings")}
+                  >
+                    <User
+                      className={`w-4 h-4 ${
+                        theme === "dark" ? "text-gray-300" : "text-gray-600"
+                      }`}
+                    />
+                    Profile
+                  </button>
+                  <hr className={theme === "dark" ? "border-gray-700" : "border-gray-200"} />
+                  <button
+                    className={`w-full flex items-center gap-2 text-left px-4 py-2 text-sm rounded-md transition ${
+                      theme === "dark"
+                        ? "text-red-400 hover:bg-gray-800"
+                        : "text-red-500 hover:bg-gray-100"
+                    }`}
+                    onClick={() => setShowLogoutConfirm(true)}
+                  >
+                    <LogOut className="w-4 h-4" />
+                    Logout
+                  </button>
 
                 {/* Logout Confirmation */}
                 {showLogoutConfirm && !isLoggingOut && (
