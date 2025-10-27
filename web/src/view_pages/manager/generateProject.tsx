@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Upload, Users, Target, FileText, Plus, X, Sparkles, Check, ArrowRight, Calendar, Mail, RefreshCw, Send, ArrowLeft, Edit, Trash2 } from 'lucide-react';
 import TopNavbar from "../../components/topbarLayouot";
 import Sidebar from "../../components/sidebarLayout";
@@ -106,7 +106,6 @@ const App: React.FC = () => {
   const [proposalSkipped, setProposalSkipped] = useState(false);
   
   // Editing mode states
-  const [isEditingBacklog, setIsEditingBacklog] = useState(false);
   
   
   // Confirmation modal state
@@ -126,6 +125,7 @@ const App: React.FC = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [expandedEpics, setExpandedEpics] = useState<Set<string>>(new Set());
   const [expandedSubEpics, setExpandedSubEpics] = useState<Set<string>>(new Set());
+  const [backlogChangesSaved, setBacklogChangesSaved] = useState(true);
 
   // New states for invitations
   const [invitations, setInvitations] = useState<Invitation[]>([]);
@@ -156,9 +156,12 @@ const App: React.FC = () => {
   const [deleteItem, setDeleteItem] = useState<{ type: string; id: string; name: string } | null>(null);
 
   // Add modal states for backlog items
+  const [showAddEpicModal, setShowAddEpicModal] = useState(false);
   const [showAddSubEpicModal, setShowAddSubEpicModal] = useState(false);
   const [showAddUserStoryModal, setShowAddUserStoryModal] = useState(false);
   const [showAddTaskModal, setShowAddTaskModal] = useState(false);
+  const [newEpicTitle, setNewEpicTitle] = useState('');
+  const [newEpicDescription, setNewEpicDescription] = useState('');
   const [newSubEpicTitle, setNewSubEpicTitle] = useState('');
   const [newUserStoryTitle, setNewUserStoryTitle] = useState('');
   const [newTaskTitle, setNewTaskTitle] = useState('');
@@ -784,6 +787,12 @@ const App: React.FC = () => {
     setEpics(mockEpics);
     setSubEpics(mockSubEpics);
     setUserStories(mockUserStories);
+    
+    // Auto-expand all cards for mock data
+    const allEpicIds = new Set(mockEpics.map(epic => epic.id));
+    setExpandedEpics(allEpicIds);
+    const allSubEpicIds = new Set(mockSubEpics.map(subEpic => subEpic.id));
+    setExpandedSubEpics(allSubEpicIds);
   };
 
   // STEP 4: Generate Backlog and Save
@@ -860,13 +869,13 @@ const App: React.FC = () => {
   const fetchBacklog = async () => {
     if (!createdProjectId) {
       console.error('No project ID available');
-      return;
+      return null;
     }
 
     const token = getAuthToken();
     if (!token) {
       showError('Authentication Required', 'Please log in again.');
-      return;
+      return null;
     }
 
     try {
@@ -928,9 +937,11 @@ const App: React.FC = () => {
       );
       setExpandedSubEpics(allSubEpicIds);
 
+      return data; // Return the data for auto-expansion
     } catch (error) {
       console.error('Error fetching backlog:', error);
       showError('Fetch Failed', `Failed to fetch backlog: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      return null;
     }
   };
 
@@ -1269,8 +1280,15 @@ const App: React.FC = () => {
       // Refresh the backlog data to ensure we have the latest from the server
       await fetchBacklog();
       
-      // Exit editing mode
-      setIsEditingBacklog(false);
+      // Mark changes as saved
+      setBacklogChangesSaved(true);
+      
+      // Keep cards expanded after saving
+      const allEpicIds = new Set(epics.map(epic => epic.id));
+      setExpandedEpics(allEpicIds);
+      const allSubEpicIds = new Set(subEpics.map(subEpic => subEpic.id));
+      setExpandedSubEpics(allSubEpicIds);
+      
       
       showSuccess('Changes Saved', 'All backlog changes have been saved successfully!');
     } catch (error) {
@@ -1508,8 +1526,13 @@ const App: React.FC = () => {
 
     // Check if this is a newly created member (not saved to backend yet)
     const member = members.find(m => m.id === memberId);
-    if (!member || member.ai === false) {
-      // This is a newly created member, just update local state
+    if (!member) {
+      console.error('Member not found:', memberId);
+      return;
+    }
+    
+    // If this is a temporary UUID (not yet saved to DB), just update local state
+    if (member.id.length === 36) { // UUID length is 36 characters
       setMembers(members.map(m => 
         m.id === memberId ? { ...m, ...updatedData } : m
       ));
@@ -1547,8 +1570,13 @@ const App: React.FC = () => {
 
     // Check if this is a newly created feature (not saved to backend yet)
     const feature = features.find(f => f.id === featureId);
-    if (!feature || feature.ai === false) {
-      // This is a newly created feature, just update local state
+    if (!feature) {
+      console.error('Feature not found:', featureId);
+      return;
+    }
+    
+    // If this is a temporary UUID (not yet saved to DB), just update local state
+    if (feature.id.length === 36) { // UUID length is 36 characters
       setFeatures(features.map(f => 
         f.id === featureId ? { ...f, title: newTitle } : f
       ));
@@ -1586,8 +1614,13 @@ const App: React.FC = () => {
 
     // Check if this is a newly created goal (not saved to backend yet)
     const goal = goals.find(g => g.id === goalId);
-    if (!goal || goal.ai === false) {
-      // This is a newly created goal, just update local state
+    if (!goal) {
+      console.error('Goal not found:', goalId);
+      return;
+    }
+    
+    // If this is a temporary UUID (not yet saved to DB), just update local state
+    if (goal.id.length === 36) { // UUID length is 36 characters
       setGoals(goals.map(g => 
         g.id === goalId ? { ...g, ...updatedData } : g
       ));
@@ -1685,8 +1718,13 @@ const App: React.FC = () => {
 
     // Check if this is a newly created member (not saved to backend yet)
     const member = members.find(m => m.id === memberId);
-    if (!member || member.ai === false) {
-      // This is a newly created member, just update local state
+    if (!member) {
+      console.error('Member not found:', memberId);
+      return;
+    }
+    
+    // If this is a temporary UUID (not yet saved to DB), just update local state
+    if (member.id.length === 36) { // UUID length is 36 characters
       setMembers(members.filter(m => m.id !== memberId));
       showSuccess('Member Deleted', 'Member deleted successfully!');
       return;
@@ -1715,8 +1753,13 @@ const App: React.FC = () => {
 
     // Check if this is a newly created feature (not saved to backend yet)
     const feature = features.find(f => f.id === featureId);
-    if (!feature || feature.ai === false) {
-      // This is a newly created feature, just update local state
+    if (!feature) {
+      console.error('Feature not found:', featureId);
+      return;
+    }
+    
+    // If this is a temporary UUID (not yet saved to DB), just update local state
+    if (feature.id.length === 36) { // UUID length is 36 characters
       setFeatures(features.filter(f => f.id !== featureId));
       showSuccess('Feature Deleted', 'Feature deleted successfully!');
       return;
@@ -1745,8 +1788,13 @@ const App: React.FC = () => {
 
     // Check if this is a newly created goal (not saved to backend yet)
     const goal = goals.find(g => g.id === goalId);
-    if (!goal || goal.ai === false) {
-      // This is a newly created goal, just update local state
+    if (!goal) {
+      console.error('Goal not found:', goalId);
+      return;
+    }
+    
+    // If this is a temporary UUID (not yet saved to DB), just update local state
+    if (goal.id.length === 36) { // UUID length is 36 characters
       setGoals(goals.filter(g => g.id !== goalId));
       showSuccess('Goal Deleted', 'Goal deleted successfully!');
       return;
@@ -1779,6 +1827,36 @@ const App: React.FC = () => {
     }
     setExpandedEpics(newExpanded);
   };
+
+  // Auto-expand all epics when backlog is loaded
+  const autoExpandAllEpics = () => {
+    const allEpicIds = new Set(epics.map(epic => epic.id));
+    setExpandedEpics(allEpicIds);
+    
+    // Also auto-expand all sub-epics
+    const allSubEpicIds = new Set(subEpics.map(subEpic => subEpic.id));
+    setExpandedSubEpics(allSubEpicIds);
+  };
+
+  // Ensure cards stay expanded during editing
+  const ensureCardsExpanded = () => {
+    const allEpicIds = new Set(epics.map(epic => epic.id));
+    setExpandedEpics(prev => new Set([...prev, ...allEpicIds]));
+    
+    const allSubEpicIds = new Set(subEpics.map(subEpic => subEpic.id));
+    setExpandedSubEpics(prev => new Set([...prev, ...allSubEpicIds]));
+  };
+
+  // Auto-expand cards when entering edit mode
+  useEffect(() => {
+    if (epics.length > 0) {
+      const allEpicIds = new Set(epics.map(epic => epic.id));
+      setExpandedEpics(allEpicIds);
+      
+      const allSubEpicIds = new Set(subEpics.map(subEpic => subEpic.id));
+      setExpandedSubEpics(allSubEpicIds);
+    }
+  }, [epics.length, subEpics.length]);
 
   // Toggle Sub Epic Expansion
   const toggleSubEpic = (subEpicId: string) => {
@@ -1834,8 +1912,15 @@ const App: React.FC = () => {
   };
 
   // Add functions for backlog items
+  const openAddEpicModal = () => {
+    setNewEpicTitle('');
+    setNewEpicDescription('');
+    setShowAddEpicModal(true);
+  };
+
   const openAddSubEpicModal = (epicId: string) => {
     setSelectedEpicId(epicId);
+    setNewSubEpicTitle('');
     setShowAddSubEpicModal(true);
   };
 
@@ -1847,6 +1932,21 @@ const App: React.FC = () => {
   const openAddTaskModal = (userStoryId: string) => {
     setSelectedUserStoryId(userStoryId);
     setShowAddTaskModal(true);
+  };
+
+  const addEpic = async () => {
+    if (!newEpicTitle.trim()) return;
+
+    try {
+      await createEpic({ title: newEpicTitle.trim(), description: newEpicDescription.trim() });
+      setNewEpicTitle('');
+      setNewEpicDescription('');
+      setShowAddEpicModal(false);
+      showSuccess('Epic Added', 'Epic added successfully!');
+    } catch (error) {
+      console.error('Error adding epic:', error);
+      showError('Add Failed', 'Failed to add epic');
+    }
   };
 
   const addSubEpic = async () => {
@@ -2153,9 +2253,15 @@ const App: React.FC = () => {
           {currentStep === 'analyze' && (
             <div className="space-y-6">
               {uploadedProposalId && (
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
-                  <p className="text-green-800 text-sm flex items-center gap-2">
-                    <Check size={16} className="text-green-600" />
+                <div className={`border rounded-lg p-4 mb-4 ${
+                  theme === "dark" 
+                    ? 'bg-gradient-to-r from-green-900/30 to-emerald-900/30 border-green-700' 
+                    : 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-200'
+                }`}>
+                  <p className={`text-sm flex items-center gap-2 ${
+                    theme === "dark" ? 'text-green-300' : 'text-green-800'
+                  }`}>
+                    <Check size={16} className={theme === "dark" ? "text-green-400" : "text-green-600"} />
                     Proposal uploaded successfully! Ready for AI analysis.
                   </p>
                 </div>
@@ -2235,7 +2341,9 @@ const App: React.FC = () => {
                     onChange={(e) => setAiGeneratedSummary(e.target.value)}
                     rows={4}
                     className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                      theme === "dark" ? "bg-purple-900 border-purple-700 text-white" : "bg-purple-50 border-gray-300"
+                      theme === "dark" 
+                        ? "bg-gradient-to-r from-purple-900/50 to-indigo-900/50 border-purple-700 text-white" 
+                        : "bg-gradient-to-r from-purple-50 to-indigo-50 border-gray-300"
                     }`}
                     disabled={loadingState !== null}
                   />
@@ -2255,32 +2363,41 @@ const App: React.FC = () => {
                   <div className="space-y-2 mb-3 max-h-60 sm:max-h-72 lg:max-h-80 xl:max-h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-800">
                     {members.map(member => (
                       <div key={member.id} className={`flex items-center justify-between p-3 rounded-lg ${
-                        member.ai ? 'bg-purple-50 border border-purple-200' : theme === "dark" ? 'bg-gray-900' : 'bg-gray-50'
+                        member.ai 
+                          ? (theme === "dark" 
+                              ? 'bg-gradient-to-r from-blue-900/40 to-indigo-900/40 border border-blue-700' 
+                              : 'bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200'
+                            ) 
+                          : theme === "dark" ? 'bg-gray-900 border border-gray-800' : 'bg-gray-50 border border-gray-200'
                       }`}>
                         <div>
-                          <span className={`font-medium ${theme === "dark" && !member.ai ? "text-white" : "text-gray-800"}`}>{member.role}</span>
+                          <span className={`font-medium ${
+                            theme === "dark" ? "text-white" : "text-gray-800"
+                          }`}>{member.role}</span>
                           {member.ai && (
-                            <span className="ml-2 text-xs text-purple-600 inline-flex items-center gap-1">
+                            <span className={`ml-2 text-xs inline-flex items-center gap-1 ${
+                              theme === "dark" ? "text-blue-300" : "text-purple-600"
+                            }`}>
                               <Sparkles size={12} /> AI Generated
                             </span>
                           )}
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-3">
                           <button 
                             onClick={() => openEditMember(member)} 
-                            className="text-blue-500 hover:text-blue-700"
+                            className="text-blue-500 hover:text-blue-700 p-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20"
                             disabled={loadingState !== null}
                             title="Edit member"
                           >
-                            <Edit size={16} />
+                            <Edit size={18} />
                           </button>
                           <button 
                             onClick={() => handleDeleteClick('member', member.id, member.role)} 
-                            className="text-red-500 hover:text-red-700"
+                            className="text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20"
                             disabled={loadingState !== null}
                             title="Delete member"
                           >
-                            <Trash2 size={16} />
+                            <Trash2 size={18} />
                           </button>
                         </div>
                       </div>
@@ -2322,35 +2439,44 @@ const App: React.FC = () => {
                   <div className="space-y-2 mb-3 max-h-60 sm:max-h-72 lg:max-h-80 xl:max-h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-800">
                     {features.map(feature => (
                       <div key={feature.id} className={`p-3 rounded-lg ${
-                        feature.ai ? 'bg-purple-50 border border-purple-200' : theme === "dark" ? 'bg-gray-900' : 'bg-gray-50'
+                        feature.ai 
+                          ? (theme === "dark" 
+                              ? 'bg-gradient-to-r from-emerald-900/40 to-teal-900/40 border border-emerald-700' 
+                              : 'bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200'
+                            ) 
+                          : theme === "dark" ? 'bg-gray-900 border border-gray-800' : 'bg-gray-50 border border-gray-200'
                       }`}>
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
-                            <div className={`font-medium mb-1 ${theme === "dark" && !feature.ai ? "text-white" : "text-gray-800"}`}>
+                            <div className={`font-medium mb-1 ${
+                              theme === "dark" ? "text-white" : "text-gray-800"
+                            }`}>
                               {feature.title}
                               {feature.ai && (
-                                <span className="ml-2 text-xs text-purple-600 inline-flex items-center gap-1">
+                                <span className={`ml-2 text-xs inline-flex items-center gap-1 ${
+                                  theme === "dark" ? "text-emerald-300" : "text-purple-600"
+                                }`}>
                                   <Sparkles size={12} /> AI Generated
                                 </span>
                               )}
                             </div>
                           </div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-3">
                             <button 
                               onClick={() => openEditFeature(feature)} 
-                              className="text-blue-500 hover:text-blue-700"
+                              className="text-blue-500 hover:text-blue-700 p-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20"
                               disabled={loadingState !== null}
                               title="Edit feature"
                             >
-                              <Edit size={16} />
+                              <Edit size={18} />
                             </button>
                             <button 
                               onClick={() => handleDeleteClick('feature', feature.id, feature.title)} 
-                              className="text-red-500 hover:text-red-700"
+                              className="text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20"
                               disabled={loadingState !== null}
                               title="Delete feature"
                             >
-                              <Trash2 size={16} />
+                              <Trash2 size={18} />
                             </button>
                           </div>
                         </div>
@@ -2393,14 +2519,23 @@ const App: React.FC = () => {
                   <div className="space-y-2 mb-3 max-h-60 sm:max-h-72 lg:max-h-80 xl:max-h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-800">
                     {goals.map(goal => (
                       <div key={goal.id} className={`p-3 rounded-lg ${
-                        goal.ai ? 'bg-purple-50 border border-purple-200' : theme === "dark" ? 'bg-gray-900' : 'bg-gray-50'
+                        goal.ai 
+                          ? (theme === "dark" 
+                              ? 'bg-gradient-to-r from-orange-900/40 to-amber-900/40 border border-orange-700' 
+                              : 'bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200'
+                            ) 
+                          : theme === "dark" ? 'bg-gray-900 border border-gray-800' : 'bg-gray-50 border border-gray-200'
                       }`}>
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
-                            <div className={`font-medium ${theme === "dark" && !goal.ai ? "text-white" : "text-gray-800"}`}>
+                            <div className={`font-medium ${
+                              theme === "dark" ? "text-white" : "text-gray-800"
+                            }`}>
                               {goal.title}
                               {goal.ai && (
-                                <span className="ml-2 text-xs text-purple-600 inline-flex items-center gap-1">
+                                <span className={`ml-2 text-xs inline-flex items-center gap-1 ${
+                                  theme === "dark" ? "text-orange-300" : "text-purple-600"
+                                }`}>
                                   <Sparkles size={12} /> AI Generated
                                 </span>
                               )}
@@ -2411,22 +2546,22 @@ const App: React.FC = () => {
                               </div>
                             )}
                           </div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-3">
                             <button 
                               onClick={() => openEditGoal(goal)} 
-                              className="text-blue-500 hover:text-blue-700"
+                              className="text-blue-500 hover:text-blue-700 p-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20"
                               disabled={loadingState !== null}
                               title="Edit goal"
                             >
-                              <Edit size={16} />
+                              <Edit size={18} />
                             </button>
                             <button 
                               onClick={() => handleDeleteClick('goal', goal.id, goal.title)} 
-                              className="text-red-500 hover:text-red-700"
+                              className="text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20"
                               disabled={loadingState !== null}
                               title="Delete goal"
                             >
-                              <Trash2 size={16} />
+                              <Trash2 size={18} />
                             </button>
                           </div>
                         </div>
@@ -2481,13 +2616,22 @@ const App: React.FC = () => {
                   <div className="space-y-3 mb-3 max-h-80 sm:max-h-96 lg:max-h-[28rem] xl:max-h-[32rem] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-800">
                     {timeline.map(week => (
                       <div key={week.id} className={`p-4 rounded-lg ${
-                        week.ai ? 'bg-purple-50 border border-purple-200' : theme === "dark" ? 'bg-gray-900' : 'bg-gray-50'
+                        week.ai 
+                          ? (theme === "dark" 
+                              ? 'bg-gradient-to-r from-cyan-900/40 to-blue-900/40 border border-cyan-700' 
+                              : 'bg-gradient-to-r from-cyan-50 to-blue-50 border border-cyan-200'
+                            ) 
+                          : theme === "dark" ? 'bg-gray-900 border border-gray-800' : 'bg-gray-50 border border-gray-200'
                       }`}>
                         <div className="flex items-center justify-between mb-2">
-                          <h4 className={`font-semibold flex items-center gap-2 ${theme === "dark" && !week.ai ? "text-white" : "text-gray-800"}`}>
+                          <h4 className={`font-semibold flex items-center gap-2 ${
+                            theme === "dark" ? "text-white" : "text-gray-800"
+                          }`}>
                             Week {week.week_number}
                             {week.ai && (
-                              <span className="text-xs text-purple-600 inline-flex items-center gap-1">
+                              <span className={`text-xs inline-flex items-center gap-1 ${
+                                theme === "dark" ? "text-cyan-300" : "text-purple-600"
+                              }`}>
                                 <Sparkles size={12} /> AI Generated
                               </span>
                             )}
@@ -2650,42 +2794,12 @@ const App: React.FC = () => {
               </div>
 
               <div className="flex items-center justify-between mb-4">
-                <h2 className={`text-xl font-bold ${theme === "dark" ? "text-white" : "text-gray-800"}`}>Project Backlog</h2>
+                <div className="flex items-center gap-3">
+                  <h2 className={`text-xl font-bold ${theme === "dark" ? "text-white" : "text-gray-800"}`}>Project Backlog</h2>
+                </div>
                 <div className="flex gap-2">
-                  {!isEditingBacklog ? (
-                    <button
-                      onClick={() => setIsEditingBacklog(true)}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
-                    >
-                      <Edit size={16} />
-                      Edit Backlog
-                    </button>
-                  ) : (
-                    <>
-                      <button
-                        onClick={saveBacklogChanges}
-                        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center gap-2"
-                      >
-                        <Check size={16} />
-                        Save Changes
-                      </button>
-                      <button
-                        onClick={() => setIsEditingBacklog(false)}
-                        className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50 flex items-center gap-2"
-                      >
-                        <X size={16} />
-                        Cancel
-                      </button>
-                    </>
-                  )}
                   <button
-                    onClick={() => {
-                      const title = prompt('Enter epic title:');
-                      const description = prompt('Enter epic description:');
-                      if (title) {
-                        createEpic({ title, description: description || '' });
-                      }
-                    }}
+                    onClick={openAddEpicModal}
                     disabled={loadingState !== null}
                     className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center gap-2"
                   >
@@ -2711,36 +2825,27 @@ const App: React.FC = () => {
                     <div
                       onClick={() => toggleEpic(epic.id)}
                       className={`p-4 cursor-pointer hover:bg-opacity-80 transition-colors ${
-                        epic.ai ? 'bg-purple-50' : theme === "dark" ? 'bg-gray-800' : 'bg-gray-100'
+                        epic.ai 
+                          ? (theme === "dark" 
+                              ? 'bg-gradient-to-r from-purple-900/50 to-indigo-900/50 border-purple-700' 
+                              : 'bg-gradient-to-r from-purple-50 to-indigo-50 border-purple-200'
+                            ) 
+                          : theme === "dark" ? 'bg-gray-800 border-gray-700' : 'bg-gray-100 border-gray-200'
                       }`}
                     >
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
                             <span className="text-xs font-semibold text-blue-600 bg-blue-100 px-2 py-1 rounded">EPIC</span>
-                            {isEditingBacklog ? (
-                              <input
-                                type="text"
-                                value={epic.title}
-                                className={`text-lg font-bold bg-transparent border-b-2 border-transparent focus:outline-none transition-colors flex-1 ${
-                                  theme === "dark" 
-                                    ? "text-white hover:border-blue-400 focus:border-blue-400" 
-                                    : "text-gray-800 hover:border-blue-300 focus:border-blue-500"
-                                }`}
-                                onChange={(e) => {
-                                  const updatedEpics = epics.map(ep => 
-                                    ep.id === epic.id ? { ...ep, title: e.target.value } : ep
-                                  );
-                                  setEpics(updatedEpics);
-                                }}
-                              />
-                            ) : (
-                              <h3 className={`font-bold text-lg ${theme === "dark" && !epic.ai ? "text-white" : "text-gray-800"}`}>
-                                {epic.title}
-                              </h3>
-                            )}
+                            <h3 className={`font-bold text-lg ${
+                              theme === "dark" ? "text-white" : "text-gray-800"
+                            }`}>
+                              {epic.title}
+                            </h3>
                             {epic.ai && (
-                              <span className="text-xs text-purple-600 inline-flex items-center gap-1">
+                              <span className={`text-xs inline-flex items-center gap-1 ${
+                                theme === "dark" ? "text-purple-300" : "text-purple-600"
+                              }`}>
                                 <Sparkles size={12} /> AI
                               </span>
                             )}
@@ -2749,20 +2854,29 @@ const App: React.FC = () => {
                             {epic.description}
                           </p>
                         </div>
-                        <div className="flex items-center gap-2">
-                          {isEditingBacklog && (
-                            <button 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteClick('epic', epic.id, epic.title);
-                              }} 
-                              className="text-red-500 hover:text-red-700"
-                              disabled={loadingState !== null}
-                              title="Delete epic"
-                            >
-                              <Trash2 size={16} />
-                            </button>
-                          )}
+                        <div className="flex items-center gap-3">
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openEditEpic(epic);
+                            }} 
+                            className="text-blue-500 hover:text-blue-700 p-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                            disabled={loadingState !== null}
+                            title="Edit epic"
+                          >
+                            <Edit size={18} />
+                          </button>
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteClick('epic', epic.id, epic.title);
+                            }} 
+                            className="text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20"
+                            disabled={loadingState !== null}
+                            title="Delete epic"
+                          >
+                            <Trash2 size={18} />
+                          </button>
                           <div className={`text-2xl ${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}>
                             {expandedEpics.has(epic.id) ? '−' : '+'}
                           </div>
@@ -2772,70 +2886,70 @@ const App: React.FC = () => {
 
                     {/* Sub Epics */}
                     {expandedEpics.has(epic.id) && (
-                      <div className={`p-4 space-y-3 ${theme === "dark" ? "bg-gray-900" : "bg-white"}`}>
-                        {isEditingBacklog && (
-                          <button 
-                            onClick={() => openAddSubEpicModal(epic.id)}
-                            className="w-full p-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-orange-500 hover:text-orange-500 hover:bg-orange-50 text-sm font-medium transition-all"
-                          >
-                            + Add Sub-Epic
-                          </button>
-                        )}
+                      <div className={`p-4 space-y-3 ${
+                        theme === "dark" ? "bg-gray-900/50" : "bg-gray-50"
+                      }`}>
+                        <button 
+                          onClick={() => openAddSubEpicModal(epic.id)}
+                          className="w-full p-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-orange-500 hover:text-orange-500 hover:bg-orange-50 text-sm font-medium transition-all"
+                        >
+                          + Add Sub-Epic
+                        </button>
                         {subEpics.filter(se => se.epic_id === epic.id).map(subEpic => (
                           <div key={subEpic.id} className={`border rounded-lg ${theme === "dark" ? "border-gray-700" : "border-gray-200"}`}>
                             {/* Sub Epic Header */}
                             <div
                               onClick={() => toggleSubEpic(subEpic.id)}
                               className={`p-3 cursor-pointer hover:bg-opacity-80 transition-colors ${
-                                subEpic.ai ? 'bg-purple-50' : theme === "dark" ? 'bg-gray-800' : 'bg-gray-50'
+                                subEpic.ai 
+                                  ? (theme === "dark" 
+                                      ? 'bg-gradient-to-r from-emerald-900/50 to-teal-900/50 border-emerald-700' 
+                                      : 'bg-gradient-to-r from-emerald-50 to-teal-50 border-emerald-200'
+                                    )
+                                  : theme === "dark" ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'
                               }`}
                             >
                               <div className="flex items-start justify-between">
                                 <div className="flex-1">
                                   <div className="flex items-center gap-2">
                                     <span className="text-xs font-semibold text-green-600 bg-green-100 px-2 py-1 rounded">SUB-EPIC</span>
-                                    {isEditingBacklog ? (
-                                      <input
-                                        type="text"
-                                        value={subEpic.title}
-                                        className={`font-semibold bg-transparent border-b-2 border-transparent focus:outline-none transition-colors flex-1 ${
-                                          theme === "dark" 
-                                            ? "text-white hover:border-green-400 focus:border-green-400" 
-                                            : "text-gray-800 hover:border-green-300 focus:border-green-500"
-                                        }`}
-                                        onChange={(e) => {
-                                          const updatedSubEpics = subEpics.map(se => 
-                                            se.id === subEpic.id ? { ...se, title: e.target.value } : se
-                                          );
-                                          setSubEpics(updatedSubEpics);
-                                        }}
-                                      />
-                                    ) : (
-                                      <h4 className={`font-semibold ${theme === "dark" && !subEpic.ai ? "text-white" : "text-gray-800"}`}>
-                                        {subEpic.title}
-                                      </h4>
-                                    )}
+                                    <h4 className={`font-semibold ${
+                                      theme === "dark" ? "text-white" : "text-gray-800"
+                                    }`}>
+                                      {subEpic.title}
+                                    </h4>
                                     {subEpic.ai && (
-                                      <span className="text-xs text-purple-600 inline-flex items-center gap-1">
+                                      <span className={`text-xs inline-flex items-center gap-1 ${
+                                        theme === "dark" ? "text-emerald-300" : "text-purple-600"
+                                      }`}>
                                         <Sparkles size={12} /> AI
                                       </span>
                                     )}
                                   </div>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                  {isEditingBacklog && (
-                                    <button 
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleDeleteClick('subEpic', subEpic.id, subEpic.title);
-                                      }} 
-                                      className="text-red-500 hover:text-red-700"
-                                      disabled={loadingState !== null}
-                                      title="Delete sub-epic"
-                                    >
-                                      <Trash2 size={14} />
-                                    </button>
-                                  )}
+                                <div className="flex items-center gap-3">
+                                  <button 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      openEditSubEpic(subEpic);
+                                    }} 
+                                    className="text-blue-500 hover:text-blue-700 p-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                                    disabled={loadingState !== null}
+                                    title="Edit sub-epic"
+                                  >
+                                    <Edit size={16} />
+                                  </button>
+                                  <button 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDeleteClick('subEpic', subEpic.id, subEpic.title);
+                                    }} 
+                                    className="text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20"
+                                    disabled={loadingState !== null}
+                                    title="Delete sub-epic"
+                                  >
+                                    <Trash2 size={16} />
+                                  </button>
                                   <div className={`text-xl ${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}>
                                     {expandedSubEpics.has(subEpic.id) ? '−' : '+'}
                                   </div>
@@ -2845,104 +2959,90 @@ const App: React.FC = () => {
 
                             {/* User Stories */}
                             {expandedSubEpics.has(subEpic.id) && (
-                              <div className={`p-3 space-y-2 ${theme === "dark" ? "bg-gray-900" : "bg-gray-50"}`}>
-                                {isEditingBacklog && (
-                                  <button 
-                                    onClick={() => openAddUserStoryModal(subEpic.id)}
-                                    className="w-full p-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-blue-500 hover:text-blue-500 hover:bg-blue-50 text-sm font-medium transition-all"
-                                  >
-                                    + Add User Story
-                                  </button>
-                                )}
+                              <div className={`p-3 space-y-2 ${
+                                theme === "dark" ? "bg-gray-900/50" : "bg-gray-50"
+                              }`}>
+                                <button 
+                                  onClick={() => openAddUserStoryModal(subEpic.id)}
+                                  className="w-full p-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-blue-500 hover:text-blue-500 hover:bg-blue-50 text-sm font-medium transition-all"
+                                >
+                                  + Add User Story
+                                </button>
                                 {userStories.filter(us => us.sub_epic_id === subEpic.id).map(story => (
                                   <div key={story.id} className={`border rounded-lg p-3 ${
-                                    story.ai ? 'bg-purple-50 border-purple-200' : theme === "dark" ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+                                    story.ai 
+                                      ? (theme === "dark" 
+                                          ? 'bg-gradient-to-r from-orange-900/50 to-amber-900/50 border-orange-700' 
+                                          : 'bg-gradient-to-r from-orange-50 to-amber-50 border-orange-200'
+                                        ) 
+                                      : theme === "dark" ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
                                   }`}>
                                     <div className="flex items-start gap-2 mb-2">
                                       <span className="text-xs font-semibold text-orange-600 bg-orange-100 px-2 py-1 rounded whitespace-nowrap">USER STORY</span>
                                       <div className="flex-1">
-                                        {isEditingBacklog ? (
-                                          <input
-                                            type="text"
-                                            value={story.title}
-                                            className={`font-medium bg-transparent border-b-2 border-transparent focus:outline-none transition-colors w-full ${
-                                              theme === "dark" 
-                                                ? "text-white hover:border-orange-400 focus:border-orange-400" 
-                                                : "text-gray-800 hover:border-orange-300 focus:border-orange-500"
-                                            }`}
-                                            onChange={(e) => {
-                                              const updatedUserStories = userStories.map(us => 
-                                                us.id === story.id ? { ...us, title: e.target.value } : us
-                                              );
-                                              setUserStories(updatedUserStories);
-                                            }}
-                                          />
-                                        ) : (
-                                          <p className={`font-medium ${theme === "dark" && !story.ai ? "text-white" : "text-gray-800"}`}>
-                                            {story.title}
-                                          </p>
-                                        )}
+                                        <p className={`font-medium ${
+                                          theme === "dark" ? "text-white" : "text-gray-800"
+                                        }`}>
+                                          {story.title}
+                                        </p>
                                         {story.ai && (
-                                          <span className="text-xs text-purple-600 inline-flex items-center gap-1 mt-1">
+                                          <span className={`text-xs inline-flex items-center gap-1 mt-1 ${
+                                            theme === "dark" ? "text-orange-300" : "text-purple-600"
+                                          }`}>
                                             <Sparkles size={12} /> AI Generated
                                           </span>
                                         )}
                                       </div>
-                                      {isEditingBacklog && (
-                                        <div className="flex items-center gap-1">
-                                          <button 
-                                            onClick={() => handleDeleteClick('userStory', story.id, story.title)} 
-                                            className="text-red-500 hover:text-red-700"
-                                            disabled={loadingState !== null}
-                                            title="Delete user story"
-                                          >
-                                            <Trash2 size={14} />
-                                          </button>
-                                        </div>
-                                      )}
+                                      <div className="flex items-center gap-2">
+                                        <button 
+                                          onClick={() => openEditUserStory(story)} 
+                                          className="text-blue-500 hover:text-blue-700 p-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                                          disabled={loadingState !== null}
+                                          title="Edit user story"
+                                        >
+                                          <Edit size={16} />
+                                        </button>
+                                        <button 
+                                          onClick={() => handleDeleteClick('userStory', story.id, story.title)} 
+                                          className="text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20"
+                                          disabled={loadingState !== null}
+                                          title="Delete user story"
+                                        >
+                                          <Trash2 size={16} />
+                                        </button>
+                                      </div>
                                     </div>
                                     
                                     {/* Tasks under this user story */}
                                     <div className="mt-3 space-y-2">
-                                      {isEditingBacklog && (
-                                        <button 
-                                          onClick={() => openAddTaskModal(story.id)}
-                                          className="w-full p-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-green-500 hover:text-green-500 hover:bg-green-50 text-sm font-medium transition-all"
-                                        >
-                                          + Add Task
-                                        </button>
-                                      )}
+                                      <button 
+                                        onClick={() => openAddTaskModal(story.id)}
+                                        className="w-full p-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-green-500 hover:text-green-500 hover:bg-green-50 text-sm font-medium transition-all"
+                                      >
+                                        + Add Task
+                                      </button>
                                       {tasks.filter(task => task.user_story_id === story.id).map(task => (
                                         <div key={task.id} className={`border rounded-lg p-2 ${
-                                          task.ai ? 'bg-blue-50 border-blue-200' : theme === "dark" ? 'bg-gray-700 border-gray-600' : 'bg-gray-100 border-gray-300'
+                                          task.ai 
+                                            ? (theme === "dark" 
+                                                ? 'bg-gradient-to-r from-blue-900/50 to-cyan-900/50 border-blue-700' 
+                                                : 'bg-gradient-to-r from-blue-50 to-cyan-50 border-blue-200'
+                                              ) 
+                                            : theme === "dark" ? 'bg-gray-700 border-gray-600' : 'bg-gray-100 border-gray-300'
                                         }`}>
                                           <div className="flex items-start justify-between">
                                             <div className="flex-1">
                                               <div className="flex items-center gap-2">
                                                 <span className="text-xs font-semibold text-blue-600 bg-blue-100 px-2 py-1 rounded">TASK</span>
-                                                {isEditingBacklog ? (
-                                                  <input
-                                                    type="text"
-                                                    value={task.title}
-                                                    className={`text-sm font-medium bg-transparent border-b-2 border-transparent focus:outline-none transition-colors flex-1 ${
-                                                      theme === "dark" 
-                                                        ? "text-white hover:border-blue-400 focus:border-blue-400" 
-                                                        : "text-gray-800 hover:border-blue-300 focus:border-blue-500"
-                                                    }`}
-                                                    onChange={(e) => {
-                                                      const updatedTasks = tasks.map(t => 
-                                                        t.id === task.id ? { ...t, title: e.target.value } : t
-                                                      );
-                                                      setTasks(updatedTasks);
-                                                    }}
-                                                  />
-                                                ) : (
-                                                  <p className={`text-sm font-medium ${theme === "dark" && !task.ai ? "text-white" : "text-gray-800"}`}>
-                                                    {task.title}
-                                                  </p>
-                                                )}
+                                                <p className={`text-sm font-medium ${
+                                                  theme === "dark" ? "text-white" : "text-gray-800"
+                                                }`}>
+                                                  {task.title}
+                                                </p>
                                                 {task.ai && (
-                                                  <span className="text-xs text-blue-600 inline-flex items-center gap-1">
+                                                  <span className={`text-xs inline-flex items-center gap-1 ${
+                                                    theme === "dark" ? "text-blue-300" : "text-blue-600"
+                                                  }`}>
                                                     <Sparkles size={10} /> AI
                                                   </span>
                                                 )}
@@ -2958,32 +3058,23 @@ const App: React.FC = () => {
                                                 )}
                                               </div>
                                             </div>
-                                            <div className="flex items-center gap-1">
-                                      <select
-                                                value={task.assignee?.id || ''}
-                                                onChange={(e) => updateTaskAssignment(task.id, e.target.value || null)}
-                                                className={`text-xs px-2 py-1 border rounded ${
-                                                  theme === "dark" ? "bg-gray-800 border-gray-600 text-white" : "border-gray-300"
-                                        }`}
-                                        disabled={loadingState !== null}
-                                      >
-                                        <option value="">Unassigned</option>
-                                        {members.map(member => (
-                                                  <option key={member.id} value={member.id}>
-                                            {member.role}
-                                          </option>
-                                        ))}
-                                      </select>
-                                      {isEditingBacklog && (
-                                        <button
-                                          onClick={() => handleDeleteClick('task', task.id, task.title)}
-                                          className="text-red-500 hover:text-red-700 text-xs"
-                                          disabled={loadingState !== null}
-                                          title="Delete task"
-                                        >
-                                          <Trash2 size={12} />
-                                        </button>
-                                      )}
+                                            <div className="flex items-center gap-2">
+                                              <button
+                                                onClick={() => openEditTask(task)}
+                                                className="text-blue-500 hover:text-blue-700 p-1 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                                                disabled={loadingState !== null}
+                                                title="Edit task"
+                                              >
+                                                <Edit size={14} />
+                                              </button>
+                                              <button
+                                                onClick={() => handleDeleteClick('task', task.id, task.title)}
+                                                className="text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20"
+                                                disabled={loadingState !== null}
+                                                title="Delete task"
+                                              >
+                                                <Trash2 size={14} />
+                                              </button>
                                             </div>
                                           </div>
                                         </div>
@@ -3048,11 +3139,21 @@ const App: React.FC = () => {
                   Skip
                 </button>
                 <button
-                  onClick={() => setCurrentStep('invite')}
-                  disabled={loadingState !== null}
-                  className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  onClick={() => {
+                    if (!backlogChangesSaved) {
+                      showError('Unsaved Changes', 'Please save your backlog changes before continuing.');
+                      return;
+                    }
+                    setCurrentStep('invite');
+                  }}
+                  disabled={loadingState !== null || !backlogChangesSaved}
+                  className={`px-6 py-3 rounded-lg flex items-center gap-2 ${
+                    !backlogChangesSaved 
+                      ? 'bg-gray-400 text-gray-200 cursor-not-allowed' 
+                      : 'bg-green-600 text-white hover:bg-green-700'
+                  } disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
-                  Confirm & Continue
+                  {!backlogChangesSaved ? 'Save Changes First' : 'Confirm & Continue'}
                   <ArrowRight size={20} />
                 </button>
               </div>
@@ -3161,12 +3262,6 @@ const App: React.FC = () => {
                             {member.role}
                           </option>
                         ))}
-                        <option value="Frontend Developer">Frontend Developer</option>
-                        <option value="Backend Developer">Backend Developer</option>
-                        <option value="Full Stack Developer">Full Stack Developer</option>
-                        <option value="UI/UX Designer">UI/UX Designer</option>
-                        <option value="QA Engineer">QA Engineer</option>
-                        <option value="DevOps Engineer">DevOps Engineer</option>
                       </select>
                     </div>
                     <button
@@ -3784,23 +3879,6 @@ const App: React.FC = () => {
                 }`}
               />
             </div>
-            <div>
-              <label className={`block text-sm font-medium mb-1 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
-                Status
-              </label>
-              <select
-                value={editingTask.status}
-                onChange={(e) => setEditingTask({ ...editingTask, status: e.target.value })}
-                className={`w-full px-3 py-2 border rounded-lg ${
-                  theme === 'dark' ? 'bg-gray-900 border-gray-700 text-white' : 'border-gray-300'
-                }`}
-              >
-                <option value="pending">Pending</option>
-                <option value="in-progress">In Progress</option>
-                <option value="completed">Completed</option>
-                <option value="blocked">Blocked</option>
-              </select>
-            </div>
           </div>
           <div className="flex space-x-3 mt-6">
             <button
@@ -3816,8 +3894,7 @@ const App: React.FC = () => {
             <button
               onClick={() => {
                 updateTask(editingTask.id, {
-                  title: editingTask.title,
-                  status: editingTask.status
+                  title: editingTask.title
                 });
                 setShowEditTaskModal(false);
               }}
@@ -4034,6 +4111,75 @@ const App: React.FC = () => {
               }`}
             >
               Delete
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Add Epic Modal */}
+    {showAddEpicModal && (
+      <div className={`fixed inset-0 flex items-center justify-center z-50 ${
+        theme === 'dark' ? 'bg-black bg-opacity-70' : 'bg-black bg-opacity-50'
+      }`}>
+        <div className={`rounded-xl p-6 w-full max-w-md mx-4 shadow-xl ${
+          theme === 'dark' ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'
+        }`}>
+          <h3 className={`text-lg font-semibold mb-4 ${
+            theme === 'dark' ? 'text-white' : 'text-gray-900'
+          }`}>
+            Add New Epic
+          </h3>
+          <div className="space-y-4">
+            <div>
+              <label className={`block text-sm font-medium mb-1 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                Title
+              </label>
+              <input
+                type="text"
+                value={newEpicTitle}
+                onChange={(e) => setNewEpicTitle(e.target.value)}
+                className={`w-full px-3 py-2 border rounded-lg ${
+                  theme === 'dark' ? 'bg-gray-900 border-gray-700 text-white' : 'border-gray-300'
+                }`}
+                placeholder="Enter epic title"
+              />
+            </div>
+            <div>
+              <label className={`block text-sm font-medium mb-1 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                Description
+              </label>
+              <textarea
+                value={newEpicDescription}
+                onChange={(e) => setNewEpicDescription(e.target.value)}
+                rows={3}
+                className={`w-full px-3 py-2 border rounded-lg ${
+                  theme === 'dark' ? 'bg-gray-900 border-gray-700 text-white' : 'border-gray-300'
+                }`}
+                placeholder="Enter epic description"
+              />
+            </div>
+          </div>
+          <div className="flex space-x-3 mt-6">
+            <button
+              onClick={() => setShowAddEpicModal(false)}
+              className={`flex-1 px-4 py-2 rounded-lg transition-colors ${
+                theme === 'dark' 
+                  ? 'bg-gray-600 text-white hover:bg-gray-700' 
+                  : 'bg-gray-500 text-white hover:bg-gray-600'
+              }`}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={addEpic}
+              className={`flex-1 px-4 py-2 rounded-lg transition-colors ${
+                theme === 'dark' 
+                  ? 'bg-green-600 text-white hover:bg-green-700' 
+                  : 'bg-green-600 text-white hover:bg-green-700'
+              }`}
+            >
+              Add Epic
             </button>
           </div>
         </div>

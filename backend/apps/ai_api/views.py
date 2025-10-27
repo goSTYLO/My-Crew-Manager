@@ -919,8 +919,10 @@ class StoryTaskViewSet(ModelViewSet):
 
     @action(detail=False, methods=["post"], url_path="bulk-assign")
     def bulk_assign(self, request):
+        print(f"🚀 BULK ASSIGN: Method called with data: {request.data}")
         try:
             assignments = request.data.get('assignments', [])
+            print(f"🚀 BULK ASSIGN: Assignments: {assignments}")
             if not isinstance(assignments, list):
                 return Response({"error": "assignments must be a list"}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -928,12 +930,21 @@ class StoryTaskViewSet(ModelViewSet):
             for item in assignments:
                 task_id = item.get('task_id')
                 assignee_id = item.get('assignee_id')
+                print(f"🚀 BULK ASSIGN: Processing task_id={task_id}, assignee_id={assignee_id}")
                 if not task_id:
+                    print(f"🚀 BULK ASSIGN: Skipping - no task_id")
                     continue
                 try:
                     task = StoryTask.objects.get(id=task_id)
+                    print(f"🚀 BULK ASSIGN: Found task {task.id}: {task.title}")
                 except StoryTask.DoesNotExist:
+                    print(f"🚀 BULK ASSIGN: Task {task_id} not found")
                     continue
+                
+                # Store old assignee for notification comparison
+                old_assignee = task.assignee
+                print(f"🚀 BULK ASSIGN: Old assignee: {old_assignee}, New assignee_id: {assignee_id}")
+                
                 if assignee_id is None:
                     task.assignee = None
                 else:
@@ -945,8 +956,41 @@ class StoryTaskViewSet(ModelViewSet):
                     if member.project_id != task.user_story.sub_epic.epic.project_id:
                         continue
                     task.assignee = member
+                
                 task.save(update_fields=["assignee"])
                 updated += 1
+                
+                # Create notification if assignment changed and new assignee exists
+                if old_assignee != task.assignee and task.assignee:
+                    print(f"🔔 Bulk assign: Creating notification for task {task.id} assigned to {task.assignee.user_name}")
+                    project = task.user_story.sub_epic.epic.project
+                    recipients = set()
+                    
+                    # Add assignee if they have a user account
+                    if task.assignee.user:
+                        recipients.add(task.assignee.user)
+                    
+                    # Add project creator if they're not the one assigning
+                    if project.created_by != request.user:
+                        recipients.add(project.created_by)
+                    
+                    # Remove the person doing the assignment
+                    recipients.discard(request.user)
+                    
+                    print(f"🔔 Bulk assign: Recipients: {[r.name for r in recipients]}")
+                    
+                    # Create notifications for each recipient
+                    for recipient in recipients:
+                        print(f"📝 Bulk assign: Creating notification for {recipient.name}")
+                        NotificationService.create_notification(
+                            recipient=recipient,
+                            notification_type='task_assigned',
+                            title=f'Task Assigned: {task.title}',
+                            message=f'{request.user.name} assigned you to "{task.title}"',
+                            content_object=task,
+                            action_url=get_notification_action_url(recipient, project.id),
+                            actor=request.user
+                        )
 
             return Response({"updated": updated}, status=status.HTTP_200_OK)
         except Exception as e:
@@ -1065,8 +1109,13 @@ class StoryTaskViewSet(ModelViewSet):
         
         # Create notifications based on what changed
         # Check for assignment change
+        print(f"🔍 Task assignment check: old_assignee={old_instance.assignee}, new_assignee={task.assignee}")
+        print(f"🔍 Recipients set: {[r.name for r in recipients]}")
+        
         if old_instance.assignee != task.assignee and task.assignee:
+            print(f"✅ Task assignment changed - creating notifications for {len(recipients)} recipients")
             for recipient in recipients:
+                print(f"📝 Creating notification for {recipient.name} (ID: {recipient.user_id})")
                 NotificationService.create_notification(
                     recipient=recipient,
                     notification_type='task_assigned',
@@ -1076,6 +1125,8 @@ class StoryTaskViewSet(ModelViewSet):
                     action_url=get_notification_action_url(recipient, project.id),
                     actor=self.request.user
                 )
+        else:
+            print(f"❌ No notification needed - old_assignee={old_instance.assignee}, new_assignee={task.assignee}")
         
         # Check for completion
         elif old_instance.status != 'done' and task.status == 'done':

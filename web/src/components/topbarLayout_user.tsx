@@ -7,6 +7,8 @@ import { useTheme } from "./themeContext";
 import { API_BASE_URL } from "../config/api";
 import { useNotificationPolling } from "../hooks/useNotificationPolling";
 import { useToast } from "./ToastContext";
+import { useChatNotificationCount } from "../hooks/useChatNotificationCount";
+import { useWebSocket } from "../contexts/WebSocketContext";
 
 interface TopNavbarProps {
   onMenuClick: () => void;
@@ -73,6 +75,8 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
   const [loadingAllNotifications, setLoadingAllNotifications] = useState(false);
   const notificationsPerPage = 20;
   const { showRealtimeUpdate } = useToast();
+  const { unreadCount, resetUnreadCount } = useChatNotificationCount();
+  const { subscribe } = useWebSocket();
 
   // Fetch notifications from API
   const fetchNotifications = async () => {
@@ -205,6 +209,38 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
       console.error('Notification polling error:', error);
     }
   });
+
+  // WebSocket subscription for real-time notifications
+  useEffect(() => {
+    const unsubscribe = subscribe((message) => {
+      // Handle notification messages - backend sends type: 'notification'
+      if (message.type === 'notification' || message.action === 'notification_created') {
+        console.log('🔔 Received WebSocket notification:', message);
+        // Refetch notifications to get the latest
+        fetchNotifications();
+        
+        // Show toast for the new notification
+        if (message.notification) {
+          const importantTypes = [
+            'task_assigned', 
+            'task_completed',
+            'project_invitation', 
+            'member_joined'
+          ];
+          
+          if (importantTypes.includes(message.notification.type)) {
+            showRealtimeUpdate(
+              message.notification.title,
+              message.notification.message,
+              message.notification.actor
+            );
+          }
+        }
+      }
+    });
+    
+    return () => unsubscribe();
+  }, [subscribe, fetchNotifications, showRealtimeUpdate]);
 
   // Listen for user updates dispatched from AccountSettings
   useEffect(() => {
@@ -363,7 +399,7 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
 
   return (
     <header
-      className={`fixed top-0 left-0 w-full shadow-sm border-b px-4 lg:px-6 py-4 ${
+      className={`fixed top-0 left-0 w-full shadow-sm border-b px-4 lg:px-6 py-4 z-50 ${
         theme === "dark"
           ? "bg-gray-800 border-gray-700"
           : "bg-white border-gray-200"
@@ -406,11 +442,19 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
         <div className="flex items-center space-x-4">
           {/* Chat */}
           <button
-            className="p-2 text-gray-500 hover:text-gray-700"
+            className="p-2 text-gray-500 hover:text-gray-700 relative"
             title="Team Chat"
-            onClick={() => navigate("/user-chat")}
+            onClick={() => {
+              resetUnreadCount();
+              navigate("/user-chat");
+            }}
           >
             <MessageSquare className="w-6 h-6" />
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 min-w-[20px] h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center px-1">
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </span>
+            )}
           </button>
 
           {/* Notifications */}
@@ -422,8 +466,10 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
               onClick={() => setShowNotifications((prev) => !prev)}
             >
               <Bell className="w-6 h-6" />
-              {notifications.some((note) => !note.is_read) && (
-                <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full"></span>
+              {notifications.filter((note) => !note.is_read).length > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-[1.25rem] h-5 bg-red-500 rounded-full flex items-center justify-center text-white text-xs font-bold px-1">
+                  {notifications.filter((note) => !note.is_read).length}
+                </span>
               )}
             </button>
 
@@ -490,7 +536,10 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
                 <div className="p-3 border-t border-gray-200 text-center">
                   <button 
                     className="text-blue-600 text-sm font-medium hover:underline"
-                    onClick={() => setShowAllNotificationsModal(true)}
+                    onClick={() => {
+                      setShowNotifications(false);  // Close dropdown first
+                      setShowAllNotificationsModal(true);
+                    }}
                   >
                     View All
                   </button>

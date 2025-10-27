@@ -104,9 +104,9 @@ const Dashboard = () => {
                 </select>
               </div>
               {/* Pie + Legend in one row */}
-              <div className="flex items-center justify-center h-64">
+              <div className="flex items-center justify-center h-64 relative z-10">
                 {/* Pie Chart */}
-                <div className="w-2/3 h-64">
+                <div className="w-2/3 h-64 relative z-10">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
@@ -173,9 +173,9 @@ const Dashboard = () => {
                 </select>
               </div>
               {/* Flex container for Pie + Legend */}
-              <div className="flex items-center justify-center">
+              <div className="flex items-center justify-center relative z-10">
                 {/* Pie Chart */}
-                <div className="h-64 w-64">
+                <div className="h-64 w-64 relative z-10">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
@@ -224,7 +224,7 @@ const Dashboard = () => {
                   <option>This Month</option>
                 </select>
               </div>
-              <div className="h-64">
+              <div className="h-64 relative z-10">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={performanceData}>
                     <CartesianGrid strokeDasharray="3 3" stroke={theme === "dark" ? "#333" : "#f0f0f0"} />

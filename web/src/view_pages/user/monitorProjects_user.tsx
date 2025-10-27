@@ -190,6 +190,23 @@ const projectAPI = {
   }
 };
 
+// ✅ AI Badge Component
+const AIBadge = ({ show, tooltipText = "AI Generated" }: { show: boolean; tooltipText?: string }) => {
+  if (!show) return null;
+  
+  return (
+    <span 
+      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ml-2 ${
+        'bg-purple-100 text-purple-800'
+      }`}
+      title={tooltipText}
+    >
+      <span>✨</span>
+      <span>AI</span>
+    </span>
+  );
+};
+
 // ✅ Project Status Badge Component
 const StatusBadge = ({ hasProposal, hasBacklog }: { 
   hasProposal: boolean; 
@@ -232,8 +249,11 @@ const ProjectCard = ({ project, theme, onDownloadFile }: {
     <div className={`${theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} rounded-xl shadow-sm border p-6 hover:shadow-md transition-shadow flex flex-col h-full min-h-[600px]`}>
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
-        <div className={`text-lg font-semibold ${theme === 'dark' ? 'text-gray-100' : 'text-gray-800'}`}>
-          {project.title}
+        <div className="flex items-center gap-2">
+          <div className={`text-lg font-semibold ${theme === 'dark' ? 'text-gray-100' : 'text-gray-800'}`}>
+            {project.title}
+          </div>
+          <AIBadge show={!!project.title} tooltipText="AI Generated Title" />
         </div>
         <StatusBadge 
           hasProposal={project.has_proposal} 
@@ -245,9 +265,12 @@ const ProjectCard = ({ project, theme, onDownloadFile }: {
 
       {/* Summary */}
       <div className="mb-4">
-        <p className={`text-sm leading-relaxed line-clamp-3 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}>
-          {project.summary || 'No description available'}
-        </p>
+        <div className="flex items-start gap-2">
+          <p className={`text-sm leading-relaxed line-clamp-3 flex-1 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}>
+            {project.summary || 'No description available'}
+          </p>
+          <AIBadge show={!!project.summary} tooltipText="AI Generated Summary" />
+        </div>
       </div>
 
       {/* Progress Indicators */}
@@ -614,7 +637,7 @@ const MonitorProjectsUser = () => {
               My Projects
             </h2>
             
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 relative z-10">
               {/* Search Input */}
               <div className="relative w-[400px]">
                 <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-400'}`} />

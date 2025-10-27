@@ -141,6 +141,32 @@ class RoomViewSet(viewsets.ModelViewSet):
         data = RoomMembershipSerializer(memberships, many=True).data
         return Response(data)
 
+    @action(detail=False, methods=['get'], url_path='unread-count')
+    def unread_count(self, request):
+        """Get total unread messages count across all user's rooms"""
+        try:
+            # Get user's memberships with related rooms
+            memberships = RoomMembership.objects.filter(user=request.user).select_related('room')
+            
+            total_unread = 0
+            
+            for membership in memberships:
+                room = membership.room
+                # Count messages after user joined, excluding their own messages
+                unread = Message.objects.filter(
+                    room=room,
+                    created_at__gt=membership.joined_at,
+                    is_deleted=False
+                ).exclude(sender=request.user).count()
+                total_unread += unread
+            
+            return Response({'unread_count': total_unread})
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error in unread_count endpoint: {str(e)}")
+            return Response({'error': 'Failed to fetch unread count'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
     @action(detail=False, methods=['post'], url_path='direct')
     def direct(self, request):
         """Get or create a 1:1 private room with another user by email."""

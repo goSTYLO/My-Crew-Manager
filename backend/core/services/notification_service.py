@@ -40,25 +40,38 @@ class NotificationService:
     @staticmethod
     def send_realtime_notification(notification):
         """Send notification through WebSocket"""
-        channel_layer = get_channel_layer()
-        notification_group = f'user_{notification.recipient.user_id}_notifications'
+        print(f"🔔 Attempting to send real-time notification {notification.id} to user {notification.recipient.user_id}")
         
-        async_to_sync(channel_layer.group_send)(
-            notification_group,
-            {
-                'type': 'notification_message',
-                'notification': {
-                    'id': notification.id,
-                    'type': notification.notification_type,
-                    'title': notification.title,
-                    'message': notification.message,
-                    'action_url': notification.action_url,
-                    'actor': notification.actor.name if notification.actor else None,
-                    'created_at': notification.created_at.isoformat(),
-                    'is_read': notification.is_read,
+        channel_layer = get_channel_layer()
+        if not channel_layer:
+            print("❌ Channel layer is None - Redis not configured properly")
+            return
+            
+        notification_group = f'user_{notification.recipient.user_id}_notifications'
+        print(f"📡 Sending to group: {notification_group}")
+        
+        try:
+            async_to_sync(channel_layer.group_send)(
+                notification_group,
+                {
+                    'type': 'notification_message',
+                    'notification': {
+                        'id': notification.id,
+                        'type': notification.notification_type,
+                        'title': notification.title,
+                        'message': notification.message,
+                        'action_url': notification.action_url,
+                        'actor': notification.actor.name if notification.actor else None,
+                        'created_at': notification.created_at.isoformat(),
+                        'is_read': notification.is_read,
+                    }
                 }
-            }
-        )
+            )
+            print(f"✅ Successfully sent notification {notification.id} to WebSocket group")
+        except Exception as e:
+            print(f"❌ Failed to send notification {notification.id} to WebSocket: {e}")
+            import traceback
+            traceback.print_exc()
     
     @staticmethod
     def mark_as_read(notification_id, user):

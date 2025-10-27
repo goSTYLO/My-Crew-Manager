@@ -66,6 +66,7 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ children }
       wsRef.current.onmessage = (event) => {
         try {
           const message: WebSocketMessage = JSON.parse(event.data);
+          console.log('📨 WebSocket message received:', message);
           handlersRef.current.forEach(handler => handler(message));
         } catch (error) {
           console.error('Error parsing WebSocket message:', error);

@@ -62,6 +62,7 @@ export default function ProjectDetailsUI() {
   
   // Backlog editing state
   const [isEditingBacklog, setIsEditingBacklog] = useState(false);
+  const [modifiedItems, setModifiedItems] = useState<Set<string>>(new Set());
   
   // Task assignment and commit tracking state
   const [editingCommitTitle, setEditingCommitTitle] = useState('');
@@ -291,9 +292,10 @@ export default function ProjectDetailsUI() {
         id: project.id,
         title: project.title,
         aiSummary: project.summary,
-        roles: (roles || []).map((role: any) => ({ id: role.id, role: role.role })),
-        features: (features || []).map((feature: any) => ({ id: feature.id, title: feature.title })),
-        goals: (goals || []).map((goal: any) => ({ id: goal.id, title: goal.title })),
+        created_by: project.created_by, // Add this field
+        roles: (roles || []).map((role: any) => ({ id: role.id, role: role.role, ai: role.ai })),
+        features: (features || []).map((feature: any) => ({ id: feature.id, title: feature.title, ai: feature.ai })),
+        goals: (goals || []).map((goal: any) => ({ id: goal.id, title: goal.title, ai: goal.ai })),
         timeline: processedTimeline
       });
     } catch (error) {
@@ -678,6 +680,7 @@ export default function ProjectDetailsUI() {
     id: 1, // Assuming project ID is available here
     title: 'Finder 4 — Lost & Found Tracker',
     aiSummary: 'A comprehensive mobile application project focused on creating an intuitive user experience with modern design principles and seamless functionality.',
+    created_by: null, // Add this field
     roles: [
       { id: 1, role: 'UI/UX Designer' },
       { id: 2, role: 'Frontend Developer' },
@@ -1040,6 +1043,9 @@ export default function ProjectDetailsUI() {
       if (!response.ok) {
         throw new Error('Failed to update epic title');
       }
+      
+      // Mark this item as modified
+      setModifiedItems(prev => new Set(prev).add(`epic-${epicId}`));
     } catch (error) {
       handleApiError(error, 'update epic title');
     }
@@ -1057,6 +1063,9 @@ export default function ProjectDetailsUI() {
       if (!response.ok) {
         throw new Error('Failed to update sub-epic title');
       }
+      
+      // Mark this item as modified
+      setModifiedItems(prev => new Set(prev).add(`subepic-${subEpicId}`));
     } catch (error) {
       handleApiError(error, 'update sub-epic title');
     }
@@ -1074,6 +1083,9 @@ export default function ProjectDetailsUI() {
       if (!response.ok) {
         throw new Error('Failed to update user story title');
       }
+      
+      // Mark this item as modified
+      setModifiedItems(prev => new Set(prev).add(`story-${storyId}`));
     } catch (error) {
       handleApiError(error, 'update user story title');
     }
@@ -1091,6 +1103,9 @@ export default function ProjectDetailsUI() {
       if (!response.ok) {
         throw new Error('Failed to update task title');
       }
+      
+      // Mark this item as modified
+      setModifiedItems(prev => new Set(prev).add(`task-${taskId}`));
     } catch (error) {
       handleApiError(error, 'update task title');
     }
@@ -1101,22 +1116,30 @@ export default function ProjectDetailsUI() {
     try {
       const updatePromises = [];
 
-      // Collect all updates from the current backlog state
+      // Only update items that have been modified
       for (const epic of backlog.epics) {
-        // Update epic title
-        updatePromises.push(updateEpicTitle(epic.id, epic.title));
+        // Update epic title only if it was modified
+        if (modifiedItems.has(`epic-${epic.id}`)) {
+          updatePromises.push(updateEpicTitle(epic.id, epic.title));
+        }
 
-        // Update sub-epic titles
+        // Update sub-epic titles only if they were modified
         for (const subEpic of epic.subEpics || []) {
-          updatePromises.push(updateSubEpicTitle(subEpic.id, subEpic.title));
+          if (modifiedItems.has(`subepic-${subEpic.id}`)) {
+            updatePromises.push(updateSubEpicTitle(subEpic.id, subEpic.title));
+          }
 
-          // Update user story titles
+          // Update user story titles only if they were modified
           for (const userStory of subEpic.userStories || []) {
-            updatePromises.push(updateUserStoryTitle(userStory.id, userStory.title));
+            if (modifiedItems.has(`story-${userStory.id}`)) {
+              updatePromises.push(updateUserStoryTitle(userStory.id, userStory.title));
+            }
 
-            // Update task titles
+            // Update task titles only if they were modified
             for (const task of userStory.tasks || []) {
-              updatePromises.push(updateTaskTitle(task.id, task.title));
+              if (modifiedItems.has(`task-${task.id}`)) {
+                updatePromises.push(updateTaskTitle(task.id, task.title));
+              }
             }
           }
         }
@@ -1128,7 +1151,8 @@ export default function ProjectDetailsUI() {
       // Refresh the backlog data to ensure we have the latest from the server
       await fetchBacklog();
       
-      // Exit editing mode
+      // Clear the modified items set and exit editing mode
+      setModifiedItems(new Set());
       setIsEditingBacklog(false);
       
       console.log('✅ All backlog changes saved successfully');
@@ -1754,6 +1778,25 @@ export default function ProjectDetailsUI() {
     );
   }
 
+  // AI Badge Component
+  const AIBadge = ({ show, tooltipText = "AI Generated" }: { show: boolean; tooltipText?: string }) => {
+    if (!show) return null;
+    
+    return (
+      <span 
+        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ml-2 ${
+          theme === 'dark' 
+            ? 'bg-purple-900/30 text-purple-300' 
+            : 'bg-purple-100 text-purple-800'
+        }`}
+        title={tooltipText}
+      >
+        <span>✨</span>
+        <span>AI</span>
+      </span>
+    );
+  };
+
   return (
     <div className={`flex min-h-screen w-full ${theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'}`}>
       <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
@@ -2276,7 +2319,10 @@ export default function ProjectDetailsUI() {
                                 className={`${theme === 'dark' ? 'text-gray-200 border-blue-400' : 'text-gray-700 border-blue-300'} font-medium bg-transparent border-b focus:outline-none focus:border-blue-500 flex-1`}
                               />
                             ) : (
-                              <span className={`${theme === 'dark' ? 'text-gray-200' : 'text-gray-700'} font-medium`}>{role.role}</span>
+                              <div className="flex items-center">
+                                <span className={`${theme === 'dark' ? 'text-gray-200' : 'text-gray-700'} font-medium`}>{role.role}</span>
+                                <AIBadge show={role.ai} />
+                              </div>
                             )}
                             {isEditingOverview && (
                               <button 
@@ -2319,7 +2365,10 @@ export default function ProjectDetailsUI() {
                                 className={`${theme === 'dark' ? 'text-gray-200 border-green-400' : 'text-gray-700 border-green-300'} font-medium bg-transparent border-b focus:outline-none focus:border-green-500 flex-1`}
                               />
                             ) : (
-                              <span className={`${theme === 'dark' ? 'text-gray-200' : 'text-gray-700'} font-medium`}>{feature.title}</span>
+                              <div className="flex items-center">
+                                <span className={`${theme === 'dark' ? 'text-gray-200' : 'text-gray-700'} font-medium`}>{feature.title}</span>
+                                <AIBadge show={feature.ai} />
+                              </div>
                             )}
                             {isEditingOverview && (
                               <button 
@@ -2366,7 +2415,10 @@ export default function ProjectDetailsUI() {
                                   className={`${theme === 'dark' ? 'text-gray-200 border-purple-400' : 'text-gray-700 border-purple-300'} font-medium bg-transparent border-b focus:outline-none focus:border-purple-500 flex-1`}
                                 />
                               ) : (
-                                <span className={`${theme === 'dark' ? 'text-gray-200' : 'text-gray-700'} font-medium`}>{goal.title}</span>
+                                <div className="flex items-center">
+                                  <span className={`${theme === 'dark' ? 'text-gray-200' : 'text-gray-700'} font-medium`}>{goal.title}</span>
+                                  <AIBadge show={goal.ai} />
+                                </div>
                               )}
                             </div>
                             {isEditingOverview && (
@@ -2498,7 +2550,10 @@ export default function ProjectDetailsUI() {
                     </button>
                     {!isEditingBacklog ? (
                   <button
-                        onClick={() => setIsEditingBacklog(true)}
+                        onClick={() => {
+                          setModifiedItems(new Set());
+                          setIsEditingBacklog(true);
+                        }}
                         disabled={loadingState !== null}
                         className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors flex items-center shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                       >
@@ -2508,7 +2563,10 @@ export default function ProjectDetailsUI() {
                     ) : (
                       <div className="flex items-center gap-2">
                         <button
-                          onClick={() => setIsEditingBacklog(false)}
+                          onClick={() => {
+                            setModifiedItems(new Set());
+                            setIsEditingBacklog(false);
+                          }}
                           className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
                         >
                           Cancel
@@ -2568,12 +2626,17 @@ export default function ProjectDetailsUI() {
                                   ep.id === epic.id ? { ...ep, title: e.target.value } : ep
                               );
                               setBacklog({ ...backlog, epics: updatedEpics });
+                              // Mark this epic as modified
+                              setModifiedItems(prev => new Set(prev).add(`epic-${epic.id}`));
                             }}
                           />
                           ) : (
-                            <span className={`text-xl font-bold ${
-                              theme === "dark" ? "text-white" : "text-gray-900"
-                            }`}>{epic.title}</span>
+                            <div className="flex items-center">
+                              <span className={`text-xl font-bold ${
+                                theme === "dark" ? "text-white" : "text-gray-900"
+                              }`}>{epic.title}</span>
+                              <AIBadge show={epic.ai} />
+                            </div>
                           )}
                         </div>
                         {isEditingBacklog && (
@@ -2627,6 +2690,8 @@ export default function ProjectDetailsUI() {
                                       return ep;
                                     });
                                     setBacklog({ ...backlog, epics: updatedEpics });
+                                    // Mark this sub-epic as modified
+                                    setModifiedItems(prev => new Set(prev).add(`subepic-${subEpic.id}`));
                                   }}
                                   className={`text-lg font-semibold bg-transparent border-b-2 border-transparent focus:outline-none transition-colors flex-1 ${
                                     theme === "dark" 
@@ -2635,9 +2700,12 @@ export default function ProjectDetailsUI() {
                                   }`}
                                 />
                                 ) : (
-                                  <span className={`text-lg font-semibold ${
-                                    theme === "dark" ? "text-white" : "text-gray-900"
-                                  }`}>{subEpic.title}</span>
+                                  <div className="flex items-center">
+                                    <span className={`text-lg font-semibold ${
+                                      theme === "dark" ? "text-white" : "text-gray-900"
+                                    }`}>{subEpic.title}</span>
+                                    <AIBadge show={subEpic.ai} />
+                                  </div>
                                 )}
                               </div>
                               {isEditingBacklog && (
@@ -2697,6 +2765,8 @@ export default function ProjectDetailsUI() {
                                             return ep;
                                           });
                                           setBacklog({ ...backlog, epics: updatedEpics });
+                                          // Mark this user story as modified
+                                          setModifiedItems(prev => new Set(prev).add(`story-${story.id}`));
                                         }}
                                         className={`flex-1 bg-transparent border-b-2 border-transparent focus:outline-none transition-colors ${
                                           theme === "dark" 
@@ -2705,9 +2775,12 @@ export default function ProjectDetailsUI() {
                                         }`}
                                       />
                                       ) : (
-                                        <span className={`flex-1 ${
-                                          theme === "dark" ? "text-white" : "text-gray-900"
-                                        }`}>{story.title}</span>
+                                        <div className="flex items-center flex-1">
+                                          <span className={`flex-1 ${
+                                            theme === "dark" ? "text-white" : "text-gray-900"
+                                          }`}>{story.title}</span>
+                                          <AIBadge show={story.ai} />
+                                        </div>
                                       )}
                                     </div>
                                     {isEditingBacklog && (
@@ -2770,6 +2843,8 @@ export default function ProjectDetailsUI() {
                                                   return ep;
                                                 });
                                                 setBacklog({ ...backlog, epics: updatedEpics });
+                                                // Mark this task as modified
+                                                setModifiedItems(prev => new Set(prev).add(`task-${task.id}`));
                                               }}
                                               className={`bg-transparent border-b-2 border-transparent focus:outline-none flex-1 transition-colors ${
                                                 theme === "dark" 
@@ -2778,9 +2853,12 @@ export default function ProjectDetailsUI() {
                                               }`}
                                             />
                                             ) : (
-                                              <span className={`flex-1 ${
-                                                theme === "dark" ? "text-gray-300" : "text-gray-700"
-                                              }`}>{task.title}</span>
+                                              <div className="flex items-center flex-1">
+                                                <span className={`flex-1 ${
+                                                  theme === "dark" ? "text-gray-300" : "text-gray-700"
+                                                }`}>{task.title}</span>
+                                                <AIBadge show={task.ai} />
+                                              </div>
                                             )}
                                           </div>
                                           {isEditingBacklog && (
@@ -2974,12 +3052,26 @@ export default function ProjectDetailsUI() {
                                 >
                                   <Edit2 className="w-4 h-4" />
                                 </button>
-                                <button
-                                  onClick={() => handleDeleteClick('member', member.id, member.name)}
-                                  className="text-red-600 hover:text-red-800 hover:bg-red-50 p-2 rounded-lg transition-colors"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
+                                {(() => {
+                                  const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+                                  const currentUserId = currentUser.id || currentUser.user_id || currentUser.pk;
+                                  const isOwner = projectData.created_by === currentUserId;
+                                  const isSelf = member.email === currentUser.email;
+                                  
+                                  // Don't show delete button if user is the owner trying to delete themselves
+                                  if (isOwner && isSelf) {
+                                    return null;
+                                  }
+                                  
+                                  return (
+                                    <button
+                                      onClick={() => handleDeleteClick('member', member.id, member.name)}
+                                      className="text-red-600 hover:text-red-800 hover:bg-red-50 p-2 rounded-lg transition-colors"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  );
+                                })()}
                               </div>
                             </td>
                           </tr>

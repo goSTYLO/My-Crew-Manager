@@ -213,12 +213,14 @@ class ChatNotificationConsumer(AsyncWebsocketConsumer):
             await self.close()
             return
         
-        self.notification_group_name = f'user_{self.user_id}_notifications'
-        print(f"Notification WebSocket: User {self.user_id} connecting to notifications")
+        # Chat notifications use a different group - don't join the general notifications group
+        # The general notifications group is handled by ProjectUpdatesConsumer
+        self.chat_notification_group = f'user_{self.user_id}_chat_notifications'
+        print(f"Chat Notification WebSocket: User {self.user_id} connecting to chat notifications")
         
-        # Join user's notification group
+        # Join user's chat notification group (separate from general notifications)
         await self.channel_layer.group_add(
-            self.notification_group_name,
+            self.chat_notification_group,
             self.channel_name
         )
         
@@ -226,10 +228,10 @@ class ChatNotificationConsumer(AsyncWebsocketConsumer):
         print(f"Notification WebSocket: Connection accepted for user {self.user_id}")
 
     async def disconnect(self, close_code):
-        # Leave notification group only if it was set during connect
-        if hasattr(self, 'notification_group_name'):
+        # Leave chat notification group only if it was set during connect
+        if hasattr(self, 'chat_notification_group'):
             await self.channel_layer.group_discard(
-                self.notification_group_name,
+                self.chat_notification_group,
                 self.channel_name
             )
 

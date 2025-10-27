@@ -29,10 +29,17 @@ class ProjectUpdatesConsumer(AsyncWebsocketConsumer):
         
         self.user_id = user.user_id
         self.group_name = f'user_{self.user_id}_updates'
+        self.notification_group_name = f'user_{self.user_id}_notifications'
         
-        # Join user's personal group
+        # Join user's personal group for project updates
         await self.channel_layer.group_add(
             self.group_name,
+            self.channel_name
+        )
+        
+        # Join user's notification group
+        await self.channel_layer.group_add(
+            self.notification_group_name,
             self.channel_name
         )
         
@@ -59,7 +66,24 @@ class ProjectUpdatesConsumer(AsyncWebsocketConsumer):
                 self.group_name,
                 self.channel_name
             )
+        if hasattr(self, 'notification_group_name'):
+            await self.channel_layer.group_discard(
+                self.notification_group_name,
+                self.channel_name
+            )
     
     # Handler for all project update events
     async def project_event(self, event):
         await self.send(text_data=json.dumps(event['data']))
+    
+    # Handler for notification broadcasts
+    async def notification_message(self, event):
+        """Handler for notification broadcasts"""
+        print(f"📨 Consumer received notification_message event: {event}")
+        print(f"📨 Sending to WebSocket client: {event['notification']}")
+        await self.send(text_data=json.dumps({
+            'type': 'notification',
+            'action': 'notification_created',
+            'notification': event['notification']
+        }))
+        print(f"✅ Notification sent to WebSocket client successfully")

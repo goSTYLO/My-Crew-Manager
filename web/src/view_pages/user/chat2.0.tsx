@@ -267,6 +267,9 @@ const ChatApp = () => {
         console.log('🔔 Connecting to notification WebSocket...');
         connectNotificationWebSocket();
         
+        // Dispatch event to reset chat badge count
+        window.dispatchEvent(new CustomEvent('chatOpened'));
+        
         console.log('💬 Chat initialized with WebSocket real-time updates');
       } else {
         setError('Please login to use chat');
