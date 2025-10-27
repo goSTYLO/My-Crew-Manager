@@ -104,6 +104,8 @@ class _NotificationsPageState extends State<NotificationsPage> {
     } else {
       context.read<InvitationBloc>().add(DeclineInvitation(invitationId));
     }
+    // Reload notifications to apply filtering (accepted invitations will be filtered out)
+    context.read<NotificationBloc>().add(const LoadNotifications());
   }
 
   @override

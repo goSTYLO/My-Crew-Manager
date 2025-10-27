@@ -359,6 +359,7 @@ class _ProjectOverviewPageState extends State<ProjectOverviewPage> {
                                       child: _MemberCircle(
                                         label: _getInitials(member.name),
                                         color: _getColorFromString(member.name),
+                                        textColor: Colors.white,
                                       ),
                                     )),
                                   ],
@@ -520,6 +521,7 @@ class _MemberCircle extends StatelessWidget {
   const _MemberCircle({
     required this.label,
     required this.color,
+    required this.textColor,
   });
 
   @override

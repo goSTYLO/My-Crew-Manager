@@ -28,6 +28,15 @@ class MarkAllAsRead extends NotificationEvent {
   const MarkAllAsRead();
 }
 
+class RemoveNotification extends NotificationEvent {
+  final int notificationId;
+
+  const RemoveNotification(this.notificationId);
+
+  @override
+  List<Object?> get props => [notificationId];
+}
+
 class NotificationReceived extends NotificationEvent {
   final dynamic notification;
 

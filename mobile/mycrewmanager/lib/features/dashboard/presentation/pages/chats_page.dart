@@ -36,6 +36,7 @@ class _ChatsPageState extends State<ChatsPage> {
   final List<MessageModel> _messages = [];
   // Stream is listened immediately; no need to store
   bool _loading = true;
+  bool _sending = false;
 
   @override
   void initState() {
@@ -44,14 +45,20 @@ class _ChatsPageState extends State<ChatsPage> {
     _connectWs();
   }
 
-  Future<void> _loadMessages() async {
+  Future<void> _loadMessages({int offset = 0, int limit = 100}) async {
     final roomId = widget.roomId;
     try {
-      final msgs = await _repo.listMessages(roomId);
+      final msgs = await _repo.listMessages(roomId, offset: offset, limit: limit);
       setState(() {
-        _messages
-          ..clear()
-          ..addAll(msgs);
+        if (offset == 0) {
+          // First load - replace all messages
+          _messages
+            ..clear()
+            ..addAll(msgs);
+        } else {
+          // Pagination load - add to existing messages
+          _messages.addAll(msgs);
+        }
       });
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -287,12 +294,21 @@ class _ChatsPageState extends State<ChatsPage> {
                     const SizedBox(width: 8),
                     Container(
                       decoration: BoxDecoration(
-                        color: Colors.blue,
+                        color: _sending ? Colors.grey : Colors.blue,
                         borderRadius: BorderRadius.circular(24),
                       ),
                       child: IconButton(
-                        icon: const Icon(Icons.send, color: Colors.white),
-                        onPressed: _sendMessage,
+                        icon: _sending 
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : const Icon(Icons.send, color: Colors.white),
+                        onPressed: _sending ? null : _sendMessage,
                       ),
                     ),
                   ],
@@ -307,12 +323,22 @@ class _ChatsPageState extends State<ChatsPage> {
 
   Future<void> _sendMessage() async {
     final text = _controller.text.trim();
-    if (text.isEmpty) return;
-    final sent = await _repo.sendMessage(widget.roomId, text);
-    setState(() {
-      _messages.add(sent);
-    });
-    _controller.clear();
+    if (text.isEmpty || _sending) return;
+    
+    setState(() => _sending = true);
+    try {
+      await _repo.sendMessage(widget.roomId, text);
+      _controller.clear();
+      // Don't add message locally - let WebSocket handle it to avoid duplicates
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to send message: ${e.toString()}'))
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
   }
 
   Future<void> _showInviteDialog() async {

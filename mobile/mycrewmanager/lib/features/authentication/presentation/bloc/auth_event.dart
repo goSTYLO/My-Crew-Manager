@@ -39,3 +39,7 @@ final class UpdateUserRole extends AuthEvent {
 final class AuthLogout extends AuthEvent {
 
 }
+
+final class RefreshUserData extends AuthEvent {
+
+}

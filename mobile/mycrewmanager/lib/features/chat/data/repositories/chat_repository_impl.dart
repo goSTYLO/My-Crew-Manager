@@ -8,7 +8,8 @@ class ChatRepositoryImpl {
   ChatRepositoryImpl(this.remote);
 
   Future<List<RoomModel>> listRooms() => remote.listRooms();
-  Future<List<MessageModel>> listMessages(int roomId) => remote.listMessages(roomId);
+  Future<List<MessageModel>> listMessages(int roomId, {int offset = 0, int limit = 50}) => 
+      remote.listMessages(roomId, offset: offset, limit: limit);
   Future<MessageModel> sendMessage(int roomId, String content, {String messageType = 'text', int? replyToId}) =>
       remote.sendMessage(roomId: roomId, content: content, messageType: messageType, replyToId: replyToId);
 

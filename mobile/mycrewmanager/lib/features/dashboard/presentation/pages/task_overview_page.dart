@@ -41,24 +41,52 @@ class _TaskOverviewPageState extends State<TaskOverviewPage> {
     }
   }
 
-  bool _isCurrentUserAssignee(String? currentUserEmail, String? currentUserName) {
-    if (currentTask.assigneeName == null) {
+  bool _isCurrentUserAssignee(String? currentUserEmail, String? currentUserName, String? currentUserId) {
+    print("🔍 DEBUG: Checking assignee match");
+    print("🔍 Current User ID: '$currentUserId'");
+    print("🔍 Current User Email: '$currentUserEmail'");
+    print("🔍 Current User Name: '$currentUserName'");
+    print("🔍 Task Assignee ID: '${currentTask.assigneeId}'");
+    print("🔍 Task Assignee Name: '${currentTask.assigneeName}'");
+    
+    if (currentTask.assigneeId == null && currentTask.assigneeName == null) {
+      print("🔍 No assignee set for this task");
       return false; // No assignee, so no one can mark it complete
     }
     
-    if (currentUserEmail == null && currentUserName == null) {
+    if (currentUserId == null && currentUserEmail == null && currentUserName == null) {
+      print("🔍 No current user info available");
       return false; // No current user info
     }
     
-    final assigneeName = currentTask.assigneeName!;
+    // Primary check: Compare user ID with assignee ID
+    if (currentUserId != null && currentTask.assigneeId != null) {
+      final idMatch = currentUserId == currentTask.assigneeId.toString();
+      print("🔍 ID match: $idMatch");
+      if (idMatch) {
+        print("🔍 Final result: true (ID match)");
+        return true;
+      }
+    }
     
-    // Check multiple matching criteria:
-    // 1. Exact email match
-    // 2. Exact name match
-    // 3. Name contains user's first name (fallback)
-    return assigneeName == currentUserEmail || 
-           assigneeName == currentUserName ||
-           (currentUserName != null && assigneeName.contains(currentUserName.split(' ').first));
+    // Fallback checks: Compare names/emails
+    final assigneeName = currentTask.assigneeName;
+    if (assigneeName != null) {
+      final emailMatch = assigneeName == currentUserEmail;
+      final nameMatch = assigneeName == currentUserName;
+      final firstNameMatch = currentUserName != null && assigneeName.contains(currentUserName.split(' ').first);
+      
+      print("🔍 Email match: $emailMatch");
+      print("🔍 Name match: $nameMatch");
+      print("🔍 First name match: $firstNameMatch");
+      
+      final isMatch = emailMatch || nameMatch || firstNameMatch;
+      print("🔍 Final result: $isMatch");
+      return isMatch;
+    }
+    
+    print("🔍 Final result: false (no matches found)");
+    return false;
   }
 
   Future<void> _markTaskAsComplete() async {
@@ -141,12 +169,14 @@ class _TaskOverviewPageState extends State<TaskOverviewPage> {
       builder: (context, authState) {
         String? currentUserEmail;
         String? currentUserName;
+        String? currentUserId;
         if (authState is AuthSuccess) {
           currentUserEmail = authState.user.email;
           currentUserName = authState.user.name;
+          currentUserId = authState.user.id;
         }
         
-        final isAssignee = _isCurrentUserAssignee(currentUserEmail, currentUserName);
+        final isAssignee = _isCurrentUserAssignee(currentUserEmail, currentUserName, currentUserId);
         
         return Scaffold(
           backgroundColor: Colors.white,
@@ -295,42 +325,12 @@ class _TaskOverviewPageState extends State<TaskOverviewPage> {
                               Row(
                                 children: const [
                                   Text(
-                                    "Priority:",
-                                    style: TextStyle(fontWeight: FontWeight.w500, color: Colors.black54),
-                                  ),
-                                  SizedBox(width: 8),
-                                  Icon(Icons.priority_high, color: Colors.red, size: 18),
-                                  SizedBox(width: 2),
-                                  Text(
-                                    "Highest Priority",
-                                    style: TextStyle(fontWeight: FontWeight.w600, color: Colors.red),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 6),
-                              Row(
-                                children: const [
-                                  Text(
                                     "Type:",
                                     style: TextStyle(fontWeight: FontWeight.w500, color: Colors.black54),
                                   ),
                                   SizedBox(width: 8),
                                   Text(
-                                    "Epic",
-                                    style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 6),
-                              Row(
-                                children: const [
-                                  Text(
-                                    "Resolution:",
-                                    style: TextStyle(fontWeight: FontWeight.w500, color: Colors.black54),
-                                  ),
-                                  SizedBox(width: 8),
-                                  Text(
-                                    "Unresolved",
+                                    "Task",
                                     style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black),
                                   ),
                                 ],

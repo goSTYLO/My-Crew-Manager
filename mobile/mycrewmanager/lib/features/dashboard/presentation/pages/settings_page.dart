@@ -123,28 +123,6 @@ class _ProfileTabState extends State<_ProfileTab> {
     }
   }
 
-  Future<void> _refreshUserData() async {
-    try {
-      final dio = Dio();
-      final tokenStorage = TokenStorage();
-      final token = await tokenStorage.getToken();
-      
-      if (token == null) return;
-      
-      dio.options.headers['Authorization'] = 'Token $token';
-      dio.options.baseUrl = Constants.baseUrl;
-      
-      final response = await dio.get('user/me/');
-      
-      if (response.statusCode == 200) {
-        // User data refreshed successfully
-        // The UI will update when the user navigates or the app restarts
-        print('User data refreshed successfully');
-      }
-    } catch (e) {
-      print('Error refreshing user data: $e');
-    }
-  }
 
   Future<void> _uploadProfilePicture() async {
     if (_avatar == null) {
@@ -190,8 +168,12 @@ class _ProfileTabState extends State<_ProfileTab> {
       );
 
       if (response.statusCode == 200) {
-        // Refresh user data to get the updated profile picture
-        await _refreshUserData();
+        // Dispatch refresh event to update the auth state with new profile picture
+        if (context.mounted) {
+          // Add a small delay to ensure backend has processed the upload
+          await Future.delayed(const Duration(milliseconds: 500));
+          context.read<AuthBloc>().add(RefreshUserData());
+        }
         
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Profile picture updated successfully!')),

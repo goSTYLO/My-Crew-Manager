@@ -16,4 +16,7 @@ abstract class NotificationRemoteDataSource {
 
   @POST("mark_all_read/")
   Future<void> markAllAsRead();
+
+  @DELETE("{id}/")
+  Future<void> removeNotification(@Path("id") int notificationId);
 }

@@ -86,4 +86,22 @@ class NotificationRepositoryImpl implements NotificationRepository {
       return left(Failure("Failed to mark all notifications as read. Try Again!"));
     }
   }
+
+  @override
+  Future<Either<Failure, void>> removeNotification(int notificationId) async {
+    logger.d("🌐 Making API call to remove notification: $notificationId");
+    try {
+      if (!await connectionChecker.isConnected) {
+        logger.d("❌ No internet connection");
+        return left(Failure(constants.Constants.noConnectionErrorMessage));
+      }
+      logger.d("✅ Internet connection available, making remove notification API call...");
+      await remoteDataSource.removeNotification(notificationId);
+      logger.d("✅ Remove notification API call successful");
+      return right(null);
+    } on DioException catch (e) {
+      logger.d("❌ Remove notification DioException: ${e.message} - Status: ${e.response?.statusCode}");
+      return left(Failure("Failed to remove notification. Try Again!"));
+    }
+  }
 }

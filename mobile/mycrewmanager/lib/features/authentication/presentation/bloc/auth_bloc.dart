@@ -7,6 +7,9 @@ import 'package:mycrewmanager/features/authentication/domain/usecases/user_login
 import 'package:mycrewmanager/features/authentication/domain/usecases/user_signup.dart';
 import 'package:mycrewmanager/features/authentication/domain/usecases/user_logout.dart';
 import 'package:mycrewmanager/core/usecase/usercase.dart';
+import 'package:mycrewmanager/init_dependencies.dart' as deps;
+import 'package:mycrewmanager/features/chat/data/services/chat_ws_service.dart';
+import 'package:mycrewmanager/features/notification/data/services/notification_ws_service.dart';
 import 'package:dio/dio.dart';
 
 part 'auth_event.dart';
@@ -24,15 +27,16 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         _userLogout = userLogout,
         _tokenStorage = tokenStorage,
         super(AuthInitial()) {
-    on<AuthEvent>((_, emit) => emit(AuthLoading()));
     on<AuthLogin>(_onAuthLogin);
     on<AuthSignUp>(_onAuthSignup);
     on<UpdateUserRole>(_onUpdateUserRole);
     on<AuthLogout>(_onAuthLogout);
     on<AuthIsUserLoggedIn>(_onAuthIsUserLoggedIn);
+    on<RefreshUserData>(_onRefreshUserData);
   }
 
   void _onAuthLogin(AuthLogin event, Emitter<AuthState> emit) async {
+    emit(AuthLoading());
     logger.d("🔐 Starting login process for: ${event.email}");
     
     final res = await _userLogin(
@@ -84,6 +88,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   }
 
   void _onAuthSignup(AuthSignUp event, Emitter<AuthState> emit) async {
+    emit(AuthLoading());
     logger.d("🔐 Starting signup process for: ${event.email}");
     
     final res = await _userSignup(
@@ -135,7 +140,23 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   }
 
   void _onAuthLogout(AuthLogout event, Emitter<AuthState> emit) async {
+    emit(AuthLoading());
     logger.d("🔐 Starting logout process");
+    
+    // Disconnect WebSocket services before logout
+    try {
+      logger.d("🔌 Disconnecting WebSocket services...");
+      final chatWsService = deps.serviceLocator<ChatWsService>();
+      final notificationWsService = deps.serviceLocator<NotificationWsService>();
+      
+      await chatWsService.disconnect();
+      notificationWsService.disconnect();
+      
+      logger.d("✅ WebSocket services disconnected");
+    } catch (e) {
+      logger.d("⚠️ Error disconnecting WebSocket services: $e");
+      // Continue with logout even if WebSocket cleanup fails
+    }
     
     final res = await _userLogout(NoParams());
 
@@ -153,6 +174,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   }
 
   void _onAuthIsUserLoggedIn(AuthIsUserLoggedIn event, Emitter<AuthState> emit) async {
+    emit(AuthLoading());
     logger.d("🔍 Checking if user is already logged in");
     
     final token = await _tokenStorage.getToken();
@@ -209,6 +231,47 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         role: event.role,
       );
       emit(AuthSuccess(updatedUser));
+    }
+  }
+
+  void _onRefreshUserData(RefreshUserData event, Emitter<AuthState> emit) async {
+    logger.d("🔄 Refreshing user data");
+    
+    final currentState = state;
+    if (currentState is! AuthSuccess) {
+      logger.d("❌ No user logged in, cannot refresh data");
+      return;
+    }
+
+    try {
+      final dio = Dio();
+      dio.options.headers['Authorization'] = 'Token ${currentState.user.token}';
+      dio.options.baseUrl = Constants.baseUrl;
+      
+      final response = await dio.get('user/me/');
+      
+      if (response.statusCode == 200) {
+        final userData = response.data;
+        logger.d("📊 Received user data: $userData");
+        
+        final updatedUser = User(
+          id: userData['user_id']?.toString() ?? currentState.user.id,
+          email: userData['email'] ?? currentState.user.email,
+          name: userData['name'] ?? currentState.user.name,
+          token: currentState.user.token,
+          role: userData['role'] ?? currentState.user.role,
+          profilePicture: userData['profile_picture'] ?? currentState.user.profilePicture,
+        );
+        
+        logger.d("✅ User data refreshed successfully: ${updatedUser.name}, profilePicture: ${updatedUser.profilePicture}");
+        emit(AuthSuccess(updatedUser));
+      } else {
+        logger.d("❌ Failed to refresh user data: ${response.statusCode}");
+        // Don't emit anything on failure to preserve current state
+      }
+    } catch (e) {
+      logger.d("❌ Error refreshing user data: $e");
+      // Don't emit anything on error to preserve current state
     }
   }
 

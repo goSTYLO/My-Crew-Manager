@@ -13,9 +13,22 @@ class ChatRemoteDataSource {
     return data.map((e) => RoomModel.fromJson(e as Map<String, dynamic>)).toList();
   }
 
-  Future<List<MessageModel>> listMessages(int roomId) async {
-    final response = await dio.get('chat/rooms/$roomId/messages/');
-    final List<dynamic> data = response.data as List<dynamic>;
+  Future<List<MessageModel>> listMessages(int roomId, {int offset = 0, int limit = 50}) async {
+    final response = await dio.get('chat/rooms/$roomId/messages/', queryParameters: {
+      'offset': offset,
+      'limit': limit,
+    });
+    
+    // Handle both old format (plain array) and new format (wrapped response)
+    List<dynamic> data;
+    if (response.data is Map<String, dynamic>) {
+      final responseData = response.data as Map<String, dynamic>;
+      // Try 'results' first, fallback to 'messages' for backward compatibility
+      data = responseData['results'] ?? responseData['messages'] ?? [];
+    } else {
+      data = response.data as List<dynamic>;
+    }
+    
     return data.map((e) => MessageModel.fromJson(e as Map<String, dynamic>)).toList();
   }
 
