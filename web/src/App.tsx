@@ -32,6 +32,7 @@ import UserSettingsApperance from './view_pages/user/user_settings_apperance';
 /* ---------------- Components ---------------- */
 import ForgotPassword from './components/forgotpassword';
 import LandingPage from './components/landingpage';
+import TermsAndCondition from './components/terms&condition';
 
 const App: React.FC = () => {
   return (
@@ -65,6 +66,7 @@ const App: React.FC = () => {
 
             {/* Components */}
             <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/term-&-conditions" element={<TermsAndCondition />} />
 
             {/* User Routes */}
             <Route path="/projects-user" element={<ProjectUser />} />
