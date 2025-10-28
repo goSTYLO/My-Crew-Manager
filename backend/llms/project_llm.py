@@ -13,14 +13,22 @@ from llms.llm_cache import get_cached_llm
 
 logger = logging.getLogger('llms')
 
-def build_prompt(section: str, proposal_text: str, context: Dict = None) -> str:
-    root_dir = os.path.dirname(__file__)
-    prompt_path = os.path.join(root_dir, "prompts", f"{section}_prompt.txt")
+# Cache prompt templates in memory to avoid disk I/O on every call
+_PROMPT_CACHE = {}
 
-    try:
-        with open(prompt_path, "r", encoding="utf-8") as f:
-            template = f.read().strip()
-    except Exception:
+def build_prompt(section: str, proposal_text: str, context: Dict = None) -> str:
+    # Check cache first
+    if section not in _PROMPT_CACHE:
+        root_dir = os.path.dirname(__file__)
+        prompt_path = os.path.join(root_dir, "prompts", f"{section}_prompt.txt")
+        try:
+            with open(prompt_path, "r", encoding="utf-8") as f:
+                _PROMPT_CACHE[section] = f.read().strip()
+        except Exception:
+            return ""
+    
+    template = _PROMPT_CACHE.get(section, "")
+    if not template:
         return ""
 
     prompt = template.replace("{proposal_text}", proposal_text)
@@ -47,24 +55,31 @@ def validate_section_format(section: str, response: str) -> bool:
         return "timeline:" in response_lower and "week_number:" in response_lower
     return True
 
-def generate_section(llm, section: str, prompt: str, max_retries: int = 3, cancellation_token: Optional[CancellationToken] = None) -> str:
-    for _ in range(max_retries):
-        try:
-            # Check for cancellation before each attempt
-            if cancellation_token:
-                cancellation_token.check_cancelled()
-            
-            response = llm.invoke(prompt).strip()
-            if not response:
+def generate_section(llm, section: str, prompt: str, max_retries: int = 3, max_tokens: int = 512, cancellation_token: Optional[CancellationToken] = None) -> str:
+    # Temporarily override pipeline's max_new_tokens for this call
+    original_max = llm.pipeline.max_new_tokens
+    llm.pipeline.max_new_tokens = max_tokens
+    
+    try:
+        for _ in range(max_retries):
+            try:
+                # Check for cancellation before each attempt
+                if cancellation_token:
+                    cancellation_token.check_cancelled()
+                
+                response = llm.invoke(prompt).strip()
+                if not response:
+                    continue
+                if not validate_section_format(section, response):
+                    continue
+                return response
+            except TaskCancelledException:
+                raise  # Re-raise cancellation exceptions
+            except Exception:
                 continue
-            if not validate_section_format(section, response):
-                continue
-            return response
-        except TaskCancelledException:
-            raise  # Re-raise cancellation exceptions
-        except Exception:
-            continue
-    return ""
+        return ""
+    finally:
+        llm.pipeline.max_new_tokens = original_max
 
 def run_pipeline_from_text(proposal_text: str, task_id: Optional[str] = None) -> ProjectModel:
     if not proposal_text:
@@ -77,6 +92,15 @@ def run_pipeline_from_text(proposal_text: str, task_id: Optional[str] = None) ->
     project_model = ProjectModel()
     raw_outputs = {}
     sections = ["summary", "features", "roles", "goals", "timeline"]
+    
+    # Section-specific token limits for optimal performance
+    section_token_limits = {
+        "summary": 256,    # Short paragraph
+        "features": 256,   # List of 5-6 items
+        "roles": 256,      # List of 5-8 roles
+        "goals": 384,      # 8 goals with titles/roles
+        "timeline": 384,   # 4 weeks with tasks
+    }
 
     context = {
         "proposal_text": proposal_text,
@@ -107,7 +131,8 @@ def run_pipeline_from_text(proposal_text: str, task_id: Optional[str] = None) ->
 
         prompt = build_prompt(section, proposal_text, context)
         if prompt:
-            raw_response = generate_section(llm, section, prompt, cancellation_token=cancellation_token)
+            max_tokens = section_token_limits.get(section, 512)
+            raw_response = generate_section(llm, section, prompt, max_tokens=max_tokens, cancellation_token=cancellation_token)
             if raw_response:
                 logger.debug(f"RAW {section.upper()}: {raw_response}")
                 raw_outputs[section] = raw_response

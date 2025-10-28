@@ -79,10 +79,12 @@ def _create_llm_pipeline() -> HuggingFacePipeline:
             "text-generation",
             model=model,
             tokenizer=tokenizer,
-            max_new_tokens=1024,
-            temperature=0.7,
+            max_new_tokens=512,  # Reduced from 1024
+            temperature=0.4,      # Reduced from 0.7
+            top_p=0.9,           # Add nucleus sampling
             do_sample=True,
             return_full_text=False,
+            use_cache=True,      # Enable KV-cache
         )
         logger.info("GPU pipeline created successfully")
     else:
@@ -100,14 +102,25 @@ def _create_llm_pipeline() -> HuggingFacePipeline:
             "text-generation",
             model=model,
             tokenizer=tokenizer,
-            max_new_tokens=512,
-            temperature=0.7,
+            max_new_tokens=256,  # Reduced from 512 for CPU
+            temperature=0.4,      # Reduced from 0.7
+            top_p=0.9,           # Add nucleus sampling
             do_sample=True,
             return_full_text=False,
+            use_cache=True,      # Enable KV-cache
         )
         logger.info("CPU pipeline created successfully")
     
     logger.info("LLM pipeline creation completed successfully!")
+    
+    # Warmup inference to initialize CUDA kernels
+    try:
+        logger.info("Running warmup inference...")
+        pipe("Test", max_new_tokens=10)
+        logger.info("Warmup complete")
+    except Exception as e:
+        logger.warning(f"Warmup failed (non-critical): {e}")
+    
     return HuggingFacePipeline(pipeline=pipe)
 
 def get_cached_llm() -> HuggingFacePipeline:
@@ -117,26 +130,26 @@ def get_cached_llm() -> HuggingFacePipeline:
     """
     global _model_instance
     
-    print("🔍 [LLM Cache] get_cached_llm() called")
+    logger.debug("[LLM Cache] get_cached_llm() called")
     
     # Update activity time whenever LLM is accessed
     _update_activity_time()
     
     if _model_instance is not None:
-        print("✅ [LLM Cache] Returning existing cached model instance")
+        logger.debug("[LLM Cache] Returning existing cached model instance")
         return _model_instance
     
-    print("⏳ [LLM Cache] No cached model found, creating new instance...")
+    logger.debug("[LLM Cache] No cached model found, creating new instance...")
     
     with _model_lock:
         # Double-check pattern: another thread might have created it while we waited
         if _model_instance is not None:
-            print("✅ [LLM Cache] Another thread created model while waiting, returning existing instance")
+            logger.debug("[LLM Cache] Another thread created model while waiting, returning existing instance")
             return _model_instance
         
-        print("🚀 [LLM Cache] Creating new LLM pipeline...")
+        logger.debug("[LLM Cache] Creating new LLM pipeline...")
         _model_instance = _create_llm_pipeline()
-        print("✅ [LLM Cache] LLM model loaded and cached successfully")
+        logger.debug("[LLM Cache] LLM model loaded and cached successfully")
         return _model_instance
 
 def get_cached_backlog_llm() -> HuggingFacePipeline:
@@ -144,7 +157,7 @@ def get_cached_backlog_llm() -> HuggingFacePipeline:
     Get cached LLM instance (same as get_cached_llm).
     Kept for backward compatibility.
     """
-    print("🔍 [LLM Cache] get_cached_backlog_llm() called - delegating to get_cached_llm()")
+    logger.debug("[LLM Cache] get_cached_backlog_llm() called - delegating to get_cached_llm()")
     return get_cached_llm()
 
 def clear_cache():
@@ -152,20 +165,20 @@ def clear_cache():
     Clear the cached model instance. Useful for testing or memory management.
     """
     global _model_instance
-    print("🧹 [LLM Cache] clear_cache() called")
+    logger.debug("[LLM Cache] clear_cache() called")
     with _model_lock:
         if _model_instance is not None:
-            print("🗑️ [LLM Cache] Clearing cached model instance")
+            logger.debug("[LLM Cache] Clearing cached model instance")
             _model_instance = None
-            print("✅ [LLM Cache] LLM cache cleared")
+            logger.debug("[LLM Cache] LLM cache cleared")
         else:
-            print("ℹ️ [LLM Cache] No cached model to clear")
+            logger.debug("[LLM Cache] No cached model to clear")
 
 def clear_backlog_cache():
     """
     Clear cache (same as clear_cache, kept for compatibility).
     """
-    print("🧹 [LLM Cache] clear_backlog_cache() called - delegating to clear_cache()")
+    logger.debug("[LLM Cache] clear_backlog_cache() called - delegating to clear_cache()")
     clear_cache()
 
 def _update_activity_time():
@@ -179,34 +192,34 @@ def clear_cache_and_free_memory():
     This should be called when you want to free VRAM.
     """
     global _model_instance
-    print("🧹 [LLM Cache] clear_cache_and_free_memory() called")
+    logger.debug("[LLM Cache] clear_cache_and_free_memory() called")
     
     with _model_lock:
         if _model_instance is not None:
-            print("🗑️ [LLM Cache] Clearing model from GPU memory...")
+            logger.debug("[LLM Cache] Clearing model from GPU memory...")
             # Clear the model from GPU memory
             if hasattr(_model_instance, 'pipeline') and hasattr(_model_instance.pipeline, 'model'):
-                print("🔧 [LLM Cache] Deleting pipeline model...")
+                logger.debug("[LLM Cache] Deleting pipeline model...")
                 del _model_instance.pipeline.model
             if hasattr(_model_instance, 'pipeline') and hasattr(_model_instance.pipeline, 'tokenizer'):
-                print("🔧 [LLM Cache] Deleting pipeline tokenizer...")
+                logger.debug("[LLM Cache] Deleting pipeline tokenizer...")
                 del _model_instance.pipeline.tokenizer
-            print("🔧 [LLM Cache] Deleting model instance...")
+            logger.debug("[LLM Cache] Deleting model instance...")
             del _model_instance
             _model_instance = None
-            print("✅ [LLM Cache] Model instance cleared")
+            logger.debug("[LLM Cache] Model instance cleared")
         else:
-            print("ℹ️ [LLM Cache] No cached model to clear")
+            logger.debug("[LLM Cache] No cached model to clear")
             
         # Force garbage collection and clear CUDA cache
-        print("🧹 [LLM Cache] Running garbage collection...")
+        logger.debug("[LLM Cache] Running garbage collection...")
         gc.collect()
         if torch.cuda.is_available():
-            print("🧹 [LLM Cache] Clearing CUDA cache...")
+            logger.debug("[LLM Cache] Clearing CUDA cache...")
             torch.cuda.empty_cache()
-            print("✅ [LLM Cache] GPU memory cleared and model unloaded")
+            logger.debug("[LLM Cache] GPU memory cleared and model unloaded")
         else:
-            print("✅ [LLM Cache] CPU memory cleared and model unloaded")
+            logger.debug("[LLM Cache] CPU memory cleared and model unloaded")
 
 def get_memory_usage():
     """
@@ -226,7 +239,7 @@ def _auto_cleanup_worker():
     """Background worker that periodically checks for cleanup opportunities."""
     global _last_activity_time, _cleanup_interval
     
-    print("🔄 [LLM Cache] Auto-cleanup worker started")
+    logger.debug("[LLM Cache] Auto-cleanup worker started")
     
     while True:
         try:
@@ -241,17 +254,17 @@ def _auto_cleanup_worker():
                 
                 # Log periodic status (every 5 minutes)
                 if int(time_since_activity) % 300 == 0 and time_since_activity > 0:
-                    print(f"⏰ [LLM Cache] Auto-cleanup check: {time_since_activity:.0f}s since last activity (cleanup at {_cleanup_interval}s)")
+                    logger.debug(f"[LLM Cache] Auto-cleanup check: {time_since_activity:.0f}s since last activity (cleanup at {_cleanup_interval}s)")
                 
                 # If no activity for the cleanup interval, clear the cache
                 if time_since_activity >= _cleanup_interval:
-                    print(f"🧹 [LLM Cache] Auto-cleanup triggered: No LLM activity for {time_since_activity:.0f} seconds, clearing cache...")
+                    logger.debug(f"[LLM Cache] Auto-cleanup triggered: No LLM activity for {time_since_activity:.0f} seconds, clearing cache...")
                     clear_cache_and_free_memory()
                     _last_activity_time = None  # Reset activity time
-                    print("✅ [LLM Cache] Auto-cleanup completed")
+                    logger.debug("[LLM Cache] Auto-cleanup completed")
                     
         except Exception as e:
-            print(f"❌ [LLM Cache] Auto-cleanup worker error: {e}")
+            logger.debug(f"[LLM Cache] Auto-cleanup worker error: {e}")
             time.sleep(30)  # Wait before retrying
 
 def start_auto_cleanup():
@@ -261,15 +274,15 @@ def start_auto_cleanup():
     """
     global _cleanup_thread
     
-    print("🚀 [LLM Cache] Starting auto-cleanup system...")
+    logger.debug("[LLM Cache] Starting auto-cleanup system...")
     
     with _cleanup_lock:
         if _cleanup_thread is None or not _cleanup_thread.is_alive():
             _cleanup_thread = threading.Thread(target=_auto_cleanup_worker, daemon=True)
             _cleanup_thread.start()
-            print(f"✅ [LLM Cache] Auto-cleanup started (cleanup interval: {_cleanup_interval} seconds)")
+            logger.debug(f"[LLM Cache] Auto-cleanup started (cleanup interval: {_cleanup_interval} seconds)")
         else:
-            print("ℹ️ [LLM Cache] Auto-cleanup already running")
+            logger.debug("[LLM Cache] Auto-cleanup already running")
 
 def stop_auto_cleanup():
     """
@@ -277,22 +290,22 @@ def stop_auto_cleanup():
     """
     global _cleanup_thread
     
-    print("🛑 [LLM Cache] Stopping auto-cleanup system...")
+    logger.debug("[LLM Cache] Stopping auto-cleanup system...")
     
     with _cleanup_lock:
         if _cleanup_thread is not None:
             # Note: We can't actually stop the thread cleanly since it's in a loop
             # The daemon=True flag ensures it will be killed when the main process exits
             _cleanup_thread = None
-            print("✅ [LLM Cache] Auto-cleanup stopped")
+            logger.debug("[LLM Cache] Auto-cleanup stopped")
         else:
-            print("ℹ️ [LLM Cache] Auto-cleanup was not running")
+            logger.debug("[LLM Cache] Auto-cleanup was not running")
 
 def set_cleanup_interval(seconds):
     """
     Set the auto-cleanup interval in seconds.
     """
     global _cleanup_interval
-    print(f"⚙️ [LLM Cache] Setting auto-cleanup interval to {seconds} seconds")
+    logger.debug(f"[LLM Cache] Setting auto-cleanup interval to {seconds} seconds")
     _cleanup_interval = seconds
-    print(f"✅ [LLM Cache] Auto-cleanup interval set to {seconds} seconds")
+    logger.debug(f"[LLM Cache] Auto-cleanup interval set to {seconds} seconds")

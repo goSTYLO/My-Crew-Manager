@@ -8,14 +8,22 @@ from llms.llm_cache import get_cached_backlog_llm
 
 logger = logging.getLogger('llms')
 
-def build_prompt(section: str, proposal_text: str, context: Dict = None) -> str:
-    root_dir = os.path.dirname(__file__)
-    prompt_path = os.path.join(root_dir, "prompts", f"{section}_prompt.txt")
+# Cache prompt templates in memory to avoid disk I/O on every call
+_PROMPT_CACHE = {}
 
-    try:
-        with open(prompt_path, "r", encoding="utf-8") as f:
-            template = f.read().strip()
-    except Exception:
+def build_prompt(section: str, proposal_text: str, context: Dict = None) -> str:
+    # Check cache first
+    if section not in _PROMPT_CACHE:
+        root_dir = os.path.dirname(__file__)
+        prompt_path = os.path.join(root_dir, "prompts", f"{section}_prompt.txt")
+        try:
+            with open(prompt_path, "r", encoding="utf-8") as f:
+                _PROMPT_CACHE[section] = f.read().strip()
+        except Exception:
+            return ""
+    
+    template = _PROMPT_CACHE.get(section, "")
+    if not template:
         return ""
 
     prompt = template.replace("{proposal_text}", proposal_text)
@@ -47,30 +55,37 @@ def validate_backlog_format(response: str) -> bool:
     # Require minimum of 4 epics and at least one task for a valid backlog
     return has_epic and has_task and epic_count >= 4 and task_count > 0
 
-def generate_section(llm, section: str, prompt: str, max_retries: int = 3, cancellation_token: Optional[CancellationToken] = None) -> str:
-    for _ in range(max_retries):
-        try:
-            # Check for cancellation before each attempt
-            if cancellation_token:
-                cancellation_token.check_cancelled()
-            
-            response = llm.invoke(prompt).strip()
-            if not response:
+def generate_section(llm, section: str, prompt: str, max_retries: int = 3, max_tokens: int = 768, cancellation_token: Optional[CancellationToken] = None) -> str:
+    # Temporarily override pipeline's max_new_tokens for this call
+    original_max = llm.pipeline.max_new_tokens
+    llm.pipeline.max_new_tokens = max_tokens
+    
+    try:
+        for _ in range(max_retries):
+            try:
+                # Check for cancellation before each attempt
+                if cancellation_token:
+                    cancellation_token.check_cancelled()
+                
+                response = llm.invoke(prompt).strip()
+                if not response:
+                    continue
+                if not validate_backlog_format(response):
+                    lines = response.splitlines()
+                    epic_count = sum(1 for line in lines if line.strip().lower().startswith("epic") and ":" in line)
+                    task_count = sum(1 for line in lines if line.strip().lower().startswith("-task") and ":" in line)
+                    logger.warning(f"Backlog validation failed, retrying... (attempt {_ + 1}/{max_retries})")
+                    logger.warning(f"Epic count: {epic_count} (need >=4), Task count: {task_count}")
+                    logger.debug(f"Response preview: {response[:200]}...")
+                    continue
+                return response
+            except TaskCancelledException:
+                raise  # Re-raise cancellation exceptions
+            except Exception:
                 continue
-            if not validate_backlog_format(response):
-                lines = response.splitlines()
-                epic_count = sum(1 for line in lines if line.strip().lower().startswith("epic") and ":" in line)
-                task_count = sum(1 for line in lines if line.strip().lower().startswith("-task") and ":" in line)
-                logger.warning(f"Backlog validation failed, retrying... (attempt {_ + 1}/{max_retries})")
-                logger.warning(f"Epic count: {epic_count} (need >=4), Task count: {task_count}")
-                logger.debug(f"Response preview: {response[:200]}...")
-                continue
-            return response
-        except TaskCancelledException:
-            raise  # Re-raise cancellation exceptions
-        except Exception:
-            continue
-    return ""
+        return ""
+    finally:
+        llm.pipeline.max_new_tokens = original_max
 
 def parse_backlog(raw_text: str) -> BacklogModel:
     backlog = BacklogModel()
@@ -138,7 +153,7 @@ def run_backlog_pipeline(proposal_text: str, context: Dict, task_id: Optional[st
     if not prompt:
         return BacklogModel()
 
-    raw_backlog = generate_section(llm, "backlog", prompt, cancellation_token=cancellation_token)
+    raw_backlog = generate_section(llm, "backlog", prompt, max_tokens=768, cancellation_token=cancellation_token)
     if not raw_backlog:
         return BacklogModel()
 
