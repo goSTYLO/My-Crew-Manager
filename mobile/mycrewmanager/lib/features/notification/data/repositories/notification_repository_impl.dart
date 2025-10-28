@@ -22,7 +22,7 @@ class NotificationRepositoryImpl implements NotificationRepository {
       }
       final notificationModels = await remoteDataSource.getNotifications();
       return right(notificationModels);
-    } on DioException catch (e) {
+    } on DioException {
       return left(Failure("Failed to load notifications. Try Again!"));
     }
   }
@@ -36,7 +36,7 @@ class NotificationRepositoryImpl implements NotificationRepository {
       final response = await (remoteDataSource as dynamic).getUnreadCount();
       final count = response['unread_count'] as int;
       return right(count);
-    } on DioException catch (e) {
+    } on DioException {
       return left(Failure("Failed to load unread count. Try Again!"));
     }
   }
@@ -49,7 +49,7 @@ class NotificationRepositoryImpl implements NotificationRepository {
       }
       await remoteDataSource.markAsRead(notificationId);
       return right(null);
-    } on DioException catch (e) {
+    } on DioException {
       return left(Failure("Failed to mark notification as read. Try Again!"));
     }
   }
@@ -62,7 +62,7 @@ class NotificationRepositoryImpl implements NotificationRepository {
       }
       await remoteDataSource.markAllAsRead();
       return right(null);
-    } on DioException catch (e) {
+    } on DioException {
       return left(Failure("Failed to mark all notifications as read. Try Again!"));
     }
   }
@@ -75,7 +75,7 @@ class NotificationRepositoryImpl implements NotificationRepository {
       }
       await remoteDataSource.removeNotification(notificationId);
       return right(null);
-    } on DioException catch (e) {
+    } on DioException {
       return left(Failure("Failed to remove notification. Try Again!"));
     }
   }

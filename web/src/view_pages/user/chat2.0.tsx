@@ -101,6 +101,12 @@ const ChatApp = () => {
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
   const [addMemberEmail, setAddMemberEmail] = useState('');
   const [addMemberError, setAddMemberError] = useState<string | null>(null);
+  const [showProjectSearch, setShowProjectSearch] = useState(false);
+  const [projects, setProjects] = useState<any[]>([]);
+  const [projectSearchQuery, setProjectSearchQuery] = useState('');
+  const [projectPage, setProjectPage] = useState(1);
+  const [loadingProjects, setLoadingProjects] = useState(false);
+  const projectsPerPage = 5;
   
   const wsRef = useRef<WebSocket | null>(null);
   const wsNotificationRef = useRef<WebSocket | null>(null);
@@ -653,12 +659,15 @@ const ChatApp = () => {
         await refreshMessages();
         console.log('✅ Messages refreshed after send');
         
-        // Update last message in contacts
-        setContacts(prev => prev.map(contact => 
-          contact.id === selectedChat 
-            ? { ...contact, lastMessage: messageText, time: 'Just now' }
-            : contact
-        ));
+        // Update last message in contacts after refresh is complete
+        // This ensures the update persists after fetchMessages updates contacts
+        setTimeout(() => {
+          setContacts(prev => prev.map(contact => 
+            contact.id === selectedChat 
+              ? { ...contact, lastMessage: messageText, time: 'Just now' }
+              : contact
+          ));
+        }, 100);
         
       } catch (err) {
         console.error('Failed to send message:', err);
@@ -1040,6 +1049,57 @@ const ChatApp = () => {
   const handleEmojiSelect = (emoji: string) => {
     setMessage(prev => prev + emoji);
     setShowEmojiPicker(false);
+  };
+
+  // Fetch user's projects
+  const fetchUserProjects = async () => {
+    setLoadingProjects(true);
+    try {
+      const token = getAuthToken();
+      const response = await fetch(`${API_BASE_URL}/ai/projects/my-projects/`, {
+        headers: {
+          'Authorization': `Token ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setProjects(data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch projects:', err);
+    } finally {
+      setLoadingProjects(false);
+    }
+  };
+
+  // Handle project selection and add members
+  const handleSelectProject = async (projectId: number) => {
+    try {
+      const token = getAuthToken();
+      const response = await fetch(
+        `${API_BASE_URL}/ai/project-members/?project_id=${projectId}`,
+        {
+          headers: {
+            'Authorization': `Token ${token}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+      if (response.ok) {
+        const members = await response.json();
+        const newEmails = members
+          .map((m: any) => m.user_email.toLowerCase())
+          .filter((email: string) => !memberEmails.includes(email));
+        
+        setMemberEmails(prev => [...prev, ...newEmails]);
+        setShowProjectSearch(false);
+        setProjectSearchQuery('');
+        console.log(`✅ Added ${newEmails.length} members from project`);
+      }
+    } catch (err) {
+      console.error('Failed to fetch project members:', err);
+    }
   };
 
   const selectedContact = contacts.find(c => c.id === selectedChat);

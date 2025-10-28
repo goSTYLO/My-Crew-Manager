@@ -1,5 +1,6 @@
 import os
 import re
+import logging
 from llms.models import (
     ProjectModel,
     TeamMemberModel,
@@ -9,6 +10,8 @@ from llms.models import (
 from typing import Dict, Optional
 from apps.ai_api.tasks import CancellationToken, TaskCancelledException
 from llms.llm_cache import get_cached_llm
+
+logger = logging.getLogger('llms')
 
 def build_prompt(section: str, proposal_text: str, context: Dict = None) -> str:
     root_dir = os.path.dirname(__file__)
@@ -106,7 +109,7 @@ def run_pipeline_from_text(proposal_text: str, task_id: Optional[str] = None) ->
         if prompt:
             raw_response = generate_section(llm, section, prompt, cancellation_token=cancellation_token)
             if raw_response:
-                print(f"\n--- RAW {section.upper()} ---\n{raw_response}\n")
+                logger.debug(f"RAW {section.upper()}: {raw_response}")
                 raw_outputs[section] = raw_response
 
     if "summary" in raw_outputs:

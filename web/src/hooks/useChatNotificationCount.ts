@@ -9,8 +9,12 @@ export const useChatNotificationCount = () => {
   const fetchUnreadCount = async () => {
     try {
       const token = sessionStorage.getItem('token');
-      if (!token) return;
+      if (!token) {
+        console.log('🔔 Chat notification: No token found');
+        return;
+      }
 
+      console.log('🔔 Chat notification: Fetching unread count from API...');
       const response = await fetch(`${API_BASE_URL}/chat/rooms/unread-count/`, {
         headers: {
           'Authorization': `Token ${token}`,
@@ -20,6 +24,7 @@ export const useChatNotificationCount = () => {
 
       if (response.ok) {
         const data = await response.json();
+        console.log('🔔 Chat notification: API response:', data);
         setUnreadCount(data.unread_count);
       } else {
         console.warn('Failed to fetch chat unread count:', response.status, response.statusText);
@@ -50,10 +55,14 @@ export const useChatNotificationCount = () => {
 
     wsRef.current.onmessage = (event) => {
       const data = JSON.parse(event.data);
+      console.log('🔔 Chat notification WebSocket message received:', data);
       
       if (data.type === 'new_message_notification') {
+        console.log('🔔 Chat notification: Incrementing unread count');
         // Increment unread count
         setUnreadCount(prev => prev + 1);
+      } else {
+        console.log('🔔 Chat notification: Ignoring message type:', data.type);
       }
     };
 

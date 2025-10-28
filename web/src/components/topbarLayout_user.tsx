@@ -48,20 +48,43 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
       return '/project-invitation';
     }
     
-    // If user is a developer and URL is for manager page, transform it
-    if (userRole !== 'manager' && actionUrl.startsWith('/project-details/')) {
-      const projectId = actionUrl.split('/project-details/')[1];
-      return `/user-project/${projectId}`;
+    // Extract tab parameter if present
+    const [baseUrl, queryString] = actionUrl.split('?');
+    
+    let transformedUrl = baseUrl;
+    
+    // Transform URL based on user role
+    if (userRole !== 'Project Manager' && baseUrl.startsWith('/project-details/')) {
+      const projectId = baseUrl.split('/project-details/')[1];
+      transformedUrl = `/user-project/${projectId}`;
+    } else if (userRole === 'Project Manager' && baseUrl.startsWith('/user-project/')) {
+      const projectId = baseUrl.split('/user-project/')[1];
+      transformedUrl = `/project-details/${projectId}`;
     }
     
-    // If user is a manager and URL is for developer page, transform it
-    if (userRole === 'manager' && actionUrl.startsWith('/user-project/')) {
-      const projectId = actionUrl.split('/user-project/')[1];
-      return `/project-details/${projectId}`;
+    // Preserve or transform tab parameter
+    if (queryString) {
+      const params = new URLSearchParams(queryString);
+      const tab = params.get('tab');
+      
+      if (tab) {
+        // Transform tab name if switching between manager/developer views
+        let transformedTab = tab;
+        if (userRole !== 'Project Manager' && tab === 'backlog') {
+          transformedTab = 'tasks';
+        } else if (userRole !== 'Project Manager' && tab === 'members') {
+          transformedTab = 'team';
+        } else if (userRole === 'Project Manager' && tab === 'tasks') {
+          transformedTab = 'backlog';
+        } else if (userRole === 'Project Manager' && tab === 'team') {
+          transformedTab = 'members';
+        }
+        
+        return `${transformedUrl}?tab=${transformedTab}`;
+      }
     }
     
-    // Return original URL if no transformation needed
-    return actionUrl;
+    return transformedUrl;
   };
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const profileDropdownRef = useRef<HTMLDivElement>(null);
@@ -192,7 +215,8 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
         'task_assigned', 
         'task_completed',
         'project_invitation', 
-        'member_joined'
+        'member_joined',
+        'project_status_changed'
       ];
       
       newNotifications.forEach(notification => {
@@ -225,7 +249,8 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
             'task_assigned', 
             'task_completed',
             'project_invitation', 
-            'member_joined'
+            'member_joined',
+            'project_status_changed'
           ];
           
           if (importantTypes.includes(message.notification.type)) {

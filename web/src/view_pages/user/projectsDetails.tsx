@@ -21,6 +21,7 @@ import TopNavbar from "../../components/topbarLayout_user";
 import { useTheme } from "../../components/themeContext";
 import ProposalViewer from "../../components/ProposalViewer";
 import { useToast } from "../../components/ToastContext";
+import { useRealtimeUpdates } from "../../hooks/useRealtimeUpdates";
 
 // API configuration
 const API_BASE_URL = 'http://localhost:8000/api';
@@ -140,6 +141,9 @@ interface Project {
   id: number;
   title: string;
   summary: string;
+  status?: string;
+  status_updated_at?: string;
+  status_updated_by_name?: string;
   created_by: User;
   created_at: string;
   member_count?: number;
@@ -341,7 +345,7 @@ const TeamMemberCard: React.FC<{ member: ProjectMember; theme: string }> = ({ me
 // Main Component
 const ProjectDetails: React.FC = () => {
   const { theme } = useTheme();
-  const { showSuccess, showError } = useToast();
+  const { showSuccess, showError, showInfo } = useToast();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
@@ -350,13 +354,24 @@ const ProjectDetails: React.FC = () => {
   const [projectDetails, setProjectDetails] = useState<ProjectDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'tasks' | 'team' | 'timeline' | 'repository'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'tasks' | 'team' | 'timeline' | 'repository'>(() => {
+    const params = new URLSearchParams(location.search);
+    const tab = params.get('tab') as 'overview' | 'tasks' | 'team' | 'timeline' | 'repository' | null;
+    return tab && ['overview', 'tasks', 'team', 'timeline', 'repository'].includes(tab)
+      ? tab
+      : 'overview';
+  });
   const [showTaskCompletionModal, setShowTaskCompletionModal] = useState(false);
   const [completingTaskId, setCompletingTaskId] = useState<number | null>(null);
   const [editingCommitTitle, setEditingCommitTitle] = useState('');
   const [editingCommitBranch, setEditingCommitBranch] = useState('');
   const [showProposalViewer, setShowProposalViewer] = useState(false);
   const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
+  
+  // Project status state
+  const [projectStatus, setProjectStatus] = useState<string>('in_progress');
+  const [statusUpdatedAt, setStatusUpdatedAt] = useState<string | null>(null);
+  const [statusUpdatedBy, setStatusUpdatedBy] = useState<string | null>(null);
 
   // Get current user email from sessionStorage
   useEffect(() => {
@@ -518,6 +533,11 @@ const ProjectDetails: React.FC = () => {
         const project = await projectResponse.json();
         console.log('Project details fetched:', project);
 
+        // Set project status fields
+        setProjectStatus(project.status || 'in_progress');
+        setStatusUpdatedAt(project.status_updated_at);
+        setStatusUpdatedBy(project.status_updated_by_name);
+
         // Fetch proposal
         let proposal = null;
         try {
@@ -638,9 +658,81 @@ const ProjectDetails: React.FC = () => {
         acc3 + story.tasks.length, 0), 0), 0) || 0;
 
   const completedTasks = projectDetails?.backlog.reduce((acc, epic) => 
-    acc + epic.sub_epics.reduce((acc2, subEpic) => 
+    acc + epic.sub_epics.reduce((acc2, subEpic) =>
       acc2 + subEpic.user_stories.reduce((acc3, story) => 
         acc3 + story.tasks.filter(t => t.status === 'done').length, 0), 0), 0) || 0;
+
+  // Real-time updates using the same pattern as monitor_created.tsx
+  useRealtimeUpdates({
+    projectId: projectId ? parseInt(projectId) : undefined,
+    callbacks: {
+      onTaskUpdate: (data) => {
+        console.log('📡 User Project Details: Real-time task update received:', data);
+        // Refresh backlog to get updated task data
+        fetchBacklog();
+      },
+      onProjectUpdate: (data) => {
+        console.log('📡 User Project Details: Real-time project update received:', data);
+        // Refresh backlog to get updated project data
+        fetchBacklog();
+      },
+      onMemberUpdate: (data) => {
+        console.log('📡 User Project Details: Real-time member update received:', data);
+        // Refresh backlog to get updated member data
+        fetchBacklog();
+      },
+      onEpicUpdate: (data) => {
+        console.log('📡 User Project Details: Real-time epic update received:', data);
+        // Refresh backlog when epics are added/updated
+        fetchBacklog();
+      },
+      onSubEpicUpdate: (data) => {
+        console.log('📡 User Project Details: Real-time sub-epic update received:', data);
+        // Refresh backlog when sub-epics are added/updated
+        fetchBacklog();
+      },
+      onUserStoryUpdate: (data) => {
+        console.log('📡 User Project Details: Real-time user story update received:', data);
+        // Refresh backlog when user stories are added/updated
+        fetchBacklog();
+      },
+      onNotification: (data) => {
+        console.log('📡 User Project Details: Real-time notification received:', data);
+        
+        // Handle project status change notifications
+        if (data.notification && data.notification.type === 'project_status_changed') {
+          console.log('📡 User Project Details: Project status change notification received:', data);
+          
+          // Update the status state with the new data
+          if (data.notification.message) {
+            // Extract status from the message
+            const statusMatch = data.notification.message.match(/to "([^"]+)"/);
+            if (statusMatch) {
+              const newStatus = statusMatch[1].toLowerCase().replace(' ', '_');
+              setProjectStatus(newStatus);
+            }
+          }
+          
+          // Refresh project details to get the latest status info
+          fetchBacklog();
+        }
+        
+        // Handle task assignment notifications
+        if (data.notification && data.notification.type === 'task_assigned') {
+          console.log('📡 User Project Details: Task assignment notification received:', data);
+          
+          // Show toast notification
+          showInfo(
+            data.notification.title,
+            data.notification.message
+          );
+          
+          // Refresh backlog to get updated task data
+          fetchBacklog();
+        }
+      }
+    }
+  });
 
   if (loading) {
     return (
@@ -712,6 +804,31 @@ const ProjectDetails: React.FC = () => {
                   {projectDetails.title}
                 </h1>
                 <TeamAvatars members={projectDetails.members} theme={theme} />
+              </div>
+
+              <div className="flex items-center gap-4">
+                {/* Project Status Badge */}
+                <div className="flex items-center gap-2">
+                  <span className={`text-sm font-medium ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Status:
+                  </span>
+                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                    projectStatus === 'complete' ? 'bg-green-100 text-green-800' :
+                    projectStatus === 'in_progress' ? 'bg-blue-100 text-blue-800' :
+                    projectStatus === 'setting_up' ? 'bg-yellow-100 text-yellow-800' :
+                    'bg-gray-100 text-gray-800'
+                  }`}>
+                    {projectStatus === 'setting_up' ? 'Setting Up' :
+                     projectStatus === 'in_progress' ? 'In Progress' :
+                     projectStatus === 'complete' ? 'Complete' :
+                     projectStatus === 'on_hold' ? 'On Hold' : projectStatus}
+                  </span>
+                </div>
+                {statusUpdatedAt && statusUpdatedBy && (
+                  <p className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+                    Last updated by {statusUpdatedBy} on {new Date(statusUpdatedAt).toLocaleString()}
+                  </p>
+                )}
               </div>
 
               <div className="flex items-center gap-4">

@@ -3,7 +3,7 @@ import { Plus, Edit, Edit2, Trash2, Send, X, BarChart3, Users, FileText, Target,
 import TopNavbar from "../../components/topbarLayouot";
 import Sidebar from "../../components/sidebarLayout";
 import { useTheme } from "../../components/themeContext";
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { API_BASE_URL } from "../../config/api";
 import LoadingSpinner from '../../components/LoadingSpinner';
 import RegenerationSuccessModal from '../../components/RegenerationSuccessModal';
@@ -24,19 +24,26 @@ import type {
 export default function ProjectDetailsUI() {
   const { theme } = useTheme();
   const { showSuccess, showError, showWarning, showRealtimeUpdate } = useToast();
-  const [activeTab, setActiveTab] = useState('monitoring');
+  const location = useLocation();
+  const [activeTab, setActiveTab] = useState(() => {
+    const params = new URLSearchParams(location.search);
+    const tab = params.get('tab');
+    return tab && ['monitoring', 'overview', 'backlog', 'members', 'repository'].includes(tab) 
+      ? tab 
+      : 'monitoring';
+  });
   const [isEditingOverview, setIsEditingOverview] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   
-  // Modal states
+
   const [showAddFeatureModal, setShowAddFeatureModal] = useState(false);
   const [showAddRoleModal, setShowAddRoleModal] = useState(false);
   const [showAddGoalModal, setShowAddGoalModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteItem, setDeleteItem] = useState<{type: string, id: any, name: string} | null>(null);
   
-  // Modal input states
+
   const [newFeatureTitle, setNewFeatureTitle] = useState('');
   const [newRoleTitle, setNewRoleTitle] = useState('');
   const [newGoalTitle, setNewGoalTitle] = useState('');
@@ -46,7 +53,7 @@ export default function ProjectDetailsUI() {
   const [newTimelineTaskTitle, setNewTimelineTaskTitle] = useState('');
   const [selectedWeekIndex, setSelectedWeekIndex] = useState<number | null>(null);
   
-  // Backlog modal states
+
   const [showAddEpicModal, setShowAddEpicModal] = useState(false);
   const [showAddSubEpicModal, setShowAddSubEpicModal] = useState(false);
   const [showAddUserStoryModal, setShowAddUserStoryModal] = useState(false);
@@ -60,11 +67,11 @@ export default function ProjectDetailsUI() {
   const [selectedSubEpicId, setSelectedSubEpicId] = useState<number | null>(null);
   const [selectedUserStoryId, setSelectedUserStoryId] = useState<number | null>(null);
   
-  // Backlog editing state
+
   const [isEditingBacklog, setIsEditingBacklog] = useState(false);
   const [modifiedItems, setModifiedItems] = useState<Set<string>>(new Set());
   
-  // Task assignment and commit tracking state
+
   const [editingCommitTitle, setEditingCommitTitle] = useState('');
   const [editingCommitBranch, setEditingCommitBranch] = useState('');
   const [showTaskCompletionModal, setShowTaskCompletionModal] = useState(false);
@@ -78,7 +85,7 @@ export default function ProjectDetailsUI() {
   const [showRegenerationModal, setShowRegenerationModal] = useState(false);
   const [regenerationType, setRegenerationType] = useState<'overview' | 'backlog'>('overview');
   
-  // Confirmation modal state
+
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [confirmModalData, setConfirmModalData] = useState<{
     title: string;
@@ -88,19 +95,24 @@ export default function ProjectDetailsUI() {
     cancelText?: string;
   } | null>(null);
   
-  // Proposal upload state
+
   const [currentProposal, setCurrentProposal] = useState<any>(null);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const [showProposalViewer, setShowProposalViewer] = useState(false);
   
+  // Project status state
+  const [projectStatus, setProjectStatus] = useState<string>('in_progress');
+  const [statusUpdatedAt, setStatusUpdatedAt] = useState<string | null>(null);
+  const [statusUpdatedBy, setStatusUpdatedBy] = useState<string | null>(null);
+  
   const { id: projectId } = useParams();
   const navigate = useNavigate();
   
-  // API Configuration
+
   const AI_API_BASE_URL = `${API_BASE_URL}/ai`;
 
-  // API Utility Functions
+
   const getAuthHeaders = () => {
     const token = sessionStorage.getItem('token');
     console.log('🔍 Token from sessionStorage:', token ? 'Found' : 'Not found');
@@ -121,7 +133,7 @@ export default function ProjectDetailsUI() {
     }
   };
 
-  // Confirmation modal helper
+
   const showConfirmation = (title: string, message: string, onConfirm: () => void, confirmText = 'Confirm', cancelText = 'Cancel') => {
     setConfirmModalData({
       title,
@@ -146,7 +158,7 @@ export default function ProjectDetailsUI() {
     setConfirmModalData(null);
   };
 
-  // Regenerate functions
+
   const performRegenerateOverview = async () => {
     try {
       setLoadingState('regenerating-overview');
@@ -163,10 +175,10 @@ export default function ProjectDetailsUI() {
       const data = await response.json();
       console.log('✅ Overview regenerated:', data);
       
-      // Refresh all data
+
       await fetchProjectData();
       
-      // Show success modal
+
       setRegenerationType('overview');
       setShowRegenerationModal(true);
     } catch (error) {
@@ -203,10 +215,10 @@ export default function ProjectDetailsUI() {
       const data = await response.json();
       console.log('✅ Backlog regenerated:', data);
       
-      // Refresh backlog data
+
       await fetchBacklog();
       
-      // Show success modal
+
       setRegenerationType('backlog');
       setShowRegenerationModal(true);
     } catch (error) {
@@ -227,12 +239,12 @@ export default function ProjectDetailsUI() {
     );
   };
 
-  // Fetch Project Overview Data
+
   const fetchProjectData = async () => {
     try {
       console.log('🔍 Fetching project data for projectId:', projectId);
       
-      // First, fetch the main project data
+
       const projectRes = await fetch(`${AI_API_BASE_URL}/projects/${projectId}/`, {
         headers: getAuthHeaders(),
         credentials: 'include',
@@ -246,7 +258,12 @@ export default function ProjectDetailsUI() {
       const project = await projectRes.json();
       console.log('✅ Project data fetched:', project);
 
-      // Then fetch related data in parallel, but handle each one individually
+      // Set project status fields
+      setProjectStatus(project.status || 'in_progress');
+      setStatusUpdatedAt(project.status_updated_at);
+      setStatusUpdatedBy(project.status_updated_by_name);
+
+
       const [featuresRes, rolesRes, goalsRes, timelineRes] = await Promise.allSettled([
         fetch(`${AI_API_BASE_URL}/project-features/?project_id=${projectId}`, {
           headers: getAuthHeaders(),
@@ -266,7 +283,7 @@ export default function ProjectDetailsUI() {
         }),
       ]);
 
-      // Process each response, handling failures gracefully
+
       const features = featuresRes.status === 'fulfilled' && featuresRes.value.ok 
         ? await featuresRes.value.json() 
         : [];
@@ -276,9 +293,13 @@ export default function ProjectDetailsUI() {
       const goals = goalsRes.status === 'fulfilled' && goalsRes.value.ok 
         ? await goalsRes.value.json() 
         : [];
-      const timeline = timelineRes.status === 'fulfilled' && timelineRes.value.ok 
-        ? await timelineRes.value.json() 
+      const timeline = timelineRes.status === 'fulfilled' && timelineRes.value.ok
+        ? await timelineRes.value.json()
         : [];
+
+
+      const roleNames = roles.map((role: any) => role.role || role.name).filter(Boolean);
+      setProjectRoles(roleNames);
 
       console.log('✅ Related data fetched:', { features, roles, goals, timeline });
 
@@ -304,7 +325,7 @@ export default function ProjectDetailsUI() {
     }
   };
 
-  // Fetch Backlog Data
+
   const fetchBacklog = async () => {
     try {
       console.log('🔍 Fetching backlog for projectId:', projectId);
@@ -321,7 +342,7 @@ export default function ProjectDetailsUI() {
       const data = await response.json();
       console.log('✅ Backlog data fetched:', data);
       
-      // Debug: Check if tasks have assignee details
+
       if (data.epics && data.epics.length > 0) {
         const firstEpic = data.epics[0];
         if (firstEpic.sub_epics && firstEpic.sub_epics.length > 0) {
@@ -336,7 +357,7 @@ export default function ProjectDetailsUI() {
         }
       }
       
-      // Transform nested structure to match frontend state
+
       const transformedBacklog = {
         epics: (data.epics || []).map((epic: any) => ({
           id: epic.id,
@@ -375,7 +396,7 @@ export default function ProjectDetailsUI() {
     }
   };
 
-  // Fetch Members Data
+
   const fetchMembers = async () => {
     try {
       console.log('🔍 Fetching members for projectId:', projectId);
@@ -392,7 +413,7 @@ export default function ProjectDetailsUI() {
       const data = await response.json();
       console.log('✅ Members data fetched:', data);
       
-      // Map to frontend format
+
       const transformedMembers = data.map((member: any) => ({
         id: member.id,
         name: member.user_name,
@@ -408,7 +429,7 @@ export default function ProjectDetailsUI() {
     }
   };
 
-  // Fetch Pending Invitations Data
+
   const fetchPendingInvitations = async () => {
     try {
       console.log('🔍 Fetching pending invitations for projectId:', projectId);
@@ -425,7 +446,7 @@ export default function ProjectDetailsUI() {
       const data = await response.json();
       console.log('✅ Pending invitations data fetched:', data);
       
-      // Filter for pending invitations only
+
       const pendingInvitations = data.filter((invitation: any) => invitation.status === 'pending');
       return pendingInvitations;
     } catch (error) {
@@ -434,7 +455,7 @@ export default function ProjectDetailsUI() {
     }
   };
 
-  // Cancel/Delete Pending Invitation
+
   const cancelInvitation = async (invitationId: number) => {
     try {
       const response = await fetch(`${AI_API_BASE_URL}/invitations/${invitationId}/`, {
@@ -445,7 +466,7 @@ export default function ProjectDetailsUI() {
 
       if (response.ok) {
         showSuccess('Invitation Cancelled', 'The invitation has been cancelled successfully.');
-        // Refresh pending invitations
+
         const updatedInvitations = await fetchPendingInvitations();
         setPendingInvitations(updatedInvitations);
       } else {
@@ -457,7 +478,7 @@ export default function ProjectDetailsUI() {
     }
   };
 
-  // Fetch Repositories Data
+
   const fetchRepositories = async () => {
     try {
       console.log('🔍 Fetching repositories for projectId:', projectId);
@@ -481,12 +502,12 @@ export default function ProjectDetailsUI() {
       setRepositories(data);
     } catch (error) {
       console.error('❌ Error in fetchRepositories:', error);
-      // Don't show error for repositories as it's optional
+
       setRepositories([]);
     }
   };
 
-  // Fetch Current Proposal
+
   const fetchCurrentProposal = async () => {
     try {
       const response = await fetch(`${AI_API_BASE_URL}/projects/${projectId}/current-proposal/`, {
@@ -506,7 +527,7 @@ export default function ProjectDetailsUI() {
     }
   };
 
-  // Task Assignment Functions
+
   const assignTask = async (taskId: number, assigneeId: number | null) => {
     try {
       const response = await fetch(`${AI_API_BASE_URL}/story-tasks/${taskId}/`, {
@@ -566,7 +587,7 @@ export default function ProjectDetailsUI() {
     setEditingCommitBranch('');
   };
 
-  // Load all data on component mount
+
   useEffect(() => {
     if (projectId) {
       console.log('🚀 Starting to load all data for projectId:', projectId);
@@ -583,7 +604,7 @@ export default function ProjectDetailsUI() {
             fetchCurrentProposal()
           ]);
           
-          // Fetch pending invitations separately
+
           const invitations = await fetchPendingInvitations();
           setPendingInvitations(invitations);
           console.log('✅ All data loaded successfully');
@@ -601,38 +622,38 @@ export default function ProjectDetailsUI() {
     }
   }, [projectId]);
 
-  // Real-time updates for project changes
+
   useRealtimeUpdates({
     projectId: projectId ? parseInt(projectId) : undefined,
     callbacks: {
       onProjectUpdate: (data) => {
         console.log('📡 Real-time project update received:', data);
         showRealtimeUpdate('Project Updated', `${data.action} project`, data.actor);
-        // Refresh project data
+
         fetchProjectData();
       },
       onEpicUpdate: (data) => {
         console.log('📡 Real-time epic update received:', data);
         showRealtimeUpdate('Epic Updated', `Epic ${data.action}`, data.actor);
-        // Refresh backlog data
+
         fetchBacklog();
       },
       onSubEpicUpdate: (data) => {
         console.log('📡 Real-time sub-epic update received:', data);
         showRealtimeUpdate('Sub-Epic Updated', `Sub-epic ${data.action}`, data.actor);
-        // Refresh backlog data
+
         fetchBacklog();
       },
       onUserStoryUpdate: (data) => {
         console.log('📡 Real-time user story update received:', data);
         showRealtimeUpdate('User Story Updated', `User story ${data.action}`, data.actor);
-        // Refresh backlog data
+
         fetchBacklog();
       },
       onTaskUpdate: (data) => {
         console.log('📡 Real-time task update received:', data);
         
-        // More specific toast messages based on action
+
         let message = `Task ${data.action}`;
         if (data.action === 'updated' && data.data && data.data.status === 'done') {
           message = 'Task completed';
@@ -641,7 +662,7 @@ export default function ProjectDetailsUI() {
         }
         
         showRealtimeUpdate('Task Updated', message, data.actor);
-        // Refresh backlog data
+
         fetchBacklog();
       },
       onMemberUpdate: (data) => {
@@ -652,26 +673,47 @@ export default function ProjectDetailsUI() {
           : `${data.actor.name} left the project`;
         
         showRealtimeUpdate('Team Updated', message, data.actor);
-        // Refresh members data
+
         fetchMembers();
       },
       onRepositoryUpdate: (data) => {
         console.log('📡 Real-time repository update received:', data);
         showRealtimeUpdate('Repository Updated', `Repository ${data.action}`, data.actor);
-        // Refresh repositories data
+
         fetchRepositories();
       },
       onBacklogRegenerated: (data) => {
         console.log('📡 Real-time backlog regeneration received:', data);
         showRealtimeUpdate('Backlog Regenerated', 'Project backlog has been regenerated', data.actor);
-        // Refresh backlog data
+
         fetchBacklog();
       },
       onOverviewRegenerated: (data) => {
         console.log('📡 Real-time overview regeneration received:', data);
         showRealtimeUpdate('Overview Regenerated', 'Project overview has been regenerated', data.actor);
-        // Refresh project data
+
         fetchProjectData();
+      },
+      onNotification: (data) => {
+        console.log('📡 Real-time notification received:', data);
+        
+        // Handle project status change notifications
+        if (data.notification && data.notification.type === 'project_status_changed') {
+          console.log('📡 Project status change notification received:', data);
+          
+          // Update the status state with the new data
+          if (data.notification.message) {
+            // Extract status from the message or use the notification data
+            const statusMatch = data.notification.message.match(/to "([^"]+)"/);
+            if (statusMatch) {
+              const newStatus = statusMatch[1].toLowerCase().replace(' ', '_');
+              setProjectStatus(newStatus);
+            }
+          }
+          
+          // Refresh project data to get the latest status info
+          fetchProjectData();
+        }
       }
     }
   });
@@ -764,11 +806,12 @@ export default function ProjectDetailsUI() {
   ]);
 
   const [inviteForm, setInviteForm] = useState({ email: '', role: '' });
+  const [projectRoles, setProjectRoles] = useState<string[]>([]);
   const [repoForm, setRepoForm] = useState({ name: '', url: '', branch: 'main' });
   const [showRepoModal, setShowRepoModal] = useState(false);
   const [editingRepo, setEditingRepo] = useState(null);
 
-  // Analytics state
+
   const [analyticsConfig, setAnalyticsConfig] = useState<AnalyticsConfig>(getDefaultAnalyticsConfig());
   const [taskStats, setTaskStats] = useState<TaskStats>({
     completed: 0,
@@ -783,7 +826,7 @@ export default function ProjectDetailsUI() {
     pending: []
   });
 
-  // Calculate analytics when backlog data changes
+
   useEffect(() => {
     if (backlog) {
       console.log('📊 Calculating analytics for backlog:', backlog);
@@ -810,7 +853,7 @@ export default function ProjectDetailsUI() {
     }
 
     try {
-      // First, look up user by email
+
       const usersResponse = await fetch(
         `${API_BASE_URL}/user/?email=${encodeURIComponent(inviteForm.email)}`,
         {
@@ -838,21 +881,21 @@ export default function ProjectDetailsUI() {
       
       const user = users[0];
       
-      // Check if there's already a pending invitation for this user
+
       const existingInvitation = pendingInvitations.find(inv => inv.invitee === parseInt(user.user_id));
       if (existingInvitation) {
         showWarning('Invitation Already Sent', `An invitation has already been sent to ${inviteForm.email} for this project. Please wait for them to respond.`);
         return;
       }
       
-      // Check if user is already a member
+
       const isAlreadyMember = members.some(member => member.email === inviteForm.email);
       if (isAlreadyMember) {
         showWarning('User Already Member', `${inviteForm.email} is already a member of this project.`);
         return;
       }
       
-      // Create invitation with user ID
+
       const response = await fetch(`${AI_API_BASE_URL}/invitations/`, {
         method: 'POST',
         headers: {
@@ -872,7 +915,7 @@ export default function ProjectDetailsUI() {
         showSuccess('Invitation Sent!', 'Team member invitation sent successfully.');
         setInviteForm({ email: '', role: '' });
         setShowInviteModal(false);
-        // Refresh members list and pending invitations
+
         fetchMembers();
         const updatedInvitations = await fetchPendingInvitations();
         setPendingInvitations(updatedInvitations);
@@ -880,7 +923,7 @@ export default function ProjectDetailsUI() {
         const errorData = await response.json();
         console.error('Failed to send invitation:', errorData);
         
-        // Handle specific error cases
+
         if (response.status === 409) {
           if (errorData.error && errorData.error.includes("pending invitation already exists")) {
             showWarning('Invitation Already Sent', `An invitation has already been sent to ${inviteForm.email} for this project. Please wait for them to respond or check the invitation status.`);
@@ -928,7 +971,7 @@ export default function ProjectDetailsUI() {
     }
   };
 
-  // Backlog CRUD Operations
+
   const addNewEpic = async (epicData: any) => {
     try {
       const response = await fetch(`${AI_API_BASE_URL}/epics/`, {
@@ -1030,7 +1073,7 @@ export default function ProjectDetailsUI() {
     }
   };
 
-  // Backlog Update Functions
+
   const updateEpicTitle = async (epicId: number, newTitle: string) => {
     try {
       const response = await fetch(`${AI_API_BASE_URL}/epics/${epicId}/`, {
@@ -1044,7 +1087,7 @@ export default function ProjectDetailsUI() {
         throw new Error('Failed to update epic title');
       }
       
-      // Mark this item as modified
+
       setModifiedItems(prev => new Set(prev).add(`epic-${epicId}`));
     } catch (error) {
       handleApiError(error, 'update epic title');
@@ -1064,7 +1107,7 @@ export default function ProjectDetailsUI() {
         throw new Error('Failed to update sub-epic title');
       }
       
-      // Mark this item as modified
+
       setModifiedItems(prev => new Set(prev).add(`subepic-${subEpicId}`));
     } catch (error) {
       handleApiError(error, 'update sub-epic title');
@@ -1084,7 +1127,7 @@ export default function ProjectDetailsUI() {
         throw new Error('Failed to update user story title');
       }
       
-      // Mark this item as modified
+
       setModifiedItems(prev => new Set(prev).add(`story-${storyId}`));
     } catch (error) {
       handleApiError(error, 'update user story title');
@@ -1104,38 +1147,38 @@ export default function ProjectDetailsUI() {
         throw new Error('Failed to update task title');
       }
       
-      // Mark this item as modified
+
       setModifiedItems(prev => new Set(prev).add(`task-${taskId}`));
     } catch (error) {
       handleApiError(error, 'update task title');
     }
   };
 
-  // Save all backlog changes
+
   const saveBacklogChanges = async () => {
     try {
       const updatePromises = [];
 
-      // Only update items that have been modified
+
       for (const epic of backlog.epics) {
-        // Update epic title only if it was modified
+
         if (modifiedItems.has(`epic-${epic.id}`)) {
           updatePromises.push(updateEpicTitle(epic.id, epic.title));
         }
 
-        // Update sub-epic titles only if they were modified
+
         for (const subEpic of epic.subEpics || []) {
           if (modifiedItems.has(`subepic-${subEpic.id}`)) {
             updatePromises.push(updateSubEpicTitle(subEpic.id, subEpic.title));
           }
 
-          // Update user story titles only if they were modified
+
           for (const userStory of subEpic.userStories || []) {
             if (modifiedItems.has(`story-${userStory.id}`)) {
               updatePromises.push(updateUserStoryTitle(userStory.id, userStory.title));
             }
 
-            // Update task titles only if they were modified
+
             for (const task of userStory.tasks || []) {
               if (modifiedItems.has(`task-${task.id}`)) {
                 updatePromises.push(updateTaskTitle(task.id, task.title));
@@ -1145,13 +1188,13 @@ export default function ProjectDetailsUI() {
         }
       }
 
-      // Execute all updates in parallel
+
       await Promise.all(updatePromises);
       
-      // Refresh the backlog data to ensure we have the latest from the server
+
       await fetchBacklog();
       
-      // Clear the modified items set and exit editing mode
+
       setModifiedItems(new Set());
       setIsEditingBacklog(false);
       
@@ -1162,11 +1205,11 @@ export default function ProjectDetailsUI() {
     }
   };
 
-  // Overview CRUD Operations
-  // TODO: Implement project title/summary update in UI
+
+
   const updateProject = async () => {
     try {
-      // Update project title and summary
+
       const projectResponse = await fetch(`${AI_API_BASE_URL}/projects/${projectId}/`, {
         method: 'PATCH',
         headers: getAuthHeaders(),
@@ -1183,7 +1226,7 @@ export default function ProjectDetailsUI() {
         return;
       }
 
-      // Update features
+
       const featuresPromises = projectData.features.map(async (feature) => {
         if (feature.id) {
           const response = await fetch(`${AI_API_BASE_URL}/project-features/${feature.id}/`, {
@@ -1197,7 +1240,7 @@ export default function ProjectDetailsUI() {
         return true;
       });
 
-      // Update roles
+
       const rolesPromises = projectData.roles.map(async (role) => {
         if (role.id) {
           const response = await fetch(`${AI_API_BASE_URL}/project-roles/${role.id}/`, {
@@ -1211,7 +1254,7 @@ export default function ProjectDetailsUI() {
         return true;
       });
 
-      // Update goals
+
       const goalsPromises = projectData.goals.map(async (goal) => {
         if (goal.id) {
           const response = await fetch(`${AI_API_BASE_URL}/project-goals/${goal.id}/`, {
@@ -1225,7 +1268,7 @@ export default function ProjectDetailsUI() {
         return true;
       });
 
-      // Update timeline items
+
       const timelinePromises = projectData.timeline.flatMap(week => 
         week.items.map(async (item) => {
           if (item.id) {
@@ -1241,16 +1284,43 @@ export default function ProjectDetailsUI() {
         })
       );
 
-      // Wait for all updates to complete
+
       await Promise.all([...featuresPromises, ...rolesPromises, ...goalsPromises, ...timelinePromises]);
 
-      // Refresh all data from the server
+
       await fetchProjectData();
 
       showSuccess('Project Updated!', 'Project has been updated successfully.');
       setIsEditingOverview(false);
     } catch (error) {
       handleApiError(error, 'update project');
+    }
+  };
+
+  const updateProjectStatus = async (newStatus: string) => {
+    try {
+      const response = await fetch(
+        `${AI_API_BASE_URL}/projects/${projectId}/update-status/`,
+        {
+          method: 'PUT',
+          headers: getAuthHeaders(),
+          credentials: 'include',
+          body: JSON.stringify({ status: newStatus })
+        }
+      );
+      
+      if (response.ok) {
+        const data = await response.json();
+        setProjectStatus(data.status);
+        setStatusUpdatedAt(data.status_updated_at);
+        setStatusUpdatedBy(data.status_updated_by_name);
+        showSuccess('Status Updated', 'Project status updated successfully');
+      } else {
+        const error = await response.json();
+        showError('Error', error.error || 'Failed to update status');
+      }
+    } catch (error) {
+      handleApiError(error, 'updating project status');
     }
   };
 
@@ -1339,7 +1409,7 @@ export default function ProjectDetailsUI() {
         setShowDeleteModal(false);
         setDeleteItem(null);
         
-        // Refresh appropriate data based on what was deleted
+
         if (deleteItem.type === 'member') {
           fetchMembers(); // Refresh members list
         } else if (deleteItem.type === 'repository') {
@@ -1414,9 +1484,9 @@ export default function ProjectDetailsUI() {
   };
 
 
-  // Repository CRUD Operations
+
   const validateRepositoryData = (repoData: any) => {
-    // Validate required fields
+
     if (!repoData.name || !repoData.name.trim()) {
       showWarning('Missing Information', 'Repository name is required.');
       return false;
@@ -1427,24 +1497,24 @@ export default function ProjectDetailsUI() {
       return false;
     }
 
-    // Validate URL format
+
     try {
       const url = new URL(repoData.url);
       
-      // Check if it's a valid GitHub URL
+
       if (!url.hostname.includes('github.com')) {
         showWarning('Invalid Repository URL', 'Please provide a valid GitHub repository URL (e.g., https://github.com/username/repository)');
         return false;
       }
 
-      // Check if it has the proper GitHub repository path structure
+
       const pathParts = url.pathname.split('/').filter(part => part.length > 0);
       if (pathParts.length < 2) {
         showWarning('Invalid Repository URL', 'GitHub repository URL must include username and repository name (e.g., https://github.com/username/repository)');
         return false;
       }
 
-      // Check if it's not just the GitHub homepage
+
       if (pathParts.length === 1 && pathParts[0] === '') {
         showWarning('Invalid Repository URL', 'Please provide a specific repository URL, not the GitHub homepage.');
         return false;
@@ -1455,7 +1525,7 @@ export default function ProjectDetailsUI() {
       return false;
     }
 
-    // Validate branch name
+
     if (repoData.branch && !/^[a-zA-Z0-9._/-]+$/.test(repoData.branch)) {
       showWarning('Invalid Branch Name', 'Branch name can only contain letters, numbers, dots, underscores, slashes, and hyphens.');
       return false;
@@ -1465,7 +1535,7 @@ export default function ProjectDetailsUI() {
   };
 
   const handleAddRepo = async (repoData: any) => {
-    // Validate data before sending to API
+
     if (!validateRepositoryData(repoData)) {
       return false; // Return false if validation fails
     }
@@ -1504,7 +1574,7 @@ export default function ProjectDetailsUI() {
     setShowEditMemberModal(true);
   };
 
-  // Updated handleAddRepo to use the API-based function
+
   const handleAddRepoLocal = async () => {
     if (!repoForm.name || !repoForm.url) {
       showWarning('Missing Information', 'Please fill out both repository name and URL fields.');
@@ -1517,7 +1587,7 @@ export default function ProjectDetailsUI() {
       branch: repoForm.branch
     });
     
-    // Only clear form and close modal if repository was successfully added
+
     if (success) {
       setRepoForm({ name: '', url: '', branch: 'main' });
       setShowRepoModal(false);
@@ -1531,9 +1601,9 @@ export default function ProjectDetailsUI() {
     setShowRepoModal(true);
   };
 
-  // Old local state manipulation functions removed - now using API-based CRUD operations
 
-  // Wrapper functions for UI compatibility
+
+
   const addEpic = async () => {
     if (newEpicTitle) {
       await addNewEpic({ title: newEpicTitle, description: newEpicDescription });
@@ -1639,7 +1709,7 @@ export default function ProjectDetailsUI() {
     }
     
     try {
-      // Get the week ID from the current timeline data
+
       const week = projectData.timeline[selectedWeekIndex];
       if (!week || !week.id) {
         showError('Week Not Found', 'Week not found. Please refresh and try again.');
@@ -1670,7 +1740,7 @@ export default function ProjectDetailsUI() {
     }
   };
 
-  // File Upload Handlers
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -1749,7 +1819,7 @@ export default function ProjectDetailsUI() {
     }
   };
 
-  // Show loading state
+
   if (loading) {
     return (
       <div className={`flex min-h-screen w-full ${theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'} items-center justify-center`}>
@@ -1761,7 +1831,7 @@ export default function ProjectDetailsUI() {
     );
   }
 
-  // Show error state
+
   if (error) {
     return (
       <div className={`flex min-h-screen w-full ${theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'} items-center justify-center`}>
@@ -1778,7 +1848,7 @@ export default function ProjectDetailsUI() {
     );
   }
 
-  // AI Badge Component
+
   const AIBadge = ({ show, tooltipText = "AI Generated" }: { show: boolean; tooltipText?: string }) => {
     if (!show) return null;
     
@@ -1794,6 +1864,24 @@ export default function ProjectDetailsUI() {
         <span>✨</span>
         <span>AI</span>
       </span>
+    );
+  };
+
+
+  const Avatar: React.FC<{ 
+    member: any; 
+    size?: 'sm' | 'md';
+    theme: string;
+  }> = ({ member, size = 'md', theme }) => {
+    const sizeClasses = size === 'sm' ? 'w-8 h-8 text-sm' : 'w-10 h-10';
+    const initials = member.name.substring(0, 2).toUpperCase();
+    
+    return (
+      <div className="relative">
+        <div className={`${sizeClasses} bg-blue-500 text-white rounded-full flex items-center justify-center font-medium border-2 ${theme === 'dark' ? 'border-gray-700' : 'border-white'} shadow-sm`}>
+          {initials}
+        </div>
+      </div>
     );
   };
 
@@ -2132,6 +2220,60 @@ export default function ProjectDetailsUI() {
                   </div>
 
                   <div className={`p-6 space-y-8 ${theme === 'dark' ? 'bg-gray-800' : 'bg-white'}`}>
+                    {/* Project Status Section */}
+                    {!isEditingOverview && (
+                      <div className="mb-6">
+                        <div className="flex items-center gap-2">
+                          <span className={`text-sm font-medium ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                            Status:
+                          </span>
+                          <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                            projectStatus === 'complete' ? 'bg-green-100 text-green-800' :
+                            projectStatus === 'in_progress' ? 'bg-blue-100 text-blue-800' :
+                            projectStatus === 'setting_up' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {projectStatus === 'setting_up' ? 'Setting Up' :
+                             projectStatus === 'in_progress' ? 'In Progress' :
+                             projectStatus === 'complete' ? 'Complete' :
+                             projectStatus === 'on_hold' ? 'On Hold' : projectStatus}
+                          </span>
+                        </div>
+                        {statusUpdatedAt && statusUpdatedBy && (
+                          <p className={`text-xs mt-1 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+                            Last updated by {statusUpdatedBy} on {new Date(statusUpdatedAt).toLocaleString()}
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    {isEditingOverview && (
+                      <div className="mb-6">
+                        <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-200' : 'text-gray-700'}`}>
+                          Project Status
+                        </label>
+                        <select
+                          value={projectStatus}
+                          onChange={(e) => updateProjectStatus(e.target.value)}
+                          className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                            theme === 'dark'
+                              ? 'bg-gray-900 border-gray-700 text-white'
+                              : 'border-gray-300'
+                          }`}
+                        >
+                          <option value="setting_up">Setting Up</option>
+                          <option value="in_progress">In Progress</option>
+                          <option value="complete">Complete</option>
+                          <option value="on_hold">On Hold</option>
+                        </select>
+                        {statusUpdatedAt && statusUpdatedBy && (
+                          <p className={`text-xs mt-1 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+                            Last updated by {statusUpdatedBy} on {new Date(statusUpdatedAt).toLocaleString()}
+                          </p>
+                        )}
+                      </div>
+                    )}
+
                     {/* Proposal Upload Section */}
                     <div className="mb-6">
                       <h3 className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'} mb-3 flex items-center`}>
@@ -2626,7 +2768,7 @@ export default function ProjectDetailsUI() {
                                   ep.id === epic.id ? { ...ep, title: e.target.value } : ep
                               );
                               setBacklog({ ...backlog, epics: updatedEpics });
-                              // Mark this epic as modified
+
                               setModifiedItems(prev => new Set(prev).add(`epic-${epic.id}`));
                             }}
                           />
@@ -2690,7 +2832,7 @@ export default function ProjectDetailsUI() {
                                       return ep;
                                     });
                                     setBacklog({ ...backlog, epics: updatedEpics });
-                                    // Mark this sub-epic as modified
+
                                     setModifiedItems(prev => new Set(prev).add(`subepic-${subEpic.id}`));
                                   }}
                                   className={`text-lg font-semibold bg-transparent border-b-2 border-transparent focus:outline-none transition-colors flex-1 ${
@@ -2765,7 +2907,7 @@ export default function ProjectDetailsUI() {
                                             return ep;
                                           });
                                           setBacklog({ ...backlog, epics: updatedEpics });
-                                          // Mark this user story as modified
+
                                           setModifiedItems(prev => new Set(prev).add(`story-${story.id}`));
                                         }}
                                         className={`flex-1 bg-transparent border-b-2 border-transparent focus:outline-none transition-colors ${
@@ -2843,7 +2985,7 @@ export default function ProjectDetailsUI() {
                                                   return ep;
                                                 });
                                                 setBacklog({ ...backlog, epics: updatedEpics });
-                                                // Mark this task as modified
+
                                                 setModifiedItems(prev => new Set(prev).add(`task-${task.id}`));
                                               }}
                                               className={`bg-transparent border-b-2 border-transparent focus:outline-none flex-1 transition-colors ${
@@ -3057,9 +3199,12 @@ export default function ProjectDetailsUI() {
                                   const currentUserId = currentUser.id || currentUser.user_id || currentUser.pk;
                                   const isOwner = projectData.created_by === currentUserId;
                                   const isSelf = member.email === currentUser.email;
+                                  const isMemberOwner = member.role === 'Owner';
                                   
-                                  // Don't show delete button if user is the owner trying to delete themselves
-                                  if (isOwner && isSelf) {
+
+
+
+                                  if ((isOwner && isSelf) || isMemberOwner) {
                                     return null;
                                   }
                                   
@@ -3162,6 +3307,69 @@ export default function ProjectDetailsUI() {
                     </div>
                   </div>
                 )}
+
+                {/* Task Distribution Section */}
+                <div className={`${theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} rounded-xl shadow-sm border overflow-hidden`}>
+                  <div className={`px-6 py-4 border-b ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'}`}>
+                    <h3 className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                      Task Distribution
+                    </h3>
+                    <p className={`text-sm mt-1 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+                      Task completion progress by team member
+                    </p>
+                  </div>
+                  
+                  <div className="p-6 space-y-4">
+                    {members.map((member) => {
+                      const memberTasks = backlog.epics.flatMap(epic =>
+                        epic.subEpics.flatMap(subEpic =>
+                          subEpic.userStories.flatMap(story =>
+                            story.tasks.filter(task => 
+                              task.assignee_details?.user_email === member.email ||
+                              (task.assignee && members.find(m => m.id === task.assignee)?.email === member.email)
+                            )
+                          )
+                        )
+                      );
+
+                      const completedCount = memberTasks.filter(t => t.status === 'done').length;
+                      const totalCount = memberTasks.length;
+                      const percentage = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
+
+                      return (
+                        <div key={member.id} className={`p-4 rounded-lg border ${
+                          theme === 'dark' ? 'bg-gray-750 border-gray-600' : 'bg-gray-50 border-gray-200'
+                        }`}>
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-3">
+                              <Avatar member={member} size="sm" theme={theme} />
+                              <div>
+                                <div className={`font-medium ${theme === 'dark' ? 'text-gray-200' : 'text-gray-800'}`}>
+                                  {member.name}
+                                </div>
+                                <div className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+                                  {member.role}
+                                </div>
+                              </div>
+                            </div>
+                            <div className={`text-sm font-medium ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                              {completedCount}/{totalCount} tasks
+                            </div>
+                          </div>
+                          
+                          <div className={`w-full h-2 rounded-full overflow-hidden ${
+                            theme === 'dark' ? 'bg-gray-700' : 'bg-gray-200'
+                          }`}>
+                            <div 
+                              className="h-full bg-blue-500 transition-all duration-300"
+                              style={{ width: `${percentage}%` }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
             )}
 
@@ -3292,14 +3500,24 @@ export default function ProjectDetailsUI() {
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow"
                 >
                   <option value="">Select a role</option>
-                  <option value="Frontend Developer">Frontend Developer</option>
-                  <option value="Backend Developer">Backend Developer</option>
-                  <option value="Full Stack Developer">Full Stack Developer</option>
-                  <option value="UI/UX Designer">UI/UX Designer</option>
-                  <option value="QA Engineer">QA Engineer</option>
-                  <option value="DevOps Engineer">DevOps Engineer</option>
-                  <option value="Product Manager">Product Manager</option>
-                  <option value="Scrum Master">Scrum Master</option>
+                  {projectRoles.length > 0 ? (
+                    projectRoles.map((role) => (
+                      <option key={role} value={role}>
+                        {role}
+                      </option>
+                    ))
+                  ) : (
+                    <>
+                      <option value="Frontend Developer">Frontend Developer</option>
+                      <option value="Backend Developer">Backend Developer</option>
+                      <option value="Full Stack Developer">Full Stack Developer</option>
+                      <option value="UI/UX Designer">UI/UX Designer</option>
+                      <option value="QA Engineer">QA Engineer</option>
+                      <option value="DevOps Engineer">DevOps Engineer</option>
+                      <option value="Product Manager">Product Manager</option>
+                      <option value="Scrum Master">Scrum Master</option>
+                    </>
+                  )}
                 </select>
               </div>
               
@@ -3383,34 +3601,19 @@ export default function ProjectDetailsUI() {
                 <p className="text-sm text-gray-500">Click the camera to update image</p>
               </div>
 
-              {/* Name */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Name</label>
-                <input
-                  type="text"
-                  value={editingMember.name}
-                  onChange={(e) =>
-                    setEditingMember({ ...editingMember, name: e.target.value })
-                  }
-                  placeholder="Enter name"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-shadow"
-                />
-              </div>
-
-              {/* Email */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Email Address
-                </label>
-                <input
-                  type="email"
-                  value={editingMember.email}
-                  onChange={(e) =>
-                    setEditingMember({ ...editingMember, email: e.target.value })
-                  }
-                  placeholder="Enter email"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-shadow"
-                />
+              {/* Member Info Display (Read-only) */}
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <div className="text-sm text-gray-600 mb-2">Member Information</div>
+                <div className="space-y-2">
+                  <div>
+                    <span className="font-medium text-gray-700">Name:</span>
+                    <span className="ml-2 text-gray-600">{editingMember.name}</span>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-700">Email:</span>
+                    <span className="ml-2 text-gray-600">{editingMember.email}</span>
+                  </div>
+                </div>
               </div>
 
               {/* Role */}
@@ -3426,14 +3629,24 @@ export default function ProjectDetailsUI() {
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-shadow"
                 >
                   <option value="">Select a role</option>
-                  <option value="Frontend Developer">Frontend Developer</option>
-                  <option value="Backend Developer">Backend Developer</option>
-                  <option value="Full Stack Developer">Full Stack Developer</option>
-                  <option value="UI/UX Designer">UI/UX Designer</option>
-                  <option value="QA Engineer">QA Engineer</option>
-                  <option value="DevOps Engineer">DevOps Engineer</option>
-                  <option value="Product Manager">Product Manager</option>
-                  <option value="Scrum Master">Scrum Master</option>
+                  {projectRoles.length > 0 ? (
+                    projectRoles.map((role) => (
+                      <option key={role} value={role}>
+                        {role}
+                      </option>
+                    ))
+                  ) : (
+                    <>
+                      <option value="Frontend Developer">Frontend Developer</option>
+                      <option value="Backend Developer">Backend Developer</option>
+                      <option value="Full Stack Developer">Full Stack Developer</option>
+                      <option value="UI/UX Designer">UI/UX Designer</option>
+                      <option value="QA Engineer">QA Engineer</option>
+                      <option value="DevOps Engineer">DevOps Engineer</option>
+                      <option value="Product Manager">Product Manager</option>
+                      <option value="Scrum Master">Scrum Master</option>
+                    </>
+                  )}
                 </select>
               </div>
 

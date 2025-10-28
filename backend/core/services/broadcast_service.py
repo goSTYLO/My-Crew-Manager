@@ -1,8 +1,11 @@
+import logging
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 from django.contrib.contenttypes.models import ContentType
 from apps.ai_api.models import ProjectMember, Project, Epic, SubEpic, UserStory, StoryTask, Repository
 from .notification_service import NotificationService
+
+logger = logging.getLogger('core.services')
 
 
 class BroadcastService:
@@ -45,10 +48,10 @@ class BroadcastService:
                     }
                 )
             
-            print(f"Broadcasted {event_type} to {len(user_ids)} members")
+            logger.info(f"Broadcasted {event_type} to {len(user_ids)} members")
             
         except Exception as e:
-            print(f"Broadcast error: {e}")
+            logger.error(f"Broadcast error: {e}")
     
     # Project-related broadcasts
     @staticmethod
@@ -159,4 +162,4 @@ class BroadcastService:
                         actor=actor
                     )
             except Exception as e:
-                print(f"Error creating notifications for {event_type}: {e}")
+                logger.error(f"Error creating notifications for {event_type}: {e}")

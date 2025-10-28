@@ -3,8 +3,9 @@ import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import Sidebar from "../../components/sidebarUser";
 import TopNavbar from "../../components/topbarLayout_user";
-import { Search, Mail, FileText, Sparkles, Users, CheckCircle, Clock, AlertCircle, GitBranch, Download } from "lucide-react";
+import { Search, Mail, FileText, Sparkles, Users, CheckCircle, Clock, AlertCircle, GitBranch, Download, RefreshCw } from "lucide-react";
 import { useTheme } from "../../components/themeContext";
+import { useToast } from "../../components/ToastContext";
 
 // ✅ Types
 interface User {
@@ -42,6 +43,9 @@ interface Project {
   id: number;
   title: string;
   summary: string;
+  status?: string;
+  status_updated_at?: string;
+  status_updated_by_name?: string;
   created_by: User;
   created_at: string;
   member_count: number;
@@ -260,6 +264,33 @@ const ProjectCard = ({ project, theme, onDownloadFile }: {
           hasBacklog={project.has_backlog}
         />
       </div>
+
+      {/* Project Status */}
+      {project.status && (
+        <div className="mb-4">
+          <div className="flex items-center gap-2">
+            <span className={`text-sm font-medium ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+              Status:
+            </span>
+            <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+              project.status === 'complete' ? 'bg-green-100 text-green-800' :
+              project.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
+              project.status === 'setting_up' ? 'bg-yellow-100 text-yellow-800' :
+              'bg-gray-100 text-gray-800'
+            }`}>
+              {project.status === 'setting_up' ? 'Setting Up' :
+               project.status === 'in_progress' ? 'In Progress' :
+               project.status === 'complete' ? 'Complete' :
+               project.status === 'on_hold' ? 'On Hold' : project.status}
+            </span>
+          </div>
+          {project.status_updated_at && project.status_updated_by_name && (
+            <p className={`text-xs mt-1 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+              Last updated by {project.status_updated_by_name} on {new Date(project.status_updated_at).toLocaleString()}
+            </p>
+          )}
+        </div>
+      )}
 
       <hr className={`border-t mb-4 ${theme === 'dark' ? 'border-gray-600' : 'border-gray-300'}`} />
 
@@ -504,6 +535,47 @@ const MonitorProjectsUser = () => {
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [pendingInvitationsCount, setPendingInvitationsCount] = useState(0);
+  const [lastRefresh, setLastRefresh] = useState<number>(Date.now());
+  
+  // Toast hooks
+  const { showInfo, showSuccess } = useToast();
+
+  // Function to load projects (initial load)
+  const loadProjects = useCallback(async () => {
+    try {
+      const response = await projectAPI.getMyProjects();
+      setProjects(response.projects || []);
+    } catch (err) {
+      console.error('Error loading projects:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load projects');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Function to refresh projects (for real-time updates)
+  const refreshProjects = useCallback(async () => {
+    try {
+      console.log('🔄 User Projects List: Starting refresh...');
+      console.log('🔄 Current projects count:', projects.length);
+      
+      // Add a small delay to ensure backend has processed the changes
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      const response = await projectAPI.getMyProjects();
+      console.log('📋 Refreshed projects response:', response);
+      const newProjects = response.projects || [];
+      console.log('📋 New projects array:', newProjects);
+      console.log('📋 Previous projects count:', projects.length, 'New projects count:', newProjects.length);
+      
+      setProjects(newProjects);
+      setLastRefresh(Date.now()); // Force re-render
+      console.log('✅ User Projects List: Projects data refreshed successfully, state updated');
+    } catch (err) {
+      console.error('❌ User Projects List: Error refreshing projects:', err);
+      // Don't set error state for refresh failures, just log it
+    }
+  }, [projects.length]);
 
   // Function to fetch pending invitations count
   const fetchPendingInvitations = useCallback(async () => {
@@ -578,18 +650,6 @@ const MonitorProjectsUser = () => {
   };
 
   useEffect(() => {
-    const loadProjects = async () => {
-      try {
-        const response = await projectAPI.getMyProjects();
-        setProjects(response.projects || []);
-      } catch (err) {
-        console.error('Error loading projects:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load projects');
-      } finally {
-        setLoading(false);
-      }
-    };
-
     const loadData = async () => {
       await Promise.all([
         loadProjects(),
@@ -617,7 +677,10 @@ const MonitorProjectsUser = () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('focus', handleFocus);
     };
-  }, [fetchPendingInvitations]);
+  }, [loadProjects, fetchPendingInvitations]);
+
+  // Note: Real-time updates are handled on individual project details pages
+  // This projects list page shows static data that gets refreshed on page load
 
   const filteredProjects = projects.filter(project =>
     project.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -633,11 +696,29 @@ const MonitorProjectsUser = () => {
         <main className="flex-1 p-4 lg:p-[100px] overflow-auto space-y-[40px] pt-20">
           {/* Header with search and invitation button */}
           <div className="flex items-center justify-between mb-6">
-            <h2 className={`text-2xl font-semibold ${theme === 'dark' ? 'text-gray-100' : 'text-gray-800'}`}>
-              My Projects
-            </h2>
+            <div>
+              <h2 className={`text-2xl font-semibold ${theme === 'dark' ? 'text-gray-100' : 'text-gray-800'}`}>
+                My Projects
+              </h2>
+              <p className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+                Last updated: {new Date(lastRefresh).toLocaleTimeString()}
+              </p>
+            </div>
             
             <div className="flex items-center gap-4 relative z-10">
+              {/* Manual Refresh Button */}
+              <button
+                onClick={refreshProjects}
+                className={`p-2 rounded-lg border transition-colors ${
+                  theme === 'dark' 
+                    ? 'border-gray-600 bg-gray-800 text-gray-300 hover:bg-gray-700' 
+                    : 'border-gray-300 bg-white text-gray-600 hover:bg-gray-50'
+                }`}
+                title="Refresh projects"
+              >
+                <RefreshCw className="w-4 h-4" />
+              </button>
+
               {/* Search Input */}
               <div className="relative w-[400px]">
                 <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-400'}`} />

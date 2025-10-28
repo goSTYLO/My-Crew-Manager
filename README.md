@@ -6,6 +6,7 @@ A comprehensive project management platform with AI-powered features, real-time 
 
 ### Core Project Management
 - **Project Creation & Management** - Create and manage projects with detailed information
+- **Project Status Management** - Track project status (Setting Up, In Progress, Complete, On Hold) with real-time updates
 - **AI-Powered Project Analysis** - Upload project proposals and get AI-generated insights
 - **Backlog Management** - Generate and manage epics, user stories, and tasks
 - **Sprint Planning** - Organize work into sprints with timeline management
@@ -134,6 +135,7 @@ The platform includes a comprehensive real-time collaboration system that enable
 
 ### Real-time Event Types
 - `project_update` - Project metadata changes (title, summary, features, roles, goals, timeline)
+- `project_status_changed` - Project status changes (Setting Up, In Progress, Complete, On Hold)
 - `epic_update` - Epic CRUD operations (create, update, delete, completion status)
 - `sub_epic_update` - Sub-epic changes
 - `user_story_update` - User story changes
@@ -241,6 +243,7 @@ The platform includes a comprehensive real-time notification system that keeps u
 - `mention` - When mentioned in chat
 - `deadline_reminder` - Upcoming deadline alerts
 - `project_update` - Important project changes
+- `project_status_changed` - When project status is updated by owner
 - `member_joined` - New member joins a project
 - `member_left` - Member leaves a project
 
@@ -645,6 +648,7 @@ To switch back to localhost-only access:
 
 ### AI API Endpoints
 - **Projects**: `/api/ai/projects/`
+- **Project Status Updates**: `PUT /api/ai/projects/{id}/update-status/` - Update project status (owner only)
 - **Invitations**: `/api/ai/invitations/`
 - **Notifications**: `/api/ai/notifications/`
 - **Epics**: `/api/ai/epics/` *(Full CRUD including PATCH for title updates)*
@@ -958,7 +962,19 @@ For support and questions:
 
 ## 🔄 Recent Updates
 
-### Smart Polling System Implementation (Latest)
+### Project Status Management System (Latest)
+- ✅ **Complete Project Status Feature**: Implemented comprehensive project status management with real-time collaboration
+  - **Status Tracking**: Added 4 project status options (Setting Up, In Progress, Complete, On Hold) with proper database schema
+  - **Permission Control**: Only project owners can change status with server-side validation
+  - **Real-time Notifications**: Status changes broadcast instantly to all project members via WebSocket
+  - **UI Integration**: Professional status selector in edit mode and status badges in view mode
+  - **Audit Trail**: Complete tracking of who changed status and when with "Last updated by X on Y" display
+  - **Cross-Platform Support**: Works seamlessly in both manager and user views with proper theming
+- ✅ **Backend Implementation**: Complete Django backend with proper API endpoints and database migration
+- ✅ **Frontend Integration**: React components with TypeScript interfaces and real-time WebSocket updates
+- ✅ **Production Ready**: Fully tested and ready for production use with comprehensive error handling
+
+### Smart Polling System Implementation
 - ✅ **WebSocket Replacement**: Successfully replaced WebSocket-based notifications and chat with intelligent polling system
   - **Notification Polling**: Implemented `useNotificationPolling` hook with adaptive intervals (3s active, 15s idle, 30s hidden)
   - **Chat Polling**: Created `useChatPolling` hook with fast polling (2s active) and pagination support
@@ -1152,7 +1168,49 @@ For support and questions:
   - **Backlog Data Processing**: Efficient processing of nested backlog structures (epics → sub-epics → user stories → tasks)
   - **Performance Optimization**: Parallel API calls and efficient data aggregation for responsive analytics
 
-### WebSocket Re-implementation & Real-time Collaboration System (Latest)
+### Project Status Management System (Latest)
+- ✅ **Comprehensive Project Status Feature**: Implemented complete project status management system with real-time updates and notifications
+  - **Status Field Implementation**: Added `status` field to Project model with 4 status choices: "Setting Up", "In Progress", "Complete", "On Hold" (default: "In Progress")
+  - **Status Tracking**: Added `status_updated_at` and `status_updated_by` fields to track when and who changed the status
+  - **Permission Control**: Only project creators/owners can change project status with proper validation
+  - **Real-time Notifications**: Status changes trigger instant notifications to all project members except the person who made the change
+  - **UI Integration**: Status selector in edit mode and status badge in view mode for both manager and user views
+  - **Last Updated Display**: Shows "Last updated by X on Y" information below status for transparency
+- ✅ **Backend Implementation**: Complete Django backend support for project status management
+  - **Model Updates**: Enhanced Project model with status fields and choices in `backend/apps/ai_api/models.py`
+  - **Database Migration**: Applied migration `0006_project_status_project_status_updated_at_and_more.py` for schema changes
+  - **API Endpoint**: Added `PUT /api/ai/projects/{id}/update-status/` endpoint for status updates
+  - **Serializer Updates**: Updated ProjectSerializer to include status fields and status_updated_by_name
+  - **Notification Integration**: Added `project_status_changed` notification type with proper WebSocket broadcasting
+  - **Permission Validation**: Server-side validation ensuring only project owners can update status
+- ✅ **Frontend Integration**: Complete React frontend implementation for both manager and user views
+  - **Manager View**: Status selector in edit mode with real-time updates and toast notifications
+  - **User View**: Read-only status display with real-time updates and toast notifications
+  - **TypeScript Interfaces**: Updated Project interfaces to include status fields across all components
+  - **State Management**: Proper React state management for status updates and real-time synchronization
+  - **UI Components**: Professional status badges with color coding (green=complete, blue=in progress, yellow=setting up, gray=on hold)
+  - **Real-time Updates**: Automatic UI refresh when status changes via WebSocket notifications
+- ✅ **Real-time Collaboration**: Enhanced WebSocket system for instant status change notifications
+  - **WebSocket Broadcasting**: Status changes broadcast instantly to all project members
+  - **Notification System**: `project_status_changed` notifications with actor information and action URLs
+  - **Auto-refresh**: Project details pages automatically refresh when status changes
+  - **Toast Notifications**: Real-time toast notifications for status changes with proper theming
+  - **Cross-user Updates**: Multiple users see status changes instantly without page refresh
+- ✅ **User Experience Enhancements**: Professional status management with comprehensive feedback
+  - **Visual Status Indicators**: Color-coded status badges for quick visual identification
+  - **Edit Mode Integration**: Status selector only appears in edit mode for project owners
+  - **Read-only Display**: Non-owners see status information but cannot change it
+  - **Audit Trail**: Complete tracking of who changed status and when
+  - **Error Handling**: Comprehensive error handling with user-friendly messages
+  - **Theme Support**: Full dark/light theme support for all status-related components
+- ✅ **Production Ready**: Complete project status system ready for production use
+  - **Backend Testing**: All API endpoints tested and working correctly
+  - **Frontend Testing**: Real-time updates verified across multiple users
+  - **Permission Security**: Proper access control preventing unauthorized status changes
+  - **Database Integrity**: Proper foreign key relationships and data validation
+  - **WebSocket Reliability**: Robust real-time notification system with error handling
+
+### WebSocket Re-implementation & Real-time Collaboration System
 - ✅ **Complete WebSocket System Overhaul**: Successfully re-implemented and fixed the entire WebSocket infrastructure for real-time collaboration
   - **Backend Import Path Fixes**: Resolved all `ModuleNotFoundError` issues by converting `backend.*` imports to relative paths across all backend modules
   - **ASGI Configuration Updates**: Fixed `ASGI_APPLICATION` setting and import paths for proper Django Channels integration
@@ -1261,6 +1319,103 @@ For support and questions:
   - **Backward Compatibility**: Both old and new notification URLs work correctly for all user roles
   - **Performance**: Clean console output focused on relevant WebSocket activity
   - **User Experience**: Real-time updates working seamlessly across all components
+
+### Monitor Created Component Code Documentation
+The following comments were removed from `web/src/view_pages/manager/monitor_created.tsx` and are documented here for reference:
+
+#### State Management Comments
+- **Modal states**: State variables for managing various modal dialogs (add feature, role, goal, delete modals)
+- **Modal input states**: State variables for form inputs in modals (feature title, role title, goal title, etc.)
+- **Backlog modal states**: State variables for backlog-related modals (add epic, sub-epic, user story, task modals)
+- **Backlog editing state**: State for managing backlog edit mode and tracking modified items
+- **Task assignment and commit tracking state**: State for task completion workflow and commit information
+- **Confirmation modal state**: State for generic confirmation dialogs
+- **Proposal upload state**: State for handling PDF proposal uploads and viewing
+
+#### API Configuration Comments
+- **API Configuration**: Base URL configuration for AI API endpoints
+- **API Utility Functions**: Helper functions for authentication headers and error handling
+
+#### Function Group Comments
+- **Regenerate functions**: Functions for AI-powered project overview and backlog regeneration
+- **Fetch Project Overview Data**: Functions for retrieving project metadata, features, roles, goals, and timeline
+- **Fetch Backlog Data**: Functions for retrieving and transforming nested backlog structure
+- **Fetch Members Data**: Functions for retrieving project team members
+- **Fetch Pending Invitations Data**: Functions for retrieving pending project invitations
+- **Cancel/Delete Pending Invitation**: Functions for managing invitation lifecycle
+- **Fetch Repositories Data**: Functions for retrieving project repositories
+- **Fetch Current Proposal**: Functions for retrieving current project proposal
+- **Task Assignment Functions**: Functions for assigning tasks to team members and tracking completion
+- **Load all data on component mount**: useEffect hook for initial data loading
+- **Real-time updates for project changes**: WebSocket integration for live project updates
+- **Backlog CRUD Operations**: Functions for creating, reading, updating, and deleting backlog items
+- **Backlog Update Functions**: Individual functions for updating epic, sub-epic, user story, and task titles
+- **Save all backlog changes**: Batch function for saving multiple backlog modifications
+- **Overview CRUD Operations**: Functions for managing project overview data
+- **Repository CRUD Operations**: Functions for managing project repositories
+- **File Upload Handlers**: Functions for handling file uploads and drag-and-drop functionality
+
+#### Implementation Details Comments
+- **Refresh all data**: Data refresh after successful operations
+- **Show success modal**: Success feedback after operations
+- **First, fetch the main project data**: Sequential data fetching strategy
+- **Then fetch related data in parallel**: Parallel data fetching for performance
+- **Process each response, handling failures gracefully**: Error handling for parallel requests
+- **Extract role names from the roles data**: Data transformation for role dropdowns
+- **Debug: Check if tasks have assignee details**: Debugging information for task assignment
+- **Transform nested structure to match frontend state**: Data structure transformation
+- **Map to frontend format**: Data mapping for UI compatibility
+- **Filter for pending invitations only**: Data filtering for specific use cases
+- **Refresh pending invitations**: Data refresh after invitation operations
+- **Don't show error for repositories as it's optional**: Error handling strategy
+- **Fetch pending invitations separately**: Separate data fetching for invitations
+- **Refresh project data**: Real-time data refresh
+- **Refresh backlog data**: Real-time backlog refresh
+- **More specific toast messages based on action**: Contextual user feedback
+- **Refresh members data**: Real-time member data refresh
+- **Refresh repositories data**: Real-time repository data refresh
+- **Calculate analytics when backlog data changes**: Analytics computation triggers
+- **First, look up user by email**: User lookup strategy for invitations
+- **Check if there's already a pending invitation for this user**: Duplicate prevention
+- **Check if user is already a member**: Membership validation
+- **Create invitation with user ID**: Invitation creation process
+- **Refresh members list and pending invitations**: Data refresh after invitation
+- **Handle specific error cases**: Error handling for different scenarios
+- **Mark this item as modified**: Change tracking for batch updates
+- **Only update items that have been modified**: Efficient update strategy
+- **Update epic title only if it was modified**: Conditional updates
+- **Update sub-epic titles only if they were modified**: Conditional updates
+- **Update user story titles only if they were modified**: Conditional updates
+- **Update task titles only if they were modified**: Conditional updates
+- **Execute all updates in parallel**: Performance optimization
+- **Refresh the backlog data to ensure we have the latest from the server**: Data consistency
+- **Clear the modified items set and exit editing mode**: State cleanup
+- **TODO: Implement project title/summary update in UI**: Future enhancement note
+- **Update project title and summary**: Project metadata updates
+- **Update features**: Feature management
+- **Update roles**: Role management
+- **Update goals**: Goal management
+- **Update timeline items**: Timeline management
+- **Wait for all updates to complete**: Synchronization
+- **Refresh all data from the server**: Complete data refresh
+- **Refresh appropriate data based on what was deleted**: Contextual data refresh
+- **Validate required fields**: Input validation
+- **Validate URL format**: URL validation
+- **Check if it's a valid GitHub URL**: GitHub URL validation
+- **Check if it has the proper GitHub repository path structure**: Repository structure validation
+- **Check if it's not just the GitHub homepage**: URL specificity validation
+- **Validate branch name**: Branch name validation
+- **Validate data before sending to API**: Pre-API validation
+- **Updated handleAddRepo to use the API-based function**: Function modernization
+- **Only clear form and close modal if repository was successfully added**: Conditional UI updates
+- **Old local state manipulation functions removed - now using API-based CRUD operations**: Code cleanup note
+- **Wrapper functions for UI compatibility**: UI compatibility layer
+- **Get the week ID from the current timeline data**: Data extraction
+- **Show loading state**: Loading UI management
+- **Show error state**: Error UI management
+- **AI Badge Component**: Component documentation
+- **Avatar Component for Task Distribution**: Component documentation
+- **Don't show delete button if: User is the owner trying to delete themselves, OR The member being deleted is the owner**: Business logic documentation
 
 ### Centralized IP Configuration & Multi-Device Access
 - ✅ **Centralized IP Configuration System**: Implemented comprehensive multi-device access with single source of truth

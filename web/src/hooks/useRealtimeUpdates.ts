@@ -20,6 +20,7 @@ interface UseRealtimeUpdatesOptions {
 }
 
 export const useRealtimeUpdates = ({ projectId, callbacks }: UseRealtimeUpdatesOptions) => {
+  console.log('🔧 useRealtimeUpdates: Hook initialized with projectId:', projectId);
   const { subscribe } = useWebSocket();
 
   // Create stable callback references
@@ -108,21 +109,33 @@ export const useRealtimeUpdates = ({ projectId, callbacks }: UseRealtimeUpdatesO
   }, [callbacks, projectId]);
 
   useEffect(() => {
+    console.log('🔧 useRealtimeUpdates: Setting up WebSocket subscription');
     const handlers = stableCallbacks();
+    console.log('🔧 useRealtimeUpdates: Available handlers:', Object.keys(handlers));
     
     // Create a single handler that routes messages based on type
     const messageHandler = (message: any) => {
       const eventType = message.type || message.action;
+      console.log('🔧 useRealtimeUpdates: Message received:', message);
+      console.log('🔧 useRealtimeUpdates: Event type:', eventType);
+      console.log('🔧 useRealtimeUpdates: Available handlers:', Object.keys(handlers));
+      
       const handler = handlers[eventType];
       if (handler && typeof handler === 'function') {
+        console.log('🔧 useRealtimeUpdates: Calling handler for:', eventType);
         handler(message);
+      } else {
+        console.log('🔧 useRealtimeUpdates: No handler found for:', eventType);
       }
     };
     
+    console.log('🔧 useRealtimeUpdates: Calling subscribe function');
     const unsubscribe = subscribe(messageHandler);
+    console.log('🔧 useRealtimeUpdates: Subscribe function returned:', typeof unsubscribe);
 
     // Cleanup: call unsubscribe function
     return () => {
+      console.log('🔧 useRealtimeUpdates: Cleaning up subscription');
       unsubscribe();
     };
   }, [subscribe, stableCallbacks]);

@@ -1,4 +1,5 @@
 import json
+import logging
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from django.contrib.auth import get_user_model
@@ -8,6 +9,7 @@ from .models import Room, RoomMembership, Message
 from .serializers import MessageSerializer, RoomSerializer, RoomMembershipSerializer
 
 User = get_user_model()
+logger = logging.getLogger('apps.chat')
 
 
 class ChatConsumer(AsyncWebsocketConsumer):
@@ -17,13 +19,13 @@ class ChatConsumer(AsyncWebsocketConsumer):
         
         # Check if user is authenticated
         if not self.scope['user'].is_authenticated:
-            print(f"Chat WebSocket: User not authenticated for room {self.room_id}")
+            logger.warning(f"Chat WebSocket: User not authenticated for room {self.room_id}")
             await self.close()
             return
         
         # Check if user is a member of the room
         if not await self.is_authenticated_and_member():
-            print(f"Chat WebSocket: User {self.scope['user'].user_id} not a member of room {self.room_id}")
+            logger.warning(f"Chat WebSocket: User {self.scope['user'].user_id} not a member of room {self.room_id}")
             await self.close()
             return
         
@@ -177,7 +179,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 serializer = MessageSerializer(message)
                 return serializer.data
         except Exception as e:
-            print(f"Error creating message: {e}")
+            logger.error(f"Error creating message: {e}")
             return None
 
     # All data operations are handled via REST API
@@ -191,32 +193,32 @@ class ChatNotificationConsumer(AsyncWebsocketConsumer):
     """Consumer for global chat notifications (new messages, mentions, etc.)"""
     
     async def connect(self):
-        print(f"Notification WebSocket: Starting connection...")
+        logger.info(f"Notification WebSocket: Starting connection...")
         
         # Check authentication
         if not self.scope['user'].is_authenticated:
-            print(f"Notification WebSocket: User not authenticated")
+            logger.warning(f"Notification WebSocket: User not authenticated")
             await self.close()
             return
         
-        print(f"Notification WebSocket: User authenticated: {self.scope['user'].email}")
+        logger.info(f"Notification WebSocket: User authenticated: {self.scope['user'].email}")
         
         # Get user ID safely
         try:
             self.user_id = getattr(self.scope['user'], 'user_id', None)
             if not self.user_id:
-                print(f"Notification WebSocket: No user_id found")
+                logger.warning(f"Notification WebSocket: No user_id found")
                 await self.close()
                 return
         except Exception as e:
-            print(f"Notification WebSocket: Error getting user_id: {e}")
+            logger.error(f"Notification WebSocket: Error getting user_id: {e}")
             await self.close()
             return
         
         # Chat notifications use a different group - don't join the general notifications group
         # The general notifications group is handled by ProjectUpdatesConsumer
         self.chat_notification_group = f'user_{self.user_id}_chat_notifications'
-        print(f"Chat Notification WebSocket: User {self.user_id} connecting to chat notifications")
+        logger.info(f"Chat Notification WebSocket: User {self.user_id} connecting to chat notifications")
         
         # Join user's chat notification group (separate from general notifications)
         await self.channel_layer.group_add(
@@ -225,7 +227,7 @@ class ChatNotificationConsumer(AsyncWebsocketConsumer):
         )
         
         await self.accept()
-        print(f"Notification WebSocket: Connection accepted for user {self.user_id}")
+        logger.info(f"Notification WebSocket: Connection accepted for user {self.user_id}")
 
     async def disconnect(self, close_code):
         # Leave chat notification group only if it was set during connect
