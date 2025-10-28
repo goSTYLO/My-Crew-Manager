@@ -31,33 +31,75 @@ export function calculateAggregatedTaskStats(
   let inProgress = 0;
   let pending = 0;
 
+  // Detect if any task has timestamp fields we can reliably filter by
+  let supportsTimeFiltering = false;
+  for (const { backlog } of projectBacklogs) {
+    if (!backlog || !backlog.epics) continue;
+    for (const epic of backlog.epics) {
+      if (supportsTimeFiltering) break;
+      for (const subEpic of (epic.subEpics || [])) {
+        if (supportsTimeFiltering) break;
+        for (const userStory of (subEpic.userStories || [])) {
+          for (const task of (userStory.tasks || [])) {
+            if (task && (task.updated_at || task.created_at)) {
+              supportsTimeFiltering = true;
+              break;
+            }
+          }
+          if (supportsTimeFiltering) break;
+        }
+      }
+    }
+    if (supportsTimeFiltering) break;
+  }
+
+  // If tasks lack timestamps, force all-time aggregation
+  const effectiveTimeFilter = supportsTimeFiltering ? timeFilter : 'all';
+
   // Helper function to filter tasks by time
   const filterTasksByTime = (tasks: any[], timeFilter: string) => {
     if (timeFilter === 'all') return tasks;
     
     const now = new Date();
-    let filterDate = new Date();
+    let startDate = new Date();
+    let endDate = new Date();
     
     switch (timeFilter) {
       case 'this_week':
-        filterDate.setDate(now.getDate() - 7);
+        // This week: from start of current week to now
+        startDate.setDate(now.getDate() - now.getDay());
+        startDate.setHours(0, 0, 0, 0);
+        endDate.setHours(23, 59, 59, 999);
         break;
       case 'last_week':
-        filterDate.setDate(now.getDate() - 14);
+        // Last week: from start of previous week to end of previous week
+        startDate.setDate(now.getDate() - now.getDay() - 7);
+        startDate.setHours(0, 0, 0, 0);
+        endDate.setDate(now.getDate() - now.getDay() - 1);
+        endDate.setHours(23, 59, 59, 999);
         break;
       case 'this_month':
-        filterDate.setMonth(now.getMonth() - 1);
+        // This month: from start of current month to now
+        startDate.setDate(1);
+        startDate.setHours(0, 0, 0, 0);
+        endDate.setHours(23, 59, 59, 999);
         break;
       case 'last_month':
-        filterDate.setMonth(now.getMonth() - 2);
+        // Last month: from start of previous month to end of previous month
+        startDate.setMonth(now.getMonth() - 1, 1);
+        startDate.setHours(0, 0, 0, 0);
+        endDate.setDate(0); // Last day of previous month
+        endDate.setHours(23, 59, 59, 999);
         break;
       default:
         return tasks;
     }
     
     return tasks.filter(task => {
-      const taskDate = new Date(task.updated_at || task.created_at);
-      return taskDate >= filterDate;
+      const ts = (task && (task.updated_at || task.created_at));
+      if (!ts) return false;
+      const taskDate = new Date(ts);
+      return !isNaN(taskDate.getTime()) && taskDate >= startDate && taskDate <= endDate;
     });
   };
 
@@ -67,7 +109,7 @@ export function calculateAggregatedTaskStats(
     backlog.epics.forEach((epic: any) => {
       epic.subEpics?.forEach((subEpic: any) => {
         subEpic.userStories?.forEach((userStory: any) => {
-          const filteredTasks = filterTasksByTime(userStory.tasks || [], timeFilter);
+          const filteredTasks = filterTasksByTime(userStory.tasks || [], effectiveTimeFilter);
           
           filteredTasks.forEach((task: any) => {
             if (isTaskCompleted(task)) {
@@ -149,20 +191,35 @@ function filterProjectsByTime(projects: any[], timeFilter: string): any[] {
   if (timeFilter === 'all') return projects;
   
   const now = new Date();
-  let filterDate = new Date();
+  let startDate = new Date();
+  let endDate = new Date();
   
   switch (timeFilter) {
     case 'this_week':
-      filterDate.setDate(now.getDate() - 7);
+      // This week: from start of current week to now
+      startDate.setDate(now.getDate() - now.getDay());
+      startDate.setHours(0, 0, 0, 0);
+      endDate.setHours(23, 59, 59, 999);
       break;
     case 'last_week':
-      filterDate.setDate(now.getDate() - 14);
+      // Last week: from start of previous week to end of previous week
+      startDate.setDate(now.getDate() - now.getDay() - 7);
+      startDate.setHours(0, 0, 0, 0);
+      endDate.setDate(now.getDate() - now.getDay() - 1);
+      endDate.setHours(23, 59, 59, 999);
       break;
     case 'this_month':
-      filterDate.setMonth(now.getMonth() - 1);
+      // This month: from start of current month to now
+      startDate.setDate(1);
+      startDate.setHours(0, 0, 0, 0);
+      endDate.setHours(23, 59, 59, 999);
       break;
     case 'last_month':
-      filterDate.setMonth(now.getMonth() - 2);
+      // Last month: from start of previous month to end of previous month
+      startDate.setMonth(now.getMonth() - 1, 1);
+      startDate.setHours(0, 0, 0, 0);
+      endDate.setDate(0); // Last day of previous month
+      endDate.setHours(23, 59, 59, 999);
       break;
     default:
       return projects;
@@ -170,7 +227,7 @@ function filterProjectsByTime(projects: any[], timeFilter: string): any[] {
   
   return projects.filter(project => {
     const projectDate = new Date(project.created_at || project.createdAt || 0);
-    return projectDate >= filterDate;
+    return projectDate >= startDate && projectDate <= endDate;
   });
 }
 

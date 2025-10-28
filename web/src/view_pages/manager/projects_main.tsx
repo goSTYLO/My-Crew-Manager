@@ -131,35 +131,6 @@ const ProjectTask = () => {
       };
     };
 
-    // Helper function to filter tasks based on time filter
-    const filterTasksByTime = (tasks: any[], timeFilter: string) => {
-      if (timeFilter === 'all') return tasks;
-      
-      const now = new Date();
-      let filterDate = new Date();
-      
-      switch (timeFilter) {
-        case 'this_week':
-          filterDate.setDate(now.getDate() - 7);
-          break;
-        case 'last_week':
-          filterDate.setDate(now.getDate() - 14);
-          break;
-        case 'this_month':
-          filterDate.setMonth(now.getMonth() - 1);
-          break;
-        case 'last_month':
-          filterDate.setMonth(now.getMonth() - 2);
-          break;
-        default:
-          return tasks;
-      }
-      
-      return tasks.filter(task => {
-        const taskDate = new Date(task.updated_at || task.created_at);
-        return taskDate >= filterDate;
-      });
-    };
 
     // Filter projects based on search query
     const filterProjects = (projectsList: any[]) => {
@@ -603,17 +574,11 @@ const ProjectTask = () => {
                   <div className={`col-span-12 lg:col-span-4 rounded-xl shadow-sm border p-6 ${theme === "dark" ? "bg-gray-800 border-gray-700 text-white" : "bg-white border-gray-200"}`}>
                     <div className="flex items-center justify-between mb-7">
                       <h2 className={`text-lg font-semibold ${theme === "dark" ? "text-white" : "text-gray-800"}`}>Task Status Across All Projects</h2>
-                      <select 
-                        value={timeFilter}
-                        onChange={(e) => setTimeFilter(e.target.value)}
-                        className={`text-sm border rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 ${theme === "dark" ? "bg-gray-900 border-gray-700 text-white" : "border-gray-300"}`}
-                      >
-                        <option value="all">All Time</option>
-                        <option value="this_week">This Week</option>
-                        <option value="last_week">Last Week</option>
-                        <option value="this_month">This Month</option>
-                        <option value="last_month">Last Month</option>
-                      </select>
+                      <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${
+                        theme === "dark" ? "bg-gray-700 text-gray-200" : "bg-gray-100 text-gray-700"
+                      }`}>
+                        All Time
+                      </span>
                     </div>
         
                     {/* Pie Chart */}
@@ -820,7 +785,7 @@ const ProjectTask = () => {
 
             {/* User Details Modal */}
             {showUserModal && selectedUser && (
-              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+              <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center">
                 <div className={`${theme === "dark" ? "bg-gray-800" : "bg-white"} rounded-lg p-6 max-w-md w-full mx-4 shadow-xl`}>
                   <div className="flex items-center justify-between mb-4">
                     <h3 className={`text-lg font-semibold ${theme === "dark" ? "text-white" : "text-gray-900"}`}>
@@ -907,7 +872,7 @@ const ProjectTask = () => {
 
             {/* View All Projects Modal */}
             {showViewAllModal && (
-              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+              <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4">
                 <div className={`rounded-lg max-w-6xl w-full max-h-[90vh] overflow-hidden ${
                   theme === "dark" ? "bg-gray-800" : "bg-white"
                 }`}>
@@ -920,16 +885,30 @@ const ProjectTask = () => {
                     }`}>
                       All Projects ({modalFilteredProjects.length})
                     </h3>
-                    <button
-                      onClick={() => setShowViewAllModal(false)}
-                      className={`text-gray-400 hover:text-gray-600 ${
-                        theme === "dark" ? "hover:text-gray-200" : ""
-                      }`}
-                    >
-                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
+                    <div className="flex items-center gap-3 w-full max-w-xl justify-end">
+                      <div className="relative w-full max-w-sm">
+                        <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 ${theme === "dark" ? "text-gray-400" : "text-gray-500"}`} />
+                        <input
+                          type="text"
+                          placeholder="Search projects..."
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          className={`pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-full text-sm ${
+                            theme === "dark" ? "bg-gray-900 border-gray-700 text-white placeholder-gray-400" : "border-gray-300"
+                          }`}
+                        />
+                      </div>
+                      <button
+                        onClick={() => setShowViewAllModal(false)}
+                        className={`text-gray-400 hover:text-gray-600 ${
+                          theme === "dark" ? "hover:text-gray-200" : ""
+                        }`}
+                      >
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
                   </div>
 
                   {/* Modal Content - Grid of Projects */}
