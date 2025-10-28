@@ -784,12 +784,20 @@ const ProjectTask = () => {
                           onClick={() => handleUserClick(collaborator)}
                         >
                           <div 
-                            className="w-12 h-12 rounded-full mb-2 mx-auto group-hover:scale-105 transition-transform flex items-center justify-center shadow-sm"
-                            style={{ backgroundColor: collaborator.avatar }}
+                            className="w-12 h-12 rounded-full mb-2 mx-auto group-hover:scale-105 transition-transform flex items-center justify-center shadow-sm overflow-hidden"
+                            style={!collaborator.profile_picture ? { backgroundColor: collaborator.avatar } : {}}
                           >
-                            <span className="text-white font-medium text-sm">
-                              {collaborator.name.split(' ').map(n => n.charAt(0)).join('')}
-                            </span>
+                            {collaborator.profile_picture ? (
+                              <img 
+                                src={collaborator.profile_picture} 
+                                alt={collaborator.name}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <span className="text-white font-medium text-sm">
+                                {collaborator.name.split(' ').map(n => n.charAt(0)).join('')}
+                              </span>
+                            )}
                           </div>
                           <p className={`text-xs truncate ${theme === "dark" ? "text-gray-300" : "text-gray-600"}`}>{collaborator.name}</p>
                         </div>
@@ -830,12 +838,20 @@ const ProjectTask = () => {
                   
                   <div className="flex items-center space-x-4 mb-6">
                     <div 
-                      className="w-16 h-16 rounded-full flex items-center justify-center shadow-lg"
-                      style={{ backgroundColor: selectedUser.avatar }}
+                      className="w-16 h-16 rounded-full flex items-center justify-center shadow-lg overflow-hidden"
+                      style={!selectedUser.profile_picture ? { backgroundColor: selectedUser.avatar } : {}}
                     >
-                      <span className="text-white font-medium text-lg">
-                        {selectedUser.name.split(' ').map(n => n.charAt(0)).join('')}
-                      </span>
+                      {selectedUser.profile_picture ? (
+                        <img 
+                          src={selectedUser.profile_picture} 
+                          alt={selectedUser.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <span className="text-white font-medium text-lg">
+                          {selectedUser.name.split(' ').map(n => n.charAt(0)).join('')}
+                        </span>
+                      )}
                     </div>
                     <div>
                       <h4 className={`text-xl font-semibold ${theme === "dark" ? "text-white" : "text-gray-900"}`}>

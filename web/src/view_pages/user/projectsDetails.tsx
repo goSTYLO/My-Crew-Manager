@@ -56,12 +56,14 @@ interface ProjectMember {
   role: string;
   joined_at: string;
   user: number;
+  user_profile_picture?: string | null;
 }
 
 interface TaskAssignee {
   id: number;
   user_name: string;
   user_email: string;
+  profile_picture?: string | null;
 }
 
 interface StoryTask {
@@ -74,6 +76,7 @@ interface StoryTask {
     id: number;
     user_name: string;
     user_email: string;
+    profile_picture?: string | null;
   };
 }
 
@@ -176,8 +179,16 @@ const Avatar: React.FC<{
   
   return (
     <div className="relative">
-      <div className={`${sizeClasses} bg-blue-500 text-white rounded-full flex items-center justify-center font-medium border-2 ${theme === 'dark' ? 'border-gray-700' : 'border-white'} shadow-sm`}>
-        {initials}
+      <div className={`${sizeClasses} rounded-full flex items-center justify-center font-medium border-2 ${theme === 'dark' ? 'border-gray-700' : 'border-white'} shadow-sm overflow-hidden ${!member.user_profile_picture ? 'bg-blue-500 text-white' : ''}`}>
+        {member.user_profile_picture ? (
+          <img 
+            src={member.user_profile_picture} 
+            alt={member.user_name}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <span>{initials}</span>
+        )}
       </div>
     </div>
   );

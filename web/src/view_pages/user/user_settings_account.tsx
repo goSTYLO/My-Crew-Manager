@@ -96,7 +96,7 @@ const AccountSettings = () => {
             const token = sessionStorage.getItem("token");
         
             if (!token) {
-                navigate("/login");
+                navigate("/signin");
                 return;
             }
         
@@ -137,7 +137,7 @@ const AccountSettings = () => {
                 setRole(fixedData.role || "");
                 } else {
                 sessionStorage.removeItem("token");
-                navigate("/login");
+                navigate("/signin");
                 }
             } catch (error) {
                 console.error("Failed to fetch user data:", error);
@@ -188,7 +188,7 @@ const AccountSettings = () => {
     
         const token = sessionStorage.getItem("token");
         if (!token) {
-        navigate("/login");
+        navigate("/signin");
         return;
         }
     

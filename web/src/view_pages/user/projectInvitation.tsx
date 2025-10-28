@@ -68,6 +68,7 @@ interface ProjectMember {
   user_email: string;
   role: string;
   joined_at: string;
+  user_profile_picture?: string | null;
 }
 
 interface Proposal {

@@ -54,7 +54,7 @@ class UserDetailView(APIView):
     parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def get(self, request):
-        serializer = UserSerializer(request.user)
+        serializer = UserSerializer(request.user, context={'request': request})
         return Response(serializer.data)
     
     def put(self, request):
@@ -88,7 +88,7 @@ class UserDetailView(APIView):
         
         try:
             user.save()
-            serializer = UserSerializer(user)
+            serializer = UserSerializer(user, context={'request': request})
             return Response(serializer.data)
         except Exception as e:
             return Response(
@@ -109,7 +109,7 @@ class UserListView(APIView):
         else:
             users = User.objects.all()
         
-        serializer = UserSerializer(users, many=True)
+        serializer = UserSerializer(users, many=True, context={'request': request})
         return Response(serializer.data)
 
 class PasswordResetView(APIView):

@@ -17,6 +17,7 @@ export interface Collaborator {
   name: string;
   email: string;
   avatar: string;
+  profile_picture?: string | null;
 }
 
 // Aggregate task stats across all project backlogs
@@ -234,7 +235,8 @@ export function extractAllUsers(
         id: user.user_id,
         name: user.name || 'Unknown User',
         email: user.email || 'unknown@example.com',
-        avatar: generateAvatarColor(user.user_id)
+        avatar: generateAvatarColor(user.user_id),
+        profile_picture: user.profile_picture || null
       };
       collaboratorMap.set(user.user_id, collaborator);
     }

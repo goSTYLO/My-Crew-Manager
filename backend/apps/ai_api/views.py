@@ -350,6 +350,11 @@ class ProjectViewSet(ModelViewSet):
                                     'id': assignee.id,
                                     'user_name': getattr(assignee, 'user_name', None),
                                     'user_email': getattr(assignee, 'user_email', None),
+                                    'profile_picture': (
+                                        request.build_absolute_uri(assignee.user.profile_picture.url)
+                                        if assignee.user and assignee.user.profile_picture
+                                        else None
+                                    ),
                                 }
                                 if assignee is not None else None
                             ),
@@ -834,6 +839,16 @@ class StoryTaskViewSet(ModelViewSet):
             return self.queryset.filter(user_story_id=user_story_id)
         return self.queryset
 
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = self.get_serializer(queryset, many=True, context={'request': request})
+        return Response(serializer.data)
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, context={'request': request})
+        return Response(serializer.data)
+
     @action(detail=False, methods=["get"], url_path="user-assigned")
     def user_assigned_tasks(self, request):
         """Get all tasks assigned to the current user across all projects"""
@@ -1236,6 +1251,16 @@ class ProjectMemberViewSet(ModelViewSet):
         if project_id:
             return self.queryset.filter(project_id=project_id)
         return self.queryset
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = self.get_serializer(queryset, many=True, context={'request': request})
+        return Response(serializer.data)
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, context={'request': request})
+        return Response(serializer.data)
 
     def create(self, request, *args, **kwargs):
         return Response(

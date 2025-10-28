@@ -5,7 +5,6 @@ import Sidebar from "../../components/sidebarUser";
 import TopNavbar from "../../components/topbarLayout_user";
 import { Search, Mail, FileText, Sparkles, Users, CheckCircle, Clock, AlertCircle, GitBranch, Download, RefreshCw } from "lucide-react";
 import { useTheme } from "../../components/themeContext";
-import { useToast } from "../../components/ToastContext";
 
 // ✅ Types
 interface User {
@@ -21,6 +20,7 @@ interface ProjectMember {
   user_email: string;
   role: string;
   joined_at: string;
+  user_profile_picture?: string | null;
 }
 
 interface Proposal {
@@ -402,8 +402,16 @@ const ProjectCard = ({ project, theme, onDownloadFile }: {
                       theme === 'dark' ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
                     }`}
                   >
-                    <div className={`w-9 h-9 rounded-full ${theme === 'dark' ? 'bg-blue-600' : 'bg-blue-500'} text-white text-sm font-medium flex items-center justify-center shadow-sm`}>
-                      {member.user_name.substring(0, 2).toUpperCase()}
+                    <div className={`w-9 h-9 rounded-full ${!member.user_profile_picture ? (theme === 'dark' ? 'bg-blue-600' : 'bg-blue-500') : ''} text-white text-sm font-medium flex items-center justify-center shadow-sm overflow-hidden`}>
+                      {member.user_profile_picture ? (
+                        <img 
+                          src={member.user_profile_picture} 
+                          alt={member.user_name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <span>{member.user_name.substring(0, 2).toUpperCase()}</span>
+                      )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className={`text-sm font-medium truncate ${theme === 'dark' ? 'text-gray-200' : 'text-gray-700'}`}>
@@ -537,8 +545,6 @@ const MonitorProjectsUser = () => {
   const [pendingInvitationsCount, setPendingInvitationsCount] = useState(0);
   const [lastRefresh, setLastRefresh] = useState<number>(Date.now());
   
-  // Toast hooks
-  const { showInfo, showSuccess } = useToast();
 
   // Function to load projects (initial load)
   const loadProjects = useCallback(async () => {

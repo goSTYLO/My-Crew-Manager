@@ -362,7 +362,7 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
       console.log('🔍 TopNavbar - Token check:', token ? 'Found' : 'Not found');
       if (!token) {
         console.log('❌ TopNavbar - No token, redirecting to sign-in');
-        navigate("/sign-in");
+        navigate("/signin");
         return;
       }
   
@@ -392,7 +392,7 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
         } else {
           console.log('❌ TopNavbar - API call failed, status:', response.status);
           sessionStorage.removeItem("token");
-          navigate("/sign-in");
+          navigate("/signin");
         }
       } catch (error) {
         console.error("Failed to fetch user data:", error);
@@ -643,7 +643,7 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
                   className={`w-full flex items-center gap-2 text-left px-4 py-2 text-sm ${
                     theme === "dark" ? "hover:bg-gray-700" : "hover:bg-gray-100"
                   }`}
-                  onClick={() => navigate("/account-settings")}
+                  onClick={() => navigate("/manager-settings")}
                 >
                   <User className={`w-4 h-4 ${theme === "dark" ? "text-white" : "text-gray-500"}`} />
                   Profile

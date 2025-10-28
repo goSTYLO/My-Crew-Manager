@@ -114,7 +114,13 @@ class BroadcastService:
     def broadcast_task_update(task, action, actor):
         """Broadcast task changes"""
         from apps.ai_api.serializers import StoryTaskSerializer
-        serializer = StoryTaskSerializer(task)
+        from django.test import RequestFactory
+        
+        # Create a mock request for absolute URL generation
+        factory = RequestFactory()
+        request = factory.get('/')
+        
+        serializer = StoryTaskSerializer(task, context={'request': request})
         BroadcastService.broadcast_to_project(
             task.user_story.sub_epic.epic.project.id, 'task_update', action, serializer.data, actor
         )
@@ -124,7 +130,13 @@ class BroadcastService:
     def broadcast_member_update(project_member, action, actor):
         """Broadcast member changes"""
         from apps.ai_api.serializers import ProjectMemberSerializer
-        serializer = ProjectMemberSerializer(project_member)
+        from django.test import RequestFactory
+        
+        # Create a mock request for absolute URL generation
+        factory = RequestFactory()
+        request = factory.get('/')
+        
+        serializer = ProjectMemberSerializer(project_member, context={'request': request})
         BroadcastService.broadcast_to_project(
             project_member.project.id, 'member_update', action, serializer.data, actor
         )

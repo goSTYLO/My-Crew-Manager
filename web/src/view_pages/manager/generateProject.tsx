@@ -14,6 +14,7 @@ interface Member {
   role: string;
   user_name?: string;
   user_email?: string;
+  user_profile_picture?: string | null;
   ai: boolean;
 }
 
@@ -68,6 +69,7 @@ interface Task {
     id: string;
     user_name: string;
     user_email: string;
+    profile_picture?: string | null;
   } | null;
 }
 

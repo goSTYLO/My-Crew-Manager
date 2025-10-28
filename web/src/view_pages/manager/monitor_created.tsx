@@ -1874,12 +1874,20 @@ export default function ProjectDetailsUI() {
     theme: string;
   }> = ({ member, size = 'md', theme }) => {
     const sizeClasses = size === 'sm' ? 'w-8 h-8 text-sm' : 'w-10 h-10';
-    const initials = member.name.substring(0, 2).toUpperCase();
+    const initials = member.user_name?.substring(0, 2).toUpperCase() || member.name?.substring(0, 2).toUpperCase() || '??';
     
     return (
       <div className="relative">
-        <div className={`${sizeClasses} bg-blue-500 text-white rounded-full flex items-center justify-center font-medium border-2 ${theme === 'dark' ? 'border-gray-700' : 'border-white'} shadow-sm`}>
-          {initials}
+        <div className={`${sizeClasses} rounded-full flex items-center justify-center font-medium border-2 ${theme === 'dark' ? 'border-gray-700' : 'border-white'} shadow-sm overflow-hidden ${!member.user_profile_picture ? 'bg-blue-500 text-white' : ''}`}>
+          {member.user_profile_picture ? (
+            <img 
+              src={member.user_profile_picture} 
+              alt={member.user_name || member.name}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <span>{initials}</span>
+          )}
         </div>
       </div>
     );

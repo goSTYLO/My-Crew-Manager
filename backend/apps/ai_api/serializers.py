@@ -117,19 +117,39 @@ class StoryTaskSerializer(serializers.ModelSerializer):
 
     def get_assignee_details(self, obj):
         if obj.assignee:
+            profile_pic = None
+            if obj.assignee.user.profile_picture:
+                request = self.context.get('request')
+                if request is not None:
+                    profile_pic = request.build_absolute_uri(obj.assignee.user.profile_picture.url)
+                else:
+                    profile_pic = obj.assignee.user.profile_picture.url
+            
             return {
                 'id': obj.assignee.id,
                 'user_name': obj.assignee.user_name,
                 'user_email': obj.assignee.user_email,
+                'profile_picture': profile_pic
             }
         return None
 
 
 class ProjectMemberSerializer(serializers.ModelSerializer):
+    user_profile_picture = serializers.SerializerMethodField()
+    
     class Meta:
         model = ProjectMember
-        fields = ['id', 'project', 'user', 'user_name', 'user_email', 'role', 'joined_at']
+        fields = ['id', 'project', 'user', 'user_name', 'user_email', 'role', 'joined_at', 'user_profile_picture']
         read_only_fields = ['id', 'joined_at']
+    
+    def get_user_profile_picture(self, obj):
+        """Return full URL for user's profile picture"""
+        if obj.user and obj.user.profile_picture:
+            request = self.context.get('request')
+            if request is not None:
+                return request.build_absolute_uri(obj.user.profile_picture.url)
+            return obj.user.profile_picture.url
+        return None
 
 
 class ProjectInvitationSerializer(serializers.ModelSerializer):

@@ -23,8 +23,18 @@ class UserSignupSerializer(serializers.ModelSerializer):
         return user
     
 class UserSerializer(serializers.ModelSerializer):
-    profile_picture = serializers.ImageField(required=False, allow_null=True)
+    profile_picture = serializers.SerializerMethodField()
     
     class Meta:
         model = User 
         fields = ['user_id', 'name', 'email', 'role', 'profile_picture']
+    
+    def get_profile_picture(self, obj):
+        """Return full URL for profile picture"""
+        if obj.profile_picture:
+            request = self.context.get('request')
+            if request is not None:
+                return request.build_absolute_uri(obj.profile_picture.url)
+            # Fallback if request context is not available
+            return obj.profile_picture.url
+        return None
