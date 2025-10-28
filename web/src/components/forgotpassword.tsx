@@ -1,7 +1,7 @@
 // pages/forgotPassword.tsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Mail, ArrowLeft, Shield, Users, BarChart3, CheckCircle, Eye, EyeOff } from 'lucide-react';
+import { Mail, ArrowLeft, Shield, Users, BarChart3, CheckCircle, Eye, EyeOff, Lock } from 'lucide-react';
 import logo from "./../assets/logo2.png";
 import { API_BASE_URL } from "../config/api";
 
@@ -301,6 +301,9 @@ export default function ForgotPasswordPage() {
                     New Password
                   </label>
                   <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                      <Lock className="h-5 w-5 text-gray-400" />
+                    </div>
                     <input
                       id="newPassword"
                       type={showPassword ? "text" : "password"}
@@ -311,7 +314,7 @@ export default function ForgotPasswordPage() {
                         if (passwordError) setPasswordError('');
                         if (message) setMessage(null);
                       }}
-                      className={`block w-full pr-11 py-3 border rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#2c7a9e] focus:border-transparent transition-all ${
+                      className={`block w-full pl-11 pr-11 py-3 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#2c7a9e] focus:border-transparent transition-all ${
                         newPassword && !validatePassword(newPassword) ? 'border-red-500' : 'border-gray-300'
                       }`}
                       placeholder="Enter new password (min 8 characters)"
@@ -343,6 +346,10 @@ export default function ForgotPasswordPage() {
                   <label htmlFor="confirmPassword" className="block text-sm font-semibold text-gray-700 mb-2">
                     Confirm Password
                   </label>
+                  <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                      <Lock className="h-5 w-5 text-gray-400" />
+                    </div>
                   <input
                     id="confirmPassword"
                     type={showPassword ? "text" : "password"}
@@ -353,13 +360,14 @@ export default function ForgotPasswordPage() {
                       if (passwordError) setPasswordError('');
                       if (message) setMessage(null);
                     }}
-                    className={`block w-full py-3 border rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#2c7a9e] focus:border-transparent transition-all ${
+                    className={`block w-full pl-11 pr-11 py-3 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#2c7a9e] focus:border-transparent transition-all ${
                       confirmPassword && !validatePasswordMatch() ? 'border-red-500' : 'border-gray-300'
                     }`}
                     placeholder="Confirm your new password"
                     required
                     disabled={loading}
                   />
+                  </div>
                   {confirmPassword && !validatePasswordMatch() && (
                     <p className="mt-2 text-sm text-red-600">Passwords do not match</p>
                   )}
