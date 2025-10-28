@@ -6,9 +6,25 @@ from django.contrib.contenttypes.fields import GenericForeignKey
 
 
 class Project(models.Model):
+    STATUS_CHOICES = [
+        ('setting_up', 'Setting Up'),
+        ('in_progress', 'In Progress'),
+        ('complete', 'Complete'),
+        ('on_hold', 'On Hold'),
+    ]
+    
     id = models.AutoField(primary_key=True)
     title = models.CharField(max_length=255)
     summary = models.TextField(blank=True, null=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='in_progress')
+    status_updated_at = models.DateTimeField(null=True, blank=True)
+    status_updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        related_name='project_status_updates'
+    )
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='ai_projects')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -249,6 +265,7 @@ class Notification(models.Model):
         ('mention', 'Mentioned in Chat'),
         ('deadline_reminder', 'Deadline Reminder'),
         ('project_update', 'Project Update'),
+        ('project_status_changed', 'Project Status Changed'),
         ('member_joined', 'Member Joined Project'),
         ('member_left', 'Member Left Project'),
     ]

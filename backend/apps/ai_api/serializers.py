@@ -11,11 +11,15 @@ from .models import (
 
 class ProjectSerializer(serializers.ModelSerializer):
     created_by_name = serializers.CharField(source='created_by.name', read_only=True)
+    status_updated_by_name = serializers.CharField(source='status_updated_by.name', read_only=True)
     
     class Meta:
         model = Project
-        fields = ['id', 'title', 'summary', 'created_by', 'created_by_name', 'created_at']
-        read_only_fields = ['id', 'created_at', 'created_by', 'created_by_name']
+        fields = [
+            'id', 'title', 'summary', 'status', 'status_updated_at', 
+            'status_updated_by_name', 'created_by', 'created_by_name', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'created_by', 'created_by_name', 'status_updated_at', 'status_updated_by_name']
 
 
 class ProposalSerializer(serializers.ModelSerializer):

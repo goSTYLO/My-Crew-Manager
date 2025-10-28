@@ -4,11 +4,21 @@ import { API_BASE_URL } from '../config/api';
 interface WebSocketMessage {
   type: string;
   action: string;
-  project_id: number;
-  data: any;
-  actor: {
+  project_id?: number;
+  data?: any;
+  actor?: {
     id: number;
     name: string;
+  };
+  notification?: {
+    id: number;
+    type: string;
+    title: string;
+    message: string;
+    action_url?: string;
+    actor?: string;
+    created_at: string;
+    is_read: boolean;
   };
 }
 
@@ -54,7 +64,8 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ children }
 
     try {
       const wsUrl = `${API_BASE_URL.replace('/api', '').replace('http', 'ws')}/ws/project-updates/?token=${token}`;
-      console.log('Creating WebSocket connection to:', wsUrl);
+      console.log('🔌 Creating WebSocket connection to:', wsUrl);
+      console.log('🔌 Token being used:', token ? `${token.substring(0, 10)}...` : 'NO TOKEN');
       wsRef.current = new WebSocket(wsUrl);
 
       wsRef.current.onopen = () => {
@@ -88,8 +99,9 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ children }
       };
 
       wsRef.current.onerror = (error) => {
-        console.error('Project Updates WebSocket error:', error);
-        console.log('WebSocket readyState:', wsRef.current?.readyState);
+        console.error('🔌 Project Updates WebSocket error:', error);
+        console.log('🔌 WebSocket readyState:', wsRef.current?.readyState);
+        console.log('🔌 WebSocket URL:', wsUrl);
         setConnectionStatus('disconnected');
       };
 

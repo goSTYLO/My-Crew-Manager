@@ -10,6 +10,8 @@ logger = logging.getLogger('apps.ai_api')
 
 class ProjectUpdatesConsumer(AsyncWebsocketConsumer):
     async def connect(self):
+        logger.info("Project Updates WebSocket: Starting connection...")
+        
         # Extract token from query string
         query_string = self.scope.get('query_string', b'').decode()
         token = None
@@ -20,18 +22,24 @@ class ProjectUpdatesConsumer(AsyncWebsocketConsumer):
                 break
         
         if not token:
+            logger.warning("Project Updates WebSocket: No token provided")
             await self.close()
             return
         
         # Authenticate user using DRF token
         user = await self.authenticate_token(token)
         if not user:
+            logger.warning("Project Updates WebSocket: Authentication failed")
             await self.close()
             return
+        
+        logger.info(f"Project Updates WebSocket: User authenticated: {user.email}")
         
         self.user_id = user.user_id
         self.group_name = f'user_{self.user_id}_updates'
         self.notification_group_name = f'user_{self.user_id}_notifications'
+        
+        logger.info(f"Project Updates WebSocket: User {self.user_id} connecting to project updates")
         
         # Join user's personal group for project updates
         await self.channel_layer.group_add(
@@ -76,11 +84,13 @@ class ProjectUpdatesConsumer(AsyncWebsocketConsumer):
     
     # Handler for all project update events
     async def project_event(self, event):
+        logger.info(f"Project Updates WebSocket: Sending project_event to user {self.user_id}: {event}")
         await self.send(text_data=json.dumps(event['data']))
     
     # Handler for notification broadcasts
     async def notification_message(self, event):
         """Handler for notification broadcasts"""
+        logger.info(f"Project Updates WebSocket: Sending notification to user {self.user_id}: {event['notification']['type']}")
         logger.debug(f"Consumer received notification_message event: {event}")
         logger.debug(f"Sending to WebSocket client: {event['notification']}")
         await self.send(text_data=json.dumps({
@@ -88,4 +98,4 @@ class ProjectUpdatesConsumer(AsyncWebsocketConsumer):
             'action': 'notification_created',
             'notification': event['notification']
         }))
-        logger.info(f"Notification sent to WebSocket client successfully")
+        logger.info(f"Project Updates WebSocket: Notification sent to user {self.user_id} successfully")

@@ -101,6 +101,11 @@ export default function ProjectDetailsUI() {
   const [dragActive, setDragActive] = useState(false);
   const [showProposalViewer, setShowProposalViewer] = useState(false);
   
+  // Project status state
+  const [projectStatus, setProjectStatus] = useState<string>('in_progress');
+  const [statusUpdatedAt, setStatusUpdatedAt] = useState<string | null>(null);
+  const [statusUpdatedBy, setStatusUpdatedBy] = useState<string | null>(null);
+  
   const { id: projectId } = useParams();
   const navigate = useNavigate();
   
@@ -252,6 +257,11 @@ export default function ProjectDetailsUI() {
 
       const project = await projectRes.json();
       console.log('✅ Project data fetched:', project);
+
+      // Set project status fields
+      setProjectStatus(project.status || 'in_progress');
+      setStatusUpdatedAt(project.status_updated_at);
+      setStatusUpdatedBy(project.status_updated_by_name);
 
 
       const [featuresRes, rolesRes, goalsRes, timelineRes] = await Promise.allSettled([
@@ -683,6 +693,27 @@ export default function ProjectDetailsUI() {
         showRealtimeUpdate('Overview Regenerated', 'Project overview has been regenerated', data.actor);
 
         fetchProjectData();
+      },
+      onNotification: (data) => {
+        console.log('📡 Real-time notification received:', data);
+        
+        // Handle project status change notifications
+        if (data.notification && data.notification.type === 'project_status_changed') {
+          console.log('📡 Project status change notification received:', data);
+          
+          // Update the status state with the new data
+          if (data.notification.message) {
+            // Extract status from the message or use the notification data
+            const statusMatch = data.notification.message.match(/to "([^"]+)"/);
+            if (statusMatch) {
+              const newStatus = statusMatch[1].toLowerCase().replace(' ', '_');
+              setProjectStatus(newStatus);
+            }
+          }
+          
+          // Refresh project data to get the latest status info
+          fetchProjectData();
+        }
       }
     }
   });
@@ -1263,6 +1294,33 @@ export default function ProjectDetailsUI() {
       setIsEditingOverview(false);
     } catch (error) {
       handleApiError(error, 'update project');
+    }
+  };
+
+  const updateProjectStatus = async (newStatus: string) => {
+    try {
+      const response = await fetch(
+        `${AI_API_BASE_URL}/projects/${projectId}/update-status/`,
+        {
+          method: 'PUT',
+          headers: getAuthHeaders(),
+          credentials: 'include',
+          body: JSON.stringify({ status: newStatus })
+        }
+      );
+      
+      if (response.ok) {
+        const data = await response.json();
+        setProjectStatus(data.status);
+        setStatusUpdatedAt(data.status_updated_at);
+        setStatusUpdatedBy(data.status_updated_by_name);
+        showSuccess('Status Updated', 'Project status updated successfully');
+      } else {
+        const error = await response.json();
+        showError('Error', error.error || 'Failed to update status');
+      }
+    } catch (error) {
+      handleApiError(error, 'updating project status');
     }
   };
 
@@ -2162,6 +2220,60 @@ export default function ProjectDetailsUI() {
                   </div>
 
                   <div className={`p-6 space-y-8 ${theme === 'dark' ? 'bg-gray-800' : 'bg-white'}`}>
+                    {/* Project Status Section */}
+                    {!isEditingOverview && (
+                      <div className="mb-6">
+                        <div className="flex items-center gap-2">
+                          <span className={`text-sm font-medium ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                            Status:
+                          </span>
+                          <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                            projectStatus === 'complete' ? 'bg-green-100 text-green-800' :
+                            projectStatus === 'in_progress' ? 'bg-blue-100 text-blue-800' :
+                            projectStatus === 'setting_up' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {projectStatus === 'setting_up' ? 'Setting Up' :
+                             projectStatus === 'in_progress' ? 'In Progress' :
+                             projectStatus === 'complete' ? 'Complete' :
+                             projectStatus === 'on_hold' ? 'On Hold' : projectStatus}
+                          </span>
+                        </div>
+                        {statusUpdatedAt && statusUpdatedBy && (
+                          <p className={`text-xs mt-1 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+                            Last updated by {statusUpdatedBy} on {new Date(statusUpdatedAt).toLocaleString()}
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    {isEditingOverview && (
+                      <div className="mb-6">
+                        <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-200' : 'text-gray-700'}`}>
+                          Project Status
+                        </label>
+                        <select
+                          value={projectStatus}
+                          onChange={(e) => updateProjectStatus(e.target.value)}
+                          className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                            theme === 'dark'
+                              ? 'bg-gray-900 border-gray-700 text-white'
+                              : 'border-gray-300'
+                          }`}
+                        >
+                          <option value="setting_up">Setting Up</option>
+                          <option value="in_progress">In Progress</option>
+                          <option value="complete">Complete</option>
+                          <option value="on_hold">On Hold</option>
+                        </select>
+                        {statusUpdatedAt && statusUpdatedBy && (
+                          <p className={`text-xs mt-1 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+                            Last updated by {statusUpdatedBy} on {new Date(statusUpdatedAt).toLocaleString()}
+                          </p>
+                        )}
+                      </div>
+                    )}
+
                     {/* Proposal Upload Section */}
                     <div className="mb-6">
                       <h3 className={`text-lg font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-900'} mb-3 flex items-center`}>

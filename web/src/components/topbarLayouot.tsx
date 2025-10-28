@@ -262,7 +262,8 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
             'task_assigned', 
             'task_completed',
             'project_invitation', 
-            'member_joined'
+            'member_joined',
+            'project_status_changed'
           ];
           
           if (importantTypes.includes(message.notification.type)) {

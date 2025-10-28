@@ -489,6 +489,55 @@ class ProjectViewSet(ModelViewSet):
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+    @action(detail=True, methods=["put"], url_path="update-status")
+    def update_status(self, request, pk=None):
+        """Update project status and notify all members except the updater"""
+        from django.utils import timezone
+        from core.services.notification_service import NotificationService
+        
+        project = self.get_object()
+        
+        # Check if user is the project owner
+        if project.created_by != request.user:
+            return Response(
+                {'error': 'Only the project owner can update the status'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        new_status = request.data.get('status')
+        if not new_status or new_status not in dict(Project.STATUS_CHOICES):
+            return Response(
+                {'error': 'Invalid status value'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        old_status = project.status
+        project.status = new_status
+        project.status_updated_at = timezone.now()
+        project.status_updated_by = request.user
+        project.save(update_fields=['status', 'status_updated_at', 'status_updated_by', 'updated_at'])
+        
+        # Get readable status labels
+        status_dict = dict(Project.STATUS_CHOICES)
+        old_status_label = status_dict.get(old_status, old_status)
+        new_status_label = status_dict.get(new_status, new_status)
+        
+        # Notify all project members except the person who made the change
+        members = project.members.exclude(user=request.user)
+        for member in members:
+            NotificationService.create_notification(
+                recipient=member.user,
+                notification_type='project_status_changed',
+                title=f'Project Status Updated: {project.title}',
+                message=f'{request.user.name} changed the project status from "{old_status_label}" to "{new_status_label}"',
+                content_object=project,
+                action_url=get_notification_action_url(member.user, project.id),
+                actor=request.user
+            )
+        
+        serializer = self.get_serializer(project)
+        return Response(serializer.data)
+
 
 class ProposalViewSet(ModelViewSet):
     queryset = Proposal.objects.all()

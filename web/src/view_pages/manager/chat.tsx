@@ -71,7 +71,6 @@ const ChatApp = () => {
   const [showContactList, setShowContactList] = useState(true);
   const [showCreateGroup, setShowCreateGroup] = useState(false);
   const [groupName, setGroupName] = useState('');
-  const [searchMember, setSearchMember] = useState('');
   const [selectedMembers, setSelectedMembers] = useState<number[]>([]);
   const [memberEmails, setMemberEmails] = useState<string[]>([]);
   const [emailInput, setEmailInput] = useState('');
@@ -88,7 +87,6 @@ const ChatApp = () => {
   const [showEditPictureModal, setShowEditPictureModal] = useState(false);
   const [groupMembers, setGroupMembers] = useState<any[]>([]);
   const [newNickname, setNewNickname] = useState('');
-  const [selectedGroupPicture, setSelectedGroupPicture] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewImage, setPreviewImage] = useState<string>('');
   const [messageToDelete, setMessageToDelete] = useState<number | null>(null);
@@ -101,6 +99,12 @@ const ChatApp = () => {
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
   const [addMemberEmail, setAddMemberEmail] = useState('');
   const [addMemberError, setAddMemberError] = useState<string | null>(null);
+  const [showProjectSearch, setShowProjectSearch] = useState(false);
+  const [projects, setProjects] = useState<any[]>([]);
+  const [projectSearchQuery, setProjectSearchQuery] = useState('');
+  const [projectPage, setProjectPage] = useState(1);
+  const [loadingProjects, setLoadingProjects] = useState(false);
+  const projectsPerPage = 5;
   
   const wsRef = useRef<WebSocket | null>(null);
   const wsNotificationRef = useRef<WebSocket | null>(null);
@@ -649,12 +653,15 @@ const ChatApp = () => {
         await refreshMessages();
         console.log('✅ Messages refreshed after send');
         
-        // Update last message in contacts
-        setContacts(prev => prev.map(contact => 
-          contact.id === selectedChat 
-            ? { ...contact, lastMessage: messageText, time: 'Just now' }
-            : contact
-        ));
+        // Update last message in contacts after refresh is complete
+        // This ensures the update persists after fetchMessages updates contacts
+        setTimeout(() => {
+          setContacts(prev => prev.map(contact => 
+            contact.id === selectedChat 
+              ? { ...contact, lastMessage: messageText, time: 'Just now' }
+              : contact
+          ));
+        }, 100);
         
       } catch (err) {
         console.error('Failed to send message:', err);
@@ -697,27 +704,8 @@ const ChatApp = () => {
     return messages[selectedChat!] || [];
   };
 
-  // Fetch available members for group creation
-  const [availableMembers, setAvailableMembers] = useState<Contact[]>([]);
 
-  useEffect(() => {
-    // In a real app, you'd fetch all users from an endpoint
-    // For now, we'll use existing contacts as available members
-    setAvailableMembers(contacts.filter(c => !c.isGroup));
-  }, [contacts]);
 
-  const filteredMembers = availableMembers.filter(member =>
-    member.name.toLowerCase().includes(searchMember.toLowerCase()) ||
-    member.role.toLowerCase().includes(searchMember.toLowerCase())
-  );
-
-  const toggleMemberSelection = (memberId: number) => {
-    setSelectedMembers(prev => 
-      prev.includes(memberId) 
-        ? prev.filter(id => id !== memberId)
-        : [...prev, memberId]
-    );
-  };
 
   // Validate email format
   const isValidEmail = (email: string) => {
@@ -797,7 +785,6 @@ const ChatApp = () => {
         setMemberEmails([]);
         setEmailInput('');
         setEmailError(null);
-        setSearchMember('');
         setShowCreateGroup(false);
         await fetchRooms();
         
@@ -809,24 +796,6 @@ const ChatApp = () => {
     }
   };
 
-  // Create direct chat using email
-  const createDirectChat = async (email: string) => {
-    try {
-      console.log('💬 Creating direct chat with:', email);
-      
-      const response = await apiCall('/rooms/direct/', {
-        method: 'POST',
-        body: JSON.stringify({ email })
-      });
-      
-      console.log('✅ Direct chat created/found:', response.room_id);
-      await fetchRooms();
-      handleSelectChat(response.room_id);
-    } catch (err) {
-      console.error('❌ Failed to create direct chat:', err);
-      setError('Failed to create direct chat');
-    }
-  };
 
   // Update group name
   const handleUpdateGroupName = async () => {
@@ -1171,6 +1140,57 @@ const ChatApp = () => {
   const handleEmojiSelect = (emoji: string) => {
     setMessage(prev => prev + emoji);
     setShowEmojiPicker(false);
+  };
+
+  // Fetch user's projects
+  const fetchUserProjects = async () => {
+    setLoadingProjects(true);
+    try {
+      const token = getAuthToken();
+      const response = await fetch(`${API_BASE_URL}/ai/projects/my-projects/`, {
+        headers: {
+          'Authorization': `Token ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setProjects(data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch projects:', err);
+    } finally {
+      setLoadingProjects(false);
+    }
+  };
+
+  // Handle project selection and add members
+  const handleSelectProject = async (projectId: number) => {
+    try {
+      const token = getAuthToken();
+      const response = await fetch(
+        `${API_BASE_URL}/ai/project-members/?project_id=${projectId}`,
+        {
+          headers: {
+            'Authorization': `Token ${token}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+      if (response.ok) {
+        const members = await response.json();
+        const newEmails = members
+          .map((m: any) => m.user_email.toLowerCase())
+          .filter((email: string) => !memberEmails.includes(email));
+        
+        setMemberEmails(prev => [...prev, ...newEmails]);
+        setShowProjectSearch(false);
+        setProjectSearchQuery('');
+        console.log(`✅ Added ${newEmails.length} members from project`);
+      }
+    } catch (err) {
+      console.error('Failed to fetch project members:', err);
+    }
   };
 
   const selectedContact = contacts.find(c => c.id === selectedChat);
@@ -1771,7 +1791,9 @@ const ChatApp = () => {
                   setMemberEmails([]);
                   setEmailInput('');
                   setEmailError(null);
-                  setSearchMember('');
+                  setShowProjectSearch(false);
+                  setProjectSearchQuery('');
+                  setProjectPage(1);
                 }}
                 className={`p-1 rounded-lg transition-colors ${
                   theme === "dark" ? "hover:bg-gray-700" : "hover:bg-gray-100"
@@ -1805,12 +1827,12 @@ const ChatApp = () => {
                 />
               </div>
 
-              {/* Search Members */}
+              {/* Search Projects */}
               <div className="mb-3">
                 <label className={`block text-sm font-medium mb-2 ${
                   theme === "dark" ? "text-gray-300" : "text-gray-700"
                 }`}>
-                  Add Members (Minimum 2)
+                  Add Members from Project (Minimum 2)
                 </label>
                 <div className="relative">
                   <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 ${
@@ -1818,9 +1840,9 @@ const ChatApp = () => {
                   }`} />
                   <input
                     type="text"
-                    value={searchMember}
-                    onChange={(e) => setSearchMember(e.target.value)}
-                    placeholder="Search members..."
+                    value={projectSearchQuery}
+                    onChange={(e) => setProjectSearchQuery(e.target.value)}
+                    placeholder="Search projects..."
                     className={`w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                       theme === "dark"
                         ? "bg-gray-900 border-gray-700 text-white placeholder-gray-500"
@@ -1828,6 +1850,16 @@ const ChatApp = () => {
                     }`}
                   />
                 </div>
+                <button
+                  onClick={() => {
+                    fetchUserProjects();
+                    setShowProjectSearch(true);
+                  }}
+                  className="mt-2 w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
+                >
+                  <Users className="w-4 h-4" />
+                  <span className="text-sm font-medium">Browse Projects</span>
+                </button>
               </div>
 
               {/* Selected Members Count */}
@@ -1850,55 +1882,118 @@ const ChatApp = () => {
                 </div>
               )}
 
-              {/* Members List */}
-              <div className={`border rounded-lg overflow-hidden mb-4 ${
-                theme === "dark" ? "border-gray-700" : "border-gray-200"
-              }`}>
-                {filteredMembers.length > 0 ? (
-                  <div className="max-h-64 overflow-y-auto">
-                    {filteredMembers.map(member => (
-                      <div
-                        key={member.id}
-                        onClick={() => toggleMemberSelection(member.id)}
-                        className={`flex items-center gap-3 p-3 cursor-pointer transition-colors ${
-                          theme === "dark"
-                            ? "hover:bg-gray-700 border-b border-gray-700"
-                            : "hover:bg-gray-50 border-b border-gray-100"
-                        }`}
-                      >
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold">
-                          {member.avatar}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h3 className={`font-medium truncate ${
-                            theme === "dark" ? "text-white" : "text-gray-800"
-                          }`}>{member.name}</h3>
-                          <p className={`text-sm truncate ${
-                            theme === "dark" ? "text-gray-400" : "text-gray-500"
-                          }`}>{member.role}</p>
-                        </div>
-                        <div className={`w-6 h-6 rounded border-2 flex items-center justify-center ${
-                          selectedMembers.includes(member.id)
-                            ? 'bg-blue-600 border-blue-600'
-                            : theme === "dark"
-                            ? 'border-gray-600'
-                            : 'border-gray-300'
-                        }`}>
-                          {selectedMembers.includes(member.id) && (
-                            <Check className="w-4 h-4 text-white" />
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className={`p-8 text-center ${
-                    theme === "dark" ? "text-gray-400" : "text-gray-500"
+              {/* Projects List */}
+              {showProjectSearch && (
+                <div className={`border rounded-lg overflow-hidden mb-4 ${
+                  theme === "dark" ? "border-gray-700" : "border-gray-200"
+                }`}>
+                  <div className={`px-3 py-2 border-b ${
+                    theme === "dark" ? "bg-gray-900 border-gray-700" : "bg-gray-50 border-gray-200"
                   }`}>
-                    <p>No members found</p>
+                    <p className={`text-sm font-medium ${
+                      theme === "dark" ? "text-gray-300" : "text-gray-700"
+                    }`}>
+                      Select a Project to Add All Members
+                    </p>
                   </div>
-                )}
-              </div>
+                  {loadingProjects ? (
+                    <div className={`p-8 text-center ${
+                      theme === "dark" ? "text-gray-400" : "text-gray-500"
+                    }`}>
+                      <p>Loading projects...</p>
+                    </div>
+                  ) : (
+                    <div className="max-h-64 overflow-y-auto">
+                      {projects
+                        .filter(project => 
+                          project.title.toLowerCase().includes(projectSearchQuery.toLowerCase())
+                        )
+                        .slice((projectPage - 1) * projectsPerPage, projectPage * projectsPerPage)
+                        .map(project => (
+                          <div
+                            key={project.id}
+                            className={`flex items-center gap-3 p-3 cursor-pointer transition-colors ${
+                              theme === "dark"
+                                ? "hover:bg-gray-700 border-b border-gray-700"
+                                : "hover:bg-gray-50 border-b border-gray-100"
+                            }`}
+                          >
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-500 to-teal-600 flex items-center justify-center text-white font-semibold">
+                              <Users className="w-5 h-5" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h3 className={`font-medium truncate ${
+                                theme === "dark" ? "text-white" : "text-gray-800"
+                              }`}>{project.title}</h3>
+                              <p className={`text-sm truncate ${
+                                theme === "dark" ? "text-gray-400" : "text-gray-500"
+                              }`}>
+                                {project.member_count || 0} members
+                              </p>
+                            </div>
+                            <button
+                              onClick={() => handleSelectProject(project.id)}
+                              className="px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                            >
+                              Select
+                            </button>
+                          </div>
+                        ))}
+                      
+                      {/* Pagination */}
+                      {projects.filter(project => 
+                        project.title.toLowerCase().includes(projectSearchQuery.toLowerCase())
+                      ).length > projectsPerPage && (
+                        <div className={`flex justify-between items-center p-3 border-t ${
+                          theme === "dark" ? "border-gray-700" : "border-gray-200"
+                        }`}>
+                          <button
+                            onClick={() => setProjectPage(prev => Math.max(1, prev - 1))}
+                            disabled={projectPage === 1}
+                            className={`px-3 py-1 rounded-lg text-sm transition-colors ${
+                              projectPage === 1
+                                ? theme === "dark"
+                                  ? "bg-gray-700 text-gray-500 cursor-not-allowed"
+                                  : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                                : theme === "dark"
+                                ? "bg-gray-600 text-gray-300 hover:bg-gray-500"
+                                : "bg-gray-300 text-gray-700 hover:bg-gray-400"
+                            }`}
+                          >
+                            Previous
+                          </button>
+                          <span className={`text-sm ${
+                            theme === "dark" ? "text-gray-400" : "text-gray-500"
+                          }`}>
+                            Page {projectPage} of {Math.ceil(projects.filter(project => 
+                              project.title.toLowerCase().includes(projectSearchQuery.toLowerCase())
+                            ).length / projectsPerPage)}
+                          </span>
+                          <button
+                            onClick={() => setProjectPage(prev => prev + 1)}
+                            disabled={projectPage >= Math.ceil(projects.filter(project => 
+                              project.title.toLowerCase().includes(projectSearchQuery.toLowerCase())
+                            ).length / projectsPerPage)}
+                            className={`px-3 py-1 rounded-lg text-sm transition-colors ${
+                              projectPage >= Math.ceil(projects.filter(project => 
+                                project.title.toLowerCase().includes(projectSearchQuery.toLowerCase())
+                              ).length / projectsPerPage)
+                                ? theme === "dark"
+                                  ? "bg-gray-700 text-gray-500 cursor-not-allowed"
+                                  : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                                : theme === "dark"
+                                ? "bg-gray-600 text-gray-300 hover:bg-gray-500"
+                                : "bg-gray-300 text-gray-700 hover:bg-gray-400"
+                            }`}
+                          >
+                            Next
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Add Members by Email Section */}
               <div className="mb-4">
@@ -1997,7 +2092,9 @@ const ChatApp = () => {
                     setMemberEmails([]);
                     setEmailInput('');
                     setEmailError(null);
-                    setSearchMember('');
+                    setShowProjectSearch(false);
+                    setProjectSearchQuery('');
+                    setProjectPage(1);
                   }}
                   className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${
                     theme === "dark"
