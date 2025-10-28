@@ -56,36 +56,46 @@ def validate_backlog_format(response: str) -> bool:
     return has_epic and has_task and epic_count >= 4 and task_count > 0
 
 def generate_section(llm, section: str, prompt: str, max_retries: int = 3, max_tokens: int = 768, cancellation_token: Optional[CancellationToken] = None) -> str:
-    # Temporarily override pipeline's max_new_tokens for this call
-    original_max = llm.pipeline.max_new_tokens
-    llm.pipeline.max_new_tokens = max_tokens
-    
-    try:
-        for _ in range(max_retries):
-            try:
-                # Check for cancellation before each attempt
-                if cancellation_token:
-                    cancellation_token.check_cancelled()
-                
-                response = llm.invoke(prompt).strip()
-                if not response:
-                    continue
-                if not validate_backlog_format(response):
-                    lines = response.splitlines()
-                    epic_count = sum(1 for line in lines if line.strip().lower().startswith("epic") and ":" in line)
-                    task_count = sum(1 for line in lines if line.strip().lower().startswith("-task") and ":" in line)
-                    logger.warning(f"Backlog validation failed, retrying... (attempt {_ + 1}/{max_retries})")
-                    logger.warning(f"Epic count: {epic_count} (need >=4), Task count: {task_count}")
-                    logger.debug(f"Response preview: {response[:200]}...")
-                    continue
-                return response
-            except TaskCancelledException:
-                raise  # Re-raise cancellation exceptions
-            except Exception:
+    for _ in range(max_retries):
+        try:
+            # Check for cancellation before each attempt
+            if cancellation_token:
+                cancellation_token.check_cancelled()
+
+            text = None
+            # Prefer direct pipeline call with per-call override if available
+            if hasattr(llm, "pipeline"):
+                try:
+                    out = llm.pipeline(prompt, max_new_tokens=max_tokens)
+                    if isinstance(out, list) and out and isinstance(out[0], dict) and "generated_text" in out[0]:
+                        text = out[0]["generated_text"]
+                    elif isinstance(out, str):
+                        text = out
+                except Exception:
+                    # Fall back to invoke if pipeline call fails
+                    pass
+
+            if not text:
+                # Fallback to the wrapper invoke
+                text = llm.invoke(prompt)
+
+            response = (text or "").strip()
+            if not response:
                 continue
-        return ""
-    finally:
-        llm.pipeline.max_new_tokens = original_max
+            if not validate_backlog_format(response):
+                lines = response.splitlines()
+                epic_count = sum(1 for line in lines if line.strip().lower().startswith("epic") and ":" in line)
+                task_count = sum(1 for line in lines if line.strip().lower().startswith("-task") and ":" in line)
+                logger.warning(f"Backlog validation failed, retrying... (attempt {_ + 1}/{max_retries})")
+                logger.warning(f"Epic count: {epic_count} (need >=4), Task count: {task_count}")
+                logger.debug(f"Response preview: {response[:200]}...")
+                continue
+            return response
+        except TaskCancelledException:
+            raise  # Re-raise cancellation exceptions
+        except Exception:
+            continue
+    return ""
 
 def parse_backlog(raw_text: str) -> BacklogModel:
     backlog = BacklogModel()

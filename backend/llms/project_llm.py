@@ -56,30 +56,40 @@ def validate_section_format(section: str, response: str) -> bool:
     return True
 
 def generate_section(llm, section: str, prompt: str, max_retries: int = 3, max_tokens: int = 512, cancellation_token: Optional[CancellationToken] = None) -> str:
-    # Temporarily override pipeline's max_new_tokens for this call
-    original_max = llm.pipeline.max_new_tokens
-    llm.pipeline.max_new_tokens = max_tokens
-    
-    try:
-        for _ in range(max_retries):
-            try:
-                # Check for cancellation before each attempt
-                if cancellation_token:
-                    cancellation_token.check_cancelled()
-                
-                response = llm.invoke(prompt).strip()
-                if not response:
-                    continue
-                if not validate_section_format(section, response):
-                    continue
-                return response
-            except TaskCancelledException:
-                raise  # Re-raise cancellation exceptions
-            except Exception:
+    for _ in range(max_retries):
+        try:
+            # Check for cancellation before each attempt
+            if cancellation_token:
+                cancellation_token.check_cancelled()
+
+            text = None
+            # Prefer direct pipeline call with per-call override if available
+            if hasattr(llm, "pipeline"):
+                try:
+                    out = llm.pipeline(prompt, max_new_tokens=max_tokens)
+                    if isinstance(out, list) and out and isinstance(out[0], dict) and "generated_text" in out[0]:
+                        text = out[0]["generated_text"]
+                    elif isinstance(out, str):
+                        text = out
+                except Exception:
+                    # Fall back to invoke if pipeline call fails
+                    pass
+
+            if not text:
+                # Fallback to the wrapper invoke
+                text = llm.invoke(prompt)
+
+            response = (text or "").strip()
+            if not response:
                 continue
-        return ""
-    finally:
-        llm.pipeline.max_new_tokens = original_max
+            if not validate_section_format(section, response):
+                continue
+            return response
+        except TaskCancelledException:
+            raise  # Re-raise cancellation exceptions
+        except Exception:
+            continue
+    return ""
 
 def run_pipeline_from_text(proposal_text: str, task_id: Optional[str] = None) -> ProjectModel:
     if not proposal_text:
