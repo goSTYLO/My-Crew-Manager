@@ -1,7 +1,10 @@
+import logging
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 from django.contrib.contenttypes.models import ContentType
 from apps.ai_api.models import Notification
+
+logger = logging.getLogger('core.services')
 
 
 class NotificationService:
@@ -32,7 +35,7 @@ class NotificationService:
             NotificationService.send_realtime_notification(notification)
         except Exception as e:
             # Log the error but don't fail the notification creation
-            print(f"Failed to send real-time notification: {e}")
+            logger.error(f"Failed to send real-time notification: {e}")
             # The notification is still created in the database
         
         return notification
@@ -40,15 +43,15 @@ class NotificationService:
     @staticmethod
     def send_realtime_notification(notification):
         """Send notification through WebSocket"""
-        print(f"🔔 Attempting to send real-time notification {notification.id} to user {notification.recipient.user_id}")
+        logger.info(f"Attempting to send real-time notification {notification.id} to user {notification.recipient.user_id}")
         
         channel_layer = get_channel_layer()
         if not channel_layer:
-            print("❌ Channel layer is None - Redis not configured properly")
+            logger.error("Channel layer is None - Redis not configured properly")
             return
             
         notification_group = f'user_{notification.recipient.user_id}_notifications'
-        print(f"📡 Sending to group: {notification_group}")
+        logger.debug(f"Sending to group: {notification_group}")
         
         try:
             async_to_sync(channel_layer.group_send)(
@@ -67,11 +70,11 @@ class NotificationService:
                     }
                 }
             )
-            print(f"✅ Successfully sent notification {notification.id} to WebSocket group")
+            logger.info(f"Successfully sent notification {notification.id} to WebSocket group")
         except Exception as e:
-            print(f"❌ Failed to send notification {notification.id} to WebSocket: {e}")
+            logger.error(f"Failed to send notification {notification.id} to WebSocket: {e}")
             import traceback
-            traceback.print_exc()
+            logger.error(f"Traceback: {traceback.format_exc()}")
     
     @staticmethod
     def mark_as_read(notification_id, user):

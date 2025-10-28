@@ -2,12 +2,15 @@ import threading
 import torch
 import time
 import gc
+import logging
 from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
 from langchain_huggingface import HuggingFacePipeline
 try:
     from transformers import BitsAndBytesConfig
 except Exception:
     BitsAndBytesConfig = None
+
+logger = logging.getLogger('llms')
 
 MODEL_ID = "unsloth/mistral-7b-instruct-v0.3-bnb-4bit"
 
@@ -23,12 +26,12 @@ _cleanup_lock = threading.Lock()
 
 def _create_llm_pipeline() -> HuggingFacePipeline:
     """Create a new LLM pipeline instance. Internal helper function."""
-    print("🚀 [LLM Cache] Loading LLM model...")
-    print(f"📦 [LLM Cache] Model ID: {MODEL_ID}")
+    logger.info("Loading LLM model...")
+    logger.info(f"Model ID: {MODEL_ID}")
     
-    print("🔧 [LLM Cache] Loading tokenizer...")
+    logger.info("Loading tokenizer...")
     tokenizer = AutoTokenizer.from_pretrained(MODEL_ID, trust_remote_code=True)
-    print("✅ [LLM Cache] Tokenizer loaded")
+    logger.info("Tokenizer loaded")
 
     use_cuda = torch.cuda.is_available()
     quant_cfg = None
@@ -46,13 +49,13 @@ def _create_llm_pipeline() -> HuggingFacePipeline:
                 bnb_4bit_compute_dtype=torch.float16,
             )
         except (ImportError, Exception) as e:
-            print(f"Warning: bitsandbytes not available, falling back to standard loading: {e}")
+            logger.warning(f"bitsandbytes not available, falling back to standard loading: {e}")
             quant_cfg = None
 
     if use_cuda:
-        print("🎮 [LLM Cache] CUDA available, loading model to GPU...")
+        logger.info("CUDA available, loading model to GPU...")
         if quant_cfg is not None:
-            print("⚡ [LLM Cache] Using 4-bit quantization for memory efficiency...")
+            logger.info("Using 4-bit quantization for memory efficiency...")
             # CUDA with 4-bit (requires bitsandbytes, best on Linux)
             model = AutoModelForCausalLM.from_pretrained(
                 MODEL_ID,
@@ -60,9 +63,9 @@ def _create_llm_pipeline() -> HuggingFacePipeline:
                 trust_remote_code=True,
                 quantization_config=quant_cfg,
             )
-            print("✅ [LLM Cache] Model loaded with 4-bit quantization")
+            logger.info("Model loaded with 4-bit quantization")
         else:
-            print("🔧 [LLM Cache] Loading model without quantization...")
+            logger.info("Loading model without quantization...")
             # CUDA without bitsandbytes: load then move explicitly to GPU
             model = AutoModelForCausalLM.from_pretrained(
                 MODEL_ID,
@@ -70,8 +73,8 @@ def _create_llm_pipeline() -> HuggingFacePipeline:
                 dtype=torch.float16,
                 trust_remote_code=True,
             ).to("cuda")
-            print("✅ [LLM Cache] Model loaded to GPU")
-        print("🔧 [LLM Cache] Creating text generation pipeline...")
+            logger.info("Model loaded to GPU")
+        logger.info("Creating text generation pipeline...")
         pipe = pipeline(
             "text-generation",
             model=model,
@@ -81,9 +84,9 @@ def _create_llm_pipeline() -> HuggingFacePipeline:
             do_sample=True,
             return_full_text=False,
         )
-        print("✅ [LLM Cache] GPU pipeline created successfully")
+        logger.info("GPU pipeline created successfully")
     else:
-        print("💻 [LLM Cache] CUDA not available, loading model to CPU...")
+        logger.info("CUDA not available, loading model to CPU...")
         # CPU fallback (slower). Avoid 4-bit config on CPU.
         model = AutoModelForCausalLM.from_pretrained(
             MODEL_ID,
@@ -91,8 +94,8 @@ def _create_llm_pipeline() -> HuggingFacePipeline:
             dtype=torch.float32,
             trust_remote_code=True,
         )
-        print("✅ [LLM Cache] Model loaded to CPU")
-        print("🔧 [LLM Cache] Creating text generation pipeline...")
+        logger.info("Model loaded to CPU")
+        logger.info("Creating text generation pipeline...")
         pipe = pipeline(
             "text-generation",
             model=model,
@@ -102,9 +105,9 @@ def _create_llm_pipeline() -> HuggingFacePipeline:
             do_sample=True,
             return_full_text=False,
         )
-        print("✅ [LLM Cache] CPU pipeline created successfully")
+        logger.info("CPU pipeline created successfully")
     
-    print("🎉 [LLM Cache] LLM pipeline creation completed successfully!")
+    logger.info("LLM pipeline creation completed successfully!")
     return HuggingFacePipeline(pipeline=pipe)
 
 def get_cached_llm() -> HuggingFacePipeline:

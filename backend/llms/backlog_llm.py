@@ -1,9 +1,12 @@
 import os
 import re
+import logging
 from typing import Dict, Optional
 from apps.ai_api.tasks import CancellationToken, TaskCancelledException
 from llms.models import BacklogModel, EpicModel, SubEpicModel, UserStoryModel, TaskModel
 from llms.llm_cache import get_cached_backlog_llm
+
+logger = logging.getLogger('llms')
 
 def build_prompt(section: str, proposal_text: str, context: Dict = None) -> str:
     root_dir = os.path.dirname(__file__)
@@ -58,9 +61,9 @@ def generate_section(llm, section: str, prompt: str, max_retries: int = 3, cance
                 lines = response.splitlines()
                 epic_count = sum(1 for line in lines if line.strip().lower().startswith("epic") and ":" in line)
                 task_count = sum(1 for line in lines if line.strip().lower().startswith("-task") and ":" in line)
-                print(f"Backlog validation failed, retrying... (attempt {_ + 1}/{max_retries})")
-                print(f"Epic count: {epic_count} (need >=4), Task count: {task_count}")
-                print(f"Response preview: {response[:200]}...")
+                logger.warning(f"Backlog validation failed, retrying... (attempt {_ + 1}/{max_retries})")
+                logger.warning(f"Epic count: {epic_count} (need >=4), Task count: {task_count}")
+                logger.debug(f"Response preview: {response[:200]}...")
                 continue
             return response
         except TaskCancelledException:
@@ -139,13 +142,13 @@ def run_backlog_pipeline(proposal_text: str, context: Dict, task_id: Optional[st
     if not raw_backlog:
         return BacklogModel()
 
-    print(f"\n--- RAW BACKLOG ---\n{raw_backlog}\n")
+    logger.debug(f"RAW BACKLOG: {raw_backlog}")
     
     backlog_model = parse_backlog(raw_backlog)
     
     # Ensure minimum of 4 epics - add generic epics if needed
     if len(backlog_model.epics) < 4:
-        print(f"Warning: Only {len(backlog_model.epics)} epics generated, adding generic epics to reach minimum of 4")
+        logger.warning(f"Only {len(backlog_model.epics)} epics generated, adding generic epics to reach minimum of 4")
         generic_epics = [
             ("User Interface", "User Interface Development"),
             ("Data Management", "Data Storage and Management"),

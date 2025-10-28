@@ -25,7 +25,7 @@ class InvitationRepositoryImpl implements InvitationRepository {
       final invitationModels = response['invitations'] as List<dynamic>;
       final invitations = invitationModels.map((json) => InvitationModel.fromJson(json as Map<String, dynamic>)).toList();
       return right(invitations);
-    } on DioException catch (e) {
+    } on DioException {
       return left(Failure("Failed to load invitations. Try Again!"));
     }
   }

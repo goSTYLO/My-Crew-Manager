@@ -1262,6 +1262,103 @@ For support and questions:
   - **Performance**: Clean console output focused on relevant WebSocket activity
   - **User Experience**: Real-time updates working seamlessly across all components
 
+### Monitor Created Component Code Documentation
+The following comments were removed from `web/src/view_pages/manager/monitor_created.tsx` and are documented here for reference:
+
+#### State Management Comments
+- **Modal states**: State variables for managing various modal dialogs (add feature, role, goal, delete modals)
+- **Modal input states**: State variables for form inputs in modals (feature title, role title, goal title, etc.)
+- **Backlog modal states**: State variables for backlog-related modals (add epic, sub-epic, user story, task modals)
+- **Backlog editing state**: State for managing backlog edit mode and tracking modified items
+- **Task assignment and commit tracking state**: State for task completion workflow and commit information
+- **Confirmation modal state**: State for generic confirmation dialogs
+- **Proposal upload state**: State for handling PDF proposal uploads and viewing
+
+#### API Configuration Comments
+- **API Configuration**: Base URL configuration for AI API endpoints
+- **API Utility Functions**: Helper functions for authentication headers and error handling
+
+#### Function Group Comments
+- **Regenerate functions**: Functions for AI-powered project overview and backlog regeneration
+- **Fetch Project Overview Data**: Functions for retrieving project metadata, features, roles, goals, and timeline
+- **Fetch Backlog Data**: Functions for retrieving and transforming nested backlog structure
+- **Fetch Members Data**: Functions for retrieving project team members
+- **Fetch Pending Invitations Data**: Functions for retrieving pending project invitations
+- **Cancel/Delete Pending Invitation**: Functions for managing invitation lifecycle
+- **Fetch Repositories Data**: Functions for retrieving project repositories
+- **Fetch Current Proposal**: Functions for retrieving current project proposal
+- **Task Assignment Functions**: Functions for assigning tasks to team members and tracking completion
+- **Load all data on component mount**: useEffect hook for initial data loading
+- **Real-time updates for project changes**: WebSocket integration for live project updates
+- **Backlog CRUD Operations**: Functions for creating, reading, updating, and deleting backlog items
+- **Backlog Update Functions**: Individual functions for updating epic, sub-epic, user story, and task titles
+- **Save all backlog changes**: Batch function for saving multiple backlog modifications
+- **Overview CRUD Operations**: Functions for managing project overview data
+- **Repository CRUD Operations**: Functions for managing project repositories
+- **File Upload Handlers**: Functions for handling file uploads and drag-and-drop functionality
+
+#### Implementation Details Comments
+- **Refresh all data**: Data refresh after successful operations
+- **Show success modal**: Success feedback after operations
+- **First, fetch the main project data**: Sequential data fetching strategy
+- **Then fetch related data in parallel**: Parallel data fetching for performance
+- **Process each response, handling failures gracefully**: Error handling for parallel requests
+- **Extract role names from the roles data**: Data transformation for role dropdowns
+- **Debug: Check if tasks have assignee details**: Debugging information for task assignment
+- **Transform nested structure to match frontend state**: Data structure transformation
+- **Map to frontend format**: Data mapping for UI compatibility
+- **Filter for pending invitations only**: Data filtering for specific use cases
+- **Refresh pending invitations**: Data refresh after invitation operations
+- **Don't show error for repositories as it's optional**: Error handling strategy
+- **Fetch pending invitations separately**: Separate data fetching for invitations
+- **Refresh project data**: Real-time data refresh
+- **Refresh backlog data**: Real-time backlog refresh
+- **More specific toast messages based on action**: Contextual user feedback
+- **Refresh members data**: Real-time member data refresh
+- **Refresh repositories data**: Real-time repository data refresh
+- **Calculate analytics when backlog data changes**: Analytics computation triggers
+- **First, look up user by email**: User lookup strategy for invitations
+- **Check if there's already a pending invitation for this user**: Duplicate prevention
+- **Check if user is already a member**: Membership validation
+- **Create invitation with user ID**: Invitation creation process
+- **Refresh members list and pending invitations**: Data refresh after invitation
+- **Handle specific error cases**: Error handling for different scenarios
+- **Mark this item as modified**: Change tracking for batch updates
+- **Only update items that have been modified**: Efficient update strategy
+- **Update epic title only if it was modified**: Conditional updates
+- **Update sub-epic titles only if they were modified**: Conditional updates
+- **Update user story titles only if they were modified**: Conditional updates
+- **Update task titles only if they were modified**: Conditional updates
+- **Execute all updates in parallel**: Performance optimization
+- **Refresh the backlog data to ensure we have the latest from the server**: Data consistency
+- **Clear the modified items set and exit editing mode**: State cleanup
+- **TODO: Implement project title/summary update in UI**: Future enhancement note
+- **Update project title and summary**: Project metadata updates
+- **Update features**: Feature management
+- **Update roles**: Role management
+- **Update goals**: Goal management
+- **Update timeline items**: Timeline management
+- **Wait for all updates to complete**: Synchronization
+- **Refresh all data from the server**: Complete data refresh
+- **Refresh appropriate data based on what was deleted**: Contextual data refresh
+- **Validate required fields**: Input validation
+- **Validate URL format**: URL validation
+- **Check if it's a valid GitHub URL**: GitHub URL validation
+- **Check if it has the proper GitHub repository path structure**: Repository structure validation
+- **Check if it's not just the GitHub homepage**: URL specificity validation
+- **Validate branch name**: Branch name validation
+- **Validate data before sending to API**: Pre-API validation
+- **Updated handleAddRepo to use the API-based function**: Function modernization
+- **Only clear form and close modal if repository was successfully added**: Conditional UI updates
+- **Old local state manipulation functions removed - now using API-based CRUD operations**: Code cleanup note
+- **Wrapper functions for UI compatibility**: UI compatibility layer
+- **Get the week ID from the current timeline data**: Data extraction
+- **Show loading state**: Loading UI management
+- **Show error state**: Error UI management
+- **AI Badge Component**: Component documentation
+- **Avatar Component for Task Distribution**: Component documentation
+- **Don't show delete button if: User is the owner trying to delete themselves, OR The member being deleted is the owner**: Business logic documentation
+
 ### Centralized IP Configuration & Multi-Device Access
 - ✅ **Centralized IP Configuration System**: Implemented comprehensive multi-device access with single source of truth
   - **Root .env Configuration**: Enhanced root-level `.env` file with `DEVICE_IP`, `VITE_API_BASE_URL`, and `MOBILE_API_BASE_URL` variables

@@ -119,16 +119,14 @@ class _CreateProjectTabState extends State<CreateProjectTab> {
       firstDate: DateTime(2020),
       lastDate: DateTime(2100),
     );
-    if (picked != null) {
-      setState(() {
-        if (isStart) {
-          _startDate = picked;
-        } else {
-          _endDate = picked;
-        }
-      });
+    setState(() {
+      if (isStart) {
+        _startDate = picked;
+      } else {
+        _endDate = picked;
+      }
+    });
     }
-  }
 
   @override
   Widget build(BuildContext context) {

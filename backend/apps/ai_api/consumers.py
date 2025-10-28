@@ -1,10 +1,12 @@
 import json
+import logging
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from django.contrib.auth import get_user_model
 from rest_framework.authtoken.models import Token
 
 User = get_user_model()
+logger = logging.getLogger('apps.ai_api')
 
 class ProjectUpdatesConsumer(AsyncWebsocketConsumer):
     async def connect(self):
@@ -79,11 +81,11 @@ class ProjectUpdatesConsumer(AsyncWebsocketConsumer):
     # Handler for notification broadcasts
     async def notification_message(self, event):
         """Handler for notification broadcasts"""
-        print(f"📨 Consumer received notification_message event: {event}")
-        print(f"📨 Sending to WebSocket client: {event['notification']}")
+        logger.debug(f"Consumer received notification_message event: {event}")
+        logger.debug(f"Sending to WebSocket client: {event['notification']}")
         await self.send(text_data=json.dumps({
             'type': 'notification',
             'action': 'notification_created',
             'notification': event['notification']
         }))
-        print(f"✅ Notification sent to WebSocket client successfully")
+        logger.info(f"Notification sent to WebSocket client successfully")

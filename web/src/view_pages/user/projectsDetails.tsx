@@ -350,7 +350,13 @@ const ProjectDetails: React.FC = () => {
   const [projectDetails, setProjectDetails] = useState<ProjectDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'tasks' | 'team' | 'timeline' | 'repository'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'tasks' | 'team' | 'timeline' | 'repository'>(() => {
+    const params = new URLSearchParams(location.search);
+    const tab = params.get('tab') as 'overview' | 'tasks' | 'team' | 'timeline' | 'repository' | null;
+    return tab && ['overview', 'tasks', 'team', 'timeline', 'repository'].includes(tab)
+      ? tab
+      : 'overview';
+  });
   const [showTaskCompletionModal, setShowTaskCompletionModal] = useState(false);
   const [completingTaskId, setCompletingTaskId] = useState<number | null>(null);
   const [editingCommitTitle, setEditingCommitTitle] = useState('');

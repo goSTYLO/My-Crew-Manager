@@ -1,4 +1,5 @@
 #view.py
+import logging
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -8,6 +9,9 @@ from django.shortcuts import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import PermissionDenied
 
+# Configure logger for this module
+logger = logging.getLogger('apps.ai_api')
+
 from .models import (
     Project, Proposal,
     ProjectFeature, ProjectRole, ProjectGoal,
@@ -16,14 +20,24 @@ from .models import (
     Notification, Repository,
 )
 
-def get_notification_action_url(recipient, project_id):
+def get_notification_action_url(recipient, project_id, tab=None):
     """
-    Generate the correct action URL for notifications based on the recipient's role.
+    Generate the correct action URL for notifications based on the recipient's global role.
+    Optionally include a tab parameter for direct navigation.
     """
-    if recipient.role == 'manager':
-        return f'/project-details/{project_id}'
+    # Check user's global role - simplified logic
+    if recipient.role == 'Project Manager':
+        base_url = f'/project-details/{project_id}'
     else:
-        return f'/user-project/{project_id}'
+        # For developers or users with no role set, use developer URL
+        base_url = f'/user-project/{project_id}'
+    
+    if tab:
+        result_url = f'{base_url}?tab={tab}'
+    else:
+        result_url = base_url
+    
+    return result_url
 from .serializers import (
     ProjectSerializer, ProposalSerializer,
     ProjectFeatureSerializer, ProjectRoleSerializer, ProjectGoalSerializer,
@@ -115,7 +129,7 @@ class ProjectViewSet(ModelViewSet):
             })
             
         except Exception as e:
-            print(f"Analysis failed: {str(e)}")
+            logger.error(f"Analysis failed: {str(e)}")
             return Response({
                 "error": f"Analysis failed: {str(e)}"
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -199,7 +213,7 @@ class ProjectViewSet(ModelViewSet):
                         actor=self.request.user
                     )
             except Exception as e:
-                print(f"Error creating backlog regeneration notifications: {e}")
+                logger.error(f"Error creating backlog regeneration notifications: {e}")
             
             return Response({
                 "message": "Backlog generated successfully",
@@ -207,7 +221,7 @@ class ProjectViewSet(ModelViewSet):
             })
             
         except Exception as e:
-            print(f"Backlog generation failed: {str(e)}")
+            logger.error(f"Backlog generation failed: {str(e)}")
             return Response({
                 "error": f"Backlog generation failed: {str(e)}"
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -919,10 +933,10 @@ class StoryTaskViewSet(ModelViewSet):
 
     @action(detail=False, methods=["post"], url_path="bulk-assign")
     def bulk_assign(self, request):
-        print(f"🚀 BULK ASSIGN: Method called with data: {request.data}")
+        logger.info(f"BULK ASSIGN: Method called with data: {request.data}")
         try:
             assignments = request.data.get('assignments', [])
-            print(f"🚀 BULK ASSIGN: Assignments: {assignments}")
+            logger.info(f"BULK ASSIGN: Assignments: {assignments}")
             if not isinstance(assignments, list):
                 return Response({"error": "assignments must be a list"}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -930,20 +944,20 @@ class StoryTaskViewSet(ModelViewSet):
             for item in assignments:
                 task_id = item.get('task_id')
                 assignee_id = item.get('assignee_id')
-                print(f"🚀 BULK ASSIGN: Processing task_id={task_id}, assignee_id={assignee_id}")
+                logger.debug(f"BULK ASSIGN: Processing task_id={task_id}, assignee_id={assignee_id}")
                 if not task_id:
-                    print(f"🚀 BULK ASSIGN: Skipping - no task_id")
+                    logger.warning(f"BULK ASSIGN: Skipping - no task_id")
                     continue
                 try:
                     task = StoryTask.objects.get(id=task_id)
-                    print(f"🚀 BULK ASSIGN: Found task {task.id}: {task.title}")
+                    logger.debug(f"BULK ASSIGN: Found task {task.id}: {task.title}")
                 except StoryTask.DoesNotExist:
-                    print(f"🚀 BULK ASSIGN: Task {task_id} not found")
+                    logger.warning(f"BULK ASSIGN: Task {task_id} not found")
                     continue
                 
                 # Store old assignee for notification comparison
                 old_assignee = task.assignee
-                print(f"🚀 BULK ASSIGN: Old assignee: {old_assignee}, New assignee_id: {assignee_id}")
+                logger.debug(f"BULK ASSIGN: Old assignee: {old_assignee}, New assignee_id: {assignee_id}")
                 
                 if assignee_id is None:
                     task.assignee = None
@@ -962,7 +976,7 @@ class StoryTaskViewSet(ModelViewSet):
                 
                 # Create notification if assignment changed and new assignee exists
                 if old_assignee != task.assignee and task.assignee:
-                    print(f"🔔 Bulk assign: Creating notification for task {task.id} assigned to {task.assignee.user_name}")
+                    logger.info(f"Bulk assign: Creating notification for task {task.id} assigned to {task.assignee.user_name}")
                     project = task.user_story.sub_epic.epic.project
                     recipients = set()
                     
@@ -977,18 +991,18 @@ class StoryTaskViewSet(ModelViewSet):
                     # Remove the person doing the assignment
                     recipients.discard(request.user)
                     
-                    print(f"🔔 Bulk assign: Recipients: {[r.name for r in recipients]}")
+                    logger.debug(f"Bulk assign: Recipients: {[r.name for r in recipients]}")
                     
                     # Create notifications for each recipient
                     for recipient in recipients:
-                        print(f"📝 Bulk assign: Creating notification for {recipient.name}")
+                        logger.debug(f"Bulk assign: Creating notification for {recipient.name}")
                         NotificationService.create_notification(
                             recipient=recipient,
                             notification_type='task_assigned',
                             title=f'Task Assigned: {task.title}',
                             message=f'{request.user.name} assigned you to "{task.title}"',
                             content_object=task,
-                            action_url=get_notification_action_url(recipient, project.id),
+                            action_url=get_notification_action_url(recipient, project.id, tab='backlog' if recipient.role == 'manager' else 'tasks'),
                             actor=request.user
                         )
 
@@ -1082,14 +1096,14 @@ class StoryTaskViewSet(ModelViewSet):
                         title=f'Task Assigned: {task.title}',
                         message=f'{self.request.user.name} assigned you to "{task.title}"',
                         content_object=task,
-                        action_url=get_notification_action_url(recipient, project.id),
+                        action_url=get_notification_action_url(recipient, project.id, tab='backlog' if recipient.role == 'manager' else 'tasks'),
                         actor=self.request.user
                     )
-                    print(f"✓ Created notification {notification.id} for {recipient.name}")
+                    logger.info(f"Created notification {notification.id} for {recipient.name}")
             except Exception as e:
-                print(f"✗ Error creating task_assigned notification: {e}")
+                logger.error(f"Error creating task_assigned notification: {e}")
                 import traceback
-                traceback.print_exc()
+                logger.error(f"Traceback: {traceback.format_exc()}")
         
         # Broadcast task creation
         BroadcastService.broadcast_task_update(task, 'created', self.request.user)
@@ -1109,27 +1123,27 @@ class StoryTaskViewSet(ModelViewSet):
         
         # Create notifications based on what changed
         # Check for assignment change
-        print(f"🔍 Task assignment check: old_assignee={old_instance.assignee}, new_assignee={task.assignee}")
-        print(f"🔍 Recipients set: {[r.name for r in recipients]}")
+        logger.debug(f"Task assignment check: old_assignee={old_instance.assignee}, new_assignee={task.assignee}")
+        logger.debug(f"Recipients set: {[r.name for r in recipients]}")
         
         if old_instance.assignee != task.assignee and task.assignee:
-            print(f"✅ Task assignment changed - creating notifications for {len(recipients)} recipients")
+            logger.info(f"Task assignment changed - creating notifications for {len(recipients)} recipients")
             for recipient in recipients:
-                print(f"📝 Creating notification for {recipient.name} (ID: {recipient.user_id})")
+                logger.debug(f"Creating notification for {recipient.name} (ID: {recipient.user_id})")
                 NotificationService.create_notification(
                     recipient=recipient,
                     notification_type='task_assigned',
                     title=f'Task Assigned: {task.title}',
                     message=f'{self.request.user.name} assigned you to "{task.title}"',
                     content_object=task,
-                    action_url=get_notification_action_url(recipient, project.id),
+                    action_url=get_notification_action_url(recipient, project.id, tab='backlog' if recipient.role == 'manager' else 'tasks'),
                     actor=self.request.user
                 )
         else:
-            print(f"❌ No notification needed - old_assignee={old_instance.assignee}, new_assignee={task.assignee}")
+            logger.debug(f"No notification needed - old_assignee={old_instance.assignee}, new_assignee={task.assignee}")
         
         # Check for completion
-        elif old_instance.status != 'done' and task.status == 'done':
+        if old_instance.status != 'done' and task.status == 'done':
             for recipient in recipients:
                 NotificationService.create_notification(
                     recipient=recipient,
@@ -1137,7 +1151,7 @@ class StoryTaskViewSet(ModelViewSet):
                     title=f'Task Completed: {task.title}',
                     message=f'{self.request.user.name} completed "{task.title}"',
                     content_object=task,
-                    action_url=get_notification_action_url(recipient, project.id),
+                    action_url=get_notification_action_url(recipient, project.id, tab='backlog' if recipient.role == 'manager' else 'tasks'),
                     actor=self.request.user
                 )
         
@@ -1150,7 +1164,7 @@ class StoryTaskViewSet(ModelViewSet):
                     title=f'Task Updated: {task.title}',
                     message=f'{self.request.user.name} updated "{task.title}"',
                     content_object=task,
-                    action_url=get_notification_action_url(recipient, project.id),
+                    action_url=get_notification_action_url(recipient, project.id, tab='backlog' if recipient.role == 'manager' else 'tasks'),
                     actor=self.request.user
                 )
         
@@ -1209,8 +1223,8 @@ class ProjectMemberViewSet(ModelViewSet):
                 invitee=removed_user
             ).delete()
             
-            print(f"Removed member {removed_user.name} from project {project.title}")
-            print(f"Deleted {deleted_invitations[0]} related invitations")
+            logger.info(f"Removed member {removed_user.name} from project {project.title}")
+            logger.info(f"Deleted {deleted_invitations[0]} related invitations")
             
             # Notify all remaining project members that someone left
             remaining_members = ProjectMember.objects.filter(
@@ -1224,7 +1238,7 @@ class ProjectMemberViewSet(ModelViewSet):
                     title=f'Member Left: {removed_user.name}',
                     message=f'{removed_user.name} was removed from {project.title}',
                     content_object=project,
-                    action_url=get_notification_action_url(remaining_member.user, project.id),
+                    action_url=get_notification_action_url(remaining_member.user, project.id, tab='members' if remaining_member.user.role == 'manager' else 'team'),
                     actor=request.user
                 )
             
@@ -1323,11 +1337,11 @@ class ProjectInvitationViewSet(ModelViewSet):
         try:
             # Debug: Check what invitations are available for this user
             user_invitations = ProjectInvitation.objects.filter(invitee=request.user)
-            print(f"User {request.user.user_id} has {user_invitations.count()} invitations: {list(user_invitations.values_list('id', 'status'))}")
-            print(f"Trying to accept invitation ID: {pk}")
+            logger.debug(f"User {request.user.user_id} has {user_invitations.count()} invitations: {list(user_invitations.values_list('id', 'status'))}")
+            logger.debug(f"Trying to accept invitation ID: {pk}")
             
             invitation = self.get_object()
-            print(f"Accepting invitation {invitation.id}: project={invitation.project.id}, invitee={invitation.invitee.user_id}, status={invitation.status}")
+            logger.info(f"Accepting invitation {invitation.id}: project={invitation.project.id}, invitee={invitation.invitee.user_id}, status={invitation.status}")
             
             # Check if the current user is the invitee
             if invitation.invitee != request.user:
@@ -1365,9 +1379,9 @@ class ProjectInvitationViewSet(ModelViewSet):
                             'role': invitation.role  # Use the role from the invitation
                         }
                     )
-                    print(f"ProjectMember {'created' if created else 'retrieved'}: {project_member}")
+                    logger.info(f"ProjectMember {'created' if created else 'retrieved'}: {project_member}")
                 except Exception as member_error:
-                    print(f"Error creating ProjectMember: {member_error}")
+                    logger.error(f"Error creating ProjectMember: {member_error}")
                     raise member_error
                 
                 # Clean up any other pending invitations for this user to this project
@@ -1382,12 +1396,12 @@ class ProjectInvitationViewSet(ModelViewSet):
                 other_invitations.delete()
                 
                 if deleted_count > 0:
-                    print(f"Cleaned up {deleted_count} duplicate pending invitations for {invitation.invitee.name} to project {invitation.project.title}")
+                    logger.info(f"Cleaned up {deleted_count} duplicate pending invitations for {invitation.invitee.name} to project {invitation.project.title}")
                 
                 # Mark related notifications as read when invitation is accepted
                 from django.contrib.contenttypes.models import ContentType
                 invitation_content_type = ContentType.objects.get_for_model(ProjectInvitation)
-                print(f"Looking for notifications with content_type={invitation_content_type}, object_id={invitation.id}, recipient={invitation.invitee.user_id}")
+                logger.debug(f"Looking for notifications with content_type={invitation_content_type}, object_id={invitation.id}, recipient={invitation.invitee.user_id}")
                 
                 related_notifications = Notification.objects.filter(
                     recipient=invitation.invitee,
@@ -1395,10 +1409,10 @@ class ProjectInvitationViewSet(ModelViewSet):
                     object_id=invitation.id,
                     is_read=False
                 )
-                print(f"Found {related_notifications.count()} related notifications to mark as read")
+                logger.debug(f"Found {related_notifications.count()} related notifications to mark as read")
                 
                 updated_notifications = related_notifications.update(is_read=True, read_at=timezone.now())
-                print(f"Marked {updated_notifications} related notifications as read")
+                logger.info(f"Marked {updated_notifications} related notifications as read")
                 
                 # Broadcast member joined if membership was created
                 if created:
@@ -1416,7 +1430,7 @@ class ProjectInvitationViewSet(ModelViewSet):
                             title=f'New Member: {invitation.invitee.name}',
                             message=f'{invitation.invitee.name} joined {invitation.project.title}',
                             content_object=invitation.project,
-                            action_url=get_notification_action_url(member.user, invitation.project.id),
+                            action_url=get_notification_action_url(member.user, invitation.project.id, tab='members' if member.user.role == 'manager' else 'team'),
                             actor=invitation.invitee
                         )
             
@@ -1434,7 +1448,7 @@ class ProjectInvitationViewSet(ModelViewSet):
                 "error_type": type(e).__name__,
                 "traceback": traceback.format_exc()
             }
-            print(f"Accept invitation error: {error_details}")
+            logger.error(f"Accept invitation error: {error_details}")
             
             # If it's a 404 error, provide more helpful message
             if "No ProjectInvitation matches" in str(e):
@@ -1477,7 +1491,7 @@ class ProjectInvitationViewSet(ModelViewSet):
             # Mark related notifications as read when invitation is declined
             from django.contrib.contenttypes.models import ContentType
             invitation_content_type = ContentType.objects.get_for_model(ProjectInvitation)
-            print(f"Looking for notifications with content_type={invitation_content_type}, object_id={invitation.id}, recipient={invitation.invitee.user_id}")
+            logger.debug(f"Looking for notifications with content_type={invitation_content_type}, object_id={invitation.id}, recipient={invitation.invitee.user_id}")
             
             related_notifications = Notification.objects.filter(
                 recipient=invitation.invitee,
@@ -1485,10 +1499,10 @@ class ProjectInvitationViewSet(ModelViewSet):
                 object_id=invitation.id,
                 is_read=False
             )
-            print(f"Found {related_notifications.count()} related notifications to mark as read")
+            logger.debug(f"Found {related_notifications.count()} related notifications to mark as read")
             
             updated_notifications = related_notifications.update(is_read=True, read_at=timezone.now())
-            print(f"Marked {updated_notifications} related notifications as read")
+            logger.info(f"Marked {updated_notifications} related notifications as read")
             
             return Response({
                 "message": "Invitation declined successfully",

@@ -30,6 +30,8 @@ cd C:\Users\Aaron\GitHub Repos\My-Crew-Manager
 
 # Start Redis server
 redis\redis-server.exe redis\redis.windows.conf
+# if already inside redis directory
+.\redis-server.exe
 ```
 
 #### Windows (Using Redis Service)

@@ -1,5 +1,5 @@
 //topbarLayouot.tsx
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import {Menu,Search,Bell,MessageSquare,ChevronDown,ChevronUp,User,LogOut,Sun, Moon} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import logo from "../assets/logo2.png";
@@ -48,20 +48,43 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
       return '/project-invitation';
     }
     
-    // If user is a developer and URL is for manager page, transform it
-    if (userRole !== 'manager' && actionUrl.startsWith('/project-details/')) {
-      const projectId = actionUrl.split('/project-details/')[1];
-      return `/user-project/${projectId}`;
+    // Extract tab parameter if present
+    const [baseUrl, queryString] = actionUrl.split('?');
+    
+    let transformedUrl = baseUrl;
+    
+    // Transform URL based on user role
+    if (userRole !== 'Project Manager' && baseUrl.startsWith('/project-details/')) {
+      const projectId = baseUrl.split('/project-details/')[1];
+      transformedUrl = `/user-project/${projectId}`;
+    } else if (userRole === 'Project Manager' && baseUrl.startsWith('/user-project/')) {
+      const projectId = baseUrl.split('/user-project/')[1];
+      transformedUrl = `/project-details/${projectId}`;
     }
     
-    // If user is a manager and URL is for developer page, transform it
-    if (userRole === 'manager' && actionUrl.startsWith('/user-project/')) {
-      const projectId = actionUrl.split('/user-project/')[1];
-      return `/project-details/${projectId}`;
+    // Preserve or transform tab parameter
+    if (queryString) {
+      const params = new URLSearchParams(queryString);
+      const tab = params.get('tab');
+      
+      if (tab) {
+        // Transform tab name if switching between manager/developer views
+        let transformedTab = tab;
+        if (userRole !== 'Project Manager' && tab === 'backlog') {
+          transformedTab = 'tasks';
+        } else if (userRole !== 'Project Manager' && tab === 'members') {
+          transformedTab = 'team';
+        } else if (userRole === 'Project Manager' && tab === 'tasks') {
+          transformedTab = 'backlog';
+        } else if (userRole === 'Project Manager' && tab === 'team') {
+          transformedTab = 'members';
+        }
+        
+        return `${transformedUrl}?tab=${transformedTab}`;
+      }
     }
     
-    // Return original URL if no transformation needed
-    return actionUrl;
+    return transformedUrl;
   };
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const profileDropdownRef = useRef<HTMLDivElement>(null);
@@ -79,8 +102,9 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
   const { subscribe } = useWebSocket();
 
   // Fetch notifications from API
-  const fetchNotifications = async () => {
+  const fetchNotifications = useCallback(async () => {
     try {
+      console.log('🔔 Manager TopNavbar: fetchNotifications called');
       setLoadingNotifications(true);
       const token = sessionStorage.getItem('token') || sessionStorage.getItem('access');
       if (!token) return;
@@ -94,9 +118,9 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
 
       if (response.ok) {
         const data = await response.json();
-        console.log('🔔 TopNavbar: Initial fetch response:', data);
+        console.log('🔔 Manager TopNavbar: Fetch response:', data);
         const notifications = data.results || data;
-        console.log('🔔 TopNavbar: Initial notifications:', notifications);
+        console.log('🔔 Manager TopNavbar: Notifications updated:', notifications);
         setNotifications(notifications);
       }
     } catch (error) {
@@ -104,10 +128,10 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
     } finally {
       setLoadingNotifications(false);
     }
-  };
+  }, []);
 
   // Fetch all notifications for modal
-  const fetchAllNotifications = async () => {
+  const fetchAllNotifications = useCallback(async () => {
     try {
       setLoadingAllNotifications(true);
       const token = sessionStorage.getItem('token') || sessionStorage.getItem('access');
@@ -131,10 +155,10 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
     } finally {
       setLoadingAllNotifications(false);
     }
-  };
+  }, [notifPage, notificationsPerPage]);
 
   // Mark notification as read
-  const markNotificationAsRead = async (notificationId: number) => {
+  const markNotificationAsRead = useCallback(async (notificationId: number) => {
     try {
       const token = sessionStorage.getItem('token') || sessionStorage.getItem('access');
       if (!token) return;
@@ -157,10 +181,10 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
     } catch (error) {
       console.error('Error marking notification as read:', error);
     }
-  };
+  }, []);
 
   // Mark all notifications as read
-  const markAllAsRead = async () => {
+  const markAllAsRead = useCallback(async () => {
     try {
       const token = sessionStorage.getItem('token') || sessionStorage.getItem('access');
       if (!token) return;
@@ -177,11 +201,14 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
         setNotifications(prev => 
           prev.map(notif => ({ ...notif, is_read: true }))
         );
+        setAllNotifications(prev => 
+          prev.map(notif => ({ ...notif, is_read: true }))
+        );
       }
     } catch (error) {
       console.error('Error marking all notifications as read:', error);
     }
-  };
+  }, []);
 
   // Smart polling for notifications - DISABLED for WebSocket testing
   useNotificationPolling({
@@ -220,10 +247,12 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
 
   // WebSocket subscription for real-time notifications
   useEffect(() => {
+    console.log('🔔 Manager TopNavbar: Setting up WebSocket subscription');
     const unsubscribe = subscribe((message) => {
+      console.log('🔔 Manager TopNavbar: WebSocket message received:', message);
       // Handle notification messages - backend sends type: 'notification'
       if (message.type === 'notification' || message.action === 'notification_created') {
-        console.log('🔔 Received WebSocket notification:', message);
+        console.log('🔔 Manager TopNavbar: Processing notification message:', message);
         // Refetch notifications to get the latest
         fetchNotifications();
         
