@@ -20,7 +20,7 @@ import websockets
 import json
 import requests
 import sys
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # Configuration
 DJANGO_BASE_URL = "http://localhost:8000"
@@ -357,6 +357,7 @@ class InteractiveWebSocketTester:
             ("7. Member Removed", self.test_member_removed),
             ("8. Project Deleted", self.test_project_deleted),
             ("9. Task Deleted", self.test_task_deleted),
+            ("10. Task Due Date Set", self.test_task_due_date_set),
         ]
         
         results = []
@@ -515,6 +516,67 @@ class InteractiveWebSocketTester:
         """Test task_deleted notification"""
         self.log("Task deletion test - requires task deletion API", "INFO")
         return True
+
+    def test_task_due_date_set(self):
+        """Test task_due_date_set notification by setting a due_date on an existing task"""
+        try:
+            # Use the first logged-in user's token
+            if not self.jwt_tokens:
+                self.log("No logged-in users available for due date test", "ERROR")
+                return False
+
+            email = next(iter(self.jwt_tokens.keys()))
+            headers = {"Authorization": f"Token {self.jwt_tokens[email]}", "Content-Type": "application/json"}
+
+            # Strategy: try to find a task assigned to this user; fallback to any story task
+            # 1) Fetch tasks assigned to current user
+            resp = self.session.get(f"{DJANGO_BASE_URL}/api/ai/story-tasks/user-assigned/", headers=headers)
+            tasks = []
+            if resp.status_code == 200:
+                tasks = resp.json()
+            else:
+                self.log(f"Could not fetch user-assigned tasks: {resp.status_code}", "WARNING")
+
+            # 2) If none, fetch all story tasks (may be large)
+            if not tasks:
+                resp_all = self.session.get(f"{DJANGO_BASE_URL}/api/ai/story-tasks/", headers=headers)
+                if resp_all.status_code == 200:
+                    tasks = resp_all.json()
+                else:
+                    self.log(f"Could not fetch story tasks: {resp_all.status_code}", "ERROR")
+                    return False
+
+            if not tasks:
+                self.log("No tasks available to set due date on", "WARNING")
+                return False
+
+            task_id = tasks[0].get('id')
+            if not task_id:
+                self.log("Selected task missing id", "ERROR")
+                return False
+
+            # Set due date to 7 days from today (YYYY-MM-DD)
+            new_due_date = (datetime.utcnow().date() + timedelta(days=7)).isoformat()
+            patch_payload = {"due_date": new_due_date}
+
+            patch_resp = self.session.patch(
+                f"{DJANGO_BASE_URL}/api/ai/story-tasks/{task_id}/",
+                headers=headers,
+                json=patch_payload
+            )
+
+            if patch_resp.status_code in (200, 202):
+                self.log(f"SUCCESS: Set due date for task {task_id} to {new_due_date}", "SUCCESS")
+                return True
+            else:
+                try:
+                    self.log(f"ERROR: Failed to set due date: {patch_resp.status_code} - {patch_resp.json()}", "ERROR")
+                except Exception:
+                    self.log(f"ERROR: Failed to set due date: {patch_resp.status_code}", "ERROR")
+                return False
+        except Exception as e:
+            self.log(f"Due date test error: {str(e)}", "ERROR")
+            return False
     
     async def test_websocket_connectivity(self):
         """Test WebSocket connectivity for all endpoints"""

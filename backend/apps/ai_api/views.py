@@ -1174,6 +1174,12 @@ class StoryTaskViewSet(ModelViewSet):
 
     def perform_update(self, serializer):
         old_instance = self.get_object()
+        # Permission: only project owner/manager can set/change due_date (restrict to project creator for now)
+        project = old_instance.user_story.sub_epic.epic.project
+        if 'due_date' in self.request.data and self.request.user != project.created_by:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("Only the project owner can set or change task due dates.")
+
         task = serializer.save()
         project = task.user_story.sub_epic.epic.project
         
@@ -1219,6 +1225,21 @@ class StoryTaskViewSet(ModelViewSet):
                     actor=self.request.user
                 )
         
+        # Due date set/changed
+        if old_instance.due_date != task.due_date:
+            # Prefer notifying assignee (if any) and project owner (if not actor)
+            for recipient in recipients:
+                NotificationService.create_notification(
+                    recipient=recipient,
+                    notification_type='task_due_date_set',
+                    title=f'Task Due Date Updated: {task.title}',
+                    message=(f'{self.request.user.name} set the due date to "{task.due_date}" for "{task.title}"'
+                             if task.due_date else f'{self.request.user.name} cleared the due date for "{task.title}"'),
+                    content_object=task,
+                    action_url=get_notification_action_url(recipient, project.id, tab='backlog' if recipient.role == 'manager' else 'tasks'),
+                    actor=self.request.user
+                )
+
         # Other updates (if any field changed)
         elif old_instance.title != task.title or old_instance.status != task.status:
             for recipient in recipients:

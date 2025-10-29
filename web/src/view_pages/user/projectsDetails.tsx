@@ -78,6 +78,7 @@ interface StoryTask {
     user_email: string;
     profile_picture?: string | null;
   };
+  due_date?: string | null;
 }
 
 interface UserStory {
@@ -277,6 +278,16 @@ const TaskRow: React.FC<{
             <span className="truncate">Epic: {epicTitle}</span>
             <span className="truncate">Story: {userStoryTitle}</span>
             <StatusBadge status={task.status} />
+            {task.due_date && (
+              <span className={`flex items-center gap-1 px-2 py-0.5 rounded text-xs whitespace-nowrap ${
+                new Date(task.due_date) < new Date(new Date().toISOString().slice(0,10))
+                  ? 'bg-red-100 text-red-700'
+                  : 'bg-blue-100 text-blue-700'
+              }`}>
+                <Clock className="w-3 h-3" />
+                Due: {task.due_date}
+              </span>
+            )}
             {task.ai && (
               <span className="flex items-center gap-1 px-2 py-0.5 bg-purple-100 text-purple-700 rounded text-xs whitespace-nowrap">
                 <Sparkles className="w-3 h-3" />
@@ -429,7 +440,8 @@ const ProjectDetails: React.FC = () => {
               assignee: task.assignee,
               assignee_details: task.assignee_details,
               commit_title: task.commit_title,
-              commit_branch: task.commit_branch
+            commit_branch: task.commit_branch,
+            due_date: task.due_date || null
             }))
           }))
         }))
@@ -595,7 +607,8 @@ const ProjectDetails: React.FC = () => {
                     assignee: task.assignee,
                     assignee_details: task.assignee_details,
                     commit_title: task.commit_title,
-                    commit_branch: task.commit_branch
+                    commit_branch: task.commit_branch,
+                    due_date: task.due_date || null
                   }))
                 }))
               }))

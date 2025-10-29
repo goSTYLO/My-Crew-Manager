@@ -104,10 +104,17 @@ class StoryTaskSerializer(serializers.ModelSerializer):
     assignee_details = serializers.SerializerMethodField()
     commit_title = serializers.CharField(required=False, allow_blank=True)
     commit_branch = serializers.CharField(required=False, allow_blank=True)
+    # New fields
+    due_date = serializers.DateField(required=False, allow_null=True)
+    created_at = serializers.DateTimeField(read_only=True)
+    updated_at = serializers.DateTimeField(read_only=True)
 
     class Meta:
         model = StoryTask
-        fields = ['id', 'user_story', 'title', 'status', 'ai', 'assignee', 'assignee_details', 'commit_title', 'commit_branch']
+        fields = [
+            'id', 'user_story', 'title', 'status', 'ai', 'assignee', 'assignee_details',
+            'commit_title', 'commit_branch', 'due_date', 'created_at', 'updated_at'
+        ]
 
     def validate(self, data):
         """Validate that commit_title is provided when status is 'done'"""

@@ -135,6 +135,10 @@ class StoryTask(models.Model):
     assignee = models.ForeignKey('ProjectMember', on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_tasks')
     commit_title = models.CharField(max_length=512, blank=True, null=True)
     commit_branch = models.CharField(max_length=255, blank=True, null=True)
+    # New: due date (date-only) and timestamps
+    due_date = models.DateField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
@@ -268,6 +272,8 @@ class Notification(models.Model):
         ('project_status_changed', 'Project Status Changed'),
         ('member_joined', 'Member Joined Project'),
         ('member_left', 'Member Left Project'),
+        # New: task due date set/changed
+        ('task_due_date_set', 'Task Due Date Set'),
     ]
     
     # Core fields

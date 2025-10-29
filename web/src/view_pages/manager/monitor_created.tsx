@@ -383,7 +383,8 @@ export default function ProjectDetailsUI() {
                 assignee: task.assignee,
                 assignee_details: task.assignee_details,
                 commit_title: task.commit_title,
-                commit_branch: task.commit_branch
+                commit_branch: task.commit_branch,
+                due_date: task.due_date || null
               }))
             }))
           }))
@@ -577,6 +578,27 @@ export default function ProjectDetailsUI() {
       }
     } catch (error) {
       handleApiError(error, 'complete task');
+    }
+  };
+
+  const updateTaskDueDate = async (taskId: number, dueDate: string | null) => {
+    try {
+      const response = await fetch(`${AI_API_BASE_URL}/story-tasks/${taskId}/`, {
+        method: 'PATCH',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+        body: JSON.stringify({ due_date: dueDate })
+      });
+
+      if (response.ok) {
+        showSuccess('Due Date Updated', dueDate ? 'Task due date set successfully' : 'Task due date cleared');
+        await fetchBacklog();
+      } else {
+        const errorData = await response.json();
+        showError('Update Failed', errorData.error || 'Failed to update due date');
+      }
+    } catch (error) {
+      handleApiError(error, 'update task due date');
     }
   };
 
@@ -3040,6 +3062,42 @@ export default function ProjectDetailsUI() {
                                             }`}>
                                               {task.status === 'done' ? '✅ Done' : '⏳ Pending'}
                                             </span>
+                              {/* Due Date Badge / Editor */}
+                              {!isEditingBacklog ? (
+                                <>
+                                  {('due_date' in task) && task.due_date && (
+                                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                      new Date(task.due_date) < new Date(new Date().toISOString().slice(0,10))
+                                        ? 'bg-red-100 text-red-800'
+                                        : 'bg-blue-100 text-blue-800'
+                                    }`}>
+                                      📅 Due: {task.due_date}
+                                    </span>
+                                  )}
+                                </>
+                              ) : (
+                                <div className="flex items-center gap-2">
+                                  <input
+                                    type="date"
+                                    value={(task as any).due_date || ''}
+                                    onChange={(e) => updateTaskDueDate(task.id, e.target.value || null)}
+                                    className={`px-2 py-1 border rounded text-xs ${
+                                      theme === "dark" 
+                                        ? 'border-gray-600 bg-gray-700 text-white' 
+                                        : 'border-gray-300'
+                                    }`}
+                                  />
+                                  {(task as any).due_date && (
+                                    <button
+                                      onClick={() => updateTaskDueDate(task.id, null)}
+                                      className="text-red-500 hover:text-red-700 text-xs"
+                                      title="Clear due date"
+                                    >
+                                      Clear
+                                    </button>
+                                  )}
+                                </div>
+                              )}
                                             
                                             {/* Assignee */}
                                             <div className="flex items-center gap-2">
