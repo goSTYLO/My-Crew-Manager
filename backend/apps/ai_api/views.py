@@ -360,6 +360,9 @@ class ProjectViewSet(ModelViewSet):
                             ),
                             'commit_title': t.commit_title,
                             'commit_branch': t.commit_branch,
+                            'due_date': t.due_date.isoformat() if t.due_date else None,
+                            'created_at': t.created_at.isoformat() if t.created_at else None,
+                            'updated_at': t.updated_at.isoformat() if t.updated_at else None,
                         })
                     user_stories.append({
                         'id': us.id,

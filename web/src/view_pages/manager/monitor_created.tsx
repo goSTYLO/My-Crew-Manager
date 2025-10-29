@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Edit, Edit2, Trash2, Send, X, BarChart3, Users, FileText, Target, CheckCircle, Clock, RefreshCw, ArrowLeft, GitBranch, Save, Camera, Upload } from 'lucide-react';
+import { Plus, Edit, Edit2, Trash2, Send, X, BarChart3, Users, FileText, Target, CheckCircle, Clock, RefreshCw, ArrowLeft, GitBranch, Save, Camera, Upload, Calendar as CalendarIcon } from 'lucide-react';
 import TopNavbar from "../../components/topbarLayouot";
 import Sidebar from "../../components/sidebarLayout";
 import { useTheme } from "../../components/themeContext";
@@ -342,6 +342,25 @@ export default function ProjectDetailsUI() {
       const data = await response.json();
       console.log('✅ Backlog data fetched:', data);
       
+      // Debug due dates specifically
+      console.log('🔍 DEBUGGING DUE DATES:');
+      if (data.epics && Array.isArray(data.epics)) {
+        data.epics.forEach((epic: any, epicIndex: number) => {
+          if (epic.sub_epics) {
+            epic.sub_epics.forEach((subEpic: any, subEpicIndex: number) => {
+              if (subEpic.user_stories) {
+                subEpic.user_stories.forEach((story: any, storyIndex: number) => {
+                  if (story.tasks) {
+                    story.tasks.forEach((task: any, taskIndex: number) => {
+                      console.log(`📅 Task [${epicIndex}.${subEpicIndex}.${storyIndex}.${taskIndex}] ID: ${task.id}, Title: "${task.title}", Due Date: "${task.due_date}" (type: ${typeof task.due_date})`);
+                    });
+                  }
+                });
+              }
+            });
+          }
+        });
+      }
 
       if (data.epics && data.epics.length > 0) {
         const firstEpic = data.epics[0];
@@ -675,6 +694,8 @@ export default function ProjectDetailsUI() {
       onTaskUpdate: (data) => {
         console.log('📡 Real-time task update received:', data);
         
+        // Refresh backlog to get updated task data
+        fetchBacklog();
 
         let message = `Task ${data.action}`;
         if (data.action === 'updated' && data.data && data.data.status === 'done') {
@@ -697,6 +718,7 @@ export default function ProjectDetailsUI() {
         showRealtimeUpdate('Team Updated', message, data.actor);
 
         fetchMembers();
+        fetchPendingInvitations();
       },
       onRepositoryUpdate: (data) => {
         console.log('📡 Real-time repository update received:', data);
@@ -3065,32 +3087,63 @@ export default function ProjectDetailsUI() {
                               {/* Due Date Badge / Editor */}
                               {!isEditingBacklog ? (
                                 <>
-                                  {('due_date' in task) && task.due_date && (
-                                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                      new Date(task.due_date) < new Date(new Date().toISOString().slice(0,10))
-                                        ? 'bg-red-100 text-red-800'
-                                        : 'bg-blue-100 text-blue-800'
+                                  {(() => {
+                                    console.log('🔍 Due date check for task', task.id, ':', {
+                                      hasDueDateProperty: 'due_date' in task,
+                                      dueDateValue: task.due_date,
+                                      dueDateType: typeof task.due_date,
+                                      willShow: ('due_date' in task) && task.due_date
+                                    });
+                                    return ('due_date' in task) && task.due_date;
+                                  })() && (
+                                    <span className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium ${
+                                      (() => {
+                                        const today = new Date().toISOString().slice(0,10);
+                                        const dueDate = task.due_date;
+                                        if (dueDate < today) return 'bg-red-100 text-red-800 border border-red-200';
+                                        if (dueDate === today) return 'bg-orange-100 text-orange-800 border border-orange-200';
+                                        return 'bg-blue-100 text-blue-800 border border-blue-200';
+                                      })()
                                     }`}>
-                                      📅 Due: {task.due_date}
+                                      <CalendarIcon className="w-3.5 h-3.5" />
+                                      {(() => {
+                                        const today = new Date().toISOString().slice(0,10);
+                                        if (task.due_date === today) return 'Due on: Today';
+                                        if (task.due_date < today) return `Overdue: ${task.due_date}`;
+                                        return `Due on: ${task.due_date}`;
+                                      })()}
                                     </span>
                                   )}
                                 </>
                               ) : (
                                 <div className="flex items-center gap-2">
-                                  <input
-                                    type="date"
-                                    value={(task as any).due_date || ''}
-                                    onChange={(e) => updateTaskDueDate(task.id, e.target.value || null)}
-                                    className={`px-2 py-1 border rounded text-xs ${
-                                      theme === "dark" 
-                                        ? 'border-gray-600 bg-gray-700 text-white' 
-                                        : 'border-gray-300'
-                                    }`}
-                                  />
+                                  <div className="relative">
+                                    <input
+                                      type="date"
+                                      value={(task as any).due_date || ''}
+                                      onChange={(e) => {
+                                        console.log('📅 Date picker changed for task', task.id, 'from', (task as any).due_date, 'to', e.target.value);
+                                        updateTaskDueDate(task.id, e.target.value || null);
+                                      }}
+                                      onFocus={() => {
+                                        console.log('📅 Date picker focused for task', task.id, 'current value:', (task as any).due_date);
+                                      }}
+                                      className={`px-4 py-3 border rounded-lg text-sm font-medium shadow-sm focus:outline-none focus:ring-2 transition-all duration-200 ${
+                                        theme === "dark" 
+                                          ? 'border-gray-600 bg-gray-800 text-gray-100 hover:border-blue-500 hover:shadow-lg hover:shadow-blue-500/20 focus:ring-blue-500 focus:border-blue-500 focus:bg-gray-750' 
+                                          : 'border-gray-300 bg-white text-gray-900 hover:border-blue-400 hover:shadow-md hover:shadow-blue-100 focus:ring-blue-400 focus:border-blue-500 focus:bg-blue-50/30'
+                                      }`}
+                                      placeholder="Set due date"
+                                    />
+                                  </div>
                                   {(task as any).due_date && (
                                     <button
                                       onClick={() => updateTaskDueDate(task.id, null)}
-                                      className="text-red-500 hover:text-red-700 text-xs"
+                                      className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                                        theme === "dark"
+                                          ? 'bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30 hover:shadow-lg hover:shadow-red-500/20'
+                                          : 'bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 hover:shadow-md hover:border-red-300'
+                                      }`}
                                       title="Clear due date"
                                     >
                                       Clear
@@ -3109,10 +3162,10 @@ export default function ProjectDetailsUI() {
                                                     const assigneeId = e.target.value ? parseInt(e.target.value) : null;
                                                     assignTask(task.id, assigneeId);
                                                   }}
-                                                  className={`px-2 py-1 border rounded text-xs ${
+                                                  className={`px-4 py-3 border rounded-lg text-sm font-medium shadow-sm focus:outline-none focus:ring-2 transition-all duration-200 min-w-[160px] ${
                                                     theme === "dark" 
-                                                      ? "border-gray-600 bg-gray-700 text-white" 
-                                                      : "border-gray-300"
+                                                      ? "border-gray-600 bg-gray-800 text-gray-100 hover:border-blue-500 hover:shadow-lg hover:shadow-blue-500/20 focus:ring-blue-500 focus:border-blue-500 focus:bg-gray-750" 
+                                                      : "border-gray-300 bg-white text-gray-900 hover:border-blue-400 hover:shadow-md hover:shadow-blue-100 focus:ring-blue-400 focus:border-blue-500 focus:bg-blue-50/30"
                                                   }`}
                                                 >
                                                   <option value="">Unassigned</option>

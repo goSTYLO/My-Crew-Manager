@@ -3,9 +3,10 @@ from .models import Project, Proposal, ProjectFeature, ProjectGoal, ProjectRole,
 
 @admin.register(Project)
 class ProjectAdmin(admin.ModelAdmin):
-    list_display = ['id', 'title', 'summary', 'created_at', 'created_by']
-    list_filter = ['created_at', 'created_by']
+    list_display = ['id', 'title', 'summary', 'status', 'created_at', 'updated_at', 'created_by']
+    list_filter = ['status', 'created_at', 'updated_at', 'created_by']
     search_fields = ['title', 'summary', 'created_by__name']
+    readonly_fields = ['created_at', 'updated_at']
     date_hierarchy = 'created_at'
     actions = ['edit']
 
@@ -140,9 +141,11 @@ class UserStoryAdmin(admin.ModelAdmin):
 
 @admin.register(StoryTask)
 class StoryTaskAdmin(admin.ModelAdmin):
-    list_display = ['id', 'title', 'user_story_title', 'sub_epic_title', 'epic_title', 'status', 'assignee', 'project_name', 'ai']
-    list_filter = ['status', 'ai', 'user_story__sub_epic__epic__project', 'assignee']
+    list_display = ['id', 'title', 'user_story_title', 'sub_epic_title', 'epic_title', 'status', 'assignee', 'due_date', 'created_at', 'updated_at', 'project_name', 'ai']
+    list_filter = ['status', 'ai', 'due_date', 'created_at', 'user_story__sub_epic__epic__project', 'assignee']
     search_fields = ['title', 'user_story__title', 'assignee__user_name', 'user_story__sub_epic__epic__project__title']
+    readonly_fields = ['created_at', 'updated_at']
+    date_hierarchy = 'created_at'
     actions = ['edit']
     
     def user_story_title(self, obj):
@@ -214,6 +217,7 @@ class NotificationAdmin(admin.ModelAdmin):
     list_filter = ['notification_type', 'is_read', 'created_at']
     search_fields = ['title', 'message', 'recipient__name', 'recipient__email']
     readonly_fields = ['created_at', 'read_at']
+    date_hierarchy = 'created_at'
     actions = ['edit']
     
     def recipient_name(self, obj):

@@ -86,14 +86,14 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
       {/* Sidebar overlay */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-30"
+          className="fixed inset-0 bg-black bg-opacity-30 z-[55]"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
       {/* Sidebar drawer */}
       <div
-        className={`fixed top-0 left-0 h-full w-64 shadow-lg z-50 transform transition-transform duration-300 ${
+        className={`fixed top-0 left-0 h-full w-64 shadow-lg z-[60] transform transition-transform duration-300 ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         } ${
           theme === "dark"

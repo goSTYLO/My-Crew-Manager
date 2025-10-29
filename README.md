@@ -534,6 +534,51 @@ My-Crew-Manager/
 └── docs/                     # API documentation
 ```
 
+## 🗄️ Database Schema Updates
+
+### StoryTask Model Changes (Latest Update)
+The StoryTask model has been enhanced with new fields for due date management and audit tracking:
+
+#### New Fields Added:
+- **`due_date`**: `DateField(null=True, blank=True)` - Optional due date for tasks
+- **`created_at`**: `DateTimeField(auto_now_add=True)` - Timestamp when task was created
+- **`updated_at`**: `DateTimeField(auto_now=True)` - Timestamp when task was last modified
+
+#### Migration Files Applied:
+- **`0008_add_due_date_fields.py`**: Adds the three new fields to StoryTask model
+- **`0009_auto_20251029_2151.py`**: Populates `created_at` field for existing tasks with current timestamp
+
+#### API Response Updates:
+The `/api/ai/projects/{id}/backlog/` endpoint now includes these fields in task responses:
+```json
+{
+  "tasks": [
+    {
+      "id": 672,
+      "title": "Task Title",
+      "status": "pending",
+      "due_date": "2025-01-15",
+      "created_at": "2025-01-10T10:30:00Z",
+      "updated_at": "2025-01-10T15:45:00Z",
+      "assignee": 123,
+      "assignee_details": { ... }
+    }
+  ]
+}
+```
+
+#### Django Admin Integration:
+- Added new fields to `StoryTaskAdmin.list_display` for easy tracking
+- Added `due_date` and `created_at` to `list_filter` for filtering
+- Added `created_at` and `updated_at` to `readonly_fields` (auto-managed)
+- Added `date_hierarchy = 'created_at'` for chronological browsing
+
+#### Frontend Integration:
+- **Manager View**: Date picker input for setting/editing due dates
+- **User View**: Read-only due date display with color-coded badges
+- **Real-time Updates**: Due date changes broadcast via WebSocket
+- **Visual Indicators**: "Due on: [date]", "Due on: Today", "Overdue: [date]"
+
 ## 🔧 Configuration
 
 ### Environment Variables
@@ -654,7 +699,7 @@ To switch back to localhost-only access:
 - **Epics**: `/api/ai/epics/` *(Full CRUD including PATCH for title updates)*
 - **Sub-Epics**: `/api/ai/sub-epics/` *(Full CRUD including PATCH for title updates)*
 - **User Stories**: `/api/ai/user-stories/` *(Full CRUD including PATCH for title updates)*
-- **Tasks**: `/api/ai/story-tasks/` *(Full CRUD including PATCH for title updates)*
+- **Tasks**: `/api/ai/story-tasks/` *(Full CRUD including PATCH for title updates and due date management)*
 - **Project Features**: `/api/ai/project-features/` *(Full CRUD)*
 - **Project Roles**: `/api/ai/project-roles/` *(Full CRUD)*
 - **Project Goals**: `/api/ai/project-goals/` *(Full CRUD)*
@@ -1469,6 +1514,43 @@ The following comments were removed from `web/src/view_pages/manager/monitor_cre
   - **Regeneration Safety**: Both overview and backlog regeneration now require user confirmation
   - **User Experience**: Clear warnings about data replacement and process duration before proceeding
   - **Consistent UI**: Professional modal dialogs with theme support and proper button styling
+
+### Task Due Date Management System (Latest)
+- ✅ **Complete Due Date Feature Implementation**: Implemented comprehensive task due date management with real-time updates and notifications
+  - **Database Schema Updates**: Added `due_date`, `created_at`, and `updated_at` fields to StoryTask model with proper migration
+  - **Manager-Only Setting**: Only project managers/owners can set due dates in `monitor_created.tsx` (not in `generateProject.tsx`)
+  - **Real-time Display**: Due dates display in both manager and user views with color-coded badges (blue=upcoming, orange=today, red=overdue)
+  - **Date Picker Integration**: Professional date picker input with existing date pre-population and real-time updates
+  - **Backend API Enhancement**: Fixed `backlog` custom action to include `due_date`, `created_at`, and `updated_at` fields in API responses
+  - **WebSocket Integration**: Real-time due date updates broadcast to all project members via WebSocket notifications
+- ✅ **Frontend UI Integration**: Enhanced both manager and user interfaces with due date functionality
+  - **Manager View (`monitor_created.tsx`)**: Date picker input for setting/editing due dates with real-time updates
+  - **User View (`projectsDetails.tsx`)**: Read-only due date display with color-coded status badges
+  - **Visual Indicators**: "Due on: [date]", "Due on: Today", "Overdue: [date]" with appropriate styling
+  - **Real-time Synchronization**: Due date changes appear instantly across all team members
+  - **Date Picker Binding**: Existing due dates properly populate in date picker when editing
+- ✅ **Backend Database & API Updates**: Complete backend support for due date management
+  - **Model Fields**: Added `due_date` (DateField, nullable), `created_at` (DateTimeField, auto_now_add), `updated_at` (DateTimeField, auto_now)
+  - **Migration Applied**: `0008_add_due_date_fields.py` and `0009_auto_20251029_2151.py` with data population for existing records
+  - **Serializer Updates**: StoryTaskSerializer includes all new fields with proper validation
+  - **API Endpoint Fix**: Fixed critical bug in `backlog` custom action where due_date fields were missing from API response
+  - **Django Admin Integration**: Added new fields to admin interface for tracking and management
+- ✅ **Real-time Notification System**: Enhanced WebSocket system for due date updates
+  - **WebSocket Broadcasting**: Due date changes trigger real-time updates to all project members
+  - **Event Handling**: `onTaskUpdate` events properly refresh backlog data to show updated due dates
+  - **Member Updates**: Fixed `onMemberUpdate` to refresh pending invitations in real-time
+  - **Message Parsing**: Fixed WebSocket message parsing to handle nested `project_event` structure
+- ✅ **User Experience Enhancements**: Professional due date management with comprehensive feedback
+  - **Color-coded Status**: Visual indicators for due date status (upcoming, today, overdue)
+  - **Calendar Integration**: HTML5 date picker with proper value binding and change handling
+  - **Real-time Updates**: Due date changes appear instantly without page refresh
+  - **Error Handling**: Comprehensive error handling with user-friendly messages
+  - **Theme Support**: Full dark/light theme support for all due date components
+- ✅ **Production Ready**: Complete due date system ready for production use
+  - **Backend Testing**: All API endpoints tested and working correctly
+  - **Frontend Testing**: Real-time updates verified across multiple users
+  - **Database Integrity**: Proper field types and migration applied successfully
+  - **WebSocket Reliability**: Real-time notification system working with proper error handling
 
 ### Task Assignment & Commit Tracking System
 - ✅ **Task Assignment System**: Implemented comprehensive task assignment functionality for story tasks

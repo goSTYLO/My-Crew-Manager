@@ -1,10 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation, useParams } from "react-router-dom";
 import { 
-  Clock, 
-  MessageSquareText, 
   Lightbulb, 
-  File, 
   Calendar, 
   ArrowLeft, 
   Users, 
@@ -13,8 +10,7 @@ import {
   CheckCircle,
   GitBranch,
   AlertCircle,
-  Download,
-  X
+  Download
 } from 'lucide-react';
 import Sidebar from "../../components/sidebarUser";
 import TopNavbar from "../../components/topbarLayout_user";
@@ -278,14 +274,31 @@ const TaskRow: React.FC<{
             <span className="truncate">Epic: {epicTitle}</span>
             <span className="truncate">Story: {userStoryTitle}</span>
             <StatusBadge status={task.status} />
-            {task.due_date && (
-              <span className={`flex items-center gap-1 px-2 py-0.5 rounded text-xs whitespace-nowrap ${
-                new Date(task.due_date) < new Date(new Date().toISOString().slice(0,10))
-                  ? 'bg-red-100 text-red-700'
-                  : 'bg-blue-100 text-blue-700'
-              }`}>
-                <Clock className="w-3 h-3" />
-                Due: {task.due_date}
+            {(() => {
+              console.log('🔍 Due date check in projectsDetails for task', task.id, ':', {
+                dueDateValue: task.due_date,
+                dueDateType: typeof task.due_date,
+                willShow: !!task.due_date
+              });
+              return task.due_date;
+            })() && (
+              <span className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium ${
+                (() => {
+                  const today = new Date().toISOString().slice(0,10);
+                  const dueDate = task.due_date!; // We know it's not null due to the condition above
+                  if (dueDate < today) return 'bg-red-100 text-red-800 border border-red-200';
+                  if (dueDate === today) return 'bg-orange-100 text-orange-800 border border-orange-200';
+                  return 'bg-blue-100 text-blue-800 border border-blue-200';
+                })()}
+              `}>
+                <Calendar className="w-3.5 h-3.5" />
+                {(() => {
+                  const today = new Date().toISOString().slice(0,10);
+                  const dueDate = task.due_date!; // We know it's not null due to the condition above
+                  if (dueDate === today) return 'Due on: Today';
+                  if (dueDate < today) return `Overdue: ${dueDate}`;
+                  return `Due on: ${dueDate}`;
+                })()}
               </span>
             )}
             {task.ai && (
@@ -417,6 +430,26 @@ const ProjectDetails: React.FC = () => {
 
       const data = await response.json();
       console.log('✅ Backlog data fetched:', data);
+      
+      // Debug due dates specifically
+      console.log('🔍 DEBUGGING DUE DATES in projectsDetails:');
+      if (data.epics && Array.isArray(data.epics)) {
+        data.epics.forEach((epic: any, epicIndex: number) => {
+          if (epic.sub_epics) {
+            epic.sub_epics.forEach((subEpic: any, subEpicIndex: number) => {
+              if (subEpic.user_stories) {
+                subEpic.user_stories.forEach((story: any, storyIndex: number) => {
+                  if (story.tasks) {
+                    story.tasks.forEach((task: any, taskIndex: number) => {
+                      console.log(`📅 Task [${epicIndex}.${subEpicIndex}.${storyIndex}.${taskIndex}] ID: ${task.id}, Title: "${task.title}", Due Date: "${task.due_date}" (type: ${typeof task.due_date})`);
+                    });
+                  }
+                });
+              }
+            });
+          }
+        });
+      }
       
       // Transform the backlog data to match the expected structure
       const transformedBacklog = (data.epics || []).map((epic: any) => ({

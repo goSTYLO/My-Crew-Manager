@@ -115,7 +115,16 @@ export const useRealtimeUpdates = ({ projectId, callbacks }: UseRealtimeUpdatesO
     
     // Create a single handler that routes messages based on type
     const messageHandler = (message: any) => {
-      const eventType = message.type || message.action;
+      // Handle both direct events and project_event wrapped events
+      let eventType = message.type || message.action;
+      let eventData = message;
+      
+      // If it's a project_event, extract the actual event type and data
+      if (message.type === 'project_event' && message.data) {
+        eventType = message.data.type || message.data.action;
+        eventData = message.data;
+      }
+      
       console.log('🔧 useRealtimeUpdates: Message received:', message);
       console.log('🔧 useRealtimeUpdates: Event type:', eventType);
       console.log('🔧 useRealtimeUpdates: Available handlers:', Object.keys(handlers));
@@ -123,7 +132,7 @@ export const useRealtimeUpdates = ({ projectId, callbacks }: UseRealtimeUpdatesO
       const handler = handlers[eventType];
       if (handler && typeof handler === 'function') {
         console.log('🔧 useRealtimeUpdates: Calling handler for:', eventType);
-        handler(message);
+        handler(eventData);
       } else {
         console.log('🔧 useRealtimeUpdates: No handler found for:', eventType);
       }
