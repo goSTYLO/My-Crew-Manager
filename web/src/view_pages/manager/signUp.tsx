@@ -2,72 +2,10 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { API_BASE_URL } from "../../config/api";
-import { Mail, Lock, Eye, EyeOff, User, CheckCircle, Users, BarChart3, Check, X, ArrowLeft, Shield } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, User, CheckCircle, Users, BarChart3, Check, X, ArrowLeft} from "lucide-react";
 import logo from "../../assets/logo2.png";
 import TermsAndConditionsModal from "../../components/terms&condition";
-
-
-// Professional Success Modal Component
-const TermsAcceptedModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => {
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-        {/* Header with gradient */}
-        <div className="bg-gradient-to-r from-[#1a5f7a] to-[#2c7a9e] px-8 pt-8 pb-6">
-          <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-white/30">
-            <CheckCircle className="w-9 h-9 text-white" strokeWidth={2.5} />
-          </div>
-          <h3 className="text-2xl font-bold text-white text-center">Terms Accepted</h3>
-        </div>
-
-        {/* Content */}
-        <div className="px-8 py-6">
-          <p className="text-gray-600 text-center leading-relaxed mb-6">
-            Thank you for reviewing and accepting our Terms and Conditions. You can now create your account.
-          </p>
-
-          {/* Feature highlights */}
-          <div className="space-y-3 mb-6">
-            <div className="flex items-center gap-3 text-sm text-gray-700">
-              <div className="w-8 h-8 rounded-lg bg-[#1a5f7a]/10 flex items-center justify-center flex-shrink-0">
-                <Shield className="w-4 h-4 text-[#1a5f7a]" />
-              </div>
-              <span>Your data is protected and secure</span>
-            </div>
-            <div className="flex items-center gap-3 text-sm text-gray-700">
-              <div className="w-8 h-8 rounded-lg bg-[#1a5f7a]/10 flex items-center justify-center flex-shrink-0">
-                <Users className="w-4 h-4 text-[#1a5f7a]" />
-              </div>
-              <span>Full access to collaboration tools</span>
-            </div>
-            <div className="flex items-center gap-3 text-sm text-gray-700">
-              <div className="w-8 h-8 rounded-lg bg-[#1a5f7a]/10 flex items-center justify-center flex-shrink-0">
-                <BarChart3 className="w-4 h-4 text-[#1a5f7a]" />
-              </div>
-              <span>Advanced analytics and reporting</span>
-            </div>
-          </div>
-
-          <button
-            onClick={onClose}
-            className="w-full px-6 py-3 rounded-lg bg-[#1a5f7a] text-white hover:bg-[#154d63] font-semibold transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-          >
-            Continue
-          </button>
-        </div>
-
-        {/* Footer note */}
-        <div className="px-8 pb-6">
-          <p className="text-xs text-gray-500 text-center">
-            You can review our terms anytime in your account settings
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-};
+import TermsAcceptedModal from "../../components/termacceptedmodal";
 
 export default function SignUpPage() {
   const navigate = useNavigate();
@@ -76,25 +14,29 @@ export default function SignUpPage() {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
+  // Email verification states
+  const [verificationStep, setVerificationStep] = useState<'signup' | 'verify'>('signup');
+  const [verificationCode, setVerificationCode] = useState('');
+  const [isVerified, setIsVerified] = useState(false);
+  const [verificationError, setVerificationError] = useState('');
+  const [resendCooldown, setResendCooldown] = useState(0);
+
   const handleTermsClose = () => {
-    // When user closes modal without accepting, uncheck the checkbox
     setIsModalOpen(false);
   };
 
   const handleTermsAccept = () => {
-    // When user accepts terms, check the checkbox and show success modal
     setTermsAccepted(true);
     setIsModalOpen(false);
     setShowSuccessModal(true);
   };
 
   const handleSuccessModalClose = () => {
-    // Close success modal and keep checkbox checked
     setShowSuccessModal(false);
   };
 
   const [formData, setFormData] = useState({
-    role: "Project Manager", // Default role
+    role: "Project Manager",
     firstname: "",
     lastname: "",
     email: "",
@@ -107,7 +49,6 @@ export default function SignUpPage() {
   const [message, setMessage] = useState<{ text: string; type: 'error' | 'success' } | null>(null);
   const [emailError, setEmailError] = useState("");
 
-  // Password validation states
   const [passwordValidation, setPasswordValidation] = useState({
     hasUppercase: false,
     hasLowercase: false,
@@ -116,7 +57,6 @@ export default function SignUpPage() {
     hasMinLength: false,
   });
 
-  // Validate email domain
   const validateEmailDomain = (email: string): boolean => {
     const validDomains = [
       '@gmail.com',
@@ -136,7 +76,6 @@ export default function SignUpPage() {
     return validDomains.some(domain => emailLower.endsWith(domain));
   };
 
-  // Validate password requirements
   const validatePassword = (password: string) => {
     setPasswordValidation({
       hasUppercase: /[A-Z]/.test(password),
@@ -153,10 +92,9 @@ export default function SignUpPage() {
   
     setErrors((prev) => ({
       ...prev,
-      [name]: "", // clear error for the field being edited
+      [name]: "",
     }));
   
-    // Validate email domain
     if (name === "email") {
       if (value && !validateEmailDomain(value)) {
         setEmailError("Please use a valid email provider (e.g., Gmail, Yahoo, Outlook)");
@@ -173,7 +111,6 @@ export default function SignUpPage() {
       }
     }
   
-    // Validate password
     if (name === "password") {
       validatePassword(value);
       if (!value) {
@@ -191,53 +128,115 @@ export default function SignUpPage() {
   
     if (message) setMessage(null);
   };
-  
 
   const handleRoleToggle = (role: string) => {
     setFormData((prev) => ({ ...prev, role }));
     if (message) setMessage(null);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!termsAccepted) {
-      setMessage({ text: 'Please accept the Terms & Conditions', type: 'error' });
-      return;
-    }
-
-    // Validate email domain
+  // Request verification code
+  const requestVerificationCode = async () => {
     if (!validateEmailDomain(formData.email)) {
-      setMessage({ text: "Please use a valid email provider (Gmail, Yahoo, Outlook, etc.)", type: 'error' });
-      return;
-    }
-
-    // Check all password requirements
-    if (!passwordValidation.hasUppercase || !passwordValidation.hasLowercase || 
-        !passwordValidation.hasNumber || !passwordValidation.hasSpecialChar || 
-        !passwordValidation.hasMinLength) {
-      setMessage({ text: "Password must meet all requirements", type: 'error' });
-      return;
-    }
-
-    if (formData.password !== formData.confirmPassword) {
-      setMessage({ text: "Passwords do not match!", type: 'error' });
+      setMessage({ text: "Please use a valid email provider", type: 'error' });
       return;
     }
 
     setLoading(true);
-    setMessage(null);
+    setVerificationError('');
 
+    try {
+      const response = await fetch(`${API_BASE_URL}/user/email/request/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email: formData.email }),
+      });
+
+      if (response.status === 204 || response.ok) {
+        setVerificationStep('verify');
+        setMessage({ text: "Verification code sent to your email!", type: 'success' });
+        
+        // Start cooldown timer
+        setResendCooldown(60);
+        const timer = setInterval(() => {
+          setResendCooldown((prev) => {
+            if (prev <= 1) {
+              clearInterval(timer);
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+      } else {
+        setMessage({ text: "Failed to send verification code", type: 'error' });
+      }
+    } catch (error) {
+      console.error("Verification request error:", error);
+      setMessage({ text: "Could not send verification code", type: 'error' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Verify the code
+  const verifyCode = async () => {
+    if (verificationCode.length !== 6) {
+      setVerificationError('Please enter a 6-digit code');
+      return;
+    }
+
+    setLoading(true);
+    setVerificationError('');
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/user/email/verify/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ 
+          email: formData.email,
+          code: verificationCode 
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.verified) {
+        setIsVerified(true);
+        setMessage({ text: "Email verified successfully!", type: 'success' });
+        
+        // Proceed to create account after verification
+        setTimeout(() => {
+          handleSignup();
+        }, 1000);
+      } else {
+        if (response.status === 429) {
+          setVerificationError('Too many attempts. Please request a new code.');
+        } else {
+          setVerificationError(data.detail || 'Invalid or expired code');
+        }
+      }
+    } catch (error) {
+      console.error("Verification error:", error);
+      setVerificationError('Verification failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Actual signup after verification
+  const handleSignup = async () => {
     const requestBody = {
       name: `${formData.firstname} ${formData.lastname}`,
       email: formData.email,
       password: formData.password,
-      role: formData.role, // Include role in request
+      role: formData.role,
     };
 
     console.log("🚀 Starting signup process...");
     console.log("📤 Request body:", { ...requestBody, password: "***" });
-    console.log("👤 Selected role:", formData.role);
 
     try {
       const response = await fetch(`${API_BASE_URL}/user/signup/`, {
@@ -264,9 +263,7 @@ export default function SignUpPage() {
 
       if (response.ok) {
         console.log("✅ Signup successful!");
-        console.log("👤 User role saved:", formData.role);
-
-        // ✅ Show success message and redirect to /signin
+        
         setMessage({ 
           text: `Account created successfully as ${formData.role}! Please sign in to continue.`, 
           type: 'success' 
@@ -274,7 +271,6 @@ export default function SignUpPage() {
         
         console.log("📍 Redirecting to /signin page...");
         
-        // Redirect to signin page after 1.5 seconds
         setTimeout(() => {
           navigate("/signin", { replace: true });
         }, 1500);
@@ -289,9 +285,36 @@ export default function SignUpPage() {
         text: error.message || "Could not reach backend. Check server.", 
         type: 'error' 
       });
-    } finally {
-      setLoading(false);
     }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!termsAccepted) {
+      setMessage({ text: 'Please accept the Terms & Conditions', type: 'error' });
+      return;
+    }
+
+    if (!validateEmailDomain(formData.email)) {
+      setMessage({ text: "Please use a valid email provider", type: 'error' });
+      return;
+    }
+
+    if (!passwordValidation.hasUppercase || !passwordValidation.hasLowercase || 
+        !passwordValidation.hasNumber || !passwordValidation.hasSpecialChar || 
+        !passwordValidation.hasMinLength) {
+      setMessage({ text: "Password must meet all requirements", type: 'error' });
+      return;
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      setMessage({ text: "Passwords do not match!", type: 'error' });
+      return;
+    }
+
+    // Request verification code
+    await requestVerificationCode();
   };
 
   const ValidationItem = ({ met, text }: { met: boolean; text: string }) => (
@@ -301,7 +324,6 @@ export default function SignUpPage() {
     </div>
   );
 
-  // Check if all password validations are met
   const isPasswordValid = 
     passwordValidation.hasUppercase &&
     passwordValidation.hasLowercase &&
@@ -309,10 +331,8 @@ export default function SignUpPage() {
     passwordValidation.hasSpecialChar &&
     passwordValidation.hasMinLength;
 
-  // Check if passwords match
   const doPasswordsMatch = formData.password === formData.confirmPassword && formData.confirmPassword !== "";
 
-  // Check if form is valid for submission
   const isFormValid = 
     formData.firstname.trim() !== "" &&
     formData.lastname.trim() !== "" &&
@@ -328,14 +348,13 @@ export default function SignUpPage() {
     <div className="min-h-screen bg-white flex">
       {/* Left Section - Company Branding */}
       <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-[#1a5f7a] via-[#2c7a9e] to-[#57a8c9] relative overflow-hidden">
-        {/* Decorative elements */}
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-20 left-20 w-64 h-64 bg-white rounded-full blur-3xl"></div>
           <div className="absolute bottom-20 right-20 w-96 h-96 bg-[#57a8c9] rounded-full blur-3xl"></div>
         </div>
 
         <div className="relative z-10 flex flex-col justify-between w-full p-12">
-        <div>
+          <div>
             <button
               onClick={() => navigate("/")}
               className="inline-flex items-center gap-2 px-4 py-2 mb-6 bg-white/10 backdrop-blur-sm rounded-lg text-white hover:bg-white/20 transition-colors border border-white/20"
@@ -355,7 +374,6 @@ export default function SignUpPage() {
             </div>
           </div>
 
-          {/* Main Content */}
           <div className="space-y-8">
             <div>
               <h2 className="text-5xl font-bold text-white mb-4 leading-tight">
@@ -366,7 +384,6 @@ export default function SignUpPage() {
               </p>
             </div>
 
-            {/* Feature Cards */}
             <div className="grid grid-cols-1 gap-4">
               <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-2xl p-6 border border-white border-opacity-20">
                 <div className="flex items-start gap-4">
@@ -406,7 +423,6 @@ export default function SignUpPage() {
             </div>
           </div>
 
-          {/* Footer */}
           <div className="flex items-center justify-between text-[#a5d5e8] text-sm">
             <p>© 2025 My Crew Manager. All rights reserved.</p>
             <div className="flex gap-6">
@@ -421,298 +437,395 @@ export default function SignUpPage() {
       {/* Right Section - Sign Up Form */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-gray-50">
         <div className="w-full max-w-md">
-          {/* Header */}
           <div className="mb-8">
-            <h2 className="text-3xl font-bold text-gray-900 mb-2">Create Account</h2>
-            <p className="text-gray-600">Register for enterprise access</p>
+            <h2 className="text-3xl font-bold text-gray-900 mb-2">
+              {verificationStep === 'signup' ? 'Create Account' : 'Verify Email'}
+            </h2>
+            <p className="text-gray-600">
+              {verificationStep === 'signup' 
+                ? 'Register for enterprise access' 
+                : `Enter the code sent to ${formData.email}`}
+            </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Role Selection */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-3">Account Type</label>
-              <div className="relative flex items-center bg-gray-200 rounded-lg p-1">
-                {/* Background slider */}
-                <div 
-                  className={`absolute top-1 bottom-1 w-1/2 bg-white rounded-md shadow-sm transition-all duration-300 ease-in-out ${
-                    formData.role === "Developer" ? "left-1/2 ml-[-2px]" : "left-1"
-                  }`}
-                />
-                
-                {/* Project Manager Button */}
-                <button
-                  type="button"
-                  onClick={() => handleRoleToggle("Project Manager")}
-                  disabled={loading}
-                  className={`relative z-10 flex-1 py-2.5 px-4 rounded-md text-sm font-semibold transition-colors duration-300 ${
-                    formData.role === "Project Manager"
-                      ? "text-gray-900"
-                      : "text-gray-600 hover:text-gray-900"
-                  }`}
-                >
-                  Project Manager
-                </button>
-                
-                {/* Developer Button */}
-                <button
-                  type="button"
-                  onClick={() => handleRoleToggle("Developer")}
-                  disabled={loading}
-                  className={`relative z-10 flex-1 py-2.5 px-4 rounded-md text-sm font-semibold transition-colors duration-300 ${
-                    formData.role === "Developer"
-                      ? "text-gray-900"
-                      : "text-gray-600 hover:text-gray-900"
-                  }`}
-                >
-                  Developer
-                </button>
-              </div>
-              <p className="text-xs text-gray-500 mt-2">
-                {formData.role === "Project Manager" 
-                  ? "Full access to dashboard and project management" 
-                  : "Access to assigned tasks and team collaboration"}
-              </p>
-            </div>
-
-            {/* First Name & Last Name */}
-            <div className="grid grid-cols-2 gap-4">
+          {verificationStep === 'signup' ? (
+            <form onSubmit={handleSubmit} className="space-y-5">
+              {/* Role Selection */}
               <div>
-                <label htmlFor="firstname" className="block text-sm font-semibold text-gray-700 mb-2">
-                  First Name
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <User className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    id="firstname"
-                    type="text"
-                    name="firstname"
-                    value={formData.firstname}
-                    onChange={handleInputChange}
-                    className="block w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#2c7a9e] focus:border-transparent transition-all"
-                    placeholder="Enter your firstname"
-                    required
-                    disabled={loading}
+                <label className="block text-sm font-semibold text-gray-700 mb-3">Account Type</label>
+                <div className="relative flex items-center bg-gray-200 rounded-lg p-1">
+                  <div 
+                    className={`absolute top-1 bottom-1 w-1/2 bg-white rounded-md shadow-sm transition-all duration-300 ease-in-out ${
+                      formData.role === "Developer" ? "left-1/2 ml-[-2px]" : "left-1"
+                    }`}
                   />
-                </div>
-              </div>
-
-              <div>
-                <label htmlFor="lastname" className="block text-sm font-semibold text-gray-700 mb-2">
-                  Last Name
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <User className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    id="lastname"
-                    type="text"
-                    name="lastname"
-                    value={formData.lastname}
-                    onChange={handleInputChange}
-                    className="block w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#2c7a9e] focus:border-transparent transition-all"
-                    placeholder="Enter your lastname"
-                    required
-                    disabled={loading}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Email */}
-            <div>
-              <label htmlFor="email" className="block text-sm font-semibold text-gray-700 mb-2">
-                Email Address
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <Mail className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  id="email"
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  className={`block w-full pl-11 pr-4 py-3 border rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#2c7a9e] focus:border-transparent transition-all ${
-                    emailError ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                  placeholder="Enter your email"
-                  required
-                  disabled={loading}
-                />
-              </div>
-              {emailError && (
-                <p className="mt-2 text-sm text-red-600">{emailError}</p>
-              )}
-              {formData.email && !emailError && (
-                <p className="mt-2 text-sm text-green-600">✓ Valid email provider</p>
-              )}
-            </div>
-
-            {/* Password */}
-            <div>
-              <label htmlFor="password" className="block text-sm font-semibold text-gray-700 mb-2">
-                Password
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  name="password"
-                  value={formData.password}
-                  onChange={handleInputChange}
-                  className="block w-full pl-11 pr-11 py-3 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#2c7a9e] focus:border-transparent transition-all"
-                  placeholder="Create a password"
-                  required
-                  disabled={loading}
-                />
-                {formData.password && (
+                  
                   <button
                     type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-0 pr-4 flex items-center"
+                    onClick={() => handleRoleToggle("Project Manager")}
                     disabled={loading}
+                    className={`relative z-10 flex-1 py-2.5 px-4 rounded-md text-sm font-semibold transition-colors duration-300 ${
+                      formData.role === "Project Manager"
+                        ? "text-gray-900"
+                        : "text-gray-600 hover:text-gray-900"
+                    }`}
                   >
-                    {showPassword ? (
-                      <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
-                    ) : (
-                      <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
-                    )}
+                    Project Manager
                   </button>
-                )}
-              </div>
-              
-              {/* Password Requirements */}
-              {formData.password && (
-                <div className="mt-3 p-3 bg-gray-100 rounded-lg space-y-1">
-                  <p className="text-xs font-semibold text-gray-700 mb-2">Password Requirements:</p>
-                  <ValidationItem met={passwordValidation.hasMinLength} text="At least 6 characters" />
-                  <ValidationItem met={passwordValidation.hasUppercase} text="One uppercase letter" />
-                  <ValidationItem met={passwordValidation.hasLowercase} text="One lowercase letter" />
-                  <ValidationItem met={passwordValidation.hasNumber} text="One number" />
-                  <ValidationItem met={passwordValidation.hasSpecialChar} text="One special character (!@#$%^&*)" />
-                </div>
-              )}
-            </div>
-
-            {/* Confirm Password */}
-            <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-semibold text-gray-700 mb-2">
-                Confirm Password
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  id="confirmPassword"
-                  type={showConfirmPassword ? "text" : "password"}
-                  name="confirmPassword"
-                  value={formData.confirmPassword}
-                  onChange={handleInputChange}
-                  className="block w-full pl-11 pr-11 py-3 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#2c7a9e] focus:border-transparent transition-all"
-                  placeholder="Confirm your password"
-                  required
-                  disabled={loading}
-                />
-                {formData.confirmPassword && (
+                  
                   <button
                     type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute inset-y-0 right-0 pr-4 flex items-center"
+                    onClick={() => handleRoleToggle("Developer")}
                     disabled={loading}
+                    className={`relative z-10 flex-1 py-2.5 px-4 rounded-md text-sm font-semibold transition-colors duration-300 ${
+                      formData.role === "Developer"
+                        ? "text-gray-900"
+                        : "text-gray-600 hover:text-gray-900"
+                    }`}
                   >
-                    {showConfirmPassword ? (
-                      <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
-                    ) : (
-                      <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
-                    )}
+                    Developer
                   </button>
-                )}
-              </div>
-              {formData.confirmPassword && (
-                <p className={`mt-2 text-sm ${formData.password === formData.confirmPassword ? 'text-green-600' : 'text-red-600'}`}>
-                  {formData.password === formData.confirmPassword ? '✓ Passwords match' : '✗ Passwords do not match'}
+                </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  {formData.role === "Project Manager" 
+                    ? "Full access to dashboard and project management" 
+                    : "Access to assigned tasks and team collaboration"}
                 </p>
-              )}
-            </div>
+              </div>
 
-            {/* Terms & Conditions */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <input
-                  id="terms"
-                  type="checkbox"
-                  checked={termsAccepted}
-                  onChange={(e) => {
-                    // Allow manual checkbox toggle
-                    setTermsAccepted(e.target.checked);
-                  }}
-                  className="h-4 w-4 text-[#2c7a9e] focus:ring-[#2c7a9e] border-gray-300 rounded"
-                  disabled={loading}
-                />
-                <label htmlFor="terms" className="ml-2 block text-sm text-gray-700">
-                  I accept the{' '}
+              {/* First Name & Last Name */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="firstname" className="block text-sm font-semibold text-gray-700 mb-2">
+                    First Name
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                      <User className="h-5 w-5 text-gray-400" />
+                    </div>
+                    <input
+                      id="firstname"
+                      type="text"
+                      name="firstname"
+                      value={formData.firstname}
+                      onChange={handleInputChange}
+                      className="block w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#2c7a9e] focus:border-transparent transition-all"
+                      placeholder="Enter your firstname"
+                      required
+                      disabled={loading}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label htmlFor="lastname" className="block text-sm font-semibold text-gray-700 mb-2">
+                    Last Name
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                      <User className="h-5 w-5 text-gray-400" />
+                    </div>
+                    <input
+                      id="lastname"
+                      type="text"
+                      name="lastname"
+                      value={formData.lastname}
+                      onChange={handleInputChange}
+                      className="block w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#2c7a9e] focus:border-transparent transition-all"
+                      placeholder="Enter your lastname"
+                      required
+                      disabled={loading}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Email */}
+              <div>
+                <label htmlFor="email" className="block text-sm font-semibold text-gray-700 mb-2">
+                  Email Address
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <Mail className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    id="email"
+                    type="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    className={`block w-full pl-11 pr-4 py-3 border rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#2c7a9e] focus:border-transparent transition-all ${
+                      emailError ? 'border-red-500' : 'border-gray-300'
+                    }`}
+                    placeholder="Enter your email"
+                    required
+                    disabled={loading}
+                  />
+                </div>
+                {emailError && (
+                  <p className="mt-2 text-sm text-red-600">{emailError}</p>
+                )}
+                {formData.email && !emailError && (
+                  <p className="mt-2 text-sm text-green-600">✓ Valid email provider</p>
+                )}
+              </div>
+
+              {/* Password */}
+              <div>
+                <label htmlFor="password" className="block text-sm font-semibold text-gray-700 mb-2">
+                  Password
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <Lock className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    name="password"
+                    value={formData.password}
+                    onChange={handleInputChange}
+                    className="block w-full pl-11 pr-11 py-3 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#2c7a9e] focus:border-transparent transition-all"
+                    placeholder="Create a password"
+                    required
+                    disabled={loading}
+                  />
+                  {formData.password && (
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute inset-y-0 right-0 pr-4 flex items-center"
+                      disabled={loading}
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                      ) : (
+                        <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                      )}
+                    </button>
+                  )}
+                </div>
+                
+                {formData.password && (
+                  <div className="mt-3 p-3 bg-gray-100 rounded-lg space-y-1">
+                    <p className="text-xs font-semibold text-gray-700 mb-2">Password Requirements:</p>
+                    <ValidationItem met={passwordValidation.hasMinLength} text="At least 6 characters" />
+                    <ValidationItem met={passwordValidation.hasUppercase} text="One uppercase letter" />
+                    <ValidationItem met={passwordValidation.hasLowercase} text="One lowercase letter" />
+                    <ValidationItem met={passwordValidation.hasNumber} text="One number" />
+                    <ValidationItem met={passwordValidation.hasSpecialChar} text="One special character (!@#$%^&*)" />
+                  </div>
+                )}
+              </div>
+
+              {/* Confirm Password */}
+              <div>
+                <label htmlFor="confirmPassword" className="block text-sm font-semibold text-gray-700 mb-2">
+                  Confirm Password
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <Lock className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    id="confirmPassword"
+                    type={showConfirmPassword ? "text" : "password"}
+                    name="confirmPassword"
+                    value={formData.confirmPassword}
+                    onChange={handleInputChange}
+                    className="block w-full pl-11 pr-11 py-3 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#2c7a9e] focus:border-transparent transition-all"
+                    placeholder="Confirm your password"
+                    required
+                    disabled={loading}
+                  />
+                  {formData.confirmPassword && (
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute inset-y-0 right-0 pr-4 flex items-center"
+                      disabled={loading}
+                    >
+                      {showConfirmPassword ? (
+                        <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                      ) : (
+                        <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                      )}
+                    </button>
+                  )}
+                </div>
+                {formData.confirmPassword && (
+                  <p className={`mt-2 text-sm ${formData.password === formData.confirmPassword ? 'text-green-600' : 'text-red-600'}`}>
+                    {formData.password === formData.confirmPassword ? '✓ Passwords match' : '✗ Passwords do not match'}
+                  </p>
+                )}
+              </div>
+
+              {/* Terms & Conditions */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <input
+                    id="terms"
+                    type="checkbox"
+                    checked={termsAccepted}
+                    onChange={(e) => {
+                      setTermsAccepted(e.target.checked);
+                    }}
+                    className="h-4 w-4 text-[#2c7a9e] focus:ring-[#2c7a9e] border-gray-300 rounded"
+                    disabled={loading}
+                  />
+                  <label htmlFor="terms" className="ml-2 block text-sm text-gray-700">
+                    I accept the{' '}
+                    <button
+                      type="button"
+                      onClick={() => setIsModalOpen(true)}
+                      className="text-[#1a5f7a] hover:text-[#2c7a9e] font-medium underline"
+                      disabled={loading}
+                    >
+                      Terms & Conditions
+                    </button>
+                  </label>
+                </div>
+              </div>
+
+              {/* Error/Success Message */}
+              {message && (
+                <div className={`rounded-lg p-4 ${
+                  message.type === 'error'
+                    ? 'bg-red-50 border border-red-200 text-red-800'
+                    : 'bg-green-50 border border-green-200 text-green-800'
+                }`}>
+                  <p className="text-sm font-medium">{message.text}</p>
+                </div>
+              )}
+
+              {/* Submit Button */}
+              <button
+                type="submit"
+                disabled={!isFormValid || loading}
+                className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white bg-[#1a5f7a] hover:bg-[#2c7a9e] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#2c7a9e] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {loading ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span>Sending Code...</span>
+                  </div>
+                ) : (
+                  'Continue to Verification'
+                )}
+              </button>
+
+              {/* Sign In Link */}
+              <div className="text-center pt-4">
+                <p className="text-sm text-gray-600">
+                  Already have an account?{' '}
                   <button
                     type="button"
-                    onClick={() => setIsModalOpen(true)}
-                    className="text-[#1a5f7a] hover:text-[#2c7a9e] font-medium underline"
+                    onClick={() => navigate("/signin")}
+                    className="font-semibold text-[#1a5f7a] hover:text-[#2c7a9e]"
                     disabled={loading}
                   >
-                    Terms & Conditions
+                    Sign in
                   </button>
+                </p>
+              </div>
+            </form>
+          ) : (
+            /* Verification Step */
+            <div className="space-y-5">
+              {/* Verification Code Input */}
+              <div>
+                <label htmlFor="verificationCode" className="block text-sm font-semibold text-gray-700 mb-2">
+                  Verification Code
                 </label>
-              </div>
-            </div>
-
-            {/* Error/Success Message */}
-            {message && (
-              <div className={`rounded-lg p-4 ${
-                message.type === 'error'
-                  ? 'bg-red-50 border border-red-200 text-red-800'
-                  : 'bg-green-50 border border-green-200 text-green-800'
-              }`}>
-                <p className="text-sm font-medium">{message.text}</p>
-              </div>
-            )}
-
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={!isFormValid || loading}
-              className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white bg-[#1a5f7a] hover:bg-[#2c7a9e] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#2c7a9e] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {loading ? (
-                <div className="flex items-center gap-2">
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  <span>Creating Account...</span>
+                <div className="relative">
+                  <input
+                    id="verificationCode"
+                    type="text"
+                    value={verificationCode}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+                      setVerificationCode(value);
+                      setVerificationError('');
+                    }}
+                    className="block w-full px-4 py-3 border border-gray-300 rounded-lg text-gray-900 text-center text-2xl tracking-widest placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#2c7a9e] focus:border-transparent transition-all"
+                    placeholder="000000"
+                    maxLength={6}
+                    disabled={loading || isVerified}
+                  />
                 </div>
-              ) : (
-                'Create Account'
-              )}
-            </button>
+                {verificationError && (
+                  <p className="mt-2 text-sm text-red-600">{verificationError}</p>
+                )}
+                <p className="mt-2 text-xs text-gray-500">
+                  Enter the 6-digit code sent to your email
+                </p>
+              </div>
 
-            {/* Sign In Link */}
-            <div className="text-center pt-4">
-              <p className="text-sm text-gray-600">
-                Already have an account?{' '}
+              {/* Error/Success Message */}
+              {message && (
+                <div className={`rounded-lg p-4 ${
+                  message.type === 'error'
+                    ? 'bg-red-50 border border-red-200 text-red-800'
+                    : 'bg-green-50 border border-green-200 text-green-800'
+                }`}>
+                  <p className="text-sm font-medium">{message.text}</p>
+                </div>
+              )}
+
+              {/* Verify Button */}
+              <button
+                onClick={verifyCode}
+                disabled={verificationCode.length !== 6 || loading || isVerified}
+                className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white bg-[#1a5f7a] hover:bg-[#2c7a9e] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#2c7a9e] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {loading ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span>{isVerified ? 'Creating Account...' : 'Verifying...'}</span>
+                  </div>
+                ) : isVerified ? (
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="w-5 h-5" />
+                    <span>Verified</span>
+                  </div>
+                ) : (
+                  'Verify Code'
+                )}
+              </button>
+
+              {/* Resend Code */}
+              <div className="text-center">
                 <button
                   type="button"
-                  onClick={() => navigate("/signin")}
-                  className="font-semibold text-[#1a5f7a] hover:text-[#2c7a9e]"
-                  disabled={loading}
+                  onClick={requestVerificationCode}
+                  disabled={resendCooldown > 0 || loading}
+                  className="text-sm text-[#1a5f7a] hover:text-[#2c7a9e] font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Sign in
+                  {resendCooldown > 0 
+                    ? `Resend code in ${resendCooldown}s` 
+                    : 'Resend verification code'}
                 </button>
-              </p>
+              </div>
+
+              {/* Back Button */}
+              <div className="text-center">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setVerificationStep('signup');
+                    setVerificationCode('');
+                    setVerificationError('');
+                    setMessage(null);
+                  }}
+                  disabled={loading}
+                  className="text-sm text-gray-600 hover:text-gray-900 font-medium"
+                >
+                  ← Back to sign up
+                </button>
+              </div>
             </div>
-          </form>
+          )}
 
           {/* Help Text */}
           <div className="mt-8 text-center">

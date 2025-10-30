@@ -549,7 +549,7 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
                             markNotificationAsRead(note.id);
                           }
                           if (note.action_url) {
-                            const transformedUrl = transformNotificationUrl(note.action_url, userData?.role);
+                            const transformedUrl = transformNotificationUrl(note.action_url, userData?.role ?? null);
                             navigate(transformedUrl);
                           }
                         }}
@@ -793,7 +793,7 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
                           markNotificationAsRead(note.id);
                         }
                         if (note.action_url) {
-                          const transformedUrl = transformNotificationUrl(note.action_url, userData?.role, note.notification_type);
+                          const transformedUrl = transformNotificationUrl(note.action_url, userData?.role ?? null, note.notification_type);
                           console.log('🎯 Transformed URL:', transformedUrl);
                           navigate(transformedUrl);
                           setShowAllNotificationsModal(false);

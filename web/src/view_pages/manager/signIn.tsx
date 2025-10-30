@@ -1,208 +1,105 @@
-// pages/signIn.tsx
-import React, { useState } from 'react';
+// pages/SignIn.tsx
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { API_BASE_URL } from "../../config/api";
-import { Eye, EyeOff, Lock, Mail, Chrome, Github, Apple, CheckCircle, Users, BarChart3, ArrowLeft, Shield } from 'lucide-react';
+import { Eye, EyeOff, Lock, Mail, Chrome, Github, Apple, CheckCircle, Users, BarChart3, ArrowLeft, ChevronDown, Trash2, User } from 'lucide-react';
 import logo from "../../assets/logo2.png";
 
-// MODEL
-interface User {
-  email: string;
-  password: string;
-}
+// Import separated logic
+import type { User as UserType } from '../../services/UserModel';
+import { LoginController } from '../../services/LoginController';
+import { SavedAccountsManager, type SavedAccount } from '../../utils/SavedAccountsManager';
 
-interface ValidationResult {
-  isValid: boolean;
-  errors: { [key: string]: string };
-}
-
-class UserModel {
-  static validateUser(user: User): ValidationResult {
-    const errors: { [key: string]: string } = {};
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-    if (!user.email) errors.email = 'Email is required';
-    else if (!emailRegex.test(user.email)) errors.email = 'Enter a valid email address';
-
-    if (!user.password) errors.password = 'Password is required';
-    else if (user.password.length < 6) errors.password = 'Password must be at least 6 characters long';
-
-    return { isValid: Object.keys(errors).length === 0, errors };
-  }
-}
-
-// CONTROLLER
-class LoginController {
-  static async login(user: User): Promise<{ success: boolean; message: string; redirect: string }> {
-    const validation = UserModel.validateUser(user);
-    if (!validation.isValid) {
-      throw new Error(Object.values(validation.errors).join(", "));
-    }
-
-    console.log("🔄 Sending login request with:", { email: user.email });
-
-    const response = await fetch(`${API_BASE_URL}/user/login/`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        email: user.email,
-        password: user.password
-      }),
-    });
-
-    console.log("📡 Response status:", response.status);
-
-    const contentType = response.headers.get("content-type");
-    let data: any = null;
-
-    if (contentType && contentType.includes("application/json")) {
-      data = await response.json();
-      console.log("📦 Full response data:", data);
-    } else {
-      const textResponse = await response.text();
-      console.error("❌ Non-JSON response:", textResponse);
-      throw new Error(textResponse || "Login failed");
-    }
-
-    if (!response.ok) {
-      console.error("❌ Login failed:", data);
-      throw new Error(data.error || data.detail || data.message || "Invalid credentials");
-    }
-
-    // ✅ Save authentication tokens to sessionStorage
-    console.log("🔍 Checking for tokens in response...");
-    
-    if (data.token) {
-      sessionStorage.setItem("token", data.token);
-      sessionStorage.setItem("access", data.token);
-      console.log("✅ Token stored successfully (DRF Token Auth)");
-    } else if (data.access) {
-      sessionStorage.setItem("access", data.access);
-      sessionStorage.setItem("token", data.access);
-      console.log("✅ Access token stored successfully (JWT)");
-    } else {
-      console.warn("⚠️ No authentication token in response!");
-    }
-
-    if (data.refresh) {
-      sessionStorage.setItem("refresh", data.refresh);
-      console.log("✅ Refresh token stored successfully");
-    }
-
-    if (data.name) {
-      sessionStorage.setItem("username", data.name);
-      console.log("✅ Username stored:", data.name);
-    }
-
-    if (data.email) {
-      sessionStorage.setItem("email", data.email);
-      console.log("✅ Email stored:", data.email);
-    }
-
-    // 🎯 CRITICAL: Enhanced Role-based redirect logic
-    console.log("\n🔍 ========== ROLE DETECTION DEBUG ==========");
-    console.log("   📦 Raw role from backend:", JSON.stringify(data.role));
-    console.log("   📏 Role type:", typeof data.role);
-    console.log("   📐 Role length:", data.role ? data.role.length : 'N/A');
-    console.log("   🔤 Role charCodes:", data.role ? Array.from(data.role).map((c: any) => c.charCodeAt(0)).join(',') : 'N/A');
-    
-    let redirectPath = "/projects-user"; // Default redirect for Developer
-
-    if (data.role) {
-      // Enhanced normalization: trim, remove special chars, standardize
-      const rawRole = String(data.role);
-      const normalizedRole = rawRole.trim().replace(/\s+/g, ' '); // Normalize spaces
-      const lowerRole = normalizedRole.toLowerCase();
-      
-      console.log("   ✨ Normalized role:", JSON.stringify(normalizedRole));
-      console.log("   🔽 Lowercase role:", JSON.stringify(lowerRole));
-      
-      // Store the normalized role
-      sessionStorage.setItem("userRole", normalizedRole);
-      console.log("   💾 Stored role in sessionStorage:", normalizedRole);
-
-      // 🎯 Multiple matching strategies for maximum compatibility
-      const isProjectManager = 
-        normalizedRole === "Project Manager" ||
-        lowerRole === "project manager" ||
-        lowerRole.includes("project") && lowerRole.includes("manager") ||
-        lowerRole === "projectmanager" ||
-        lowerRole === "pm";
-
-      const isDeveloper = 
-        normalizedRole === "Developer" ||
-        lowerRole === "developer" ||
-        lowerRole === "user";
-
-      console.log("   🔍 isProjectManager check:", isProjectManager);
-      console.log("   🔍 isDeveloper check:", isDeveloper);
-
-      // Determine redirect path
-      if (isProjectManager) {
-        redirectPath = "/main-projects";
-        console.log("   ✅✅✅ MATCHED: Project Manager → /main-projects");
-      } else if (isDeveloper) {
-        redirectPath = "/projects-user";
-        console.log("   ✅ MATCHED: Developer → /projects-user");
-      } else {
-        // Default to user for unknown roles
-        redirectPath = "/projects-user";
-        console.warn("   ⚠️ UNKNOWN ROLE - defaulting to /projects-user");
-        console.warn("   ❓ Role was:", normalizedRole);
-      }
-    } else {
-      console.warn("   ⚠️ No 'role' in backend response!");
-      sessionStorage.setItem("userRole", "Developer");
-      redirectPath = "/projects-user";
-    }
-
-    console.log("   🎯 FINAL REDIRECT PATH:", redirectPath);
-    console.log("========================================\n");
-
-    // Final verification log
-    console.log("🔐 Final sessionStorage state:");
-    console.log("   - access:", sessionStorage.getItem("access") ? "✓" : "✗");
-    console.log("   - token:", sessionStorage.getItem("token") ? "✓" : "✗");
-    console.log("   - refresh:", sessionStorage.getItem("refresh") ? "✓" : "✗");
-    console.log("   - username:", sessionStorage.getItem("username") || "✗");
-    console.log("   - email:", sessionStorage.getItem("email") || "✗");
-    console.log("   - userRole:", sessionStorage.getItem("userRole") || "✗");
-
-    return { 
-      success: true, 
-      message: `Welcome back, ${data.name || 'User'}!`, 
-      redirect: redirectPath 
-    };
-  }
-}
-
-// VIEW
 export default function LoginPage() {
   const navigate = useNavigate();
-  const [formData, setFormData] = useState<User>({ email: '', password: '' });
+  const [formData, setFormData] = useState<UserType>({ email: '', password: '' });
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [socialLoading, setSocialLoading] = useState<string | null>(null);
   const [message, setMessage] = useState<{ text: string; type: 'error' | 'success' } | null>(null);
+  const [rememberMe, setRememberMe] = useState(false);
+  const [savedAccounts, setSavedAccounts] = useState<SavedAccount[]>([]);
+  const [showAccountDropdown, setShowAccountDropdown] = useState(false);
+
+  // Load saved accounts on component mount
+  useEffect(() => {
+    const accounts = SavedAccountsManager.getAllAccounts();
+    setSavedAccounts(accounts);
+    
+    if (accounts.length > 0) {
+      const mostRecent = accounts[0];
+      setFormData({
+        email: mostRecent.email,
+        password: mostRecent.rememberMe && mostRecent.encryptedPassword 
+          ? SavedAccountsManager.decryptPassword(mostRecent.encryptedPassword) 
+          : ''
+      });
+      setRememberMe(mostRecent.rememberMe);
+      
+      if (mostRecent.rememberMe && mostRecent.encryptedPassword) {
+        console.log("✅ Auto-filled with saved credentials (Remember Me was enabled)");
+      } else {
+        console.log("📧 Auto-filled email only (Remember Me was not enabled)");
+      }
+    }
+  }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-
-    const validation = UserModel.validateUser({ ...formData, [name]: value });
-    setErrors(validation.errors);
+    setErrors({});
     if (message) setMessage(null);
   };
 
+  const handleRememberMeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setRememberMe(e.target.checked);
+  };
+
+  const handleSelectAccount = (account: SavedAccount) => {
+    setFormData({
+      email: account.email,
+      password: account.rememberMe && account.encryptedPassword 
+        ? SavedAccountsManager.decryptPassword(account.encryptedPassword) 
+        : ''
+    });
+    setRememberMe(account.rememberMe);
+    setShowAccountDropdown(false);
+    SavedAccountsManager.updateLastUsed(account.email);
+    setSavedAccounts(SavedAccountsManager.getAllAccounts());
+    
+    if (account.rememberMe && account.encryptedPassword) {
+      console.log("✅ Loaded account with saved password (Remember Me enabled)");
+    } else {
+      console.log("📧 Loaded account email only (Remember Me not enabled)");
+    }
+  };
+
+  const handleRemoveAccount = (e: React.MouseEvent, email: string) => {
+    e.stopPropagation();
+    SavedAccountsManager.removeAccount(email);
+    setSavedAccounts(SavedAccountsManager.getAllAccounts());
+    
+    if (formData.email.toLowerCase() === email.toLowerCase()) {
+      setFormData({ email: '', password: '' });
+      setRememberMe(false);
+    }
+    
+    setMessage({ text: 'Account removed successfully', type: 'success' });
+    setTimeout(() => setMessage(null), 3000);
+  };
+
+  const handleClearAllAccounts = () => {
+    SavedAccountsManager.clearAll();
+    setSavedAccounts([]);
+    setFormData({ email: '', password: '' });
+    setRememberMe(false);
+    setShowAccountDropdown(false);
+    setMessage({ text: 'All saved accounts cleared', type: 'success' });
+    setTimeout(() => setMessage(null), 3000);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    const validation = UserModel.validateUser(formData);
-    setErrors(validation.errors);
-
-    if (!validation.isValid) return;
 
     setIsLoading(true);
     setMessage(null);
@@ -211,9 +108,17 @@ export default function LoginPage() {
       console.log("🚀 Starting login process...");
       const result = await LoginController.login(formData);
       console.log("✅ Login successful - redirect path:", result.redirect);
+      
+      SavedAccountsManager.saveAccount(formData.email, formData.password, rememberMe);
+      
+      if (rememberMe) {
+        console.log("✅ Account saved with encrypted password (Remember Me enabled)");
+      } else {
+        console.log("📧 Account saved with email only (Remember Me disabled - no password stored)");
+      }
+      
       setMessage({ text: result.message, type: 'success' });
 
-      // Redirect after 1 second to show success message
       setTimeout(() => {
         console.log("🔀 Executing navigation to:", result.redirect);
         navigate(result.redirect, { replace: true });
@@ -242,21 +147,18 @@ export default function LoginPage() {
     }
   };
 
-  const isFormValid = Object.keys(errors).length === 0 && formData.email && formData.password;
+  const isFormValid = formData.email && formData.password;
 
   return (
     <div className="min-h-screen bg-white flex">
       {/* Left Section - Company Branding */}
       <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-[#1a5f7a] via-[#2c7a9e] to-[#57a8c9] relative overflow-hidden">
-        {/* Decorative elements */}
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-20 left-20 w-64 h-64 bg-white rounded-full blur-3xl"></div>
           <div className="absolute bottom-20 right-20 w-96 h-96 bg-[#57a8c9] rounded-full blur-3xl"></div>
         </div>
 
         <div className="relative z-10 flex flex-col justify-between w-full p-12">
-          
-          {/* Back Button & Logo & Brand */}
           <div>
             <button
               onClick={() => navigate("/")}
@@ -277,7 +179,6 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {/* Main Content */}
           <div className="space-y-8">
             <div>
               <h2 className="text-5xl font-bold text-white mb-4 leading-tight">
@@ -288,7 +189,6 @@ export default function LoginPage() {
               </p>
             </div>
 
-            {/* Feature Cards */}
             <div className="grid grid-cols-1 gap-4">
               <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-2xl p-6 border border-white border-opacity-20">
                 <div className="flex items-start gap-4">
@@ -328,7 +228,6 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {/* Footer */}
           <div className="flex items-center justify-between text-[#a5d5e8] text-sm">
             <p>© 2025 My Crew Manager. All rights reserved.</p>
             <div className="flex gap-6">
@@ -343,13 +242,90 @@ export default function LoginPage() {
       {/* Right Section - Login Form */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-gray-50">
         <div className="w-full max-w-md">
-          {/* Header */}
           <div className="mb-8">
             <h2 className="text-3xl font-bold text-gray-900 mb-2">Sign In</h2>
             <p className="text-gray-600">Access your enterprise account</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Saved Accounts Dropdown */}
+            {savedAccounts.length > 0 && (
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setShowAccountDropdown(!showAccountDropdown)}
+                  className="w-full bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4 flex items-center justify-between hover:from-blue-100 hover:to-indigo-100 transition-all group"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <User className="w-5 h-5 text-white" />
+                    </div>
+                    <div className="text-left">
+                      <p className="text-sm font-semibold text-gray-900">
+                        {savedAccounts.length} Saved Account{savedAccounts.length > 1 ? 's' : ''}
+                      </p>
+                      <p className="text-xs text-gray-600">Click to view and select</p>
+                    </div>
+                  </div>
+                  <ChevronDown className={`w-5 h-5 text-gray-500 transition-transform ${showAccountDropdown ? 'rotate-180' : ''}`} />
+                </button>
+
+                {showAccountDropdown && (
+                  <div className="absolute z-10 w-full mt-2 bg-white border border-gray-200 rounded-lg shadow-xl overflow-hidden">
+                    <div className="max-h-64 overflow-y-auto">
+                      {savedAccounts.map((account, index) => (
+                        <button
+                          key={index}
+                          type="button"
+                          onClick={() => handleSelectAccount(account)}
+                          className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0 group"
+                        >
+                          <div className="flex items-center gap-3 flex-1 min-w-0">
+                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                              account.rememberMe 
+                                ? 'bg-gradient-to-br from-green-100 to-emerald-200' 
+                                : 'bg-gradient-to-br from-gray-100 to-gray-200'
+                            }`}>
+                              {account.rememberMe ? (
+                                <Lock className="w-5 h-5 text-green-600" />
+                              ) : (
+                                <Mail className="w-5 h-5 text-gray-600" />
+                              )}
+                            </div>
+                            <div className="text-left flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-900 truncate">
+                                {account.email}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {account.rememberMe ? '🔒 Password saved' : '📧 Email only'} • {new Date(account.lastUsed).toLocaleDateString()}
+                              </p>
+                            </div>
+                          </div>
+                          <button
+                            onClick={(e) => handleRemoveAccount(e, account.email)}
+                            className="ml-2 p-2 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors opacity-0 group-hover:opacity-100"
+                            title="Remove account"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </button>
+                      ))}
+                    </div>
+                    
+                    <div className="p-3 bg-gray-50 border-t border-gray-200">
+                      <button
+                        type="button"
+                        onClick={handleClearAllAccounts}
+                        className="w-full text-center text-sm font-medium text-red-600 hover:text-red-700 py-2"
+                      >
+                        Clear All Saved Accounts
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Email Input */}
             <div>
               <label htmlFor="email" className="block text-sm font-semibold text-gray-700 mb-2">
@@ -415,7 +391,21 @@ export default function LoginPage() {
             </div>
 
             {/* Remember Me & Forgot Password */}
-            <div className="flex items-center justify-end">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <input
+                  id="remember-me"
+                  name="remember-me"
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={handleRememberMeChange}
+                  className="h-4 w-4 text-[#1a5f7a] focus:ring-[#2c7a9e] border-gray-300 rounded cursor-pointer"
+                  disabled={isLoading}
+                />
+                <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-700 cursor-pointer">
+                  Remember me
+                </label>
+              </div>
               <button
                 onClick={() => navigate("/forgot-password")}
                 type="button"
@@ -501,7 +491,6 @@ export default function LoginPage() {
             </div>
           </form>
 
-          {/* Help Text */}
           <div className="mt-8 text-center">
             <p className="text-xs text-gray-500">
               Need help? Contact{' '}

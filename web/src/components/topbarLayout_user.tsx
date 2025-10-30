@@ -540,7 +540,7 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
                             markNotificationAsRead(note.id);
                           }
                           if (note.action_url) {
-                            const transformedUrl = transformNotificationUrl(note.action_url, userData?.role);
+                            const transformedUrl = transformNotificationUrl(note.action_url, userData?.role ?? null);
                             navigate(transformedUrl);
                           }
                         }}
@@ -629,37 +629,37 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
             {/* Dropdown */}
             {showProfileDropdown && (
               <div
-              className={`absolute right-0 mt-2 w-48 rounded-lg shadow-lg border p-2${
+              className={`absolute right-0 mt-2 w-48 rounded-lg shadow-lg border z-[9999] p-2 ${
                 theme === "dark"
-                  ? "bg-gray-900 border-gray-700 text-gray-200"
+                  ? "bg-gray-800 border-gray-700 text-white"
                   : "bg-white border-gray-200 text-gray-800"
               }`}
             >
                 <button
-                    className={`w-full flex items-center gap-2 text-left px-4 py-2 text-sm rounded-md transition ${
+                    className={`w-full flex items-center gap-2 text-left px-4 py-2 text-sm ${
                       theme === "dark"
-                        ? "hover:bg-gray-800"
+                        ? "hover:bg-gray-700"
                         : "hover:bg-gray-100"
                     }`}
                     onClick={() => navigate("/user-settings")}
                   >
                     <User
                       className={`w-4 h-4 ${
-                        theme === "dark" ? "text-gray-300" : "text-gray-600"
+                        theme === "dark" ? "text-white" : "text-gray-500"
                       }`}
                     />
                     Profile
                   </button>
                   <hr className={theme === "dark" ? "border-gray-700" : "border-gray-200"} />
                   <button
-                    className={`w-full flex items-center gap-2 text-left px-4 py-2 text-sm rounded-md transition ${
+                    className={`w-full flex items-center gap-2 text-left px-4 py-2 text-sm text-red-500 ${
                       theme === "dark"
-                        ? "text-red-400 hover:bg-gray-800"
-                        : "text-red-500 hover:bg-gray-100"
+                        ? "hover:bg-gray-700"
+                        : "hover:bg-gray-100"
                     }`}
                     onClick={() => setShowLogoutConfirm(true)}
                   >
-                    <LogOut className="w-4 h-4" />
+                    <LogOut className="w-4 h-4 text-red-500" />
                     Logout
                   </button>
 
@@ -796,7 +796,7 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
                           markNotificationAsRead(note.id);
                         }
                         if (note.action_url) {
-                          const transformedUrl = transformNotificationUrl(note.action_url, userData?.role, note.notification_type);
+                          const transformedUrl = transformNotificationUrl(note.action_url, userData?.role ?? null, note.notification_type);
                           console.log('🎯 Transformed URL:', transformedUrl);
                           navigate(transformedUrl);
                           setShowAllNotificationsModal(false);

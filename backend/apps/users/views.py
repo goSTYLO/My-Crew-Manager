@@ -15,6 +15,7 @@ from django.conf import settings
 from django.contrib.auth.hashers import make_password, check_password
 from django.core.mail import send_mail
 from datetime import timedelta
+from django.db import transaction, connection
 
 class SignupView(APIView):
     def post(self, request):
@@ -119,6 +120,80 @@ class UserListView(APIView):
         serializer = UserSerializer(users, many=True, context={'request': request})
         return Response(serializer.data)
 
+
+
+class AccountDeleteView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = AccountDeleteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        email = serializer.validated_data['email'].strip().lower()
+        password = serializer.validated_data['password']
+
+        # Ensure the email matches the authenticated user
+        if email != request.user.email.lower():
+            return Response(
+                {'error': 'Email does not match your account'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Verify password
+        if not request.user.check_password(password):
+            return Response(
+                {'error': 'Incorrect password. Please try again.'}, 
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+
+        try:
+            with transaction.atomic():
+                user_id = request.user.user_id
+                
+                # Delete auth token
+                try:
+                    request.user.auth_token.delete()
+                except Exception:
+                    pass
+                
+                # Fix the foreign key constraint issue
+                # Update all references to this user before deletion
+                with connection.cursor() as cursor:
+                    # Check if column exists first
+                    cursor.execute("""
+                        SELECT column_name 
+                        FROM information_schema.columns 
+                        WHERE table_name='ai_api_project' 
+                        AND column_name='status_updated_by_id'
+                    """)
+                    
+                    if cursor.fetchone():
+                        cursor.execute(
+                            "UPDATE ai_api_project SET status_updated_by_id = NULL WHERE status_updated_by_id = %s",
+                            [user_id]
+                        )
+                
+                # Now delete the user
+                request.user.delete()
+                
+                return Response(
+                    {
+                        'deleted': True, 
+                        'user_id': str(user_id),
+                        'message': 'Account deleted successfully'
+                    }, 
+                    status=status.HTTP_200_OK
+                )
+                
+        except Exception as e:
+            import traceback
+            print("Delete error:", traceback.format_exc())
+            return Response(
+                {'error': 'Unable to delete account. Please contact support.'}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
 class PasswordResetView(APIView):
     # No permission_classes, so it's accessible without authentication
     
@@ -131,43 +206,15 @@ class PasswordResetView(APIView):
                 {'error': 'Email and password are required'}, 
                 status=status.HTTP_400_BAD_REQUEST
             )
-
-
-class AccountDeleteView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request):
-        serializer = AccountDeleteSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        email = serializer.validated_data['email'].strip().lower()
-        password = serializer.validated_data['password']
-
-        # Ensure the email matches the authenticated user
-        if email != request.user.email.lower():
-            return Response({'detail': 'email mismatch'}, status=status.HTTP_400_BAD_REQUEST)
-
-        # Verify password
-        if not request.user.check_password(password):
-            return Response({'detail': 'invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
-
-        # Delete auth token if exists
-        try:
-            request.user.auth_token.delete()
-        except Exception:
-            pass
-
-        # Perform deletion
-        user_id = request.user.user_id
-        request.user.delete()
-        return Response({'deleted': True, 'user_id': user_id}, status=status.HTTP_200_OK)
         
         try:
             user = User.objects.get(email=email)
             user.set_password(new_password)
             user.save()
-            return Response({
-                'message': 'Password has been reset successfully'
-            }, status=status.HTTP_200_OK)
+            return Response(
+                {'message': 'Password has been reset successfully'}, 
+                status=status.HTTP_200_OK
+            )
         except User.DoesNotExist:
             return Response(
                 {'error': 'No account found with this email address'}, 
