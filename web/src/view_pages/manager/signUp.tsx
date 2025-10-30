@@ -2,11 +2,97 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { API_BASE_URL } from "../../config/api";
-import { Mail, Lock, Eye, EyeOff, User, CheckCircle, Users, BarChart3, Check, X, ArrowLeft } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, User, CheckCircle, Users, BarChart3, Check, X, ArrowLeft, Shield } from "lucide-react";
 import logo from "../../assets/logo2.png";
+import TermsAndConditionsModal from "../../components/terms&condition";
+
+
+// Professional Success Modal Component
+const TermsAcceptedModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+        {/* Header with gradient */}
+        <div className="bg-gradient-to-r from-[#1a5f7a] to-[#2c7a9e] px-8 pt-8 pb-6">
+          <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-white/30">
+            <CheckCircle className="w-9 h-9 text-white" strokeWidth={2.5} />
+          </div>
+          <h3 className="text-2xl font-bold text-white text-center">Terms Accepted</h3>
+        </div>
+
+        {/* Content */}
+        <div className="px-8 py-6">
+          <p className="text-gray-600 text-center leading-relaxed mb-6">
+            Thank you for reviewing and accepting our Terms and Conditions. You can now create your account.
+          </p>
+
+          {/* Feature highlights */}
+          <div className="space-y-3 mb-6">
+            <div className="flex items-center gap-3 text-sm text-gray-700">
+              <div className="w-8 h-8 rounded-lg bg-[#1a5f7a]/10 flex items-center justify-center flex-shrink-0">
+                <Shield className="w-4 h-4 text-[#1a5f7a]" />
+              </div>
+              <span>Your data is protected and secure</span>
+            </div>
+            <div className="flex items-center gap-3 text-sm text-gray-700">
+              <div className="w-8 h-8 rounded-lg bg-[#1a5f7a]/10 flex items-center justify-center flex-shrink-0">
+                <Users className="w-4 h-4 text-[#1a5f7a]" />
+              </div>
+              <span>Full access to collaboration tools</span>
+            </div>
+            <div className="flex items-center gap-3 text-sm text-gray-700">
+              <div className="w-8 h-8 rounded-lg bg-[#1a5f7a]/10 flex items-center justify-center flex-shrink-0">
+                <BarChart3 className="w-4 h-4 text-[#1a5f7a]" />
+              </div>
+              <span>Advanced analytics and reporting</span>
+            </div>
+          </div>
+
+          <button
+            onClick={onClose}
+            className="w-full px-6 py-3 rounded-lg bg-[#1a5f7a] text-white hover:bg-[#154d63] font-semibold transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+          >
+            Continue
+          </button>
+        </div>
+
+        {/* Footer note */}
+        <div className="px-8 pb-6">
+          <p className="text-xs text-gray-500 text-center">
+            You can review our terms anytime in your account settings
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export default function SignUpPage() {
   const navigate = useNavigate();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
+
+  const handleTermsClose = () => {
+    // When user closes modal without accepting, uncheck the checkbox
+    setIsModalOpen(false);
+  };
+
+  const handleTermsAccept = () => {
+    // When user accepts terms, check the checkbox and show success modal
+    setTermsAccepted(true);
+    setIsModalOpen(false);
+    setShowSuccessModal(true);
+  };
+
+  const handleSuccessModalClose = () => {
+    // Close success modal and keep checkbox checked
+    setShowSuccessModal(false);
+  };
+
   const [formData, setFormData] = useState({
     role: "Project Manager", // Default role
     firstname: "",
@@ -64,23 +150,48 @@ export default function SignUpPage() {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-    
+  
+    setErrors((prev) => ({
+      ...prev,
+      [name]: "", // clear error for the field being edited
+    }));
+  
     // Validate email domain
     if (name === "email") {
       if (value && !validateEmailDomain(value)) {
         setEmailError("Please use a valid email provider (e.g., Gmail, Yahoo, Outlook)");
+        setErrors((prev) => ({
+          ...prev,
+          email: "Invalid email domain",
+        }));
       } else {
         setEmailError("");
+        setErrors((prev) => ({
+          ...prev,
+          email: "",
+        }));
       }
     }
-    
+  
     // Validate password
     if (name === "password") {
       validatePassword(value);
+      if (!value) {
+        setErrors((prev) => ({
+          ...prev,
+          password: "Password is required",
+        }));
+      } else {
+        setErrors((prev) => ({
+          ...prev,
+          password: "",
+        }));
+      }
     }
-    
+  
     if (message) setMessage(null);
   };
+  
 
   const handleRoleToggle = (role: string) => {
     setFormData((prev) => ({ ...prev, role }));
@@ -89,6 +200,11 @@ export default function SignUpPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!termsAccepted) {
+      setMessage({ text: 'Please accept the Terms & Conditions', type: 'error' });
+      return;
+    }
 
     // Validate email domain
     if (!validateEmailDomain(formData.email)) {
@@ -184,6 +300,29 @@ export default function SignUpPage() {
       <span>{text}</span>
     </div>
   );
+
+  // Check if all password validations are met
+  const isPasswordValid = 
+    passwordValidation.hasUppercase &&
+    passwordValidation.hasLowercase &&
+    passwordValidation.hasNumber &&
+    passwordValidation.hasSpecialChar &&
+    passwordValidation.hasMinLength;
+
+  // Check if passwords match
+  const doPasswordsMatch = formData.password === formData.confirmPassword && formData.confirmPassword !== "";
+
+  // Check if form is valid for submission
+  const isFormValid = 
+    formData.firstname.trim() !== "" &&
+    formData.lastname.trim() !== "" &&
+    formData.email.trim() !== "" &&
+    !emailError &&
+    formData.password.trim() !== "" &&
+    isPasswordValid &&
+    formData.confirmPassword.trim() !== "" &&
+    doPasswordsMatch &&
+    termsAccepted;
 
   return (
     <div className="min-h-screen bg-white flex">
@@ -504,6 +643,34 @@ export default function SignUpPage() {
               )}
             </div>
 
+            {/* Terms & Conditions */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <input
+                  id="terms"
+                  type="checkbox"
+                  checked={termsAccepted}
+                  onChange={(e) => {
+                    // Allow manual checkbox toggle
+                    setTermsAccepted(e.target.checked);
+                  }}
+                  className="h-4 w-4 text-[#2c7a9e] focus:ring-[#2c7a9e] border-gray-300 rounded"
+                  disabled={loading}
+                />
+                <label htmlFor="terms" className="ml-2 block text-sm text-gray-700">
+                  I accept the{' '}
+                  <button
+                    type="button"
+                    onClick={() => setIsModalOpen(true)}
+                    className="text-[#1a5f7a] hover:text-[#2c7a9e] font-medium underline"
+                    disabled={loading}
+                  >
+                    Terms & Conditions
+                  </button>
+                </label>
+              </div>
+            </div>
+
             {/* Error/Success Message */}
             {message && (
               <div className={`rounded-lg p-4 ${
@@ -518,7 +685,7 @@ export default function SignUpPage() {
             {/* Submit Button */}
             <button
               type="submit"
-              disabled={loading}
+              disabled={!isFormValid || loading}
               className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white bg-[#1a5f7a] hover:bg-[#2c7a9e] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#2c7a9e] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {loading ? (
@@ -562,6 +729,19 @@ export default function SignUpPage() {
           </div>
         </div>
       </div>
+
+      {/* Terms and Conditions Modal */}
+      <TermsAndConditionsModal
+        isOpen={isModalOpen}
+        onClose={handleTermsClose}
+        onAccept={handleTermsAccept}
+      />
+
+      {/* Success Modal */}
+      <TermsAcceptedModal
+        isOpen={showSuccessModal}
+        onClose={handleSuccessModalClose}
+      />
     </div>
   );
 }

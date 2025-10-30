@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from "../../config/api";
 import { Eye, EyeOff, Lock, Mail, Chrome, Github, Apple, CheckCircle, Users, BarChart3, ArrowLeft, Shield } from 'lucide-react';
 import logo from "../../assets/logo2.png";
-import TermsAndConditionsModal from "../../components/terms&condition";
 
 // MODEL
 interface User {
@@ -177,80 +176,15 @@ class LoginController {
   }
 }
 
-// Professional Success Modal Component
-const TermsAcceptedModal = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => {
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-        {/* Header with gradient */}
-        <div className="bg-gradient-to-r from-[#1a5f7a] to-[#2c7a9e] px-8 pt-8 pb-6">
-          <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-white/30">
-            <CheckCircle className="w-9 h-9 text-white" strokeWidth={2.5} />
-          </div>
-          <h3 className="text-2xl font-bold text-white text-center">Terms Accepted</h3>
-        </div>
-
-        {/* Content */}
-        <div className="px-8 py-6">
-          <p className="text-gray-600 text-center leading-relaxed mb-6">
-            Thank you for reviewing and accepting our Terms and Conditions. You are now ready to access your enterprise account and begin collaborating with your team.
-          </p>
-
-          {/* Feature highlights */}
-          <div className="space-y-3 mb-6">
-            <div className="flex items-center gap-3 text-sm text-gray-700">
-              <div className="w-8 h-8 rounded-lg bg-[#1a5f7a]/10 flex items-center justify-center flex-shrink-0">
-                <Shield className="w-4 h-4 text-[#1a5f7a]" />
-              </div>
-              <span>Your data is protected and secure</span>
-            </div>
-            <div className="flex items-center gap-3 text-sm text-gray-700">
-              <div className="w-8 h-8 rounded-lg bg-[#1a5f7a]/10 flex items-center justify-center flex-shrink-0">
-                <Users className="w-4 h-4 text-[#1a5f7a]" />
-              </div>
-              <span>Full access to collaboration tools</span>
-            </div>
-            <div className="flex items-center gap-3 text-sm text-gray-700">
-              <div className="w-8 h-8 rounded-lg bg-[#1a5f7a]/10 flex items-center justify-center flex-shrink-0">
-                <BarChart3 className="w-4 h-4 text-[#1a5f7a]" />
-              </div>
-              <span>Advanced analytics and reporting</span>
-            </div>
-          </div>
-
-          <button
-            onClick={onClose}
-            className="w-full px-6 py-3 rounded-lg bg-[#1a5f7a] text-white hover:bg-[#154d63] font-semibold transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-          >
-            Continue to Sign In
-          </button>
-        </div>
-
-        {/* Footer note */}
-        <div className="px-8 pb-6">
-          <p className="text-xs text-gray-500 text-center">
-            You can review our terms anytime in your account settings
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-};
-
 // VIEW
 export default function LoginPage() {
   const navigate = useNavigate();
   const [formData, setFormData] = useState<User>({ email: '', password: '' });
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [showPassword, setShowPassword] = useState(false);
-  const [termsAccepted, setTermsAccepted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [socialLoading, setSocialLoading] = useState<string | null>(null);
   const [message, setMessage] = useState<{ text: string; type: 'error' | 'success' } | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -261,28 +195,12 @@ export default function LoginPage() {
     if (message) setMessage(null);
   };
 
-  const handleTermsClose = () => {
-    // Uncheck the checkbox when modal is closed without accepting
-    setTermsAccepted(false);
-    setIsModalOpen(false);
-  };
-
-  const handleTermsAccept = () => {
-    setTermsAccepted(true);
-    setIsModalOpen(false);
-    setShowSuccessModal(true);
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     const validation = UserModel.validateUser(formData);
     setErrors(validation.errors);
-
-    if (!termsAccepted) {
-      setMessage({ text: 'Please accept the Terms & Conditions', type: 'error' });
-      return;
-    }
 
     if (!validation.isValid) return;
 
@@ -324,7 +242,7 @@ export default function LoginPage() {
     }
   };
 
-  const isFormValid = Object.keys(errors).length === 0 && formData.email && formData.password && termsAccepted;
+  const isFormValid = Object.keys(errors).length === 0 && formData.email && formData.password;
 
   return (
     <div className="min-h-screen bg-white flex">
@@ -497,27 +415,7 @@ export default function LoginPage() {
             </div>
 
             {/* Remember Me & Forgot Password */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <input
-                  id="terms"
-                  type="checkbox"
-                  checked={termsAccepted}
-                  onChange={(e) => setTermsAccepted(e.target.checked)}
-                  className="h-4 w-4 text-[#2c7a9e] focus:ring-[#2c7a9e] border-gray-300 rounded"
-                  disabled={isLoading}
-                />
-                <label htmlFor="terms" className="ml-2 block text-sm text-gray-700">
-                  Accept{' '}
-                  <button
-                    type="button"
-                    onClick={() => setIsModalOpen(true)}
-                    className="text-[#1a5f7a] hover:text-[#2c7a9e] font-medium underline"
-                  >
-                    Terms & Conditions
-                  </button>
-                </label>
-              </div>
+            <div className="flex items-center justify-end">
               <button
                 onClick={() => navigate("/forgot-password")}
                 type="button"
@@ -614,19 +512,6 @@ export default function LoginPage() {
           </div>
         </div>
       </div>
-
-      {/* Terms and Conditions Modal */}
-      <TermsAndConditionsModal
-        isOpen={isModalOpen}
-        onClose={handleTermsClose}
-        onAccept={handleTermsAccept}
-      />
-
-      {/* Success Modal */}
-      <TermsAcceptedModal
-        isOpen={showSuccessModal}
-        onClose={() => setShowSuccessModal(false)}
-      />
     </div>
   );
 }

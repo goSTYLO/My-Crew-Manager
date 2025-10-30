@@ -22,6 +22,7 @@ export default function TermsAndConditionsModal({
   onAccept,
 }: TermsAndConditionsModalProps) {
   const [activeSection, setActiveSection] = useState("overview");
+  
 
   const sections = [
     { id: "overview", label: "Overview", icon: FileText },
