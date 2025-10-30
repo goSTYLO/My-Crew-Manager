@@ -9,6 +9,7 @@ from .models import User, EmailVerification
 from .serializers import UserSignupSerializer
 from .serializers import UserSerializer
 from .serializers import EmailRequestSerializer, EmailVerifySerializer
+from .serializers import AccountDeleteSerializer
 from django.utils import timezone
 from django.conf import settings
 from django.contrib.auth.hashers import make_password, check_password
@@ -130,6 +131,35 @@ class PasswordResetView(APIView):
                 {'error': 'Email and password are required'}, 
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+
+class AccountDeleteView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = AccountDeleteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        email = serializer.validated_data['email'].strip().lower()
+        password = serializer.validated_data['password']
+
+        # Ensure the email matches the authenticated user
+        if email != request.user.email.lower():
+            return Response({'detail': 'email mismatch'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Verify password
+        if not request.user.check_password(password):
+            return Response({'detail': 'invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        # Delete auth token if exists
+        try:
+            request.user.auth_token.delete()
+        except Exception:
+            pass
+
+        # Perform deletion
+        user_id = request.user.user_id
+        request.user.delete()
+        return Response({'deleted': True, 'user_id': user_id}, status=status.HTTP_200_OK)
         
         try:
             user = User.objects.get(email=email)
