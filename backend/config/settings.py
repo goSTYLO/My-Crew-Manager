@@ -295,3 +295,18 @@ LOGGING = {
 
 
 CORS_ALLOW_ALL_ORIGINS = True  # ✅ Allows all domains (use only for development)
+
+# Email (SMTP) settings
+EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
+EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_PORT = int(os.getenv('EMAIL_PORT', '465'))
+EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'False').lower() == 'true'
+EMAIL_USE_SSL = os.getenv('EMAIL_USE_SSL', 'True').lower() == 'true'
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER or 'no-reply@example.com')
+
+# Verification settings
+VERIFICATION_CODE_TTL_MIN = int(os.getenv('VERIFICATION_CODE_TTL_MIN', '10'))
+VERIFICATION_MAX_ATTEMPTS = int(os.getenv('VERIFICATION_MAX_ATTEMPTS', '5'))
+VERIFICATION_RESEND_COOLDOWN_SEC = int(os.getenv('VERIFICATION_RESEND_COOLDOWN_SEC', '60'))

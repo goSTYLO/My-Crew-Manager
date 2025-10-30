@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from .models import User
+from rest_framework import serializers
 
 class UserSignupSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(
@@ -38,3 +39,12 @@ class UserSerializer(serializers.ModelSerializer):
             # Fallback if request context is not available
             return obj.profile_picture.url
         return None
+
+
+class EmailRequestSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+
+class EmailVerifySerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    code = serializers.RegexField(regex=r'^\d{6}$')

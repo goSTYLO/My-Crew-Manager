@@ -5,9 +5,15 @@ from rest_framework.authtoken.models import Token
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from django.contrib.auth import authenticate
-from .models import User
+from .models import User, EmailVerification
 from .serializers import UserSignupSerializer
 from .serializers import UserSerializer
+from .serializers import EmailRequestSerializer, EmailVerifySerializer
+from django.utils import timezone
+from django.conf import settings
+from django.contrib.auth.hashers import make_password, check_password
+from django.core.mail import send_mail
+from datetime import timedelta
 
 class SignupView(APIView):
     def post(self, request):
@@ -137,3 +143,129 @@ class PasswordResetView(APIView):
                 {'error': 'No account found with this email address'}, 
                 status=status.HTTP_404_NOT_FOUND
             )
+
+
+class EmailRequestView(APIView):
+    def post(self, request):
+        serializer = EmailRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        email = serializer.validated_data['email'].strip().lower()
+
+        now = timezone.now()
+        last = EmailVerification.objects.filter(email=email, status='PENDING').order_by('-created_at').first()
+        if last and (now - last.last_sent_at).total_seconds() < settings.VERIFICATION_RESEND_COOLDOWN_SEC:
+            return Response(status=status.HTTP_204_NO_CONTENT)
+
+        code = f"{__import__('random').randint(100000, 999999)}"
+        code_hash = make_password(code)
+        expires_at = now + timedelta(minutes=settings.VERIFICATION_CODE_TTL_MIN)
+
+        EmailVerification.objects.create(
+            email=email,
+            code_hash=code_hash,
+            expires_at=expires_at,
+            attempts=0,
+            status='PENDING',
+            ip=request.META.get('REMOTE_ADDR'),
+            user_agent=request.META.get('HTTP_USER_AGENT'),
+        )
+
+        subject = 'Verify your email for My Crew Manager'
+        message = (
+            f"Your My Crew Manager verification code is {code}. "
+            f"It expires in {settings.VERIFICATION_CODE_TTL_MIN} minutes."
+        )
+        html_message = f"""
+        <div style="background:#f6f7fb;padding:24px 0;font-family:Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#1f2937;">
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+            <tr>
+              <td align="center">
+                <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="560" style="background:#ffffff;border-radius:12px;box-shadow:0 6px 24px rgba(0,0,0,0.06);overflow:hidden;">
+                  <tr>
+                    <td style="background:#111827;color:#ffffff;padding:20px 24px;">
+                      <div style="font-size:18px;font-weight:600;">My Crew Manager</div>
+                      <div style="opacity:.8;font-size:12px;">Secure Email Verification</div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding:28px 24px 8px 24px;">
+                      <div style="font-size:18px;font-weight:600;margin-bottom:8px;">Confirm your email</div>
+                      <div style="font-size:14px;line-height:1.6;color:#4b5563;">
+                        Use the code below to verify your email address. This code will expire in {settings.VERIFICATION_CODE_TTL_MIN} minutes.
+                      </div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding:8px 24px 4px 24px;">
+                      <div style="background:#111827;color:#ffffff;text-align:center;border-radius:10px;padding:18px 0;font-size:28px;letter-spacing:6px;font-weight:700;">
+                        {code}
+                      </div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding:8px 24px 20px 24px;">
+                      <div style="font-size:12px;color:#6b7280;">
+                        Didn’t request this? You can safely ignore this email.
+                      </div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="background:#f9fafb;padding:16px 24px;color:#6b7280;font-size:12px;border-top:1px solid #eef2f7;">
+                      <div>Sent to {email}</div>
+                      <div style="margin-top:4px;">&copy; {timezone.now().year} My Crew Manager. All rights reserved.</div>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+        </div>
+        """
+        try:
+            send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [email], html_message=html_message)
+        except Exception:
+            # Do not leak mail errors to clients; consider logging in production
+            pass
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class EmailVerifyView(APIView):
+    def post(self, request):
+        serializer = EmailVerifySerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        email = serializer.validated_data['email'].strip().lower()
+        code = serializer.validated_data['code']
+
+        now = timezone.now()
+        rec = EmailVerification.objects.filter(email=email, status='PENDING').order_by('-created_at').first()
+        if not rec:
+            return Response({'detail': 'invalid or expired'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if rec.expires_at <= now:
+            rec.status = 'EXPIRED'
+            rec.save(update_fields=['status'])
+            return Response({'detail': 'invalid or expired'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if rec.attempts >= settings.VERIFICATION_MAX_ATTEMPTS:
+            rec.status = 'LOCKED'
+            rec.save(update_fields=['status'])
+            return Response({'detail': 'too many attempts'}, status=status.HTTP_429_TOO_MANY_REQUESTS)
+
+        if not check_password(code, rec.code_hash):
+            rec.attempts = rec.attempts + 1
+            rec.save(update_fields=['attempts'])
+            return Response({'detail': 'invalid or expired'}, status=status.HTTP_400_BAD_REQUEST)
+
+        rec.status = 'VERIFIED'
+        rec.save(update_fields=['status'])
+
+        try:
+            user = User.objects.get(email=email)
+            if not user.email_verified_at:
+                user.email_verified_at = now
+                user.save(update_fields=['email_verified_at'])
+        except User.DoesNotExist:
+            pass
+
+        return Response({'verified': True})
