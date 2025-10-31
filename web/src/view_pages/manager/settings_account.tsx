@@ -449,9 +449,19 @@ const AccountSettings = () => {
                                                 <input
                                                     type="text"
                                                     placeholder="9XX XXX XXXX"
-                                                    className={`w-full p-3 border rounded-r-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition ${theme === "dark" ? "bg-gray-900 border-gray-700 text-white placeholder-gray-500" : "bg-white border-gray-300 text-gray-900 placeholder-gray-400"}`}
+                                                    className={`w-full p-3 border rounded-r-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition ${
+                                                        theme === "dark"
+                                                            ? "bg-gray-900 border-gray-700 text-white placeholder-gray-500"
+                                                            : "bg-white border-gray-300 text-gray-900 placeholder-gray-400"
+                                                    }`}
                                                     value={phoneNumber}
-                                                    onChange={(e) => setPhoneNumber(e.target.value)}
+                                                    onChange={(e) => {
+                                                        // Allow only numbers
+                                                        const numericValue = e.target.value.replace(/[^0-9]/g, "");
+                                                        setPhoneNumber(numericValue);
+                                                    }}
+                                                    inputMode="numeric"
+                                                    maxLength={10}
                                                 />
                                             </div>
                                         </div>
@@ -606,7 +616,7 @@ const AccountSettings = () => {
                                                     Phone Number
                                                 </p>
                                                 <p className={`text-base font-semibold truncate ${theme === "dark" ? "text-white" : "text-gray-900"}`}>
-                                                    {phoneNumber ? `+63 ${phoneNumber}` : '+63 981567839'}
+                                                    {phoneNumber ? `+63 ${phoneNumber}` : '+63  9XX XXX XXXX (Not Set)'}
                                                 </p>
                                             </div>
                                         </div>

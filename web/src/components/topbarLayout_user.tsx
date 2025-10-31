@@ -1,6 +1,6 @@
 //topbarLayouot.tsx
 import React, { useState, useRef, useEffect } from "react";
-import {Menu,Search,Bell,MessageSquare,ChevronDown,ChevronUp,User,LogOut,Sun, Moon} from "lucide-react";
+import {Menu,Bell,MessageSquare,ChevronDown,ChevronUp,User,LogOut,Sun, Moon} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import logo from "../assets/logo2.png";
 import { useTheme } from "./themeContext";
@@ -749,34 +749,50 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
       {/* View All Notifications Modal */}
       {showAllNotificationsModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[80vh] flex flex-col">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <h2 className="text-xl font-semibold text-gray-800">All Notifications</h2>
+          <div
+            className={`rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[80vh] flex flex-col overflow-hidden transition-colors ${
+              theme === "dark"
+                ? "bg-gray-800 text-gray-200 border border-gray-700"
+                : "bg-white text-gray-800 border border-gray-200"
+            }`}
+          >
+            {/* Header */}
+            <div
+              className={`flex items-center justify-between p-6 border-b transition-colors ${
+                theme === "dark" ? "border-gray-700" : "border-gray-200"
+              }`}
+            >
+              <h2 className={`text-xl font-semibold ${theme === "dark" ? "text-white" : "text-gray-800"}`}>
+                All Notifications
+              </h2>
               <div className="flex items-center space-x-4">
                 <button
                   onClick={markAllAsRead}
-                  className="px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors"
+                  className={`px-4 py-2 text-sm rounded-md transition-colors ${
+                    theme === "dark"
+                      ? "bg-blue-600 text-white hover:bg-blue-700"
+                      : "bg-blue-600 text-white hover:bg-blue-700"
+                  }`}
                 >
                   Mark All as Read
                 </button>
                 <button
                   onClick={() => setShowAllNotificationsModal(false)}
-                  className="text-gray-500 hover:text-gray-700 text-2xl"
+                  className={`text-2xl transition-colors ${
+                    theme === "dark" ? "text-gray-300 hover:text-white" : "text-gray-500 hover:text-gray-700"
+                  }`}
                 >
                   ×
                 </button>
               </div>
             </div>
-            
+
+            {/* Notifications List */}
             <div className="flex-1 overflow-y-auto p-6">
               {loadingAllNotifications ? (
-                <div className="text-center py-8 text-gray-500">
-                  Loading notifications...
-                </div>
+                <div className="text-center py-8 text-gray-500">Loading notifications...</div>
               ) : allNotifications.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  No notifications found
-                </div>
+                <div className="text-center py-8 text-gray-500">No notifications found</div>
               ) : (
                 <div className="space-y-4">
                   {allNotifications.map((note) => (
@@ -784,7 +800,11 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
                       key={note.id}
                       className={`p-4 rounded-lg border transition-colors cursor-pointer ${
                         note.is_read
-                          ? "bg-gray-50 border-gray-200 text-gray-600"
+                          ? theme === "dark"
+                            ? "bg-gray-700 border-gray-600 text-gray-400"
+                            : "bg-gray-50 border-gray-200 text-gray-600"
+                          : theme === "dark"
+                          ? "bg-blue-700 border-blue-600 text-gray-100 hover:bg-blue-600"
                           : "bg-blue-50 border-blue-200 text-gray-800 hover:bg-blue-100"
                       }`}
                       onClick={() => {
@@ -804,15 +824,11 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
                       }}
                     >
                       <div className="flex items-start space-x-3">
-                        {!note.is_read && (
-                          <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
-                        )}
+                        {!note.is_read && <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>}
                         <div className="flex-1">
-                          <div className="font-medium text-gray-900">{note.title}</div>
-                          <div className="text-gray-600 mt-1">{note.message}</div>
-                          <div className="text-xs text-gray-400 mt-2">
-                            {new Date(note.created_at).toLocaleString()}
-                          </div>
+                          <div className="font-medium">{note.title}</div>
+                          <div className="mt-1 text-sm">{note.message}</div>
+                          <div className="mt-2 text-xs text-gray-400">{new Date(note.created_at).toLocaleString()}</div>
                         </div>
                       </div>
                     </div>
@@ -823,21 +839,27 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
 
             {/* Pagination */}
             {allNotifications.length > 0 && (
-              <div className="flex items-center justify-between p-4 border-t border-gray-200">
+              <div
+                className={`flex items-center justify-between p-4 border-t transition-colors ${
+                  theme === "dark" ? "border-gray-700" : "border-gray-200"
+                }`}
+              >
                 <button
-                  onClick={() => setNotifPage(prev => Math.max(1, prev - 1))}
+                  onClick={() => setNotifPage((prev) => Math.max(1, prev - 1))}
                   disabled={notifPage === 1}
-                  className="px-4 py-2 text-sm rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-gray-100 hover:bg-gray-200"
+                  className={`px-4 py-2 text-sm rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                    theme === "dark" ? "bg-gray-700 hover:bg-gray-600 text-gray-200" : "bg-gray-100 hover:bg-gray-200"
+                  }`}
                 >
                   Previous
                 </button>
-                <span className="text-sm text-gray-600">
-                  Page {notifPage}
-                </span>
+                <span className="text-sm">{`Page ${notifPage}`}</span>
                 <button
-                  onClick={() => setNotifPage(prev => prev + 1)}
+                  onClick={() => setNotifPage((prev) => prev + 1)}
                   disabled={allNotifications.length < notificationsPerPage}
-                  className="px-4 py-2 text-sm rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-gray-100 hover:bg-gray-200"
+                  className={`px-4 py-2 text-sm rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                    theme === "dark" ? "bg-gray-700 hover:bg-gray-600 text-gray-200" : "bg-gray-100 hover:bg-gray-200"
+                  }`}
                 >
                   Next
                 </button>
