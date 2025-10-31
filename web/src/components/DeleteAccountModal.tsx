@@ -1,4 +1,5 @@
-import { X, AlertTriangle, Mail, Lock } from "lucide-react";
+import { useState } from "react";
+import { X, AlertTriangle, Mail, Lock, Eye, EyeOff } from "lucide-react";
 
 // Add this import to your AccountSettings.tsx file:
 // import DeleteAccountModal from "./DeleteAccountModal";
@@ -36,6 +37,8 @@ const DeleteAccountModal = ({
     isDeleting,
     handleDeleteAccount,
 }: DeleteAccountModalProps) => {
+    const [showPassword, setShowPassword] = useState(false);
+    
     if (!showDeleteModal) return null;
 
     const handleClose = () => {
@@ -44,6 +47,7 @@ const DeleteAccountModal = ({
         setDeletePassword("");
         setDeleteError("");
         setDeleteSuccess(false);
+        setShowPassword(false);
     };
 
     return (
@@ -128,9 +132,9 @@ const DeleteAccountModal = ({
                                 <div className="relative">
                                     <Lock className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 ${theme === "dark" ? "text-gray-500" : "text-gray-400"}`} />
                                     <input
-                                        type="password"
+                                        type={showPassword ? "text" : "password"}
                                         placeholder="Enter your password"
-                                        className={`w-full pl-10 pr-3 py-3 border rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent transition ${theme === "dark" ? "bg-gray-900 border-gray-700 text-white placeholder-gray-500" : "bg-white border-gray-300 text-gray-900 placeholder-gray-400"}`}
+                                        className={`w-full pl-10 pr-12 py-3 border rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent transition ${theme === "dark" ? "bg-gray-900 border-gray-700 text-white placeholder-gray-500" : "bg-white border-gray-300 text-gray-900 placeholder-gray-400"}`}
                                         value={deletePassword}
                                         onChange={(e) => {
                                             setDeletePassword(e.target.value);
@@ -143,6 +147,16 @@ const DeleteAccountModal = ({
                                         }}
                                         disabled={isDeleting}
                                     />
+                                    {deletePassword && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowPassword(!showPassword)}
+                                            className={`absolute right-3 top-1/2 transform -translate-y-1/2 p-1 rounded transition ${theme === "dark" ? "hover:bg-gray-700 text-gray-400 hover:text-gray-300" : "hover:bg-gray-100 text-gray-500 hover:text-gray-700"}`}
+                                            disabled={isDeleting}
+                                        >
+                                            {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                                        </button>
+                                    )}
                                 </div>
                             </div>
 

@@ -1,3 +1,4 @@
+# EMAIL_VERIFICATION_README.md
 # Email Verification (Django + DRF)
 
 ## Setup

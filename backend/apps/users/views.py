@@ -275,49 +275,101 @@ class EmailRequestView(APIView):
             f"It expires in {settings.VERIFICATION_CODE_TTL_MIN} minutes."
         )
         html_message = f"""
-        <div style="background:#f6f7fb;padding:24px 0;font-family:Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#1f2937;">
-          <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
-            <tr>
-              <td align="center">
-                <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="560" style="background:#ffffff;border-radius:12px;box-shadow:0 6px 24px rgba(0,0,0,0.06);overflow:hidden;">
-                  <tr>
-                    <td style="background:#111827;color:#ffffff;padding:20px 24px;">
-                      <div style="font-size:18px;font-weight:600;">My Crew Manager</div>
-                      <div style="opacity:.8;font-size:12px;">Secure Email Verification</div>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style="padding:28px 24px 8px 24px;">
-                      <div style="font-size:18px;font-weight:600;margin-bottom:8px;">Confirm your email</div>
-                      <div style="font-size:14px;line-height:1.6;color:#4b5563;">
-                        Use the code below to verify your email address. This code will expire in {settings.VERIFICATION_CODE_TTL_MIN} minutes.
-                      </div>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style="padding:8px 24px 4px 24px;">
-                      <div style="background:#111827;color:#ffffff;text-align:center;border-radius:10px;padding:18px 0;font-size:28px;letter-spacing:6px;font-weight:700;">
-                        {code}
-                      </div>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style="padding:8px 24px 20px 24px;">
-                      <div style="font-size:12px;color:#6b7280;">
-                        Didn’t request this? You can safely ignore this email.
-                      </div>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style="background:#f9fafb;padding:16px 24px;color:#6b7280;font-size:12px;border-top:1px solid #eef2f7;">
-                      <div>Sent to {email}</div>
-                      <div style="margin-top:4px;">&copy; {timezone.now().year} My Crew Manager. All rights reserved.</div>
-                    </td>
-                  </tr>
-                </table>
-              </td>
-            </tr>
-          </table>
+        <div style="background:#f8f9fc;padding:40px 0;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica Neue,Arial,sans-serif;color:#1f2937;">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                <tr>
+                <td align="center">
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" style="background:#ffffff;border-radius:16px;box-shadow:0 10px 40px rgba(0,0,0,0.1);overflow:hidden;border:1px solid #e5e7eb;">
+                    
+                    <!-- Header with Logo and Branding -->
+                    <tr>
+                        <td style="background:linear-gradient(135deg, #1a5f7a 0%, #2c7a9e 100%);color:#ffffff;padding:40px 40px 36px 40px;text-align:center;">
+                        <div style="font-size:32px;font-weight:700;letter-spacing:-1px;margin-bottom:8px;">MyCrewManager</div>
+                        <div style="opacity:.95;font-size:14px;font-weight:500;letter-spacing:0.5px;text-transform:uppercase;">Email Verification Service</div>
+                        </td>
+                    </tr>
+                    
+                    <!-- Main Content -->
+                    <tr>
+                        <td style="padding:48px 40px 24px 40px;">
+                        <div style="text-align:center;margin-bottom:32px;">
+                            <div style="display:inline-block;background:#f0f9ff;color:#1a5f7a;padding:8px 20px;border-radius:20px;font-size:13px;font-weight:600;margin-bottom:20px;">
+                            Action Required
+                            </div>
+                        </div>
+                        <div style="font-size:24px;font-weight:700;margin-bottom:16px;color:#111827;line-height:1.3;">Email Verification Required</div>
+                        <div style="font-size:15px;line-height:1.8;color:#4b5563;margin-bottom:8px;">
+                            Thank you for registering with MyCrewManager. To ensure the security of your account and complete your registration, please verify your email address using the code provided below.
+                        </div>
+                        <div style="font-size:14px;line-height:1.7;color:#6b7280;">
+                            This verification code will remain valid for <strong style="color:#1a5f7a;">{settings.VERIFICATION_CODE_TTL_MIN} minutes</strong> from the time of this email.
+                        </div>
+                        </td>
+                    </tr>
+                    
+                    <!-- Verification Code -->
+                    <tr>
+                        <td style="padding:16px 40px 24px 40px;">
+                        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                            <tr>
+                            <td align="center">
+                                <div style="background:linear-gradient(135deg, #1a5f7a 0%, #2c7a9e 100%);border-radius:12px;padding:32px 40px;box-shadow:0 6px 20px rgba(26,95,122,0.2);">
+                                <div style="color:#ffffff;opacity:0.9;font-size:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">Verification Code</div>
+                                <div style="color:#ffffff;font-size:36px;letter-spacing:10px;font-weight:700;font-family:Consolas,Monaco,Courier New,monospace;">
+                                    {code}
+                                </div>
+                                </div>
+                            </td>
+                            </tr>
+                        </table>
+                        </td>
+                    </tr>
+                    
+                    <!-- Instructions -->
+                    <tr>
+                        <td style="padding:16px 40px 32px 40px;">
+                        <div style="background:#f9fafb;border-left:4px solid #1a5f7a;padding:20px 24px;border-radius:8px;">
+                            <div style="font-size:14px;font-weight:600;color:#111827;margin-bottom:8px;">Important Security Information</div>
+                            <div style="font-size:13px;line-height:1.7;color:#4b5563;">
+                            • Enter this code in the verification page to confirm your email address<br>
+                            • Never share this code with anyone, including MyCrewManager staff<br>
+                            • If you did not create an account, please disregard this message
+                            </div>
+                        </div>
+                        </td>
+                    </tr>
+                    
+                    <!-- Footer -->
+                    <tr>
+                        <td style="background:#f9fafb;padding:32px 40px;border-top:1px solid #e5e7eb;">
+                        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                            <tr>
+                            <td style="padding-bottom:16px;border-bottom:1px solid #e5e7eb;">
+                                <div style="font-size:13px;color:#6b7280;line-height:1.6;">
+                                <strong style="color:#374151;display:block;margin-bottom:4px;">This email was sent to:</strong>
+                                {email}
+                                </div>
+                            </td>
+                            </tr>
+                            <tr>
+                            <td style="padding-top:16px;">
+                                <div style="font-size:12px;color:#9ca3af;line-height:1.7;">
+                                This is an automated message from MyCrewManager's secure authentication system. Please do not reply directly to this email. For support inquiries, please visit our help center.
+                                </div>
+                                <div style="margin-top:16px;padding-top:16px;border-top:1px solid #e5e7eb;font-size:12px;color:#9ca3af;">
+                                &copy; {timezone.now().year} MyCrewManager. All rights reserved.<br>
+                                <span style="opacity:0.8;">Trusted workforce management solutions.</span>
+                                </div>
+                            </td>
+                            </tr>
+                        </table>
+                        </td>
+                    </tr>
+                    
+                    </table>
+                </td>
+                </tr>
+            </table>
         </div>
         """
         try:
