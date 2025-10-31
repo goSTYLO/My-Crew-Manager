@@ -15,7 +15,9 @@ from django.conf import settings
 from django.contrib.auth.hashers import make_password, check_password
 from django.core.mail import send_mail
 from datetime import timedelta
-from django.db import transaction, connection
+from django.db import transaction, connection, IntegrityError
+from django.db.models.deletion import ProtectedError
+from django.db.utils import OperationalError, ProgrammingError
 
 class SignupView(APIView):
     def post(self, request):
@@ -156,35 +158,55 @@ class AccountDeleteView(APIView):
                 except Exception:
                     pass
                 
-                # Fix the foreign key constraint issue
-                # Update all references to this user before deletion
-                with connection.cursor() as cursor:
-                    # Check if column exists first
-                    cursor.execute("""
-                        SELECT column_name 
-                        FROM information_schema.columns 
-                        WHERE table_name='ai_api_project' 
-                        AND column_name='status_updated_by_id'
-                    """)
-                    
-                    if cursor.fetchone():
-                        cursor.execute(
-                            "UPDATE ai_api_project SET status_updated_by_id = NULL WHERE status_updated_by_id = %s",
-                            [user_id]
-                        )
-                
-                # Now delete the user
-                request.user.delete()
-                
+                # Attempt hard delete in its own savepoint; on failure, perform soft delete in a clean savepoint
+                soft_deleted = False
+                try:
+                    with transaction.atomic():
+                        request.user.delete()
+                except (ProgrammingError, IntegrityError, ProtectedError) as e:
+                    print(f"Hard delete failed, performing soft-delete: {e}")
+                    with transaction.atomic():
+                        user = request.user
+                        update_fields = []
+                        if hasattr(user, 'is_active'):
+                            user.is_active = False
+                            update_fields.append('is_active')
+                        if hasattr(user, 'email') and user.email:
+                            user.email = f"deleted_{user.user_id}@example.invalid"
+                            update_fields.append('email')
+                        if hasattr(user, 'name') and user.name:
+                            user.name = "Deleted User"
+                            update_fields.append('name')
+                        if update_fields:
+                            user.save(update_fields=update_fields)
+                            soft_deleted = True
+
                 return Response(
                     {
-                        'deleted': True, 
+                        'deleted': True,
+                        'soft_deleted': soft_deleted,
                         'user_id': str(user_id),
                         'message': 'Account deleted successfully'
-                    }, 
+                    },
                     status=status.HTTP_200_OK
                 )
                 
+        except ProtectedError as e:
+            # There are related objects protected by FK constraints
+            return Response(
+                {
+                    'error': 'Account cannot be deleted due to linked records. Please remove or reassign related data first.'
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        except IntegrityError as e:
+            # Database integrity prevents deletion (e.g., NOT NULL FK)
+            return Response(
+                {
+                    'error': 'Account cannot be deleted due to database constraints. Please contact support.'
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
         except Exception as e:
             import traceback
             print("Delete error:", traceback.format_exc())

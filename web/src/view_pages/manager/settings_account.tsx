@@ -289,20 +289,33 @@ const AccountSettings = () => {
                 }, 2000);
                 
             } else {
-                const errorData = await deleteResponse.json().catch(() => ({ error: "Unknown error occurred" }));
-                console.error("Delete error response:", errorData);
+                const rawBody = await deleteResponse.text().catch(() => "");
+                let parsedBody: any = {};
+                try {
+                    parsedBody = rawBody ? JSON.parse(rawBody) : {};
+                } catch {
+                    // ignore JSON parse error; fall back to raw text
+                }
+
+                const serverMessage = (parsedBody && (parsedBody.error || parsedBody.detail || parsedBody.message)) || rawBody || "Unknown error occurred";
+                console.error("Delete error response:", {
+                    status: deleteResponse.status,
+                    statusText: deleteResponse.statusText,
+                    body: rawBody,
+                    parsed: parsedBody,
+                });
                 
                 // Handle specific error cases
                 if (deleteResponse.status === 401) {
                     setDeleteError("Incorrect password. Please try again.");
                 } else if (deleteResponse.status === 400) {
-                    setDeleteError(errorData.error || "Invalid request. Please check your email and password.");
+                    setDeleteError(serverMessage || "Invalid request. Please check your email and password.");
                 } else if (deleteResponse.status === 429) {
                     setDeleteError("Too many attempts. Please try again later.");
                 } else if (deleteResponse.status === 500) {
-                    setDeleteError("Server error. Please try again later or contact support.");
+                    setDeleteError(serverMessage || "Server error. Please try again later or contact support.");
                 } else {
-                    setDeleteError(errorData.error || "Failed to delete account. Please try again.");
+                    setDeleteError(serverMessage || "Failed to delete account. Please try again.");
                 }
             }
         } catch (error) {
