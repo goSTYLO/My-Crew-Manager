@@ -1,7 +1,8 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { ToastProvider } from './components/ToastContext';
 import { WebSocketProvider } from './contexts/WebSocketContext';
+import { LoginController } from './services/LoginController';
 
 import SignIn from './view_pages/manager/signIn';
 import SignUp from './view_pages/manager/signUp';
@@ -32,13 +33,68 @@ import UserSettingsApperance from './view_pages/user/user_settings_apperance';
 /* ---------------- Components ---------------- */
 import ForgotPassword from './components/forgotpassword';
 import LandingPage from './components/landingpage';
+import ContactSupportPage from './components/ContactSupportPage';
+import FAQPage from './components/FAQPage';
+import AboutUsPage from './components/AboutUsPage';
+
+// Component to handle Remember Me session check
+const RememberMeHandler: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [isChecking, setIsChecking] = useState(true);
+
+  useEffect(() => {
+    // Only check on initial load, not on route changes
+    // Skip if already on login/signup pages
+    const isAuthPage = ['/signin', '/sign-in', '/signup', '/signUp', '/', '/landing-page'].includes(location.pathname);
+    
+    if (!isAuthPage) {
+      // Check for Remember Me session
+      LoginController.checkRememberMeSession()
+        .then((result) => {
+          if (result.authenticated && result.user) {
+            // User has valid Remember Me session - determine redirect based on role
+            const role = sessionStorage.getItem('userRole') || '';
+            const normalizedRole = role.trim().replace(/\s+/g, ' ').toLowerCase();
+            
+            let redirectPath = '/projects-user'; // Default
+            if (normalizedRole.includes('project') && normalizedRole.includes('manager')) {
+              redirectPath = '/main-projects';
+            }
+            
+            // Only redirect if we're at root or landing page
+            if (location.pathname === '/' || location.pathname === '/landing-page') {
+              console.log('✅ Remember Me session restored, redirecting to:', redirectPath);
+              navigate(redirectPath, { replace: true });
+            }
+          }
+        })
+        .catch((error) => {
+          console.error('❌ Error checking Remember Me session:', error);
+        })
+        .finally(() => {
+          setIsChecking(false);
+        });
+    } else {
+      setIsChecking(false);
+    }
+  }, []); // Only run once on mount
+
+  if (isChecking) {
+    // Optional: Show loading spinner while checking
+    return null; // Or return a loading component
+  }
+
+  return <>{children}</>;
+};
 
 const App: React.FC = () => {
   return (
     <ToastProvider>
       <WebSocketProvider>
         <Router>
-          <Routes>
+          <RememberMeHandler>
+            <Routes>
 
             {/* Root path shows Sign In */}
             <Route path="/" element={<LandingPage />} />
@@ -65,6 +121,9 @@ const App: React.FC = () => {
 
             {/* Components */}
             <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/contact-support" element={<ContactSupportPage />} />
+            <Route path="/faq" element={<FAQPage />} />
+            <Route path="/about-us" element={<AboutUsPage />} />
 
             {/* User Routes */}
             <Route path="/projects-user" element={<ProjectUser />} />
@@ -80,7 +139,8 @@ const App: React.FC = () => {
             {/* Default Fallback */}
             <Route path="*" element={<Navigate to="/landing-page" replace />} />
 
-          </Routes>
+            </Routes>
+          </RememberMeHandler>
         </Router>
       </WebSocketProvider>
     </ToastProvider>

@@ -2,8 +2,15 @@ import { useState } from 'react';
 import { ArrowRight, CheckCircle, AlertCircle, MessageSquare, HelpCircle, Mail, FileText } from 'lucide-react';
 import { sendContactMessage } from '../services/contactService';
 import type { ContactFormData, Status } from '../services/contactService';
+import { useTheme } from './themeContext';
 
-export default function ContactSupport() {
+interface ContactSupportProps {
+  forceLight?: boolean;
+}
+
+export default function ContactSupport({ forceLight = false }: ContactSupportProps) {
+  const { theme: contextTheme } = useTheme();
+  const theme = forceLight ? 'light' : contextTheme;
   const [formData, setFormData] = useState<ContactFormData>({
     full_name: '',
     email: '',
@@ -33,17 +40,27 @@ export default function ContactSupport() {
   };
 
   return (
-    <section id="contact" className="py-20 px-4 sm:px-6 lg:px-8 bg-white">
-      <div className="w-full mx-auto">
+    <section id="contact" className={`py-20 px-4 sm:px-6 lg:px-8 min-h-screen overflow-x-hidden ${
+      theme === "dark" ? "bg-gray-900" : "bg-white"
+    }`}>
+      <div className="w-full max-w-full mx-auto">
         <div className="text-center mb-16">
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-[#1a5f7a]/10 rounded-full text-[#1a5f7a] text-sm font-semibold mb-4">
+          <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold mb-4 ${
+            theme === "dark" 
+              ? "bg-blue-900/30 text-blue-300" 
+              : "bg-[#1a5f7a]/10 text-[#1a5f7a]"
+          }`}>
             <HelpCircle className="w-4 h-4" />
             Get in Touch
           </div>
-          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+          <h2 className={`text-3xl sm:text-4xl md:text-5xl font-bold mb-4 ${
+            theme === "dark" ? "text-white" : "text-gray-900"
+          }`}>
             Contact Support
           </h2>
-          <p className="text-lg sm:text-xl text-gray-600 w-full mx-auto">
+          <p className={`text-lg sm:text-xl w-full mx-auto ${
+            theme === "dark" ? "text-gray-300" : "text-gray-600"
+          }`}>
             Have questions? Our team is here to help you succeed with MyCrewManager
           </p>
         </div>
@@ -59,7 +76,7 @@ export default function ContactSupport() {
                   </div>
                   <div>
                     <h4 className="font-semibold mb-1 text-lg">Email Us</h4>
-                    <a href="mailto:support@mycrewmanager.com" className="text-[#c9e4f0] hover:text-white transition-colors">
+                    <a href="mailto:support@mycrewmanager.com" className="text-[#c9e4f0] hover:text-white transition-colors break-all">
                       support@mycrewmanager.com
                     </a>
                     <p className="text-[#c9e4f0] text-sm mt-1">We'll respond within 24 hours</p>
@@ -94,42 +111,74 @@ export default function ContactSupport() {
               </div>
             </div>
 
-            <div className="bg-gray-50 rounded-2xl p-8 border border-gray-200">
-              <h3 className="text-xl font-bold text-gray-900 mb-4">Office Hours</h3>
-              <div className="space-y-2 text-gray-600">
-                <div className="flex justify-between">
+            <div className={`rounded-2xl p-8 border ${
+              theme === "dark" 
+                ? "bg-gray-800 border-gray-700" 
+                : "bg-gray-50 border-gray-200"
+            }`}>
+              <h3 className={`text-xl font-bold mb-4 ${
+                theme === "dark" ? "text-white" : "text-gray-900"
+              }`}>
+                Office Hours
+              </h3>
+              <div className={`space-y-2 ${
+                theme === "dark" ? "text-gray-300" : "text-gray-600"
+              }`}>
+                <div className="flex justify-between flex-wrap gap-2">
                   <span className="font-medium">Monday - Friday</span>
-                  <span>9:00 AM - 6:00 PM</span>
+                  <span className="whitespace-nowrap">9:00 AM - 6:00 PM</span>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex justify-between flex-wrap gap-2">
                   <span className="font-medium">Saturday</span>
-                  <span>10:00 AM - 4:00 PM</span>
+                  <span className="whitespace-nowrap">10:00 AM - 4:00 PM</span>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex justify-between flex-wrap gap-2">
                   <span className="font-medium">Sunday</span>
                   <span>Closed</span>
                 </div>
-                <p className="text-sm text-gray-500 mt-4">* All times in Philippine Standard Time (PST)</p>
+                <p className={`text-sm mt-4 ${
+                  theme === "dark" ? "text-gray-400" : "text-gray-500"
+                }`}>
+                  * All times in Philippine Standard Time (PST)
+                </p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-200">
-            <h3 className="text-2xl font-bold text-gray-900 mb-6">Send us a Message</h3>
+          <div className={`rounded-2xl p-8 shadow-lg border ${
+            theme === "dark" 
+              ? "bg-gray-800 border-gray-700" 
+              : "bg-white border-gray-200"
+          }`}>
+            <h3 className={`text-2xl font-bold mb-6 ${
+              theme === "dark" ? "text-white" : "text-gray-900"
+            }`}>
+              Send us a Message
+            </h3>
             
             {status.message && (
               <div className={`mb-6 p-4 rounded-lg flex items-start gap-3 ${
                 status.type === 'success' 
-                  ? 'bg-green-50 border border-green-200' 
-                  : 'bg-red-50 border border-red-200'
+                  ? theme === "dark"
+                    ? 'bg-green-900/30 border border-green-700'
+                    : 'bg-green-50 border border-green-200'
+                  : theme === "dark"
+                    ? 'bg-red-900/30 border border-red-700'
+                    : 'bg-red-50 border border-red-200'
               }`}>
                 {status.type === 'success' ? (
-                  <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                  <CheckCircle className={`w-5 h-5 flex-shrink-0 mt-0.5 ${
+                    theme === "dark" ? "text-green-400" : "text-green-600"
+                  }`} />
                 ) : (
-                  <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                  <AlertCircle className={`w-5 h-5 flex-shrink-0 mt-0.5 ${
+                    theme === "dark" ? "text-red-400" : "text-red-600"
+                  }`} />
                 )}
                 <p className={`text-sm ${
-                  status.type === 'success' ? 'text-green-800' : 'text-red-800'
+                  status.type === 'success' 
+                    ? theme === "dark" ? 'text-green-300' : 'text-green-800'
+                    : theme === "dark" ? 'text-red-300' : 'text-red-800'
                 }`}>
                   {status.message}
                 </p>
@@ -138,7 +187,9 @@ export default function ContactSupport() {
 
             <div className="space-y-6">
               <div>
-                <label htmlFor="full_name" className="block text-sm font-semibold text-gray-700 mb-2">
+                <label htmlFor="full_name" className={`block text-sm font-semibold mb-2 ${
+                  theme === "dark" ? "text-gray-200" : "text-gray-700"
+                }`}>
                   Full Name
                 </label>
                 <input
@@ -146,13 +197,19 @@ export default function ContactSupport() {
                   id="full_name"
                   value={formData.full_name}
                   onChange={handleChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1a5f7a] focus:border-transparent outline-none transition-all"
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#1a5f7a] focus:border-transparent outline-none transition-all ${
+                    theme === "dark"
+                      ? "bg-gray-900 border-gray-600 text-white placeholder-gray-400"
+                      : "bg-white border-gray-300 text-gray-900"
+                  }`}
                   placeholder="Enter your full name"
                 />
               </div>
 
               <div>
-                <label htmlFor="email" className="block text-sm font-semibold text-gray-700 mb-2">
+                <label htmlFor="email" className={`block text-sm font-semibold mb-2 ${
+                  theme === "dark" ? "text-gray-200" : "text-gray-700"
+                }`}>
                   Email Address
                 </label>
                 <input
@@ -160,13 +217,19 @@ export default function ContactSupport() {
                   id="email"
                   value={formData.email}
                   onChange={handleChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1a5f7a] focus:border-transparent outline-none transition-all"
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#1a5f7a] focus:border-transparent outline-none transition-all ${
+                    theme === "dark"
+                      ? "bg-gray-900 border-gray-600 text-white placeholder-gray-400"
+                      : "bg-white border-gray-300 text-gray-900"
+                  }`}
                   placeholder="Enter your email address"
                 />
               </div>
 
               <div>
-                <label htmlFor="subject" className="block text-sm font-semibold text-gray-700 mb-2">
+                <label htmlFor="subject" className={`block text-sm font-semibold mb-2 ${
+                  theme === "dark" ? "text-gray-200" : "text-gray-700"
+                }`}>
                   Subject
                 </label>
                 <input
@@ -174,13 +237,19 @@ export default function ContactSupport() {
                   id="subject"
                   value={formData.subject}
                   onChange={handleChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1a5f7a] focus:border-transparent outline-none transition-all"
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#1a5f7a] focus:border-transparent outline-none transition-all ${
+                    theme === "dark"
+                      ? "bg-gray-900 border-gray-600 text-white placeholder-gray-400"
+                      : "bg-white border-gray-300 text-gray-900"
+                  }`}
                   placeholder="How can we help?"
                 />
               </div>
 
               <div>
-                <label htmlFor="message" className="block text-sm font-semibold text-gray-700 mb-2">
+                <label htmlFor="message" className={`block text-sm font-semibold mb-2 ${
+                  theme === "dark" ? "text-gray-200" : "text-gray-700"
+                }`}>
                   Message
                 </label>
                 <textarea
@@ -188,7 +257,11 @@ export default function ContactSupport() {
                   rows={5}
                   value={formData.message}
                   onChange={handleChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1a5f7a] focus:border-transparent outline-none transition-all resize-none"
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#1a5f7a] focus:border-transparent outline-none transition-all resize-none ${
+                    theme === "dark"
+                      ? "bg-gray-900 border-gray-600 text-white placeholder-gray-400"
+                      : "bg-white border-gray-300 text-gray-900"
+                  }`}
                   placeholder="Tell us more about your inquiry..."
                 ></textarea>
               </div>

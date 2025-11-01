@@ -44,3 +44,8 @@ pdfplumber
 # Tokenizer/protobuf deps for Transformers
 protobuf>=4.25.0
 google>=3.0.0
+
+# 2FA Dependencies
+pyotp>=2.9.0
+qrcode[pil]>=7.4.2
+cryptography>=41.0.0

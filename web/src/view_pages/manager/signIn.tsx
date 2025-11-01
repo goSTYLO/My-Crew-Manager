@@ -1,7 +1,7 @@
 // pages/SignIn.tsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, Lock, Mail, Chrome, Github, Apple, CheckCircle, Users, BarChart3, ArrowLeft, ChevronDown, Trash2, User } from 'lucide-react';
+import { Eye, EyeOff, Mail, Chrome, Github, Apple, CheckCircle, Users, BarChart3, ArrowLeft, ChevronDown, Trash2, User, Lock } from 'lucide-react';
 import logo from "../../assets/logo2.png";
 
 // Import separated logic
@@ -20,29 +20,66 @@ export default function LoginPage() {
   const [rememberMe, setRememberMe] = useState(false);
   const [savedAccounts, setSavedAccounts] = useState<SavedAccount[]>([]);
   const [showAccountDropdown, setShowAccountDropdown] = useState(false);
+  const [show2FAVerification, setShow2FAVerification] = useState(false);
+  const [tempToken, setTempToken] = useState<string>("");
+  const [twoFactorCode, setTwoFactorCode] = useState<string>("");
+  const [isCheckingSession, setIsCheckingSession] = useState(true);
 
-  // Load saved accounts on component mount
+  // Check for Remember Me session and auto-login on component mount
   useEffect(() => {
-    const accounts = SavedAccountsManager.getAllAccounts();
-    setSavedAccounts(accounts);
-    
-    if (accounts.length > 0) {
-      const mostRecent = accounts[0];
-      setFormData({
-        email: mostRecent.email,
-        password: mostRecent.rememberMe && mostRecent.encryptedPassword 
-          ? SavedAccountsManager.decryptPassword(mostRecent.encryptedPassword) 
-          : ''
-      });
-      setRememberMe(mostRecent.rememberMe);
-      
-      if (mostRecent.rememberMe && mostRecent.encryptedPassword) {
-        console.log("✅ Auto-filled with saved credentials (Remember Me was enabled)");
-      } else {
-        console.log("📧 Auto-filled email only (Remember Me was not enabled)");
+    const checkAndAutoLogin = async () => {
+      try {
+        console.log("🔍 Checking for Remember Me session...");
+        const sessionResult = await LoginController.checkRememberMeSession();
+        
+        if (sessionResult.authenticated && sessionResult.user) {
+          // Valid session found - auto-fill form with email and password
+          console.log("✅ Remember Me session found - auto-filling credentials...");
+          await loadSavedAccountsWithAutoFill();
+        } else {
+          // No valid session - try to auto-fill form if Remember Me account exists
+          console.log("ℹ️ No valid Remember Me session - checking for saved credentials");
+          await loadSavedAccountsWithAutoFill();
+        }
+      } catch (error) {
+        console.error("❌ Error checking Remember Me session:", error);
+        // On error, still try to load saved accounts
+        await loadSavedAccountsWithAutoFill();
+      } finally {
+        setIsCheckingSession(false);
       }
-    }
-  }, []);
+    };
+
+    const loadSavedAccountsWithAutoFill = async () => {
+      const accounts = SavedAccountsManager.getAllAccounts();
+      setSavedAccounts(accounts);
+      
+      if (accounts.length > 0) {
+        const mostRecent = accounts[0];
+        
+        // Try to get decrypted password if Remember Me was enabled
+        // Uses email-based encryption key that persists in sessionStorage
+        let password = '';
+        if (mostRecent.rememberMe && mostRecent.encryptedPassword) {
+          password = SavedAccountsManager.getDecryptedPassword(mostRecent.email);
+        }
+        
+        setFormData({
+          email: mostRecent.email,
+          password: password
+        });
+        setRememberMe(mostRecent.rememberMe);
+        
+        if (password) {
+          console.log("✅ Auto-filled email and password (Remember Me enabled)");
+        } else {
+          console.log("📧 Auto-filled email only (Remember Me not enabled or password not saved)");
+        }
+      }
+    };
+
+    checkAndAutoLogin();
+  }, [navigate]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -56,21 +93,26 @@ export default function LoginPage() {
   };
 
   const handleSelectAccount = (account: SavedAccount) => {
+    // Try to decrypt password if Remember Me was enabled
+    // Uses email-based encryption key from sessionStorage
+    let password = '';
+    if (account.rememberMe && account.encryptedPassword) {
+      password = SavedAccountsManager.getDecryptedPassword(account.email);
+    }
+    
     setFormData({
       email: account.email,
-      password: account.rememberMe && account.encryptedPassword 
-        ? SavedAccountsManager.decryptPassword(account.encryptedPassword) 
-        : ''
+      password: password
     });
     setRememberMe(account.rememberMe);
     setShowAccountDropdown(false);
     SavedAccountsManager.updateLastUsed(account.email);
     setSavedAccounts(SavedAccountsManager.getAllAccounts());
     
-    if (account.rememberMe && account.encryptedPassword) {
-      console.log("✅ Loaded account with saved password (Remember Me enabled)");
+    if (password) {
+      console.log("✅ Loaded account with decrypted password (Remember Me enabled)");
     } else {
-      console.log("📧 Loaded account email only (Remember Me not enabled)");
+      console.log("📧 Loaded account email only (Remember Me not enabled or password not available)");
     }
   };
 
@@ -106,15 +148,28 @@ export default function LoginPage() {
 
     try {
       console.log("🚀 Starting login process...");
-      const result = await LoginController.login(formData);
+      const result = await LoginController.login(formData, rememberMe);
+      console.log("✅ Login response:", result);
+      
+      // Check if 2FA is required
+      if (result.requires2FA && result.tempToken) {
+        console.log("🔐 2FA required - showing verification step");
+        setTempToken(result.tempToken);
+        setShow2FAVerification(true);
+        setMessage({ text: result.message || "Please enter your 2FA code", type: 'success' });
+        setIsLoading(false);
+        return;
+      }
+      
       console.log("✅ Login successful - redirect path:", result.redirect);
       
+      // Save account with encrypted password if Remember Me is enabled
       SavedAccountsManager.saveAccount(formData.email, formData.password, rememberMe);
       
       if (rememberMe) {
-        console.log("✅ Account saved with encrypted password (Remember Me enabled)");
+        console.log("✅ Account saved with Remember Me enabled (password encrypted securely)");
       } else {
-        console.log("📧 Account saved with email only (Remember Me disabled - no password stored)");
+        console.log("📧 Account saved with email only (Remember Me disabled)");
       }
       
       setMessage({ text: result.message, type: 'success' });
@@ -134,6 +189,59 @@ export default function LoginPage() {
     }
   };
 
+  const handle2FAVerify = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (twoFactorCode.length !== 6) {
+      setMessage({ text: 'Please enter a valid 6-digit code', type: 'error' });
+      return;
+    }
+
+    setIsLoading(true);
+    setMessage(null);
+
+    try {
+      console.log("🔐 Verifying 2FA code...");
+      const result = await LoginController.verify2FA(tempToken, twoFactorCode, rememberMe);
+      console.log("✅ 2FA verification successful - redirect path:", result.redirect);
+      
+      // Save account with encrypted password if Remember Me is enabled
+      SavedAccountsManager.saveAccount(formData.email, formData.password, rememberMe);
+      if (rememberMe) {
+        console.log("✅ Account saved with Remember Me enabled (password encrypted securely)");
+      }
+      
+      setMessage({ text: result.message, type: 'success' });
+
+      setTimeout(() => {
+        console.log("🔀 Executing navigation to:", result.redirect);
+        navigate(result.redirect, { replace: true });
+      }, 1000);
+    } catch (error) {
+      console.error("❌ 2FA verification error:", error);
+      setMessage({
+        text: error instanceof Error ? error.message : 'Invalid verification code',
+        type: 'error'
+      });
+      setTwoFactorCode(""); // Clear code on error
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handle2FACodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+    setTwoFactorCode(value);
+    setMessage(null);
+  };
+
+  const handleBackToLogin = () => {
+    setShow2FAVerification(false);
+    setTwoFactorCode("");
+    setTempToken("");
+    setMessage(null);
+  };
+
   const handleSocialLogin = async (provider: string) => {
     setSocialLoading(provider);
     setMessage(null);
@@ -148,6 +256,18 @@ export default function LoginPage() {
   };
 
   const isFormValid = formData.email && formData.password;
+
+  // Show loading state while checking for Remember Me session
+  if (isCheckingSession) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-[#1a5f7a] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600 font-medium">Checking session...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-white flex">
@@ -247,6 +367,7 @@ export default function LoginPage() {
             <p className="text-gray-600">Access your enterprise account</p>
           </div>
 
+          {!show2FAVerification ? (
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Saved Accounts Dropdown */}
             {savedAccounts.length > 0 && (
@@ -297,7 +418,7 @@ export default function LoginPage() {
                                 {account.email}
                               </p>
                               <p className="text-xs text-gray-500">
-                                {account.rememberMe ? '🔒 Password saved' : '📧 Email only'} • {new Date(account.lastUsed).toLocaleDateString()}
+                                {account.rememberMe ? '🔒 Remember Me enabled' : '📧 Email only'} • {new Date(account.lastUsed).toLocaleDateString()}
                               </p>
                             </div>
                           </div>
@@ -490,6 +611,83 @@ export default function LoginPage() {
               </p>
             </div>
           </form>
+          ) : (
+          <form onSubmit={handle2FAVerify} className="space-y-5">
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Lock className="w-8 h-8 text-white" />
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Two-Factor Authentication</h2>
+              <p className="text-gray-600">Enter the 6-digit code from your authenticator app</p>
+            </div>
+
+            {/* 2FA Code Input */}
+            <div>
+              <label htmlFor="2fa-code" className="block text-sm font-semibold text-gray-700 mb-2">
+                Verification Code
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <Lock className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                  id="2fa-code"
+                  name="2fa-code"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  value={twoFactorCode}
+                  onChange={handle2FACodeChange}
+                  className="block w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#2c7a9e] focus:border-transparent transition-all text-center text-2xl tracking-widest font-mono"
+                  placeholder="000000"
+                  maxLength={6}
+                  disabled={isLoading}
+                  autoFocus
+                />
+              </div>
+              <p className="mt-2 text-xs text-gray-500 text-center">
+                Open your Microsoft Authenticator app to get your verification code
+              </p>
+            </div>
+
+            {/* Error/Success Message */}
+            {message && (
+              <div className={`rounded-lg p-4 ${
+                message.type === 'error'
+                  ? 'bg-red-50 border border-red-200 text-red-800'
+                  : 'bg-green-50 border border-green-200 text-green-800'
+              }`}>
+                <p className="text-sm font-medium">{message.text}</p>
+              </div>
+            )}
+
+            {/* Submit Button */}
+            <button
+              type="submit"
+              disabled={twoFactorCode.length !== 6 || isLoading}
+              className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white bg-[#1a5f7a] hover:bg-[#2c7a9e] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#2c7a9e] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {isLoading ? (
+                <div className="flex items-center gap-2">
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <span>Verifying...</span>
+                </div>
+              ) : (
+                'Verify Code'
+              )}
+            </button>
+
+            {/* Back Button */}
+            <button
+              type="button"
+              onClick={handleBackToLogin}
+              disabled={isLoading}
+              className="w-full text-center text-sm font-semibold text-gray-600 hover:text-gray-800 py-2"
+            >
+              ← Back to login
+            </button>
+          </form>
+          )}
 
           <div className="mt-8 text-center">
             <p className="text-xs text-gray-500">

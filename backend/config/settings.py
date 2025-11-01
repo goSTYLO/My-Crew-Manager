@@ -195,6 +195,19 @@ CORS_ALLOW_HEADERS = [
     'x-requested-with',
 ]
 
+# Cookie settings for secure authentication
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SECURE = not DEBUG  # Only use Secure in production (HTTPS)
+SESSION_COOKIE_SAMESITE = 'Lax'  # Lax for better compatibility while still providing CSRF protection
+SESSION_COOKIE_AGE = 86400 * 30  # 30 days default session age
+
+# Custom refresh token cookie settings
+REFRESH_TOKEN_COOKIE_NAME = 'refresh_token'
+REFRESH_TOKEN_COOKIE_AGE = 86400 * 30  # 30 days for Remember Me
+REFRESH_TOKEN_COOKIE_HTTPONLY = True
+REFRESH_TOKEN_COOKIE_SECURE = not DEBUG  # Only use Secure in production
+REFRESH_TOKEN_COOKIE_SAMESITE = 'Lax'
+
 # Logging Configuration
 LOGGING = {
     'version': 1,

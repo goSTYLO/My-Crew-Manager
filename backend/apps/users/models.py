@@ -28,6 +28,8 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_staff = models.BooleanField(default=False)
     profile_picture = models.ImageField(upload_to='profiles/', blank=True, null=True)
     email_verified_at = models.DateTimeField(null=True, blank=True)
+    two_factor_enabled = models.BooleanField(default=False)
+    two_factor_secret = models.CharField(max_length=500, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     USERNAME_FIELD = 'email'
@@ -55,5 +57,39 @@ class EmailVerification(models.Model):
     class Meta:
         indexes = [
             models.Index(fields=['email', 'status']),
+            models.Index(fields=['expires_at']),
+        ]
+
+
+class TwoFactorTempToken(models.Model):
+    """Temporary token for pending 2FA verification during login"""
+    id = models.BigAutoField(primary_key=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='two_factor_temp_tokens')
+    token = models.CharField(max_length=64, unique=True, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    
+    class Meta:
+        indexes = [
+            models.Index(fields=['token']),
+            models.Index(fields=['expires_at']),
+        ]
+
+
+class RefreshToken(models.Model):
+    """Refresh token for Remember Me functionality"""
+    id = models.BigAutoField(primary_key=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='refresh_tokens')
+    token = models.CharField(max_length=128, unique=True, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    remember_me = models.BooleanField(default=False)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.TextField(null=True, blank=True)
+    
+    class Meta:
+        indexes = [
+            models.Index(fields=['token']),
+            models.Index(fields=['user', 'expires_at']),
             models.Index(fields=['expires_at']),
         ]
