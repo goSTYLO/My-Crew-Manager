@@ -74,3 +74,22 @@ class TwoFactorTempToken(models.Model):
             models.Index(fields=['token']),
             models.Index(fields=['expires_at']),
         ]
+
+
+class RefreshToken(models.Model):
+    """Refresh token for Remember Me functionality"""
+    id = models.BigAutoField(primary_key=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='refresh_tokens')
+    token = models.CharField(max_length=128, unique=True, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    remember_me = models.BooleanField(default=False)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.TextField(null=True, blank=True)
+    
+    class Meta:
+        indexes = [
+            models.Index(fields=['token']),
+            models.Index(fields=['user', 'expires_at']),
+            models.Index(fields=['expires_at']),
+        ]

@@ -5,7 +5,7 @@ from rest_framework.authtoken.models import Token
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from django.contrib.auth import authenticate
-from .models import User, EmailVerification, TwoFactorTempToken
+from .models import User, EmailVerification, TwoFactorTempToken, RefreshToken
 from .serializers import UserSignupSerializer
 from .serializers import UserSerializer
 from .serializers import EmailRequestSerializer, EmailVerifySerializer
@@ -29,6 +29,51 @@ from datetime import timedelta
 from django.db import transaction, connection, IntegrityError
 from django.db.models.deletion import ProtectedError
 from django.db.utils import OperationalError, ProgrammingError
+import json
+
+
+def _set_refresh_token_cookie(response, refresh_token, remember_me=False):
+    """Helper function to set refresh token as HTTP-only cookie"""
+    max_age = settings.REFRESH_TOKEN_COOKIE_AGE if remember_me else None  # Session cookie if not remember_me
+    
+    response.set_cookie(
+        settings.REFRESH_TOKEN_COOKIE_NAME,
+        refresh_token,
+        max_age=max_age,
+        httponly=settings.REFRESH_TOKEN_COOKIE_HTTPONLY,
+        secure=settings.REFRESH_TOKEN_COOKIE_SECURE,
+        samesite=settings.REFRESH_TOKEN_COOKIE_SAMESITE,
+        path='/',
+    )
+
+
+def _create_refresh_token(user, remember_me, request=None):
+    """Helper function to create a new refresh token"""
+    # Delete expired refresh tokens for this user
+    RefreshToken.objects.filter(user=user, expires_at__lt=timezone.now()).delete()
+    
+    # Generate new refresh token
+    refresh_token_value = secrets.token_urlsafe(64)
+    expires_at = timezone.now() + timedelta(days=30) if remember_me else timezone.now() + timedelta(hours=24)
+    
+    # Get IP and user agent if available
+    ip_address = None
+    user_agent = None
+    if request:
+        ip_address = request.META.get('REMOTE_ADDR')
+        user_agent = request.META.get('HTTP_USER_AGENT', '')[:255]  # Limit length
+    
+    refresh_token = RefreshToken.objects.create(
+        user=user,
+        token=refresh_token_value,
+        expires_at=expires_at,
+        remember_me=remember_me,
+        ip_address=ip_address,
+        user_agent=user_agent
+    )
+    
+    return refresh_token.token
+
 
 class SignupView(APIView):
     def post(self, request):
@@ -50,6 +95,7 @@ class LoginView(APIView):
     def post(self, request):
         email = request.data.get('email')
         password = request.data.get('password')
+        remember_me = request.data.get('remember_me', False)
         user = authenticate(email=email, password=password)
         if user:
             # Check if 2FA is enabled (using getattr in case migration hasn't been run)
@@ -61,22 +107,27 @@ class LoginView(APIView):
                 # Delete any existing temp tokens for this user
                 TwoFactorTempToken.objects.filter(user=user).delete()
                 
-                # Create new temp token
+                # Store remember_me in session or temp token for later use
+                # For now, we'll handle it in Verify2FALoginView
                 TwoFactorTempToken.objects.create(
                     user=user,
                     token=temp_token,
                     expires_at=expires_at
                 )
                 
-                return Response({
+                response = Response({
                     'requires_2fa': True,
                     'temp_token': temp_token,
                     'message': 'Please enter your 2FA code'
                 })
+                
+                # Store remember_me flag temporarily in a secure way
+                # We'll pass it through the temp_token verification
+                return response
             else:
                 # Normal login flow
                 token, created = Token.objects.get_or_create(user=user)
-                return Response({
+                response = Response({
                     'id': str(user.user_id),
                     'email': user.email,
                     'name': user.name,
@@ -84,14 +135,103 @@ class LoginView(APIView):
                     'token': token.key,
                     'role': user.role,
                 })
+                
+                # Create refresh token and set cookie if remember_me is True
+                if remember_me:
+                    refresh_token = _create_refresh_token(user, remember_me=True, request=request)
+                    _set_refresh_token_cookie(response, refresh_token, remember_me=True)
+                
+                return response
         return Response({'message': 'Invalid email or password'}, status=status.HTTP_401_UNAUTHORIZED)
     
 class LogoutView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        request.user.auth_token.delete()
-        return Response({"message": "Logged out successfully"})
+        user = request.user
+        
+        # Delete auth token
+        try:
+            request.user.auth_token.delete()
+        except:
+            pass  # Token might not exist
+        
+        # Delete all refresh tokens for this user
+        RefreshToken.objects.filter(user=user).delete()
+        
+        # Create response and clear refresh token cookie
+        response = Response({"message": "Logged out successfully"})
+        response.delete_cookie(
+            settings.REFRESH_TOKEN_COOKIE_NAME,
+            path='/',
+            samesite=settings.REFRESH_TOKEN_COOKIE_SAMESITE,
+            secure=settings.REFRESH_TOKEN_COOKIE_SECURE
+        )
+        
+        return response
+
+
+class RefreshTokenView(APIView):
+    """Refresh access token using refresh token from cookie"""
+    
+    def post(self, request):
+        # Get refresh token from cookie
+        refresh_token_value = request.COOKIES.get(settings.REFRESH_TOKEN_COOKIE_NAME)
+        
+        if not refresh_token_value:
+            return Response(
+                {'error': 'No refresh token found'}, 
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+        
+        # Find refresh token in database
+        now = timezone.now()
+        refresh_token_obj = RefreshToken.objects.filter(
+            token=refresh_token_value,
+            expires_at__gt=now
+        ).first()
+        
+        if not refresh_token_obj:
+            # Token expired or invalid - clear cookie
+            response = Response(
+                {'error': 'Refresh token expired or invalid'}, 
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+            response.delete_cookie(
+                settings.REFRESH_TOKEN_COOKIE_NAME,
+                path='/',
+                samesite=settings.REFRESH_TOKEN_COOKIE_SAMESITE,
+                secure=settings.REFRESH_TOKEN_COOKIE_SECURE
+            )
+            return response
+        
+        user = refresh_token_obj.user
+        
+        # Create or get access token
+        token, created = Token.objects.get_or_create(user=user)
+        
+        # Optionally rotate refresh token for security (create new one, delete old)
+        # For now, we'll keep the same refresh token until it expires
+        # Uncomment below for token rotation:
+        # refresh_token_obj.delete()
+        # new_refresh_token = _create_refresh_token(user, refresh_token_obj.remember_me, request)
+        # response = Response({
+        #     'token': token.key,
+        #     'id': str(user.user_id),
+        #     'email': user.email,
+        #     'name': user.name,
+        #     'role': user.role,
+        # })
+        # _set_refresh_token_cookie(response, new_refresh_token, refresh_token_obj.remember_me)
+        # return response
+        
+        return Response({
+            'token': token.key,
+            'id': str(user.user_id),
+            'email': user.email,
+            'name': user.name,
+            'role': user.role,
+        })
     
 class UserDetailView(APIView):
     permission_classes = [IsAuthenticated]
@@ -720,16 +860,26 @@ class Verify2FALoginView(APIView):
             # Delete temp token
             temp_token_obj.delete()
             
+            # Get remember_me from request (passed from frontend)
+            remember_me = request.data.get('remember_me', False)
+            
             # Create permanent auth token
             token, created = Token.objects.get_or_create(user=user)
             
-            return Response({
+            response = Response({
                 'id': str(user.user_id),
                 'email': user.email,
                 'name': user.name,
                 'role': user.role,
                 'token': token.key,
             })
+            
+            # Create refresh token and set cookie if remember_me is True
+            if remember_me:
+                refresh_token = _create_refresh_token(user, remember_me=True, request=request)
+                _set_refresh_token_cookie(response, refresh_token, remember_me=True)
+            
+            return response
         else:
             return Response(
                 {'error': 'Invalid verification code'}, 

@@ -4,7 +4,7 @@ import { type User, UserModel } from "../services/UserModel";
 import { TwoFactorService } from "./TwoFactorService";
 
 export class LoginController {
-  static async login(user: User): Promise<{ 
+  static async login(user: User, rememberMe: boolean = false): Promise<{ 
     success: boolean; 
     message: string; 
     redirect: string;
@@ -16,14 +16,16 @@ export class LoginController {
       throw new Error(Object.values(validation.errors).join(", "));
     }
 
-    console.log("🔄 Sending login request with:", { email: user.email });
+    console.log("🔄 Sending login request with:", { email: user.email, rememberMe });
 
     const response = await fetch(`${API_BASE_URL}/user/login/`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      credentials: 'include', // Include cookies in request
       body: JSON.stringify({
         email: user.email,
-        password: user.password
+        password: user.password,
+        remember_me: rememberMe
       }),
     });
 
@@ -49,6 +51,10 @@ export class LoginController {
     // Check if 2FA is required
     if (data.requires_2fa && data.temp_token) {
       console.log("🔐 2FA required - returning temp token");
+      // Store rememberMe temporarily in sessionStorage for 2FA verification
+      if (rememberMe) {
+        sessionStorage.setItem('pending_remember_me', 'true');
+      }
       return {
         success: true,
         requires2FA: true,
@@ -168,14 +174,21 @@ export class LoginController {
   /**
    * Verify 2FA code after initial login
    */
-  static async verify2FA(tempToken: string, code: string): Promise<{ 
+  static async verify2FA(tempToken: string, code: string, rememberMe: boolean = false): Promise<{ 
     success: boolean; 
     message: string; 
     redirect: string;
   }> {
     console.log("🔐 Verifying 2FA code...");
 
-    const data = await TwoFactorService.verify2FALogin(tempToken, code);
+    // Check if rememberMe was stored during login
+    const pendingRememberMe = sessionStorage.getItem('pending_remember_me') === 'true';
+    const shouldRememberMe = rememberMe || pendingRememberMe;
+    if (pendingRememberMe) {
+      sessionStorage.removeItem('pending_remember_me');
+    }
+
+    const data = await TwoFactorService.verify2FALogin(tempToken, code, shouldRememberMe);
 
     // Save authentication tokens to sessionStorage (same as normal login)
     if (data.token) {
@@ -221,5 +234,113 @@ export class LoginController {
       message: `Welcome back, ${data.name || 'User'}!`,
       redirect: redirectPath,
     };
+  }
+
+  /**
+   * Refresh access token using refresh token from cookie
+   */
+  static async refreshAccessToken(): Promise<{ 
+    success: boolean; 
+    token?: string;
+    user?: any;
+    message?: string;
+  }> {
+    try {
+      console.log("🔄 Attempting to refresh access token...");
+      
+      const response = await fetch(`${API_BASE_URL}/user/refresh-token/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: 'include', // Include cookies (refresh token is in HTTP-only cookie)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.warn("⚠️ Token refresh failed:", errorData);
+        return {
+          success: false,
+          message: errorData.error || "Token refresh failed"
+        };
+      }
+
+      const data = await response.json();
+      console.log("✅ Token refreshed successfully");
+
+      // Store new access token
+      if (data.token) {
+        sessionStorage.setItem("token", data.token);
+        sessionStorage.setItem("access", data.token);
+      }
+
+      if (data.name) {
+        sessionStorage.setItem("username", data.name);
+      }
+
+      if (data.email) {
+        sessionStorage.setItem("email", data.email);
+      }
+
+      if (data.role) {
+        const normalizedRole = String(data.role).trim().replace(/\s+/g, ' ');
+        sessionStorage.setItem("userRole", normalizedRole);
+      }
+
+      return {
+        success: true,
+        token: data.token,
+        user: {
+          id: data.id,
+          email: data.email,
+          name: data.name,
+          role: data.role,
+        }
+      };
+    } catch (error) {
+      console.error("❌ Token refresh error:", error);
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : "Token refresh failed"
+      };
+    }
+  }
+
+  /**
+   * Check for existing Remember Me session on app initialization
+   */
+  static async checkRememberMeSession(): Promise<{ 
+    success: boolean; 
+    authenticated: boolean;
+    user?: any;
+    message?: string;
+  }> {
+    try {
+      console.log("🔍 Checking for Remember Me session...");
+      
+      // Attempt to refresh token (cookie will be sent automatically)
+      const refreshResult = await this.refreshAccessToken();
+      
+      if (refreshResult.success && refreshResult.token) {
+        console.log("✅ Remember Me session found and restored");
+        return {
+          success: true,
+          authenticated: true,
+          user: refreshResult.user,
+        };
+      } else {
+        console.log("ℹ️ No valid Remember Me session found");
+        return {
+          success: true,
+          authenticated: false,
+          message: refreshResult.message || "No valid session found"
+        };
+      }
+    } catch (error) {
+      console.error("❌ Error checking Remember Me session:", error);
+      return {
+        success: false,
+        authenticated: false,
+        message: error instanceof Error ? error.message : "Session check failed"
+      };
+    }
   }
 }

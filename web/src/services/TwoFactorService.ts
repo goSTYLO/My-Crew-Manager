@@ -125,7 +125,7 @@ export class TwoFactorService {
   /**
    * Verify 2FA code during login
    */
-  static async verify2FALogin(tempToken: string, code: string): Promise<{
+  static async verify2FALogin(tempToken: string, code: string, rememberMe: boolean = false): Promise<{
     id: string;
     email: string;
     name: string;
@@ -137,9 +137,11 @@ export class TwoFactorService {
       headers: {
         "Content-Type": "application/json",
       },
+      credentials: 'include', // Include cookies in request
       body: JSON.stringify({
         temp_token: tempToken,
         code: code,
+        remember_me: rememberMe,
       }),
     });
 

@@ -23,29 +23,63 @@ export default function LoginPage() {
   const [show2FAVerification, setShow2FAVerification] = useState(false);
   const [tempToken, setTempToken] = useState<string>("");
   const [twoFactorCode, setTwoFactorCode] = useState<string>("");
+  const [isCheckingSession, setIsCheckingSession] = useState(true);
 
-  // Load saved accounts on component mount
+  // Check for Remember Me session and auto-login on component mount
   useEffect(() => {
-    const accounts = SavedAccountsManager.getAllAccounts();
-    setSavedAccounts(accounts);
-    
-    if (accounts.length > 0) {
-      const mostRecent = accounts[0];
-      setFormData({
-        email: mostRecent.email,
-        password: mostRecent.rememberMe && mostRecent.encryptedPassword 
-          ? SavedAccountsManager.decryptPassword(mostRecent.encryptedPassword) 
-          : ''
-      });
-      setRememberMe(mostRecent.rememberMe);
-      
-      if (mostRecent.rememberMe && mostRecent.encryptedPassword) {
-        console.log("✅ Auto-filled with saved credentials (Remember Me was enabled)");
-      } else {
-        console.log("📧 Auto-filled email only (Remember Me was not enabled)");
+    const checkAndAutoLogin = async () => {
+      try {
+        console.log("🔍 Checking for Remember Me session...");
+        const sessionResult = await LoginController.checkRememberMeSession();
+        
+        if (sessionResult.authenticated && sessionResult.user) {
+          // Valid session found - auto-fill form with email and password
+          console.log("✅ Remember Me session found - auto-filling credentials...");
+          await loadSavedAccountsWithAutoFill();
+        } else {
+          // No valid session - try to auto-fill form if Remember Me account exists
+          console.log("ℹ️ No valid Remember Me session - checking for saved credentials");
+          await loadSavedAccountsWithAutoFill();
+        }
+      } catch (error) {
+        console.error("❌ Error checking Remember Me session:", error);
+        // On error, still try to load saved accounts
+        await loadSavedAccountsWithAutoFill();
+      } finally {
+        setIsCheckingSession(false);
       }
-    }
-  }, []);
+    };
+
+    const loadSavedAccountsWithAutoFill = async () => {
+      const accounts = SavedAccountsManager.getAllAccounts();
+      setSavedAccounts(accounts);
+      
+      if (accounts.length > 0) {
+        const mostRecent = accounts[0];
+        
+        // Try to get decrypted password if Remember Me was enabled
+        // Uses email-based encryption key that persists in sessionStorage
+        let password = '';
+        if (mostRecent.rememberMe && mostRecent.encryptedPassword) {
+          password = SavedAccountsManager.getDecryptedPassword(mostRecent.email);
+        }
+        
+        setFormData({
+          email: mostRecent.email,
+          password: password
+        });
+        setRememberMe(mostRecent.rememberMe);
+        
+        if (password) {
+          console.log("✅ Auto-filled email and password (Remember Me enabled)");
+        } else {
+          console.log("📧 Auto-filled email only (Remember Me not enabled or password not saved)");
+        }
+      }
+    };
+
+    checkAndAutoLogin();
+  }, [navigate]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -59,21 +93,26 @@ export default function LoginPage() {
   };
 
   const handleSelectAccount = (account: SavedAccount) => {
+    // Try to decrypt password if Remember Me was enabled
+    // Uses email-based encryption key from sessionStorage
+    let password = '';
+    if (account.rememberMe && account.encryptedPassword) {
+      password = SavedAccountsManager.getDecryptedPassword(account.email);
+    }
+    
     setFormData({
       email: account.email,
-      password: account.rememberMe && account.encryptedPassword 
-        ? SavedAccountsManager.decryptPassword(account.encryptedPassword) 
-        : ''
+      password: password
     });
     setRememberMe(account.rememberMe);
     setShowAccountDropdown(false);
     SavedAccountsManager.updateLastUsed(account.email);
     setSavedAccounts(SavedAccountsManager.getAllAccounts());
     
-    if (account.rememberMe && account.encryptedPassword) {
-      console.log("✅ Loaded account with saved password (Remember Me enabled)");
+    if (password) {
+      console.log("✅ Loaded account with decrypted password (Remember Me enabled)");
     } else {
-      console.log("📧 Loaded account email only (Remember Me not enabled)");
+      console.log("📧 Loaded account email only (Remember Me not enabled or password not available)");
     }
   };
 
@@ -109,7 +148,7 @@ export default function LoginPage() {
 
     try {
       console.log("🚀 Starting login process...");
-      const result = await LoginController.login(formData);
+      const result = await LoginController.login(formData, rememberMe);
       console.log("✅ Login response:", result);
       
       // Check if 2FA is required
@@ -124,12 +163,13 @@ export default function LoginPage() {
       
       console.log("✅ Login successful - redirect path:", result.redirect);
       
+      // Save account with encrypted password if Remember Me is enabled
       SavedAccountsManager.saveAccount(formData.email, formData.password, rememberMe);
       
       if (rememberMe) {
-        console.log("✅ Account saved with encrypted password (Remember Me enabled)");
+        console.log("✅ Account saved with Remember Me enabled (password encrypted securely)");
       } else {
-        console.log("📧 Account saved with email only (Remember Me disabled - no password stored)");
+        console.log("📧 Account saved with email only (Remember Me disabled)");
       }
       
       setMessage({ text: result.message, type: 'success' });
@@ -162,8 +202,14 @@ export default function LoginPage() {
 
     try {
       console.log("🔐 Verifying 2FA code...");
-      const result = await LoginController.verify2FA(tempToken, twoFactorCode);
+      const result = await LoginController.verify2FA(tempToken, twoFactorCode, rememberMe);
       console.log("✅ 2FA verification successful - redirect path:", result.redirect);
+      
+      // Save account with encrypted password if Remember Me is enabled
+      SavedAccountsManager.saveAccount(formData.email, formData.password, rememberMe);
+      if (rememberMe) {
+        console.log("✅ Account saved with Remember Me enabled (password encrypted securely)");
+      }
       
       setMessage({ text: result.message, type: 'success' });
 
@@ -210,6 +256,18 @@ export default function LoginPage() {
   };
 
   const isFormValid = formData.email && formData.password;
+
+  // Show loading state while checking for Remember Me session
+  if (isCheckingSession) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-[#1a5f7a] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600 font-medium">Checking session...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-white flex">
@@ -360,7 +418,7 @@ export default function LoginPage() {
                                 {account.email}
                               </p>
                               <p className="text-xs text-gray-500">
-                                {account.rememberMe ? '🔒 Password saved' : '📧 Email only'} • {new Date(account.lastUsed).toLocaleDateString()}
+                                {account.rememberMe ? '🔒 Remember Me enabled' : '📧 Email only'} • {new Date(account.lastUsed).toLocaleDateString()}
                               </p>
                             </div>
                           </div>
