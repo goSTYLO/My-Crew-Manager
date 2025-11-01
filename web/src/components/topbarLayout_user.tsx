@@ -9,6 +9,7 @@ import { useNotificationPolling } from "../hooks/useNotificationPolling";
 import { useToast } from "./ToastContext";
 import { useChatNotificationCount } from "../hooks/useChatNotificationCount";
 import { useWebSocket } from "../contexts/WebSocketContext";
+import { TokenManager } from "../services/TokenManager";
 
 interface TopNavbarProps {
   onMenuClick: () => void;
@@ -98,14 +99,15 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
   const [loadingAllNotifications, setLoadingAllNotifications] = useState(false);
   const notificationsPerPage = 20;
   const { showRealtimeUpdate } = useToast();
-  const { unreadCount, resetUnreadCount } = useChatNotificationCount();
-  const { subscribe } = useWebSocket();
+  const { unreadCount } = useChatNotificationCount();
+  const { subscribe, connectionStatus } = useWebSocket();
+  const isWebSocketConnected = connectionStatus === 'connected';
 
   // Fetch notifications from API
   const fetchNotifications = async () => {
     try {
       setLoadingNotifications(true);
-      const token = sessionStorage.getItem('token') || sessionStorage.getItem('access');
+      const token = TokenManager.getToken();
       if (!token) return;
 
       const response = await fetch(`${API_BASE_URL}/ai/notifications/`, {
@@ -130,7 +132,7 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
   const fetchAllNotifications = async () => {
     try {
       setLoadingAllNotifications(true);
-      const token = sessionStorage.getItem('token') || sessionStorage.getItem('access');
+      const token = TokenManager.getToken();
       if (!token) return;
 
       const response = await fetch(`${API_BASE_URL}/ai/notifications/?page=${notifPage}&limit=${notificationsPerPage}`, {
@@ -156,7 +158,7 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
   // Mark notification as read
   const markNotificationAsRead = async (notificationId: number) => {
     try {
-      const token = sessionStorage.getItem('token') || sessionStorage.getItem('access');
+      const token = TokenManager.getToken();
       if (!token) return;
 
       const response = await fetch(`${API_BASE_URL}/ai/notifications/${notificationId}/mark_read/`, {
@@ -182,7 +184,7 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
   // Mark all notifications as read
   const markAllAsRead = async () => {
     try {
-      const token = sessionStorage.getItem('token') || sessionStorage.getItem('access');
+      const token = TokenManager.getToken();
       if (!token) return;
 
       const response = await fetch(`${API_BASE_URL}/ai/notifications/mark_all_read/`, {
@@ -203,9 +205,10 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
     }
   };
 
-  // Smart polling for notifications - DISABLED for WebSocket testing
+  // Smart polling for notifications - disabled when WebSocket is connected
   useNotificationPolling({
-    enabled: false, // Disabled to test WebSocket broadcasting
+    enabled: true,
+    websocketConnected: isWebSocketConnected,
     onNewNotifications: (newNotifications) => {
       // Add new notifications to the list
       setNotifications(prev => [...newNotifications, ...prev]);
@@ -302,7 +305,7 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
     setShowLogoutConfirm(false);
 
     try {
-      const token = sessionStorage.getItem("token");
+      const token = TokenManager.getToken();
 
       await fetch(`${API_BASE_URL}/user/logout/`, {
         method: "POST",
@@ -312,16 +315,16 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
         },
       });
 
-      sessionStorage.removeItem("token");
-      sessionStorage.clear();
+      // Use TokenManager to clear all auth data including active session
+      TokenManager.clearAll();
 
       setTimeout(() => {
         window.location.replace("/sign-in");
       }, 1200);
     } catch (error) {
       console.error("Logout error:", error);
-      sessionStorage.removeItem("token");
-      sessionStorage.clear();
+      // Clear session even if API call fails
+      TokenManager.clearAll();
 
       setTimeout(() => {
         window.location.replace("/sign-in");
@@ -346,7 +349,7 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
   // Fetch user data and listen for updates from settings
   useEffect(() => {
     const fetchUserData = async () => {
-      const token = sessionStorage.getItem("token");
+      const token = TokenManager.getToken();
       console.log('🔍 TopNavbar - Token check:', token ? 'Found' : 'Not found');
       console.log('📍 TopNavbar - Current pathname:', window.location.pathname);
       if (!token) {
@@ -471,7 +474,8 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
             className="p-2 text-gray-500 hover:text-gray-700 relative"
             title="Team Chat"
             onClick={() => {
-              resetUnreadCount();
+              // Navigate to chat page
+              // WebSocket will automatically update badge count when rooms are marked as read
               navigate("/user-chat");
             }}
           >

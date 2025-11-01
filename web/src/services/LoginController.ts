@@ -2,6 +2,7 @@
 import { API_BASE_URL } from "./../config/api";
 import { type User, UserModel } from "../services/UserModel";
 import { TwoFactorService } from "./TwoFactorService";
+import { TokenManager } from "./TokenManager";
 
 export class LoginController {
   static async login(user: User, rememberMe: boolean = false): Promise<{ 
@@ -10,10 +11,34 @@ export class LoginController {
     redirect: string;
     requires2FA?: boolean;
     tempToken?: string;
+    concurrentSession?: boolean;
   }> {
     const validation = UserModel.validateUser(user);
     if (!validation.isValid) {
       throw new Error(Object.values(validation.errors).join(", "));
+    }
+
+    // Check if this account is already logged in from another tab
+    const normalizedEmail = user.email.toLowerCase().trim();
+    const activeSession = TokenManager.getActiveSession();
+    
+    // Only prevent login if SAME account is already logged in from another tab
+    // Different accounts can login simultaneously (multi-account mode)
+    if (activeSession && activeSession.email === normalizedEmail && activeSession.sessionId !== TokenManager.getCurrentSessionIdPublic()) {
+      console.warn('⚠️ Account is already logged in from another tab:', normalizedEmail);
+      
+      return {
+        success: false,
+        message: 'This account is already logged in from another browser tab. Please log out from the other tab first, or close it and try again.',
+        redirect: '',
+        concurrentSession: true,
+      };
+    }
+    
+    // If active session is for a different account, allow login (multi-account mode)
+    if (activeSession && activeSession.email !== normalizedEmail) {
+      console.log('✅ Different account already logged in - allowing login (multi-account mode)');
+      // Continue with login - TokenManager.setToken() will handle session registration with force=true
     }
 
     console.log("🔄 Sending login request with:", { email: user.email, rememberMe });
@@ -64,33 +89,38 @@ export class LoginController {
       };
     }
 
-    // ✅ Save authentication tokens to sessionStorage
+    // ✅ Save authentication tokens securely via TokenManager
     console.log("🔍 Checking for tokens in response...");
     
+    const userEmail = data.email || normalizedEmail;
+    
     if (data.token) {
-      sessionStorage.setItem("token", data.token);
-      sessionStorage.setItem("access", data.token);
+      TokenManager.setToken(data.token, userEmail, true); // Force register on login
       console.log("✅ Token stored successfully (DRF Token Auth)");
     } else if (data.access) {
-      sessionStorage.setItem("access", data.access);
-      sessionStorage.setItem("token", data.access);
+      TokenManager.setToken(data.access, userEmail, true); // Force register on login
       console.log("✅ Access token stored successfully (JWT)");
     } else {
       console.warn("⚠️ No authentication token in response!");
     }
 
     if (data.refresh) {
+      // Only store refresh token if not using HTTP-only cookies
       sessionStorage.setItem("refresh", data.refresh);
-      console.log("✅ Refresh token stored successfully");
+      console.log("✅ Refresh token stored (fallback, prefers HTTP-only cookie)");
     }
+
+    // Store user data via TokenManager
+    TokenManager.setUserData({
+      name: data.name,
+      email: data.email,
+      role: data.role,
+    });
 
     if (data.name) {
-      sessionStorage.setItem("username", data.name);
       console.log("✅ Username stored:", data.name);
     }
-
     if (data.email) {
-      sessionStorage.setItem("email", data.email);
       console.log("✅ Email stored:", data.email);
     }
 
@@ -112,9 +142,8 @@ export class LoginController {
       console.log("   ✨ Normalized role:", JSON.stringify(normalizedRole));
       console.log("   🔽 Lowercase role:", JSON.stringify(lowerRole));
       
-      // Store the normalized role
-      sessionStorage.setItem("userRole", normalizedRole);
-      console.log("   💾 Stored role in sessionStorage:", normalizedRole);
+      // Role already stored by TokenManager.setUserData above
+      console.log("   💾 Role stored:", normalizedRole);
 
       // 🎯 Multiple matching strategies for maximum compatibility
       const isProjectManager = 
@@ -147,7 +176,7 @@ export class LoginController {
       }
     } else {
       console.warn("   ⚠️ No 'role' in backend response!");
-      sessionStorage.setItem("userRole", "Developer");
+      TokenManager.setUserData({ role: "Developer" });
       redirectPath = "/projects-user";
     }
 
@@ -155,13 +184,11 @@ export class LoginController {
     console.log("========================================\n");
 
     // Final verification log
-    console.log("🔐 Final sessionStorage state:");
-    console.log("   - access:", sessionStorage.getItem("access") ? "✓" : "✗");
-    console.log("   - token:", sessionStorage.getItem("token") ? "✓" : "✗");
-    console.log("   - refresh:", sessionStorage.getItem("refresh") ? "✓" : "✗");
-    console.log("   - username:", sessionStorage.getItem("username") || "✗");
-    console.log("   - email:", sessionStorage.getItem("email") || "✗");
-    console.log("   - userRole:", sessionStorage.getItem("userRole") || "✗");
+    console.log("🔐 Final authentication state:");
+    console.log("   - token:", TokenManager.hasToken() ? "✓" : "✗");
+    console.log("   - username:", TokenManager.getUsername() || "✗");
+    console.log("   - email:", TokenManager.getEmail() || "✗");
+    console.log("   - userRole:", TokenManager.getUserRole() || "✗");
 
     return { 
       success: true, 
@@ -190,20 +217,19 @@ export class LoginController {
 
     const data = await TwoFactorService.verify2FALogin(tempToken, code, shouldRememberMe);
 
-    // Save authentication tokens to sessionStorage (same as normal login)
+    // Save authentication tokens via TokenManager
+    const userEmail = data.email || TokenManager.getEmail() || '';
     if (data.token) {
-      sessionStorage.setItem("token", data.token);
-      sessionStorage.setItem("access", data.token);
+      TokenManager.setToken(data.token, userEmail, true); // Force register on 2FA login
       console.log("✅ Token stored successfully");
     }
 
-    if (data.name) {
-      sessionStorage.setItem("username", data.name);
-    }
-
-    if (data.email) {
-      sessionStorage.setItem("email", data.email);
-    }
+    // Store user data via TokenManager
+    TokenManager.setUserData({
+      name: data.name,
+      email: data.email,
+      role: data.role,
+    });
 
     // Determine redirect path based on role
     let redirectPath = "/projects-user";
@@ -211,7 +237,7 @@ export class LoginController {
       const normalizedRole = String(data.role).trim().replace(/\s+/g, ' ');
       const lowerRole = normalizedRole.toLowerCase();
       
-      sessionStorage.setItem("userRole", normalizedRole);
+      // Role already stored by TokenManager.setUserData above
 
       const isProjectManager = 
         normalizedRole === "Project Manager" ||
@@ -226,7 +252,7 @@ export class LoginController {
         redirectPath = "/projects-user";
       }
     } else {
-      sessionStorage.setItem("userRole", "Developer");
+      TokenManager.setUserData({ role: "Developer" });
     }
 
     return {
@@ -266,24 +292,17 @@ export class LoginController {
       const data = await response.json();
       console.log("✅ Token refreshed successfully");
 
-      // Store new access token
+      // Store new access token via TokenManager
       if (data.token) {
-        sessionStorage.setItem("token", data.token);
-        sessionStorage.setItem("access", data.token);
+        TokenManager.setToken(data.token);
       }
 
-      if (data.name) {
-        sessionStorage.setItem("username", data.name);
-      }
-
-      if (data.email) {
-        sessionStorage.setItem("email", data.email);
-      }
-
-      if (data.role) {
-        const normalizedRole = String(data.role).trim().replace(/\s+/g, ' ');
-        sessionStorage.setItem("userRole", normalizedRole);
-      }
+      // Store user data via TokenManager
+      TokenManager.setUserData({
+        name: data.name,
+        email: data.email,
+        role: data.role,
+      });
 
       return {
         success: true,

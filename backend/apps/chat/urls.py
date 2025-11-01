@@ -10,10 +10,12 @@ router = DefaultRouter()
 router.register(r'rooms', RoomViewSet, basename='room')
 
 urlpatterns = [
-    path('', include(router.urls)),
-    # Manual nested routes for messages under rooms
+    # Manual nested routes for messages under rooms - MUST come BEFORE router.urls
+    # Otherwise the router's 'rooms/<pk>/' route matches first
     path('rooms/<int:room_pk>/messages/', MessageViewSet.as_view({'get': 'list', 'post': 'create'}), name='room-messages-list-create'),
     path('rooms/<int:room_pk>/messages/<int:pk>/', MessageViewSet.as_view({'delete': 'destroy'}), name='room-message-detail'),
+    # Router URLs come after nested routes
+    path('', include(router.urls)),
 ]
 
 

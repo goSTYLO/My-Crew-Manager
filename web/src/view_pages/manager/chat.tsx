@@ -30,6 +30,7 @@ interface Message {
   sender_username?: string;
   message_id?: number;
   reply_to_id?: number | null;
+  created_at?: string; // Store original created_at for sorting
 }
 
 interface Room {
@@ -271,8 +272,11 @@ const ChatApp = () => {
         console.log('🔔 Connecting to notification WebSocket...');
         connectNotificationWebSocket();
         
-        // Dispatch event to reset chat badge count
-        window.dispatchEvent(new CustomEvent('chatOpened'));
+        // Dispatch event to refresh chat badge count after a delay
+        // This allows any mark-as-read operations to complete first
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('chatOpened'));
+        }, 500);
         
         console.log('💬 Chat initialized with WebSocket real-time updates');
       } else {
@@ -381,12 +385,53 @@ const ChatApp = () => {
       console.log('📥 Fetching messages for room:', roomId);
       console.log('👤 Current user ID:', currentUserId);
       console.log('👤 Current user ID type:', typeof currentUserId);
-      const response = await apiCall(`/rooms/${roomId}/messages/`);
+      
+      // Get existing messages to determine the highest message_id we've seen
+      const existingMessages = messages[roomId] || [];
+      const highestMessageId = existingMessages
+        .filter(msg => msg.message_id && msg.message_id < 1000000000000)
+        .reduce((max, msg) => Math.max(max, msg.message_id || 0), 0);
+      
+      // Build query parameters
+      const queryParams = new URLSearchParams();
+      
+      if (highestMessageId > 0) {
+        // Fetch messages after the highest ID we've seen (newer messages)
+        queryParams.append('after_id', highestMessageId.toString());
+        queryParams.append('limit', '200'); // Get up to 200 newer messages
+        console.log(`📥 Fetching messages after ID ${highestMessageId} (incremental fetch)`);
+      } else {
+        // First fetch or no existing messages - fetch latest 200 messages
+        // We'll need to get total count and calculate offset to get latest messages
+        queryParams.append('limit', '200');
+        queryParams.append('offset', '0');
+        console.log(`📥 Fetching initial messages (up to 200)`);
+      }
+      
+      const response = await apiCall(`/rooms/${roomId}/messages/?${queryParams.toString()}`);
       
       // Handle different response structures
-      const msgs: ApiMessage[] = response.results || response.messages || response || [];
+      let msgs: ApiMessage[] = response.results || response.messages || response || [];
+      
+      // If this is the first fetch and we got less than total, we might be missing recent messages
+      // In that case, if total_count > 200, we need to fetch from the end
+      if (highestMessageId === 0 && response.total_count && response.total_count > msgs.length) {
+        console.log(`📥 Total messages: ${response.total_count}, fetched: ${msgs.length}. Fetching latest messages...`);
+        
+        // Calculate offset to get the LAST 200 messages
+        const totalCount = response.total_count;
+        const latestOffset = Math.max(0, totalCount - 200);
+        
+        const latestResponse = await apiCall(`/rooms/${roomId}/messages/?limit=200&offset=${latestOffset}`);
+        const latestMsgs: ApiMessage[] = latestResponse.results || latestResponse.messages || latestResponse || [];
+        
+        // Use the latest messages (most recent)
+        msgs = latestMsgs;
+        console.log(`📥 Fetched ${latestMsgs.length} latest messages (offset ${latestOffset})`);
+      }
+      
       console.log('📥 API Response structure:', response);
-      console.log('📥 Extracted messages:', msgs);
+      console.log('📥 Extracted messages:', msgs.length);
 
       if (!Array.isArray(msgs)) {
         console.error('❌ Messages is not an array:', msgs);
@@ -394,53 +439,130 @@ const ChatApp = () => {
         return;
       }
 
-      const existingMessages = messages[roomId];
+      // Keep optimistic messages (temporary IDs > 1000000000000) that haven't been replaced yet
+      // Re-get existingMessages here since we might have updated it above
+      const existingMessagesForMerge = messages[roomId] || [];
+      const optimisticMessages = existingMessagesForMerge.filter(msg => 
+        msg.message_id && msg.message_id > 1000000000000
+      );
+      
+      // Create a map of existing real messages (by message_id) for quick lookup
+      const existingMessagesMap = new Map<number, Message>();
+      existingMessagesForMerge.forEach(msg => {
+        if (msg.message_id && msg.message_id < 1000000000000) {
+          existingMessagesMap.set(msg.message_id, msg);
+        }
+      });
       
       const formattedMessages: Message[] = msgs.map(msg => {
-        // Check if this message already exists in our state
-        const existingMsg = existingMessages?.find(m => m.message_id === msg.message_id);
+        // Check if this message already exists in our state (only check real messages)
+        const existingMsg = existingMessagesMap.get(msg.message_id);
         
-        // If message exists, preserve its sender status (me/them)
+        // Always determine sender based on currentUserId comparison
         const isMyMessage = msg.sender_id === currentUserId; 
         console.log(`🔍 Message ${msg.message_id}: sender_id=${msg.sender_id} (${typeof msg.sender_id}), currentUserId=${currentUserId} (${typeof currentUserId}), isMyMessage=${isMyMessage}`);
         
-        // This prevents messages from switching sides when leaving and returning
+        // If message exists as a real message, preserve its sender status and other properties
         let sender: 'me' | 'them';
-        if (existingMsg) {
+        if (existingMsg && existingMsg.message_id && existingMsg.message_id < 1000000000000) {
           sender = existingMsg.sender;
           console.log(`♻️ Preserving existing message ${msg.message_id} as '${sender}'`);
+          
+          // Return existing message (preserves all properties including UI state)
+          return existingMsg;
         } else {
           // For new messages, determine based on sender_id
           sender = isMyMessage ? 'me' : 'them';
           console.log(`🆕 New message ${msg.message_id}: sender_id=${msg.sender_id}, currentUserId=${currentUserId}, determined as '${sender}'`);
+          
+          return {
+            id: msg.message_id,
+            sender: sender,
+            text: msg.content,
+            time: new Date(msg.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+            sender_id: msg.sender_id,
+            sender_username: msg.sender_username,
+            message_id: msg.message_id,
+            reply_to_id: msg.reply_to_id || undefined,
+            created_at: msg.created_at // Store for sorting
+          };
         }
-        
-        return {
-          id: msg.message_id,
-          sender: sender,
-          text: msg.content,
-          time: new Date(msg.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
-          sender_id: msg.sender_id,
-          sender_username: msg.sender_username,
-          message_id: msg.message_id,
-          reply_to_id: msg.reply_to_id || undefined
-        };
       });
       
-      console.log('✅ Messages formatted:', formattedMessages.length);
+      // Merge: Get existing real messages that weren't in the API response
+      // If we did an incremental fetch (after_id), keep ALL existing messages
+      // If we did a full fetch (latest 200), only keep messages not in the fetch
+      let existingRealMessagesNotInFetch: Message[] = [];
+      
+      if (highestMessageId > 0) {
+        // Incremental fetch: Keep ALL existing real messages (they're older than what we fetched)
+        existingRealMessagesNotInFetch = existingMessagesForMerge.filter(msg => 
+          msg.message_id && msg.message_id < 1000000000000
+        );
+        console.log(`📥 Incremental fetch: Keeping all ${existingRealMessagesNotInFetch.length} existing messages`);
+      } else {
+        // Full fetch: Only keep messages not in the API response (edge case - shouldn't happen often)
+        existingRealMessagesNotInFetch = existingMessagesForMerge.filter(msg => {
+          if (!msg.message_id || msg.message_id > 1000000000000) {
+            return false; // Skip optimistic messages
+          }
+          // Keep if this message_id is not in the fetched messages
+          return !msgs.some(apiMsg => apiMsg.message_id === msg.message_id);
+        });
+        console.log(`📥 Full fetch: Keeping ${existingRealMessagesNotInFetch.length} existing messages not in API response`);
+      }
+      
+      console.log(`📥 Fetched ${formattedMessages.length} messages from API`);
+      console.log(`💾 Found ${existingRealMessagesNotInFetch.length} existing messages not in fetch (likely from WebSocket)`);
+      
+      // Combine: fetched messages + existing messages not in fetch + optimistic messages
+      const allMessages = [...formattedMessages, ...existingRealMessagesNotInFetch, ...optimisticMessages];
+      
+      // Remove duplicates (shouldn't happen, but safety check)
+      const uniqueMessages = Array.from(
+        new Map(allMessages.map(msg => [msg.message_id, msg])).values()
+      );
+      
+      // Sort messages by created_at timestamp to ensure correct chronological order
+      uniqueMessages.sort((a, b) => {
+        if (a.created_at && b.created_at) {
+          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        }
+        // Fallback to message_id if created_at not available
+        return (a.message_id || 0) - (b.message_id || 0);
+      });
+      
+      console.log('✅ Messages merged and sorted:', uniqueMessages.length, '(including', optimisticMessages.length, 'optimistic,', existingRealMessagesNotInFetch.length, 'from existing state)');
       setMessages(prev => ({
         ...prev,
-        [roomId]: formattedMessages
+        [roomId]: uniqueMessages
       }));
       
       // Update the last message in contacts after fetching
-      if (formattedMessages.length > 0) {
-        const lastMsg = formattedMessages[formattedMessages.length - 1];
+      if (uniqueMessages.length > 0) {
+        // Find the last real message (not optimistic) for contacts
+        const lastRealMsg = [...uniqueMessages].reverse().find(msg => 
+          msg.message_id && msg.message_id < 1000000000000
+        ) || uniqueMessages[uniqueMessages.length - 1];
+        
         setContacts(prev => prev.map(contact => 
           contact.id === roomId 
-            ? { ...contact, lastMessage: lastMsg.text, time: lastMsg.time }
+            ? { ...contact, lastMessage: lastRealMsg.text, time: lastRealMsg.time }
             : contact
         ));
+      }
+      
+      // After loading messages, mark room as read ONLY if this is the currently selected chat
+      // This ensures badge updates when user views messages in an active chat
+      // Don't mark as read if user navigated away or chat is not selected
+      if (selectedChat === roomId) {
+        console.log('📖 Messages loaded for active chat, marking room as read to update badge');
+        // Small delay to ensure messages are fully rendered and user has seen them
+        setTimeout(() => {
+          markRoomAsRead(roomId);
+        }, 150);
+      } else {
+        console.log('📖 Messages loaded but chat is not selected - not marking as read');
       }
     } catch (err) {
       console.error('❌ Failed to fetch messages:', err);
@@ -481,9 +603,123 @@ const ChatApp = () => {
         switch (data.type) {
           case 'chat_message':
             handleNewMessage(roomId, data.message, data.user_id);
+            
+            // WebSocket will automatically send unread_count_updated when new messages arrive
+            // No need to manually refresh badge - backend handles it
+            console.log('🔔 New message received - WebSocket will send unread_count_updated automatically');
+            break;
+          case 'message_deleted':
+            // Remove deleted message from local state and add system message in real-time
+            if (data.message_id) {
+              console.log('🗑️ Message deleted via WebSocket:', data.message_id, 'deleted by:', data.deleted_by);
+              setMessages(prev => {
+                if (prev[roomId]) {
+                  // Find the deleted message to check who sent it
+                  const deletedMsg = prev[roomId].find(msg => msg.message_id === data.message_id);
+                  const wasMyMessage = deletedMsg?.sender === 'me';
+                  
+                  // Check if current user is the one who deleted (for personalized message)
+                  const deletedByMe = currentUserId && data.deleted_by_id === currentUserId;
+                  
+                  // Filter out the deleted message
+                  const filteredMessages = prev[roomId].filter(msg => msg.message_id !== data.message_id);
+                  
+                  // Add system message showing who deleted the message
+                  // Personalize based on who deleted and who originally sent it
+                  let systemMessageText: string;
+                  if (deletedByMe && wasMyMessage) {
+                    systemMessageText = '🗑️ You deleted this message';
+                  } else if (deletedByMe && !wasMyMessage) {
+                    systemMessageText = '🗑️ You removed this message';
+                  } else if (!deletedByMe && wasMyMessage) {
+                    systemMessageText = `🗑️ ${data.deleted_by || 'Owner'} removed this message`;
+                  } else {
+                    systemMessageText = `🗑️ ${data.deleted_by || 'Owner'} removed this message`;
+                  }
+                  
+                  const systemMessage: Message = {
+                    id: Date.now(),
+                    sender: 'them', // System messages always appear as 'them' (left side) for consistency
+                    text: systemMessageText,
+                    time: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+                    message_id: Date.now() // Use timestamp as temporary ID for system messages
+                  };
+                  
+                  // Insert system message at the position where the deleted message was
+                  // Find where the deleted message was and insert the system message there
+                  const deletedIndex = prev[roomId].findIndex(msg => msg.message_id === data.message_id);
+                  let updatedMessages;
+                  if (deletedIndex >= 0) {
+                    updatedMessages = [
+                      ...filteredMessages.slice(0, deletedIndex),
+                      systemMessage,
+                      ...filteredMessages.slice(deletedIndex)
+                    ];
+                  } else {
+                    updatedMessages = [...filteredMessages, systemMessage];
+                  }
+                  
+                  // Update contacts list if the deleted message was the last one
+                  setContacts(currentContacts => currentContacts.map(contact => {
+                    if (contact.id === roomId) {
+                      // Don't show system messages in contacts list - find last non-system message
+                      const lastNonSystemMsg = [...updatedMessages].reverse().find(msg => 
+                        !msg.text.includes('🗑️') && !msg.text.includes('➕') && !msg.text.includes('📝') && !msg.text.includes('🖼️')
+                      );
+                      return {
+                        ...contact,
+                        lastMessage: lastNonSystemMsg ? lastNonSystemMsg.text : 'No messages yet',
+                        time: lastNonSystemMsg ? lastNonSystemMsg.time : ''
+                      };
+                    }
+                    return contact;
+                  }));
+                  
+                  return {
+                    ...prev,
+                    [roomId]: updatedMessages
+                  };
+                }
+                return prev;
+              });
+            }
             break;
           case 'user_joined':
+            // Add system message when a user joins/is added to the group (real-time across all tabs)
             console.log('👋 User joined:', data.user);
+            if (data.user_email) {
+              // Add system message if this room is selected OR we have messages loaded for it
+              const shouldAddMessage = selectedChat === roomId || messages[roomId];
+              
+              if (shouldAddMessage) {
+                const systemMessage: Message = {
+                  id: Date.now(),
+                  sender: 'them', // System messages always appear on left side
+                  text: `➕ ${data.user_email} was invited to the group`,
+                  time: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+                  message_id: Date.now()
+                };
+                
+                setMessages(prev => {
+                  const existingMessages = prev[roomId] || [];
+                  // Check if we already have this system message to avoid duplicates
+                  const alreadyExists = existingMessages.some(msg => 
+                    msg.text.includes(data.user_email) && msg.text.includes('was invited to the group')
+                  );
+                  
+                  if (!alreadyExists) {
+                    return {
+                      ...prev,
+                      [roomId]: [...existingMessages, systemMessage]
+                    };
+                  }
+                  return prev;
+                });
+              }
+              
+              // Refresh rooms to update member count (always refresh regardless of selection)
+              fetchRooms();
+            }
             break;
           case 'user_left':
             console.log('👋 User left:', data.user);
@@ -543,8 +779,122 @@ const ChatApp = () => {
       
       switch (data.type) {
         case 'new_message':
-          // Update unread count for the room
-          updateUnreadCount(data.room_id);
+        case 'new_message_notification':
+          // Handle new message notification - add to messages if we have the room open
+          if (data.room_id && data.message) {
+            // If this room is currently selected or we have messages loaded for it, add the message
+            const isCurrentRoom = selectedChat === data.room_id;
+            const hasMessagesForRoom = messages[data.room_id];
+            
+            if (isCurrentRoom || hasMessagesForRoom) {
+              const newMessage: Message = {
+                id: data.message.message_id,
+                sender: data.message.sender_id === currentUserId ? 'me' : 'them',
+                text: data.message.content,
+                time: new Date(data.message.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+                sender_id: data.message.sender_id,
+                sender_username: data.message.sender_username,
+                message_id: data.message.message_id,
+                reply_to_id: data.message.reply_to_id || undefined,
+                created_at: data.message.created_at // Store for sorting
+              };
+              
+              setMessages(prev => {
+                const existingMessages = prev[data.room_id] || [];
+                
+                // Check if message already exists by message_id (real message)
+                const existingRealMsgIndex = existingMessages.findIndex(msg => 
+                  msg.message_id === newMessage.message_id && msg.message_id && msg.message_id < 1000000000000
+                );
+                
+                if (existingRealMsgIndex >= 0) {
+                  // Message already exists - update it
+                  const updated = [...existingMessages];
+                  updated[existingRealMsgIndex] = newMessage;
+                  updated.sort((a, b) => {
+                    if (a.created_at && b.created_at) {
+                      return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+                    }
+                    return (a.message_id || 0) - (b.message_id || 0);
+                  });
+                  return {
+                    ...prev,
+                    [data.room_id]: updated
+                  };
+                }
+                
+                // Check for optimistic message to replace
+                const optimisticMsgIndex = existingMessages.findIndex(msg => 
+                  msg.message_id && msg.message_id > 1000000000000 &&
+                  msg.sender === 'me' && 
+                  msg.text === newMessage.text &&
+                  data.message.sender_id === currentUserId
+                );
+                
+                let updatedMessages: Message[];
+                
+                if (optimisticMsgIndex >= 0) {
+                  // Replace optimistic message
+                  updatedMessages = [...existingMessages];
+                  updatedMessages[optimisticMsgIndex] = newMessage;
+                } else {
+                  // Insert new message in correct chronological position
+                  const newMessageTime = new Date(data.message.created_at).getTime();
+                  let insertIndex = existingMessages.length;
+                  
+                  for (let i = 0; i < existingMessages.length; i++) {
+                    const existingMsg = existingMessages[i];
+                    if (existingMsg.created_at) {
+                      const existingTime = new Date(existingMsg.created_at).getTime();
+                      if (existingTime < newMessageTime) {
+                        continue;
+                      } else {
+                        insertIndex = i;
+                        break;
+                      }
+                    } else if (existingMsg.message_id && newMessage.message_id) {
+                      if (existingMsg.message_id < newMessage.message_id) {
+                        continue;
+                      } else {
+                        insertIndex = i;
+                        break;
+                      }
+                    }
+                  }
+                  
+                  updatedMessages = [
+                    ...existingMessages.slice(0, insertIndex),
+                    newMessage,
+                    ...existingMessages.slice(insertIndex)
+                  ];
+                }
+                
+                // Sort by created_at timestamp to ensure correct chronological order
+                updatedMessages.sort((a, b) => {
+                  if (a.created_at && b.created_at) {
+                    return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+                  }
+                  return (a.message_id || 0) - (b.message_id || 0);
+                });
+                
+                return {
+                  ...prev,
+                  [data.room_id]: updatedMessages
+                };
+              });
+              
+              // Update last message in contacts
+              setContacts(prev => prev.map(contact => 
+                contact.id === data.room_id 
+                  ? { ...contact, lastMessage: data.message.content, time: 'Just now' }
+                  : contact
+              ));
+            }
+            
+            // WebSocket will automatically send unread_count_updated when new messages arrive
+            // No need to manually refresh badge - backend handles it
+            console.log('🔔 New message notification received - WebSocket will send unread_count_updated automatically');
+          }
           break;
         case 'room_invitation':
           // Refresh rooms list
@@ -588,13 +938,110 @@ const ChatApp = () => {
       text: messageData.content,
       time: new Date(messageData.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
       sender_id: senderId,
-      message_id: messageData.message_id
+      sender_username: messageData.sender_username,
+      message_id: messageData.message_id,
+      reply_to_id: messageData.reply_to_id || undefined,
+      created_at: messageData.created_at // Store for sorting
     };
     
-    setMessages(prev => ({
-      ...prev,
-      [roomId]: [...(prev[roomId] || []), newMessage]
-    }));
+    setMessages(prev => {
+      const existingMessages = prev[roomId] || [];
+      
+      // Check if message already exists by message_id (real message)
+      const existingRealMsgIndex = existingMessages.findIndex(msg => 
+        msg.message_id === newMessage.message_id && msg.message_id && msg.message_id < 1000000000000
+      );
+      
+      if (existingRealMsgIndex >= 0) {
+        // Message already exists as real message - just update it (in case of WebSocket duplicate)
+        const updated = [...existingMessages];
+        updated[existingRealMsgIndex] = newMessage;
+        // Sort to maintain order
+        updated.sort((a, b) => {
+          if (a.created_at && b.created_at) {
+            return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+          }
+          return (a.message_id || 0) - (b.message_id || 0);
+        });
+        return {
+          ...prev,
+          [roomId]: updated
+        };
+      }
+      
+      // Check for optimistic message to replace (temporary IDs > 1000000000000)
+      // Match by text and sender to find the optimistic message
+      const optimisticMsgIndex = existingMessages.findIndex(msg => 
+        msg.message_id && msg.message_id > 1000000000000 &&
+        msg.sender === 'me' && 
+        msg.text === newMessage.text &&
+        senderId === currentUserId // Only replace if it's the current user's message
+      );
+      
+      if (optimisticMsgIndex >= 0) {
+        // Replace optimistic message with real message
+        const updated = [...existingMessages];
+        updated[optimisticMsgIndex] = newMessage;
+        
+        // Sort by created_at to ensure correct order
+        updated.sort((a, b) => {
+          if (a.created_at && b.created_at) {
+            return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+          }
+          return (a.message_id || 0) - (b.message_id || 0);
+        });
+        
+        return {
+          ...prev,
+          [roomId]: updated
+        };
+      }
+      
+      // New message - insert in correct chronological position
+      const newMessageTime = new Date(messageData.created_at).getTime();
+      let insertIndex = existingMessages.length;
+      
+      for (let i = 0; i < existingMessages.length; i++) {
+        const existingMsg = existingMessages[i];
+        if (existingMsg.created_at) {
+          const existingTime = new Date(existingMsg.created_at).getTime();
+          if (existingTime < newMessageTime) {
+            continue;
+          } else {
+            insertIndex = i;
+            break;
+          }
+        } else if (existingMsg.message_id && newMessage.message_id) {
+          // Fallback to message_id comparison
+          if (existingMsg.message_id < newMessage.message_id) {
+            continue;
+          } else {
+            insertIndex = i;
+            break;
+          }
+        }
+      }
+      
+      // Insert at the correct position
+      const updatedMessages = [
+        ...existingMessages.slice(0, insertIndex),
+        newMessage,
+        ...existingMessages.slice(insertIndex)
+      ];
+      
+      // Sort by created_at to ensure correct chronological order
+      updatedMessages.sort((a, b) => {
+        if (a.created_at && b.created_at) {
+          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        }
+        return (a.message_id || 0) - (b.message_id || 0);
+      });
+      
+      return {
+        ...prev,
+        [roomId]: updatedMessages
+      };
+    });
     
     // Update last message in contacts
     setContacts(prev => prev.map(contact => 
@@ -637,6 +1084,37 @@ const ChatApp = () => {
       const messageText = message;
       setMessage(''); // Clear input immediately
       
+      const now = new Date();
+      const optimisticId = Date.now(); // Temporary ID for tracking
+      
+      // Optimistically add message to UI for instant feedback
+      // This will be replaced by the real message when API response or WebSocket arrives
+      const optimisticMessage: Message = {
+        id: optimisticId,
+        sender: 'me',
+        text: messageText,
+        time: now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+        sender_id: currentUserId || undefined,
+        message_id: optimisticId, // Temporary ID - will be replaced
+        created_at: now.toISOString() // Store current time for sorting
+      };
+      
+      // Add optimistic message at the end
+      setMessages(prev => {
+        const existingMessages = prev[selectedChat] || [];
+        return {
+          ...prev,
+          [selectedChat]: [...existingMessages, optimisticMessage]
+        };
+      });
+      
+      // Update contacts list optimistically
+      setContacts(prev => prev.map(contact => 
+        contact.id === selectedChat 
+          ? { ...contact, lastMessage: messageText, time: 'Just now' }
+          : contact
+      ));
+      
       try {
         const response = await apiCall(`/rooms/${selectedChat}/messages/`, {
           method: 'POST',
@@ -648,26 +1126,174 @@ const ChatApp = () => {
         
         console.log('✅ Message sent successfully:', response);
         
-        // Refresh messages immediately after sending (like assignTask in monitor_created.tsx)
-        console.log('🔄 Refreshing messages after sending...');
-        await refreshMessages();
-        console.log('✅ Messages refreshed after send');
+        // Immediately replace optimistic message with real message from API response
+        // This ensures the message appears correctly even if WebSocket is delayed
+        if (response && response.message_id) {
+          console.log('✅ API response received, replacing optimistic message:', response);
+          
+          const realMessage: Message = {
+            id: response.message_id,
+            sender: 'me',
+            text: response.content || messageText,
+            time: new Date(response.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+            sender_id: response.sender_id || currentUserId || undefined,
+            sender_username: response.sender_username,
+            message_id: response.message_id,
+            reply_to_id: response.reply_to_id || undefined,
+            created_at: response.created_at // Store real timestamp
+          };
+          
+          setMessages(prev => {
+            const existingMessages = prev[selectedChat] || [];
+            console.log('📦 Current messages before replacement:', existingMessages.length);
+            console.log('🔍 Looking for optimistic message with ID:', optimisticId);
+            
+            // Remove optimistic message (by matching the optimistic ID)
+            const filtered = existingMessages.filter(msg => {
+              const isOptimistic = msg.message_id === optimisticId;
+              if (isOptimistic) {
+                console.log('🗑️ Removing optimistic message:', msg.message_id, msg.text);
+              }
+              return !isOptimistic;
+            });
+            
+            console.log('📦 Messages after filtering optimistic:', filtered.length);
+            
+            // Check if real message already exists (in case WebSocket arrived first)
+            const alreadyExists = filtered.some(msg => msg.message_id === realMessage.message_id);
+            
+            if (!alreadyExists) {
+              // Add real message
+              const updated = [...filtered, realMessage];
+              
+              // Sort by created_at to ensure correct order
+              updated.sort((a, b) => {
+                if (a.created_at && b.created_at) {
+                  return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+                }
+                return (a.message_id || 0) - (b.message_id || 0);
+              });
+              
+              console.log('✅ Final messages after replacement:', updated.length);
+              return {
+                ...prev,
+                [selectedChat]: updated
+              };
+            } else {
+              console.log('ℹ️ Real message already exists (WebSocket arrived first), just removing optimistic');
+              // Real message already exists, just remove optimistic and sort
+              filtered.sort((a, b) => {
+                if (a.created_at && b.created_at) {
+                  return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+                }
+                return (a.message_id || 0) - (b.message_id || 0);
+              });
+              return {
+                ...prev,
+                [selectedChat]: filtered
+              };
+            }
+          });
+        } else {
+          console.warn('⚠️ API response missing message_id:', response);
+        }
         
-        // Update last message in contacts after refresh is complete
-        // This ensures the update persists after fetchMessages updates contacts
-        setTimeout(() => {
-          setContacts(prev => prev.map(contact => 
-            contact.id === selectedChat 
-              ? { ...contact, lastMessage: messageText, time: 'Just now' }
-              : contact
-          ));
-        }, 100);
+        // When user sends a message in the currently open chat, the backend automatically marks it as read
+        // The backend updates sender's joined_at and sends unread_count_updated via WebSocket
+        // We also call markRoomAsRead as backup verification to ensure badge is always correct
+        if (selectedChat) {
+          console.log('📝 Message sent in active chat - backend will mark as read and send badge update via WebSocket');
+          
+          // Small delay to ensure backend has processed the message and updated joined_at
+          // This is a backup verification in case WebSocket notification is delayed
+          // The backend will send unread_count_updated immediately, but we verify with API call
+          setTimeout(() => {
+            console.log('📝 Verifying badge count after sending message (backup verification)...');
+            markRoomAsRead(selectedChat);
+          }, 600);
+        }
         
       } catch (err) {
         console.error('Failed to send message:', err);
         setError('Failed to send message');
         setMessage(messageText); // Restore message on error
+        
+        // Remove optimistic message on error
+        setMessages(prev => ({
+          ...prev,
+          [selectedChat]: (prev[selectedChat] || []).filter(msg => msg.message_id !== optimisticId)
+        }));
       }
+    }
+  };
+
+  // Mark messages as read for a room
+  const markRoomAsRead = async (roomId: number) => {
+    try {
+      const token = getAuthToken();
+      if (!token) return;
+      
+      console.log('🔔 Marking room as read:', roomId);
+      
+      // Update user's joined_at timestamp to mark all current messages as read
+      // This endpoint should update the membership joined_at to current time
+      const response = await fetch(`${API_BASE_URL}/chat/rooms/${roomId}/mark_read/`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Token ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (response.ok) {
+        const responseData = await response.json();
+        console.log('✅ Successfully marked room as read:', roomId);
+        console.log('📊 Mark read response:', responseData);
+        
+        // Immediately update badge from API response (ensures instant update)
+        // WebSocket will also send unread_count_updated for real-time sync across tabs
+        if (responseData.total_unread_count !== undefined && typeof responseData.total_unread_count === 'number') {
+          const newCount = Math.max(0, responseData.total_unread_count);
+          console.log('🔔 Updating badge immediately from API response:', newCount);
+          
+          // Dispatch event immediately for instant UI update
+          window.dispatchEvent(new CustomEvent('chatBadgeUpdate', { 
+            detail: { unread_count: newCount },
+            bubbles: true,
+            cancelable: true
+          }));
+          
+          // Backup: Verify with API fetch after a short delay (ensures accuracy)
+          // This handles cases where WebSocket might be slow or not connected
+          // Multiple verification attempts to ensure badge resets correctly
+          setTimeout(() => {
+            console.log('🔔 Verification #1: Fetching unread count from API to verify badge count...');
+            window.dispatchEvent(new CustomEvent('chatBadgeRefresh', { bubbles: true }));
+          }, 300);
+          
+          // Second verification after longer delay (catches any race conditions)
+          setTimeout(() => {
+            console.log('🔔 Verification #2: Second API fetch to ensure badge is correct...');
+            window.dispatchEvent(new CustomEvent('chatBadgeRefresh', { bubbles: true }));
+          }, 1000);
+        } else {
+          // Fallback: fetch from API if total_unread_count not in response or invalid
+          console.log('⚠️ total_unread_count not in response or invalid, fetching from API...');
+          console.log('📊 Response data:', responseData);
+          setTimeout(() => {
+            window.dispatchEvent(new CustomEvent('chatBadgeRefresh', { bubbles: true }));
+          }, 300);
+        }
+        
+        console.log('🔔 WebSocket will also send unread_count_updated for real-time sync across tabs...');
+      } else {
+        const errorText = await response.text();
+        console.error('⚠️ Mark read endpoint returned error:', response.status, errorText);
+        // On error, don't refresh - let it update naturally when user navigates or receives new message
+      }
+    } catch (error) {
+      console.error('❌ Failed to mark room as read:', error);
+      // On error, don't refresh - let it update naturally when user navigates or receives new message
     }
   };
 
@@ -677,22 +1303,29 @@ const ChatApp = () => {
     setShowContactList(false);
     setShowGroupMenu(false); // Close menu when switching chats
     
-    // Load initial messages if not already loaded
-    if (!messages[id] || messages[id].length === 0) {
-      console.log(`💬 Loading initial messages for room ${id}`);
-      fetchMessages(id);
-    } else {
-      console.log(`💬 Messages already loaded for room ${id}`);
-    }
+    // Always refresh messages when selecting a chat to ensure we have the latest
+    // This is especially important when returning to the chat after navigating away
+    console.log(`💬 Selecting chat room ${id} - refreshing messages to ensure latest data`);
     
-    // Connect to WebSocket for real-time updates
+    // Connect to WebSocket for real-time updates BEFORE fetching messages
+    // This ensures we receive real-time updates immediately
     console.log(`🔌 Connecting to WebSocket for room ${id}`);
     connectRoomWebSocket(id);
     
-    // Reset unread count
+    // Fetch messages - this will call markRoomAsRead after messages are loaded
+    fetchMessages(id);
+    
+    // Reset unread count locally (optimistic UI update)
     setContacts(prev => prev.map(contact => 
       contact.id === id ? { ...contact, unread: 0 } : contact
     ));
+    
+    // Dispatch event to refresh badge count when chat is selected
+    // This ensures badge is updated even if markRoomAsRead hasn't completed yet
+    window.dispatchEvent(new CustomEvent('chatRoomSelected', { 
+      detail: { roomId: id },
+      bubbles: true 
+    }));
   };
 
   const handleBackToContacts = () => {
@@ -987,19 +1620,8 @@ const ChatApp = () => {
           body: JSON.stringify({ email })
         });
         
-        // Add system message to chat
-        const systemMessage: Message = {
-          id: Date.now(),
-          sender: 'them',
-          text: `➕ ${email} was invited to the group`,
-          time: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
-          message_id: Date.now()
-        };
-        
-        setMessages(prev => ({
-          ...prev,
-          [selectedChat]: [...(prev[selectedChat] || []), systemMessage]
-        }));
+        // Don't add system message here - it will be added via WebSocket user_joined event
+        // This ensures real-time updates across all tabs
         
         // Refresh group members
         await fetchGroupMembers(selectedChat);
@@ -1052,62 +1674,57 @@ const ChatApp = () => {
       
       console.log('🗑️ Attempting to delete message:', messageId, 'from room:', selectedChat);
       
-      // Try multiple endpoint formats based on common Django REST patterns
-      const endpoints = [
-        `${API_BASE_URL}/chat/messages/${messageId}/`,
-        `${API_BASE_URL}/chat/rooms/${selectedChat}/messages/${messageId}/delete/`,
-        `${API_BASE_URL}/chat/messages/${messageId}/delete/`,
-        `${API_BASE_URL}/chat/rooms/${selectedChat}/messages/${messageId}/`,
-        `${API_BASE_URL}/chat/messages/${messageId}/`,
-      ];
+      // Correct endpoint based on backend URL pattern: rooms/<room_pk>/messages/<pk>/
+      const endpoint = `${API_BASE_URL}/chat/rooms/${selectedChat}/messages/${messageId}/`;
       
-      let success = false;
-      let lastError = null;
+      console.log('🔄 Deleting via endpoint:', endpoint);
       
-      for (const endpoint of endpoints) {
-        try {
-          console.log('🔄 Trying endpoint:', endpoint);
-          
-          const response = await fetch(endpoint, {
-            method: endpoint.includes('/delete/') ? 'POST' : 'DELETE',
-            headers: {
-              'Authorization': `Token ${token}`,
-              'Content-Type': 'application/json',
-            },
-          });
-          
-          if (response.ok || response.status === 204) {
-            console.log('✅ Successfully deleted with endpoint:', endpoint);
-            success = true;
-            break;
-          } else if (response.status !== 404) {
-            // If it's not 404, this might be the right endpoint with different error
-            const errorData = await response.json().catch(() => ({}));
-            lastError = errorData;
-            console.log('⚠️ Got non-404 error, might be permission issue:', response.status, errorData);
-          }
-        } catch (err) {
-          console.log('❌ Endpoint failed:', endpoint, err);
-        }
-      }
+      const response = await fetch(endpoint, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Token ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
       
-      if (success) {
+      if (response.ok || response.status === 204) {
+        console.log('✅ Successfully deleted message:', messageId);
+        
         // Remove message from local state
         setMessages(prev => ({
           ...prev,
           [selectedChat]: prev[selectedChat].filter(msg => msg.message_id !== messageId)
         }));
         
+        // Update contacts list to reflect deleted message
+        setContacts(prev => prev.map(contact => {
+          if (contact.id === selectedChat) {
+            const updatedMessages = messages[selectedChat]?.filter(msg => msg.message_id !== messageId) || [];
+            const lastMsg = updatedMessages[updatedMessages.length - 1];
+            return {
+              ...contact,
+              lastMessage: lastMsg ? lastMsg.text : 'No messages yet',
+              time: lastMsg ? lastMsg.time : ''
+            };
+          }
+          return contact;
+        }));
+        
         setShowDeleteConfirm(false);
         setMessageToDelete(null);
-        console.log('✅ Message deleted successfully');
       } else {
-        console.error('❌ All endpoints failed. Last error:', lastError);
-        setError(
-          lastError?.detail || 
-          'Failed to delete message. Please check your Django backend URLs configuration. ' +
-          'Expected endpoints: /api/chat/messages/{id}/ or /api/chat/rooms/{room_id}/messages/{message_id}/'
-        );
+        // Handle errors
+        const errorData = await response.json().catch(() => ({ detail: 'Unknown error' }));
+        
+        if (response.status === 403) {
+          setError(errorData.detail || 'You do not have permission to delete this message.');
+        } else if (response.status === 404) {
+          setError('Message not found. It may have already been deleted.');
+        } else {
+          setError(errorData.detail || 'Failed to delete message. Please try again.');
+        }
+        
+        console.error('❌ Failed to delete message:', response.status, errorData);
         setShowDeleteConfirm(false);
       }
     } catch (err) {

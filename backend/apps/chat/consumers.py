@@ -147,6 +147,16 @@ class ChatConsumer(AsyncWebsocketConsumer):
             'user_id': event['user_id'],
         }))
 
+    async def message_deleted(self, event):
+        """Handle message deleted notification"""
+        await self.send(text_data=json.dumps({
+            'type': 'message_deleted',
+            'message_id': event['message_id'],
+            'deleted_by': event['deleted_by'],
+            'deleted_by_id': event.get('deleted_by_id'),
+            'message_content': event.get('message_content', ''),  # Include original message content
+        }))
+
     @database_sync_to_async
     def is_authenticated_and_member(self):
         """Check if user is authenticated and is a member of the room"""
@@ -275,4 +285,15 @@ class ChatNotificationConsumer(AsyncWebsocketConsumer):
             'type': 'direct_room_created',
             'room': event.get('room'),
             'created_by': event.get('created_by'),
+        }))
+
+    async def unread_count_updated(self, event):
+        """Send updated unread count for real-time badge update"""
+        unread_count = event.get('unread_count', 0)
+        room_id = event.get('room_id')
+        logger.info(f"📊 ChatNotificationConsumer: Sending unread_count_updated WebSocket message: user_id={self.user_id}, unread_count={unread_count}, room_id={room_id}")
+        await self.send(text_data=json.dumps({
+            'type': 'unread_count_updated',
+            'unread_count': unread_count,
+            'room_id': room_id,
         }))

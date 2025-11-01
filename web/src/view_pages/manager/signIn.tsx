@@ -151,12 +151,32 @@ export default function LoginPage() {
       const result = await LoginController.login(formData, rememberMe);
       console.log("✅ Login response:", result);
       
+      // Check if concurrent session error
+      if (!result.success && result.concurrentSession) {
+        console.warn("⚠️ Concurrent session detected");
+        setMessage({
+          text: result.message || 'This account is already logged in from another browser tab. Please log out from the other tab first, or close it and try again.',
+          type: 'error'
+        });
+        setIsLoading(false);
+        return;
+      }
+      
       // Check if 2FA is required
       if (result.requires2FA && result.tempToken) {
         console.log("🔐 2FA required - showing verification step");
         setTempToken(result.tempToken);
         setShow2FAVerification(true);
         setMessage({ text: result.message || "Please enter your 2FA code", type: 'success' });
+        setIsLoading(false);
+        return;
+      }
+      
+      if (!result.success) {
+        setMessage({
+          text: result.message || 'Login failed. Please try again.',
+          type: 'error'
+        });
         setIsLoading(false);
         return;
       }

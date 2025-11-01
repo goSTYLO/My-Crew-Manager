@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
 import { API_BASE_URL } from '../config/api';
+import { TokenManager } from '../services/TokenManager';
 
 interface WebSocketMessage {
   type: string;
@@ -41,31 +42,39 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ children }
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectAttemptsRef = useRef(0);
   const maxReconnectAttempts = 5;
-  const reconnectDelay = 3000; // 3 seconds
+  const reconnectDelay = 3000; // Base delay for exponential backoff
+  const tokenRefreshCallbackRef = useRef<((token: string) => void) | null>(null);
 
   const getAuthToken = useCallback(() => {
-    return sessionStorage.getItem('access') || sessionStorage.getItem('token');
+    return TokenManager.getToken();
   }, []);
 
-  const connect = useCallback(() => {
+  const connect = useCallback(async () => {
     if (wsRef.current?.readyState === WebSocket.OPEN || wsRef.current?.readyState === WebSocket.CONNECTING) {
       console.log('WebSocket already connecting or connected, skipping');
       return;
     }
 
-    const token = getAuthToken();
+    // Get valid token, attempt refresh if needed
+    let token = getAuthToken();
     if (!token) {
-      console.log('No auth token found, skipping WebSocket connection');
-      setConnectionStatus('disconnected');
-      return;
+      console.log('No auth token found, attempting refresh...');
+      token = await TokenManager.refreshTokenIfNeeded();
+      if (!token) {
+        console.log('Failed to get valid token, skipping WebSocket connection');
+        setConnectionStatus('disconnected');
+        return;
+      }
     }
 
     setConnectionStatus('connecting');
 
+    // Note: Token in URL is a security concern but required by current backend implementation
+    // TODO: Move to Authorization header when backend supports it
+    const wsUrl = `${API_BASE_URL.replace('/api', '').replace('http', 'ws')}/ws/project-updates/?token=${token}`;
+    
     try {
-      const wsUrl = `${API_BASE_URL.replace('/api', '').replace('http', 'ws')}/ws/project-updates/?token=${token}`;
-      console.log('🔌 Creating WebSocket connection to:', wsUrl);
-      console.log('🔌 Token being used:', token ? `${token.substring(0, 10)}...` : 'NO TOKEN');
+      console.log('🔌 Creating WebSocket connection to:', wsUrl.replace(/token=[^&]+/, 'token=***'));
       wsRef.current = new WebSocket(wsUrl);
 
       wsRef.current.onopen = () => {
@@ -88,13 +97,27 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ children }
         console.log('Project Updates WebSocket disconnected:', event.code, event.reason);
         setConnectionStatus('disconnected');
 
-        if (event.code !== 1000 && reconnectAttemptsRef.current < maxReconnectAttempts) {
+        // If connection closed due to authentication failure (1008), refresh token and reconnect
+        if (event.code === 1008) {
+          console.log('WebSocket closed due to authentication failure, refreshing token...');
+          TokenManager.refreshTokenIfNeeded().then(() => {
+            if (reconnectAttemptsRef.current < maxReconnectAttempts) {
+              reconnectAttemptsRef.current++;
+              reconnectTimeoutRef.current = setTimeout(() => {
+                console.log(`Reconnecting after auth refresh (${reconnectAttemptsRef.current}/${maxReconnectAttempts})`);
+                connect();
+              }, reconnectDelay);
+            }
+          });
+        } else if (event.code !== 1000 && reconnectAttemptsRef.current < maxReconnectAttempts) {
+          // Exponential backoff for other connection failures
+          const delay = Math.min(reconnectDelay * Math.pow(2, reconnectAttemptsRef.current - 1), 30000);
           setConnectionStatus('reconnecting');
           reconnectAttemptsRef.current++;
           reconnectTimeoutRef.current = setTimeout(() => {
             console.log(`Attempting to reconnect (${reconnectAttemptsRef.current}/${maxReconnectAttempts})`);
             connect();
-          }, reconnectDelay);
+          }, delay);
         }
       };
 
@@ -134,6 +157,28 @@ export const WebSocketProvider: React.FC<WebSocketProviderProps> = ({ children }
   const getConnectionStatus = useCallback(() => {
     return connectionStatus;
   }, [connectionStatus]);
+
+  // Listen for token refresh events and reconnect WebSocket
+  useEffect(() => {
+    const handleTokenRefresh = async () => {
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        // Token was refreshed, reconnect WebSocket with new token
+        console.log('🔐 Token refreshed, reconnecting WebSocket...');
+        disconnect();
+        // Small delay to ensure cleanup completes
+        setTimeout(() => {
+          connect();
+        }, 100);
+      }
+    };
+
+    // Store callback for token refresh
+    tokenRefreshCallbackRef.current = handleTokenRefresh;
+
+    return () => {
+      tokenRefreshCallbackRef.current = null;
+    };
+  }, [connect, disconnect]);
 
   useEffect(() => {
     connect();

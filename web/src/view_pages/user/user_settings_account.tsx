@@ -295,10 +295,10 @@ const AccountSettings = () => {
                 const token = sessionStorage.getItem("token");
                 if (token) {
                     const response = await fetch(`${API_BASE_URL}/user/me/`, {
-                        headers: {
-                            Authorization: `Token ${token}`,
-                            "Content-Type": "application/json",
-                        },
+                headers: {
+                    Authorization: `Token ${token}`,
+                    "Content-Type": "application/json",
+                },
                     });
                     if (response.ok) {
                         const data = await response.json();
@@ -328,7 +328,7 @@ const AccountSettings = () => {
                     setEmailOTP("");
                     setEmailChangeMessage("");
                 }, 2000);
-            } else {
+                } else {
                 setEmailChangeMessage(result.message || "Verification failed");
             }
         } catch (error) {
@@ -408,8 +408,8 @@ const AccountSettings = () => {
                                     <div>
                                         <div className="flex items-center justify-between mb-2">
                                             <label className={`block text-sm font-medium ${theme === "dark" ? "text-gray-300" : "text-gray-700"}`}>
-                                                Email Address
-                                            </label>
+                                            Email Address
+                                        </label>
                                             <button
                                                 type="button"
                                                 onClick={() => {
@@ -638,60 +638,6 @@ const AccountSettings = () => {
                                                 </p>
                                             </div>
                                         </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Bottom Section */}
-                    <div className="grid grid-cols-12 gap-6 mt-6">
-                        <div className={`col-span-3 p-6 rounded-xl shadow border h-64 ${theme === "dark" ? "bg-gray-800 text-white border-gray-700" : "bg-white"}`}>
-                            <h3 className="font-bold text-2xl">{userData?.role || 'User'}</h3>
-                            <p className={`text-base ${theme === "dark" ? "text-gray-300" : "text-gray-500"}`}>Leads projects and ensures tasks are completed efficiently.</p>
-                            <h4 className="mt-3 font-semibold">Worked with</h4>
-                            <div className="flex mt-6 gap-6 overflow-x-auto">
-                                {[...Array(5)].map((_, i) => (
-                                    <img
-                                        key={i}
-                                        src={`https://i.pravatar.cc/40?img=${i + 1}`}
-                                        className="w-12 h-12 rounded-full"
-                                        alt={`Team member ${i + 1}`}
-                                    />
-                                ))}
-                            </div>
-                        </div>
-
-                        <div className="col-span-9 grid grid-cols-2 gap-6">
-                            <div className={`p-6 rounded-xl shadow border h-full ${theme === "dark" ? "bg-gray-800 text-white border-gray-700" : "bg-white"}`}>
-                                <div className="flex justify-between items-center mb-3">
-                                    <h3 className="font-bold text-2xl">Projects</h3>
-                                    <a href="#" className="text-sm text-blue-500">View all</a>
-                                </div>
-                                <div className="grid grid-cols-2 gap-2">
-                                    {[...Array(6)].map((_, i) => (
-                                        <div
-                                            key={i}
-                                            className={`rounded p-2 text-center text-xs ${theme === "dark" ? "bg-gray-700 text-white" : "bg-gray-100"}`}
-                                        >
-                                            Project {i + 1}
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-
-                            <div className={`p-6 rounded-xl shadow border text-center h-full ${theme === "dark" ? "bg-gray-800 text-white border-gray-700" : "bg-white"}`}>
-                                <div className={`flex justify-between text-sm mb-3 ${theme === "dark" ? "text-gray-300" : "text-gray-500"}`}>
-                                    <span className={`font-bold text-2xl ${theme === "dark" ? "text-white" : "text-black"}`}>Total work done</span>
-                                    <select id="timeframe-select" className={`text-sm border rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 ${theme === "dark" ? "bg-gray-900 border-gray-700 text-white" : "border-gray-300"}`}>
-                                        <option>This Week</option>
-                                        <option>Last Week</option>
-                                        <option>This Month</option>
-                                    </select>
-                                </div>
-                                <div className="flex flex-col items-center">
-                                    <div className="w-32 h-32 rounded-full border-8 border-blue-600 flex items-center justify-center font-bold">
-                                        5w: 2d
                                     </div>
                                 </div>
                             </div>

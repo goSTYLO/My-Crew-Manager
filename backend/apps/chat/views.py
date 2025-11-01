@@ -41,7 +41,12 @@ def send_user_notification(user_id, notification_type, data):
         channel_layer = get_channel_layer()
         if channel_layer is None:
             return
-        user_group_name = f'user_{user_id}_notifications'
+        # For chat notifications, use the chat notification group
+        # Other notifications use the general notifications group
+        if notification_type in ['new_message_notification', 'unread_count_updated', 'room_invitation', 'direct_room_created']:
+            user_group_name = f'user_{user_id}_chat_notifications'
+        else:
+            user_group_name = f'user_{user_id}_notifications'
         async_to_sync(channel_layer.group_send)(
             user_group_name,
             {
@@ -108,9 +113,12 @@ class RoomViewSet(viewsets.ModelViewSet):
                 'invited_by': request.user.name,
             })
             
+            # Send notification to room with user email for system message
             send_room_notification(room.room_id, 'user_joined', {
                 'user': membership.user.name,
                 'user_id': membership.user.pk,
+                'user_email': membership.user.email,  # Include email for system message
+                'invited_by': request.user.name,
             })
         
         return Response({'detail': 'User invited/added successfully'})
@@ -141,16 +149,108 @@ class RoomViewSet(viewsets.ModelViewSet):
         data = RoomMembershipSerializer(memberships, many=True).data
         return Response(data)
 
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticatedAndRoomMember])
+    def mark_read(self, request, pk=None):
+        """Mark all messages in a room as read by updating user's joined_at timestamp"""
+        from django.utils import timezone
+        from django.db import transaction
+        from datetime import timedelta
+        
+        room = self.get_object()
+        membership = RoomMembership.objects.filter(room=room, user=request.user).first()
+        
+        if not membership:
+            return Response({'detail': 'You are not a member of this room'}, status=status.HTTP_403_FORBIDDEN)
+        
+        # Get the most recent message timestamp in this room to ensure all messages are marked as read
+        # We need to find the absolute latest message (even if deleted) to ensure we mark everything correctly
+        latest_message = Message.objects.filter(
+            room=room
+        ).order_by('-created_at').first()
+        
+        # Use current time as baseline
+        current_time = timezone.now()
+        
+        if latest_message:
+            # Set joined_at to be slightly after the latest message to ensure all existing messages are marked as read
+            # Use max() to ensure we're always in the future, and add 2 seconds for safety
+            latest_message_time = latest_message.created_at
+            new_joined_at = max(current_time, latest_message_time) + timedelta(seconds=2)
+        else:
+            # No messages yet, use current time
+            new_joined_at = current_time
+        
+        membership.joined_at = new_joined_at
+        
+        # Force save and refresh from database to ensure transaction commits
+        with transaction.atomic():
+            membership.save(update_fields=['joined_at'])
+            # Refresh from database to ensure we have the latest data
+            membership.refresh_from_db()
+        
+        # Verify the update by checking unread count for this room AFTER the transaction commits
+        # Query again from fresh to ensure we get the updated joined_at value
+        membership.refresh_from_db()
+        room_unread_count = Message.objects.filter(
+            room=room,
+            created_at__gt=membership.joined_at,
+            is_deleted=False
+        ).exclude(sender=request.user).count()
+        
+        # IMPORTANT: Recalculate total unread count AFTER the transaction commits
+        # This ensures we get the most accurate count with the updated joined_at timestamp
+        # Calculate total unread count across all rooms for real-time badge update
+        # Refresh all memberships to ensure we have the latest joined_at values
+        memberships = RoomMembership.objects.filter(user=request.user).select_related('room')
+        
+        # Force refresh of the current membership to ensure we have the updated joined_at
+        membership.refresh_from_db()
+        
+        total_unread = 0
+        for memb in memberships:
+            # Refresh each membership to ensure we have latest joined_at
+            memb.refresh_from_db()
+            unread = Message.objects.filter(
+                room=memb.room,
+                created_at__gt=memb.joined_at,
+                is_deleted=False
+            ).exclude(sender=request.user).count()
+            total_unread += unread
+        
+        # Ensure total_unread is never negative
+        total_unread = max(0, total_unread)
+        
+        # Send WebSocket notification with updated unread count for real-time badge update
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"📊 Sending unread_count_updated WebSocket notification: user_id={request.user.pk}, total_unread={total_unread}, room_id={room.room_id}")
+        send_user_notification(request.user.pk, 'unread_count_updated', {
+            'unread_count': total_unread,
+            'room_id': room.room_id,
+        })
+        
+        return Response({
+            'status': 'marked as read', 
+            'room_id': room.room_id,
+            'joined_at': membership.joined_at.isoformat(),
+            'unread_count': room_unread_count,  # Return unread count for this room for verification
+            'total_unread_count': total_unread,  # Return total unread count for badge update (always >= 0)
+            'latest_message_at': latest_message.created_at.isoformat() if latest_message else None
+        })
+
     @action(detail=False, methods=['get'], url_path='unread-count')
     def unread_count(self, request):
         """Get total unread messages count across all user's rooms"""
         try:
             # Get user's memberships with related rooms
+            # Refresh from database to ensure we have latest joined_at values
             memberships = RoomMembership.objects.filter(user=request.user).select_related('room')
             
             total_unread = 0
             
             for membership in memberships:
+                # Refresh membership to ensure we have latest joined_at
+                membership.refresh_from_db()
                 room = membership.room
                 # Count messages after user joined, excluding their own messages
                 unread = Message.objects.filter(
@@ -159,6 +259,9 @@ class RoomViewSet(viewsets.ModelViewSet):
                     is_deleted=False
                 ).exclude(sender=request.user).count()
                 total_unread += unread
+            
+            # Ensure total_unread is never negative
+            total_unread = max(0, total_unread)
             
             return Response({'unread_count': total_unread})
         except Exception as e:
@@ -327,7 +430,44 @@ class MessageViewSet(mixins.ListModelMixin,
             'user_id': request.user.pk,
         })
         
-        # Send notifications to room members who aren't currently connected
+        # IMPORTANT: When sender sends a message in a room they're viewing, mark it as read
+        # Update sender's joined_at to current message time so their own message doesn't count as unread
+        # This ensures the badge count is accurate immediately after sending
+        sender_membership = RoomMembership.objects.filter(room_id=room_id, user=request.user).first()
+        if sender_membership:
+            from django.utils import timezone
+            from datetime import timedelta
+            # Set joined_at to be slightly after the message timestamp to mark it as read
+            message_time = message.created_at
+            sender_membership.joined_at = max(timezone.now(), message_time) + timedelta(seconds=1)
+            sender_membership.save(update_fields=['joined_at'])
+            sender_membership.refresh_from_db()
+            
+            # Calculate and send updated unread count to SENDER for immediate badge update
+            # This ensures badge reflects that the sender has seen their own message
+            sender_memberships = RoomMembership.objects.filter(user=request.user).select_related('room')
+            sender_total_unread = 0
+            for memb in sender_memberships:
+                memb.refresh_from_db()  # Ensure latest joined_at
+                unread = Message.objects.filter(
+                    room=memb.room,
+                    created_at__gt=memb.joined_at,
+                    is_deleted=False
+                ).exclude(sender=request.user).count()
+                sender_total_unread += unread
+            
+            sender_total_unread = max(0, sender_total_unread)
+            
+            # Send unread_count_updated to sender for immediate badge update
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.info(f"📊 Sending unread_count_updated to message SENDER: user_id={request.user.pk}, total_unread={sender_total_unread}, room_id={room_id}")
+            send_user_notification(request.user.pk, 'unread_count_updated', {
+                'unread_count': sender_total_unread,
+                'room_id': room_id,
+            })
+        
+        # Send notifications to room members who aren't currently connected (excluding sender)
         room = Room.objects.get(room_id=room_id)
         for membership in room.memberships.exclude(user=request.user):
             send_user_notification(membership.user.pk, 'new_message_notification', {
@@ -335,10 +475,46 @@ class MessageViewSet(mixins.ListModelMixin,
                 'message': message_data,
                 'sender': request.user.name,
             })
+            
+            # Calculate and send updated unread count for real-time badge update
+            memberships = RoomMembership.objects.filter(user=membership.user).select_related('room')
+            total_unread = 0
+            for memb in memberships:
+                memb.refresh_from_db()  # Ensure latest joined_at
+                unread = Message.objects.filter(
+                    room=memb.room,
+                    created_at__gt=memb.joined_at,
+                    is_deleted=False
+                ).exclude(sender=membership.user).count()
+                total_unread += unread
+            
+            total_unread = max(0, total_unread)
+            
+            send_user_notification(membership.user.pk, 'unread_count_updated', {
+                'unread_count': total_unread,
+                'room_id': room_id,
+            })
         
         out = self.get_serializer(message)
         headers = self.get_success_headers(out.data)
         return Response(out.data, status=status.HTTP_201_CREATED, headers=headers)
+
+    def get_object(self):
+        """
+        Override get_object to handle message lookup properly.
+        We need to look up by message_id (pk) and room_pk, but also include
+        deleted messages in the lookup since we're deleting it.
+        """
+        room_pk = self.kwargs.get('room_pk')
+        pk = self.kwargs.get('pk')
+        
+        # Get the message, including deleted ones (we're deleting it, so it might already be soft-deleted)
+        try:
+            message = Message.objects.get(message_id=pk, room_id=room_pk)
+            return message
+        except Message.DoesNotExist:
+            from rest_framework.exceptions import NotFound
+            raise NotFound(f'Message with id {pk} not found in room {room_pk}')
 
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -346,13 +522,19 @@ class MessageViewSet(mixins.ListModelMixin,
         if instance.sender_id != request.user.pk and not RoomMembership.objects.filter(room=instance.room, user=request.user, is_admin=True).exists():
             return Response({'detail': 'Not permitted'}, status=status.HTTP_403_FORBIDDEN)
         
+        # Store message content before deletion for system message
+        deleted_message_content = instance.content
+        deleted_by_user = request.user
+        
         instance.is_deleted = True
         instance.save(update_fields=['is_deleted'])
         
-        # Send real-time notification
+        # Send real-time notification with message details for system message display
         send_room_notification(instance.room.room_id, 'message_deleted', {
             'message_id': instance.message_id,
-            'deleted_by': request.user.name,
+            'deleted_by': deleted_by_user.name,
+            'deleted_by_id': deleted_by_user.pk,
+            'message_content': deleted_message_content,  # For system message display
         })
         
         return Response(status=status.HTTP_204_NO_CONTENT)

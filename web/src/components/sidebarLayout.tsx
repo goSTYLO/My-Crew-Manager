@@ -31,7 +31,8 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
     setShowLogoutConfirm(false); // hide confirmation immediately
   
     try {
-      const token = sessionStorage.getItem("token");
+      const { TokenManager } = await import("../services/TokenManager");
+      const token = TokenManager.getToken();
   
       // Call the logout API endpoint
       await fetch(`${API_BASE_URL}/user/logout/`, {
@@ -42,9 +43,8 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
         },
       });
   
-      // Clear session storage
-      sessionStorage.removeItem("token");
-      sessionStorage.clear();
+      // Use TokenManager to clear all auth data including active session
+      TokenManager.clearAll();
   
       // Add a small delay so the spinner is visible
       setTimeout(() => {
@@ -53,8 +53,8 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
   
     } catch (error) {
       console.error("Logout error:", error);
-      sessionStorage.removeItem("token");
-      sessionStorage.clear();
+      const { TokenManager } = await import("../services/TokenManager");
+      TokenManager.clearAll();
   
       setTimeout(() => {
         window.location.replace("/sign-in");
@@ -74,11 +74,16 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
   ];
 
   const projectPaths = ["/main-projects", "/projects", "/create-project"];
+  const settingsPaths = ["/manager-settings", "/notifications", "/security", "/appearance"];
 
   const checkIsActive = (itemPath: string | undefined) => {
     if (!itemPath) return false;
     if (itemPath === "/main-projects") {
       return projectPaths.includes(location.pathname);
+    }
+    // Settings item should remain active for all settings-related pages
+    if (itemPath === "/manager-settings") {
+      return settingsPaths.includes(location.pathname);
     }
     return location.pathname === itemPath;
   };

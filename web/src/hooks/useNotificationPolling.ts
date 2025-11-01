@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { API_BASE_URL } from '../config/api';
+import { TokenManager } from '../services/TokenManager';
 
 interface Notification {
   id: number;
@@ -15,12 +16,14 @@ interface Notification {
 
 interface UseNotificationPollingOptions {
   enabled?: boolean;
+  websocketConnected?: boolean; // Disable polling when WebSocket is connected
   onNewNotifications?: (notifications: Notification[]) => void;
   onError?: (error: any) => void;
 }
 
 export const useNotificationPolling = ({
   enabled = true,
+  websocketConnected = false,
   onNewNotifications,
   onError
 }: UseNotificationPollingOptions = {}) => {
@@ -35,9 +38,9 @@ export const useNotificationPolling = ({
   const lastActivityRef = useRef<Date>(new Date());
   const isVisibleRef = useRef(true);
 
-  // Get auth token
+  // Get auth token via TokenManager
   const getAuthToken = useCallback(() => {
-    return sessionStorage.getItem('token') || sessionStorage.getItem('access');
+    return TokenManager.getToken();
   }, []);
 
   // Track user activity
@@ -105,12 +108,16 @@ export const useNotificationPolling = ({
 
   // Poll function - stable callback with no dependencies
   const poll = useCallback(() => {
-    if (!enabled || !isVisibleRef.current) {
+    // Disable polling if WebSocket is connected (avoid duplicates)
+    if (!enabled || !isVisibleRef.current || websocketConnected) {
+      if (websocketConnected) {
+        console.log('🔔 Polling disabled: WebSocket is connected');
+      }
       return;
     }
 
     fetchNotifications();
-  }, [enabled, fetchNotifications]);
+  }, [enabled, websocketConnected, fetchNotifications]);
 
   // Start polling
   const startPolling = useCallback(() => {
@@ -180,9 +187,10 @@ export const useNotificationPolling = ({
     };
   }, []);
 
-  // Start/stop polling based on enabled state
+  // Start/stop polling based on enabled state and WebSocket connection
   useEffect(() => {
-    if (enabled) {
+    // Don't poll if WebSocket is connected
+    if (enabled && !websocketConnected) {
       startPolling();
     } else {
       stopPolling();
@@ -191,7 +199,7 @@ export const useNotificationPolling = ({
     return () => {
       stopPolling();
     };
-  }, [enabled]); // Only enabled in dependencies
+  }, [enabled, websocketConnected, startPolling, stopPolling]);
 
   // Manual refresh function
   const refresh = useCallback(() => {
