@@ -9,6 +9,7 @@ djangorestframework-simplejwt>=5.3.1
 channels
 channels-redis
 daphne>=4.0.0
+colorlog>=6.10.0
 
 # HuggingFace + LangChain
 transformers

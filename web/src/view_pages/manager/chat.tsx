@@ -6,62 +6,7 @@ import TopNavbar from "../../components/topbarLayouot";
 import { useTheme } from "../../components/themeContext";
 import { useChatPolling } from "../../hooks/useChatPolling";
 import { API_BASE_URL } from "../../config/api";
-
-// Types
-interface Contact {
-  id: number;
-  name: string;
-  role: string;
-  avatar: string;
-  online: boolean;
-  lastMessage: string;
-  time: string;
-  unread: number;
-  isGroup: boolean;
-  members?: number[];
-}
-
-interface Message {
-  id: number;
-  sender: 'me' | 'them';
-  text: string;
-  time: string;
-  sender_id?: number;
-  sender_username?: string;
-  message_id?: number;
-  reply_to_id?: number | null;
-  created_at?: string; // Store original created_at for sorting
-}
-
-interface Room {
-  room_id: number;
-  name: string | null;
-  is_private: boolean;
-  created_by_id: number;
-  created_at: string;
-  members_count: number;
-}
-
-interface ApiMessage {
-  message_id: number;
-  room_id: number;
-  sender_id: number;
-  sender_username: string;
-  content: string;
-  message_type: string;
-  reply_to_id: number | null;
-  created_at: string;
-  edited_at: string | null;
-  is_deleted: boolean;
-}
-
-interface UserData {
-  user_id: number;
-  name: string;
-  email: string;
-  role: string;
-  profile_picture: string | null;
-}
+import type { Contact, Message, Room, ApiMessage, UserData } from "../../types/chat";
 
 const ChatApp = () => {
   const { theme } = useTheme();
@@ -107,11 +52,11 @@ const ChatApp = () => {
   const [loadingProjects, setLoadingProjects] = useState(false);
   const projectsPerPage = 5;
   
-  const wsRef = useRef<WebSocket | null>(null);
-  const wsNotificationRef = useRef<WebSocket | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const wsRef = useRef<WebSocket | null>(null);
+  const wsNotificationRef = useRef<WebSocket | null>(null);
 
   // Chat polling for real-time updates - DISABLED for WebSocket testing
   const chatPolling = useChatPolling({
@@ -268,10 +213,6 @@ const ChatApp = () => {
         console.log('✅ Current user loaded, starting chat initialization...');
         await fetchRooms();
         
-        // Connect to notification WebSocket for real-time updates
-        console.log('🔔 Connecting to notification WebSocket...');
-        connectNotificationWebSocket();
-        
         // Dispatch event to refresh chat badge count after a delay
         // This allows any mark-as-read operations to complete first
         setTimeout(() => {
@@ -285,15 +226,6 @@ const ChatApp = () => {
     };
     
     init();
-    
-    return () => {
-      if (wsNotificationRef.current) {
-        wsNotificationRef.current.close();
-      }
-      if (wsRef.current) {
-        wsRef.current.close();
-      }
-    };
   }, []);
 
   // Close menu when clicking outside
@@ -378,6 +310,376 @@ const ChatApp = () => {
       setLoading(false);
     }
   };
+
+  // Connect to WebSocket for a specific room
+  const connectRoomWebSocket = (roomId: number) => {
+    const token = getAuthToken();
+    
+    if (!token) {
+      console.error('❌ Cannot connect WebSocket: No auth token');
+      return;
+    }
+
+    // Close existing connection
+    if (wsRef.current) {
+      wsRef.current.close();
+    }
+
+    // Use API_BASE_URL and convert http to ws, remove /api prefix
+    const baseUrl = API_BASE_URL.replace('/api', '').replace('http', 'ws');
+    const wsUrl = `${baseUrl}/ws/chat/${roomId}/?token=${token}`;
+    console.log('🔌 Attempting WebSocket connection:', wsUrl);
+    
+    try {
+      const ws = new WebSocket(wsUrl);
+      
+      ws.onopen = () => {
+        console.log('✅ WebSocket connected for room:', roomId);
+      };
+      
+      ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        console.log('📨 WebSocket message received:', data);
+        
+        switch (data.type) {
+          case 'chat_message':
+            // Handle new message
+            const newMessage: Message = {
+              id: data.message.message_id,
+              sender: data.user_id === currentUserId ? 'me' : 'them',
+              text: data.message.content,
+              time: new Date(data.message.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+              sender_id: data.user_id,
+              sender_username: data.message.sender_username,
+              message_id: data.message.message_id,
+              reply_to_id: data.message.reply_to_id || undefined,
+              created_at: data.message.created_at,
+            };
+            
+            setMessages(prev => {
+              const existingMessages = prev[roomId] || [];
+              
+              // Check if message already exists
+              const exists = existingMessages.some(msg => msg.message_id === newMessage.message_id);
+              if (exists) {
+                return prev;
+              }
+              
+              // Check for optimistic message to replace
+              const optimisticIndex = existingMessages.findIndex(msg => 
+                msg.message_id && msg.message_id > 1000000000000 &&
+                msg.sender === 'me' && 
+                msg.text === newMessage.text &&
+                data.user_id === currentUserId
+              );
+              
+              if (optimisticIndex >= 0) {
+                // Replace optimistic message
+                const updated = [...existingMessages];
+                updated[optimisticIndex] = newMessage;
+                updated.sort((a, b) => {
+                  if (a.created_at && b.created_at) {
+                    return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+                  }
+                  return (a.message_id || 0) - (b.message_id || 0);
+                });
+                return { ...prev, [roomId]: updated };
+              }
+              
+              // Add new message
+              const updated = [...existingMessages, newMessage];
+              updated.sort((a, b) => {
+                if (a.created_at && b.created_at) {
+                  return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+                }
+                return (a.message_id || 0) - (b.message_id || 0);
+              });
+              
+              return { ...prev, [roomId]: updated };
+            });
+            
+            // Update last message in contacts
+            setContacts(prev => prev.map(contact => 
+              contact.id === roomId 
+                ? { ...contact, lastMessage: data.message.content, time: 'Just now' }
+                : contact
+            ));
+            
+            console.log('🔔 New message received - WebSocket will send unread_count_updated automatically');
+            break;
+            
+          case 'message_deleted':
+            if (data.message_id) {
+              console.log('🗑️ Message deleted via WebSocket:', data.message_id, 'deleted by:', data.deleted_by);
+              
+              setMessages(prev => {
+                const deletedMsg = prev[roomId]?.find(msg => msg.message_id === data.message_id);
+                const wasMyMessage = deletedMsg?.sender === 'me';
+                const deletedByMe = currentUserId && data.deleted_by_id === currentUserId;
+              
+                let systemMessageText: string;
+                if (deletedByMe && wasMyMessage) {
+                  systemMessageText = '🗑️ You deleted this message';
+                } else if (deletedByMe && !wasMyMessage) {
+                  systemMessageText = '🗑️ You removed this message';
+                } else if (!deletedByMe && wasMyMessage) {
+                  systemMessageText = `🗑️ ${data.deleted_by || 'Owner'} removed this message`;
+                } else {
+                  systemMessageText = `🗑️ ${data.deleted_by || 'Owner'} removed this message`;
+                }
+                
+                if (prev[roomId]) {
+                  const filtered = prev[roomId].filter(msg => msg.message_id !== data.message_id);
+                  const systemMessage: Message = {
+                    id: Date.now(),
+                    sender: 'them',
+                    text: systemMessageText,
+                    time: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+                    message_id: Date.now()
+                  };
+                  
+                  const deletedIndex = prev[roomId].findIndex(msg => msg.message_id === data.message_id);
+                  const updated = deletedIndex >= 0
+                    ? [...filtered.slice(0, deletedIndex), systemMessage, ...filtered.slice(deletedIndex)]
+                    : [...filtered, systemMessage];
+                  
+                  // Update contacts
+                  setContacts(currentContacts => currentContacts.map(contact => {
+                    if (contact.id === roomId) {
+                      const lastNonSystemMsg = [...updated].reverse().find(msg => 
+                        !msg.text.includes('🗑️') && !msg.text.includes('➕') && !msg.text.includes('📝') && !msg.text.includes('🖼️')
+                      );
+                      return {
+                        ...contact,
+                        lastMessage: lastNonSystemMsg ? lastNonSystemMsg.text : 'No messages yet',
+                        time: lastNonSystemMsg ? lastNonSystemMsg.time : ''
+                      };
+                    }
+                    return contact;
+                  }));
+                  
+                  return { ...prev, [roomId]: updated };
+                }
+                return prev;
+              });
+            }
+            break;
+            
+          case 'user_joined':
+            console.log('👋 User joined:', data.user);
+            if (data.user_email) {
+              // Add system message
+              const systemMessage: Message = {
+                id: Date.now(),
+                sender: 'them',
+                text: `➕ ${data.user_email} was invited to the group`,
+                time: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+                message_id: Date.now()
+              };
+              
+              setMessages(prev => {
+                const existingMessages = prev[roomId] || [];
+                const alreadyExists = existingMessages.some(msg => 
+                  msg.text.includes(data.user_email) && msg.text.includes('was invited to the group')
+                );
+                
+                if (!alreadyExists) {
+                  return { ...prev, [roomId]: [...existingMessages, systemMessage] };
+                }
+                return prev;
+              });
+              
+              // Refresh rooms to update member count
+              fetchRooms();
+            }
+            break;
+            
+          case 'user_left':
+            console.log('👋 User left:', data.user);
+            break;
+        }
+      };
+      
+      ws.onerror = (error) => {
+        console.error('❌ WebSocket error (This is normal if backend WebSocket is not configured yet):', error);
+      };
+      
+      ws.onclose = (event) => {
+        console.log('🔌 WebSocket disconnected from room:', roomId);
+        if (event.code === 1006) {
+          console.log('⚠️ WebSocket closed abnormally. Backend WebSocket may not be configured.');
+          console.log('💡 Configure Django Channels + Redis for real-time features');
+        }
+      };
+      
+      wsRef.current = ws;
+    } catch (error) {
+      console.error('❌ Failed to create WebSocket:', error);
+      console.log('💡 Continuing without WebSocket. Messages will work via REST API.');
+    }
+  };
+
+  // Connect to notification WebSocket
+  const connectNotificationWebSocket = () => {
+    const token = getAuthToken();
+    
+    if (!token) {
+      console.error('❌ Cannot connect notification WebSocket: No auth token');
+      return;
+    }
+
+    // Close existing connection
+    if (wsNotificationRef.current) {
+      wsNotificationRef.current.close();
+    }
+
+    const baseUrl = API_BASE_URL.replace('/api', '').replace('http', 'ws');
+    const wsUrl = `${baseUrl}/ws/chat/notifications/?token=${token}`;
+    console.log('🔔 Connecting to notification WebSocket:', wsUrl);
+    
+    const ws = new WebSocket(wsUrl);
+    
+    ws.onopen = () => {
+      console.log('✅ Notification WebSocket connected');
+    };
+    
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      console.log('🔔 Notification received:', data);
+      
+      switch (data.type) {
+        case 'new_message':
+        case 'new_message_notification':
+          if (data.room_id && data.message) {
+            const newMessage: Message = {
+              id: data.message.message_id,
+              sender: data.message.sender_id === currentUserId ? 'me' : 'them',
+              text: data.message.content,
+              time: new Date(data.message.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+              sender_id: data.message.sender_id,
+              sender_username: data.message.sender_username,
+              message_id: data.message.message_id,
+              reply_to_id: data.message.reply_to_id || undefined,
+              created_at: data.message.created_at,
+            };
+            
+            const isCurrentRoom = selectedChat === data.room_id;
+            const hasMessagesForRoom = messages[data.room_id];
+            
+            if (isCurrentRoom || hasMessagesForRoom) {
+              setMessages(prev => {
+                const existingMessages = prev[data.room_id] || [];
+                const exists = existingMessages.some(msg => msg.message_id === newMessage.message_id);
+                if (exists) {
+                  return prev;
+                }
+                
+                const optimisticIndex = existingMessages.findIndex(msg => 
+                  msg.message_id && msg.message_id > 1000000000000 &&
+                  msg.sender === 'me' && 
+                  msg.text === newMessage.text &&
+                  data.message.sender_id === currentUserId
+                );
+                
+                let updated: Message[];
+                if (optimisticIndex >= 0) {
+                  updated = [...existingMessages];
+                  updated[optimisticIndex] = newMessage;
+                } else {
+                  updated = [...existingMessages, newMessage];
+                }
+                
+                updated.sort((a, b) => {
+                  if (a.created_at && b.created_at) {
+                    return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+                  }
+                  return (a.message_id || 0) - (b.message_id || 0);
+                });
+                
+                return { ...prev, [data.room_id]: updated };
+              });
+              
+              setContacts(prev => prev.map(contact => 
+                contact.id === data.room_id 
+                  ? { ...contact, lastMessage: data.message.content, time: 'Just now' }
+                  : contact
+              ));
+            }
+            
+            console.log('🔔 New message notification received - WebSocket will send unread_count_updated automatically');
+          }
+          break;
+          
+        case 'room_invitation':
+          fetchRooms();
+          break;
+          
+        case 'direct_room_created':
+          fetchRooms();
+          break;
+      }
+    };
+    
+    ws.onerror = (error) => {
+      console.error('❌ Notification WebSocket error:', error);
+      console.error('Make sure Django Channels and Redis are running');
+      console.error('Check asgi.py routing configuration');
+    };
+    
+    ws.onclose = (event) => {
+      console.log('🔔 Notification WebSocket disconnected. Code:', event.code, 'Reason:', event.reason);
+      
+      // Auto-reconnect after 5 seconds if not manually closed
+      if (event.code !== 1000) {
+        console.log('🔄 Attempting to reconnect in 5 seconds...');
+        setTimeout(() => {
+          if (wsNotificationRef.current?.readyState === WebSocket.CLOSED) {
+            connectNotificationWebSocket();
+          }
+        }, 5000);
+      }
+    };
+    
+    wsNotificationRef.current = ws;
+  };
+
+  // Connect to WebSocket when room is selected
+  useEffect(() => {
+    if (selectedChat && currentUserId) {
+      connectRoomWebSocket(selectedChat);
+    } else {
+      // Close connection if no room selected
+      if (wsRef.current) {
+        wsRef.current.close();
+        wsRef.current = null;
+      }
+    }
+    
+    // Cleanup on unmount or room change
+    return () => {
+      if (wsRef.current) {
+        wsRef.current.close();
+        wsRef.current = null;
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedChat, currentUserId]);
+
+  // Connect to notification WebSocket on mount
+  useEffect(() => {
+    if (currentUserId) {
+      connectNotificationWebSocket();
+    }
+    
+    // Cleanup on unmount
+    return () => {
+      if (wsNotificationRef.current) {
+        wsNotificationRef.current.close();
+        wsNotificationRef.current = null;
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUserId]);
 
   // Fetch messages for a room
   const fetchMessages = async (roomId: number) => {
@@ -570,486 +872,6 @@ const ChatApp = () => {
     }
   };
 
-  // Connect to WebSocket for a specific room
-  const connectRoomWebSocket = (roomId: number) => {
-    const token = getAuthToken();
-    
-    if (!token) {
-      console.error('❌ Cannot connect WebSocket: No auth token');
-      return;
-    }
-
-    // Close existing connection
-    if (wsRef.current) {
-      wsRef.current.close();
-    }
-
-    // Use API_BASE_URL and convert http to ws, remove /api prefix
-    const baseUrl = API_BASE_URL.replace('/api', '').replace('http', 'ws');
-    const wsUrl = `${baseUrl}/ws/chat/${roomId}/?token=${token}`;
-    console.log('🔌 Attempting WebSocket connection:', wsUrl);
-    
-    try {
-      const ws = new WebSocket(wsUrl);
-      
-      ws.onopen = () => {
-        console.log('✅ WebSocket connected for room:', roomId);
-      };
-      
-      ws.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-        console.log('📨 WebSocket message received:', data);
-        
-        switch (data.type) {
-          case 'chat_message':
-            handleNewMessage(roomId, data.message, data.user_id);
-            
-            // WebSocket will automatically send unread_count_updated when new messages arrive
-            // No need to manually refresh badge - backend handles it
-            console.log('🔔 New message received - WebSocket will send unread_count_updated automatically');
-            break;
-          case 'message_deleted':
-            // Remove deleted message from local state and add system message in real-time
-            if (data.message_id) {
-              console.log('🗑️ Message deleted via WebSocket:', data.message_id, 'deleted by:', data.deleted_by);
-              setMessages(prev => {
-                if (prev[roomId]) {
-                  // Find the deleted message to check who sent it
-                  const deletedMsg = prev[roomId].find(msg => msg.message_id === data.message_id);
-                  const wasMyMessage = deletedMsg?.sender === 'me';
-                  
-                  // Check if current user is the one who deleted (for personalized message)
-                  const deletedByMe = currentUserId && data.deleted_by_id === currentUserId;
-                  
-                  // Filter out the deleted message
-                  const filteredMessages = prev[roomId].filter(msg => msg.message_id !== data.message_id);
-                  
-                  // Add system message showing who deleted the message
-                  // Personalize based on who deleted and who originally sent it
-                  let systemMessageText: string;
-                  if (deletedByMe && wasMyMessage) {
-                    systemMessageText = '🗑️ You deleted this message';
-                  } else if (deletedByMe && !wasMyMessage) {
-                    systemMessageText = '🗑️ You removed this message';
-                  } else if (!deletedByMe && wasMyMessage) {
-                    systemMessageText = `🗑️ ${data.deleted_by || 'Owner'} removed this message`;
-                  } else {
-                    systemMessageText = `🗑️ ${data.deleted_by || 'Owner'} removed this message`;
-                  }
-                  
-                  const systemMessage: Message = {
-                    id: Date.now(),
-                    sender: 'them', // System messages always appear as 'them' (left side) for consistency
-                    text: systemMessageText,
-                    time: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
-                    message_id: Date.now() // Use timestamp as temporary ID for system messages
-                  };
-                  
-                  // Insert system message at the position where the deleted message was
-                  // Find where the deleted message was and insert the system message there
-                  const deletedIndex = prev[roomId].findIndex(msg => msg.message_id === data.message_id);
-                  let updatedMessages;
-                  if (deletedIndex >= 0) {
-                    updatedMessages = [
-                      ...filteredMessages.slice(0, deletedIndex),
-                      systemMessage,
-                      ...filteredMessages.slice(deletedIndex)
-                    ];
-                  } else {
-                    updatedMessages = [...filteredMessages, systemMessage];
-                  }
-                  
-                  // Update contacts list if the deleted message was the last one
-                  setContacts(currentContacts => currentContacts.map(contact => {
-                    if (contact.id === roomId) {
-                      // Don't show system messages in contacts list - find last non-system message
-                      const lastNonSystemMsg = [...updatedMessages].reverse().find(msg => 
-                        !msg.text.includes('🗑️') && !msg.text.includes('➕') && !msg.text.includes('📝') && !msg.text.includes('🖼️')
-                      );
-                      return {
-                        ...contact,
-                        lastMessage: lastNonSystemMsg ? lastNonSystemMsg.text : 'No messages yet',
-                        time: lastNonSystemMsg ? lastNonSystemMsg.time : ''
-                      };
-                    }
-                    return contact;
-                  }));
-                  
-                  return {
-                    ...prev,
-                    [roomId]: updatedMessages
-                  };
-                }
-                return prev;
-              });
-            }
-            break;
-          case 'user_joined':
-            // Add system message when a user joins/is added to the group (real-time across all tabs)
-            console.log('👋 User joined:', data.user);
-            if (data.user_email) {
-              // Add system message if this room is selected OR we have messages loaded for it
-              const shouldAddMessage = selectedChat === roomId || messages[roomId];
-              
-              if (shouldAddMessage) {
-                const systemMessage: Message = {
-                  id: Date.now(),
-                  sender: 'them', // System messages always appear on left side
-                  text: `➕ ${data.user_email} was invited to the group`,
-                  time: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
-                  message_id: Date.now()
-                };
-                
-                setMessages(prev => {
-                  const existingMessages = prev[roomId] || [];
-                  // Check if we already have this system message to avoid duplicates
-                  const alreadyExists = existingMessages.some(msg => 
-                    msg.text.includes(data.user_email) && msg.text.includes('was invited to the group')
-                  );
-                  
-                  if (!alreadyExists) {
-                    return {
-                      ...prev,
-                      [roomId]: [...existingMessages, systemMessage]
-                    };
-                  }
-                  return prev;
-                });
-              }
-              
-              // Refresh rooms to update member count (always refresh regardless of selection)
-              fetchRooms();
-            }
-            break;
-          case 'user_left':
-            console.log('👋 User left:', data.user);
-            break;
-          case 'typing':
-            // Handle typing indicator
-            break;
-          case 'stop_typing':
-            // Handle stop typing
-            break;
-        }
-      };
-      
-      ws.onerror = (error) => {
-        console.error('❌ WebSocket error (This is normal if backend WebSocket is not configured yet):', error);
-        // console.log('💡 Messages will still work via REST API polling');
-      };
-      
-      ws.onclose = (event) => {
-        console.log('🔌 WebSocket disconnected from room:', roomId);
-        if (event.code === 1006) {
-          console.log('⚠️ WebSocket closed abnormally. Backend WebSocket may not be configured.');
-          console.log('💡 Configure Django Channels + Redis for real-time features');
-        }
-      };
-      
-      wsRef.current = ws;
-    } catch (error) {
-      console.error('❌ Failed to create WebSocket:', error);
-      console.log('💡 Continuing without WebSocket. Messages will work via REST API.');
-    }
-  };
-
-  // Connect to notification WebSocket
-  const connectNotificationWebSocket = () => {
-    const token = getAuthToken();
-    
-    if (!token) {
-      console.error('❌ Cannot connect notification WebSocket: No auth token');
-      return;
-    }
-
-    // Use API_BASE_URL and convert http to ws, remove /api prefix
-    const baseUrl = API_BASE_URL.replace('/api', '').replace('http', 'ws');
-    const wsUrl = `${baseUrl}/ws/chat/notifications/?token=${token}`;
-    console.log('🔔 Connecting to notification WebSocket:', wsUrl);
-    
-    const ws = new WebSocket(wsUrl);
-    
-    ws.onopen = () => {
-      console.log('✅ Notification WebSocket connected');
-    };
-    
-    ws.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      console.log('🔔 Notification received:', data);
-      
-      switch (data.type) {
-        case 'new_message':
-        case 'new_message_notification':
-          // Handle new message notification - add to messages if we have the room open
-          if (data.room_id && data.message) {
-            // If this room is currently selected or we have messages loaded for it, add the message
-            const isCurrentRoom = selectedChat === data.room_id;
-            const hasMessagesForRoom = messages[data.room_id];
-            
-            if (isCurrentRoom || hasMessagesForRoom) {
-              const newMessage: Message = {
-                id: data.message.message_id,
-                sender: data.message.sender_id === currentUserId ? 'me' : 'them',
-                text: data.message.content,
-                time: new Date(data.message.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
-                sender_id: data.message.sender_id,
-                sender_username: data.message.sender_username,
-                message_id: data.message.message_id,
-                reply_to_id: data.message.reply_to_id || undefined,
-                created_at: data.message.created_at // Store for sorting
-              };
-              
-              setMessages(prev => {
-                const existingMessages = prev[data.room_id] || [];
-                
-                // Check if message already exists by message_id (real message)
-                const existingRealMsgIndex = existingMessages.findIndex(msg => 
-                  msg.message_id === newMessage.message_id && msg.message_id && msg.message_id < 1000000000000
-                );
-                
-                if (existingRealMsgIndex >= 0) {
-                  // Message already exists - update it
-                  const updated = [...existingMessages];
-                  updated[existingRealMsgIndex] = newMessage;
-                  updated.sort((a, b) => {
-                    if (a.created_at && b.created_at) {
-                      return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-                    }
-                    return (a.message_id || 0) - (b.message_id || 0);
-                  });
-                  return {
-                    ...prev,
-                    [data.room_id]: updated
-                  };
-                }
-                
-                // Check for optimistic message to replace
-                const optimisticMsgIndex = existingMessages.findIndex(msg => 
-                  msg.message_id && msg.message_id > 1000000000000 &&
-                  msg.sender === 'me' && 
-                  msg.text === newMessage.text &&
-                  data.message.sender_id === currentUserId
-                );
-                
-                let updatedMessages: Message[];
-                
-                if (optimisticMsgIndex >= 0) {
-                  // Replace optimistic message
-                  updatedMessages = [...existingMessages];
-                  updatedMessages[optimisticMsgIndex] = newMessage;
-                } else {
-                  // Insert new message in correct chronological position
-                  const newMessageTime = new Date(data.message.created_at).getTime();
-                  let insertIndex = existingMessages.length;
-                  
-                  for (let i = 0; i < existingMessages.length; i++) {
-                    const existingMsg = existingMessages[i];
-                    if (existingMsg.created_at) {
-                      const existingTime = new Date(existingMsg.created_at).getTime();
-                      if (existingTime < newMessageTime) {
-                        continue;
-                      } else {
-                        insertIndex = i;
-                        break;
-                      }
-                    } else if (existingMsg.message_id && newMessage.message_id) {
-                      if (existingMsg.message_id < newMessage.message_id) {
-                        continue;
-                      } else {
-                        insertIndex = i;
-                        break;
-                      }
-                    }
-                  }
-                  
-                  updatedMessages = [
-                    ...existingMessages.slice(0, insertIndex),
-                    newMessage,
-                    ...existingMessages.slice(insertIndex)
-                  ];
-                }
-                
-                // Sort by created_at timestamp to ensure correct chronological order
-                updatedMessages.sort((a, b) => {
-                  if (a.created_at && b.created_at) {
-                    return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-                  }
-                  return (a.message_id || 0) - (b.message_id || 0);
-                });
-                
-                return {
-                  ...prev,
-                  [data.room_id]: updatedMessages
-                };
-              });
-              
-              // Update last message in contacts
-              setContacts(prev => prev.map(contact => 
-                contact.id === data.room_id 
-                  ? { ...contact, lastMessage: data.message.content, time: 'Just now' }
-                  : contact
-              ));
-            }
-            
-            // WebSocket will automatically send unread_count_updated when new messages arrive
-            // No need to manually refresh badge - backend handles it
-            console.log('🔔 New message notification received - WebSocket will send unread_count_updated automatically');
-          }
-          break;
-        case 'room_invitation':
-          // Refresh rooms list
-          fetchRooms();
-          break;
-        case 'direct_room_created':
-          // Refresh rooms list
-          fetchRooms();
-          break;
-      }
-    };
-    
-    ws.onerror = (error) => {
-      console.error('❌ Notification WebSocket error:', error);
-      console.error('Make sure Django Channels and Redis are running');
-      console.error('Check asgi.py routing configuration');
-    };
-    
-    ws.onclose = (event) => {
-      console.log('🔔 Notification WebSocket disconnected. Code:', event.code, 'Reason:', event.reason);
-      
-      // Auto-reconnect after 5 seconds if not manually closed
-      if (event.code !== 1000) {
-        console.log('🔄 Attempting to reconnect in 5 seconds...');
-        setTimeout(() => {
-          if (wsNotificationRef.current?.readyState === WebSocket.CLOSED) {
-            connectNotificationWebSocket();
-          }
-        }, 5000);
-      }
-    };
-    
-    wsNotificationRef.current = ws;
-  };
-
-  // Handle new message from WebSocket
-  const handleNewMessage = (roomId: number, messageData: ApiMessage, senderId: number) => {
-    const newMessage: Message = {
-      id: messageData.message_id,
-      sender: senderId === currentUserId ? 'me' : 'them',
-      text: messageData.content,
-      time: new Date(messageData.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
-      sender_id: senderId,
-      sender_username: messageData.sender_username,
-      message_id: messageData.message_id,
-      reply_to_id: messageData.reply_to_id || undefined,
-      created_at: messageData.created_at // Store for sorting
-    };
-    
-    setMessages(prev => {
-      const existingMessages = prev[roomId] || [];
-      
-      // Check if message already exists by message_id (real message)
-      const existingRealMsgIndex = existingMessages.findIndex(msg => 
-        msg.message_id === newMessage.message_id && msg.message_id && msg.message_id < 1000000000000
-      );
-      
-      if (existingRealMsgIndex >= 0) {
-        // Message already exists as real message - just update it (in case of WebSocket duplicate)
-        const updated = [...existingMessages];
-        updated[existingRealMsgIndex] = newMessage;
-        // Sort to maintain order
-        updated.sort((a, b) => {
-          if (a.created_at && b.created_at) {
-            return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-          }
-          return (a.message_id || 0) - (b.message_id || 0);
-        });
-        return {
-          ...prev,
-          [roomId]: updated
-        };
-      }
-      
-      // Check for optimistic message to replace (temporary IDs > 1000000000000)
-      // Match by text and sender to find the optimistic message
-      const optimisticMsgIndex = existingMessages.findIndex(msg => 
-        msg.message_id && msg.message_id > 1000000000000 &&
-        msg.sender === 'me' && 
-        msg.text === newMessage.text &&
-        senderId === currentUserId // Only replace if it's the current user's message
-      );
-      
-      if (optimisticMsgIndex >= 0) {
-        // Replace optimistic message with real message
-        const updated = [...existingMessages];
-        updated[optimisticMsgIndex] = newMessage;
-        
-        // Sort by created_at to ensure correct order
-        updated.sort((a, b) => {
-          if (a.created_at && b.created_at) {
-            return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-          }
-          return (a.message_id || 0) - (b.message_id || 0);
-        });
-        
-        return {
-          ...prev,
-          [roomId]: updated
-        };
-      }
-      
-      // New message - insert in correct chronological position
-      const newMessageTime = new Date(messageData.created_at).getTime();
-      let insertIndex = existingMessages.length;
-      
-      for (let i = 0; i < existingMessages.length; i++) {
-        const existingMsg = existingMessages[i];
-        if (existingMsg.created_at) {
-          const existingTime = new Date(existingMsg.created_at).getTime();
-          if (existingTime < newMessageTime) {
-            continue;
-          } else {
-            insertIndex = i;
-            break;
-          }
-        } else if (existingMsg.message_id && newMessage.message_id) {
-          // Fallback to message_id comparison
-          if (existingMsg.message_id < newMessage.message_id) {
-            continue;
-          } else {
-            insertIndex = i;
-            break;
-          }
-        }
-      }
-      
-      // Insert at the correct position
-      const updatedMessages = [
-        ...existingMessages.slice(0, insertIndex),
-        newMessage,
-        ...existingMessages.slice(insertIndex)
-      ];
-      
-      // Sort by created_at to ensure correct chronological order
-      updatedMessages.sort((a, b) => {
-        if (a.created_at && b.created_at) {
-          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-        }
-        return (a.message_id || 0) - (b.message_id || 0);
-      });
-      
-      return {
-        ...prev,
-        [roomId]: updatedMessages
-      };
-    });
-    
-    // Update last message in contacts
-    setContacts(prev => prev.map(contact => 
-      contact.id === roomId 
-        ? { ...contact, lastMessage: messageData.content, time: 'Just now' }
-        : contact
-    ));
-  };
 
   // Update unread count
   const updateUnreadCount = (roomId: number) => {
@@ -1307,9 +1129,7 @@ const ChatApp = () => {
     // This is especially important when returning to the chat after navigating away
     console.log(`💬 Selecting chat room ${id} - refreshing messages to ensure latest data`);
     
-    // Connect to WebSocket for real-time updates BEFORE fetching messages
-    // This ensures we receive real-time updates immediately
-    console.log(`🔌 Connecting to WebSocket for room ${id}`);
+    // Connect to WebSocket for this room
     connectRoomWebSocket(id);
     
     // Fetch messages - this will call markRoomAsRead after messages are loaded
