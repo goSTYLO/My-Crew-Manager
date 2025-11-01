@@ -1,9 +1,16 @@
 // controllers/LoginController.ts
 import { API_BASE_URL } from "./../config/api";
 import { type User, UserModel } from "../services/UserModel";
+import { TwoFactorService } from "./TwoFactorService";
 
 export class LoginController {
-  static async login(user: User): Promise<{ success: boolean; message: string; redirect: string }> {
+  static async login(user: User): Promise<{ 
+    success: boolean; 
+    message: string; 
+    redirect: string;
+    requires2FA?: boolean;
+    tempToken?: string;
+  }> {
     const validation = UserModel.validateUser(user);
     if (!validation.isValid) {
       throw new Error(Object.values(validation.errors).join(", "));
@@ -37,6 +44,18 @@ export class LoginController {
     if (!response.ok) {
       console.error("❌ Login failed:", data);
       throw new Error(data.error || data.detail || data.message || "Invalid credentials");
+    }
+
+    // Check if 2FA is required
+    if (data.requires_2fa && data.temp_token) {
+      console.log("🔐 2FA required - returning temp token");
+      return {
+        success: true,
+        requires2FA: true,
+        tempToken: data.temp_token,
+        message: data.message || "Please enter your 2FA code",
+        redirect: "", // Will be set after 2FA verification
+      };
     }
 
     // ✅ Save authentication tokens to sessionStorage
@@ -141,7 +160,66 @@ export class LoginController {
     return { 
       success: true, 
       message: `Welcome back, ${data.name || 'User'}!`, 
-      redirect: redirectPath 
+      redirect: redirectPath,
+      requires2FA: false,
+    };
+  }
+
+  /**
+   * Verify 2FA code after initial login
+   */
+  static async verify2FA(tempToken: string, code: string): Promise<{ 
+    success: boolean; 
+    message: string; 
+    redirect: string;
+  }> {
+    console.log("🔐 Verifying 2FA code...");
+
+    const data = await TwoFactorService.verify2FALogin(tempToken, code);
+
+    // Save authentication tokens to sessionStorage (same as normal login)
+    if (data.token) {
+      sessionStorage.setItem("token", data.token);
+      sessionStorage.setItem("access", data.token);
+      console.log("✅ Token stored successfully");
+    }
+
+    if (data.name) {
+      sessionStorage.setItem("username", data.name);
+    }
+
+    if (data.email) {
+      sessionStorage.setItem("email", data.email);
+    }
+
+    // Determine redirect path based on role
+    let redirectPath = "/projects-user";
+    if (data.role) {
+      const normalizedRole = String(data.role).trim().replace(/\s+/g, ' ');
+      const lowerRole = normalizedRole.toLowerCase();
+      
+      sessionStorage.setItem("userRole", normalizedRole);
+
+      const isProjectManager = 
+        normalizedRole === "Project Manager" ||
+        lowerRole === "project manager" ||
+        (lowerRole.includes("project") && lowerRole.includes("manager")) ||
+        lowerRole === "projectmanager" ||
+        lowerRole === "pm";
+
+      if (isProjectManager) {
+        redirectPath = "/main-projects";
+      } else {
+        redirectPath = "/projects-user";
+      }
+    } else {
+      sessionStorage.setItem("userRole", "Developer");
+    }
+
+    return {
+      success: true,
+      message: `Welcome back, ${data.name || 'User'}!`,
+      redirect: redirectPath,
     };
   }
 }

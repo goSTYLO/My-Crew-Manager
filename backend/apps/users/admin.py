@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
-from .models import User
+from .models import User, TwoFactorTempToken
 
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
@@ -25,3 +25,12 @@ class UserAdmin(BaseUserAdmin):
     )
     
     readonly_fields = ['created_at', 'last_login']
+
+
+@admin.register(TwoFactorTempToken)
+class TwoFactorTempTokenAdmin(admin.ModelAdmin):
+    list_display = ['user', 'token', 'created_at', 'expires_at']
+    list_filter = ['created_at', 'expires_at']
+    search_fields = ['user__email', 'token']
+    readonly_fields = ['token', 'created_at']
+    date_hierarchy = 'created_at'

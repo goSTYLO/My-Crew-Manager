@@ -5,11 +5,22 @@ from rest_framework.authtoken.models import Token
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from django.contrib.auth import authenticate
-from .models import User, EmailVerification
+from .models import User, EmailVerification, TwoFactorTempToken
 from .serializers import UserSignupSerializer
 from .serializers import UserSerializer
 from .serializers import EmailRequestSerializer, EmailVerifySerializer
 from .serializers import AccountDeleteSerializer
+from .serializers import (
+    TwoFactorVerifySerializer, TwoFactorEnableSerializer,
+    TwoFactorDisableSerializer, TwoFactorLoginVerifySerializer
+)
+import pyotp
+import secrets
+import qrcode
+from io import BytesIO
+import base64
+import hashlib
+from cryptography.fernet import Fernet
 from django.utils import timezone
 from django.conf import settings
 from django.contrib.auth.hashers import make_password, check_password
@@ -41,15 +52,38 @@ class LoginView(APIView):
         password = request.data.get('password')
         user = authenticate(email=email, password=password)
         if user:
-            token, created = Token.objects.get_or_create(user=user)
-            return Response({
-                'id': str(user.user_id),
-                'email': user.email,
-                'name': user.name,
-                'role': user.role,
-                'token': token.key,
-                'role': user.role,
-            })
+            # Check if 2FA is enabled (using getattr in case migration hasn't been run)
+            if getattr(user, 'two_factor_enabled', False):
+                # Generate temporary token for 2FA verification
+                temp_token = secrets.token_urlsafe(32)
+                expires_at = timezone.now() + timedelta(minutes=5)
+                
+                # Delete any existing temp tokens for this user
+                TwoFactorTempToken.objects.filter(user=user).delete()
+                
+                # Create new temp token
+                TwoFactorTempToken.objects.create(
+                    user=user,
+                    token=temp_token,
+                    expires_at=expires_at
+                )
+                
+                return Response({
+                    'requires_2fa': True,
+                    'temp_token': temp_token,
+                    'message': 'Please enter your 2FA code'
+                })
+            else:
+                # Normal login flow
+                token, created = Token.objects.get_or_create(user=user)
+                return Response({
+                    'id': str(user.user_id),
+                    'email': user.email,
+                    'name': user.name,
+                    'role': user.role,
+                    'token': token.key,
+                    'role': user.role,
+                })
         return Response({'message': 'Invalid email or password'}, status=status.HTTP_401_UNAUTHORIZED)
     
 class LogoutView(APIView):
@@ -420,3 +454,284 @@ class EmailVerifyView(APIView):
             pass
 
         return Response({'verified': True})
+
+
+class Get2FAStatusView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        try:
+            user = request.user
+            
+            # Check if 2FA fields exist (in case migration hasn't been run)
+            if not hasattr(user, 'two_factor_enabled'):
+                return Response(
+                    {'error': '2FA fields not found in database. Please run migrations: python manage.py makemigrations && python manage.py migrate'}, 
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+            
+            response_data = {
+                'enabled': getattr(user, 'two_factor_enabled', False)
+            }
+            
+            if not response_data['enabled']:
+                # Generate secret and QR code for setup
+                secret = pyotp.random_base32()
+                totp = pyotp.TOTP(secret)
+                
+                # Create provisioning URI
+                provisioning_uri = totp.provisioning_uri(
+                    name=user.email,
+                    issuer_name='MyCrewManager'
+                )
+                
+                # Generate QR code as base64
+                qr = qrcode.QRCode(version=1, box_size=10, border=5)
+                qr.add_data(provisioning_uri)
+                qr.make(fit=True)
+                img = qr.make_image(fill_color="black", back_color="white")
+                
+                buffer = BytesIO()
+                img.save(buffer, format='PNG')
+                qr_code_base64 = base64.b64encode(buffer.getvalue()).decode()
+                
+                response_data['qr_code'] = f"data:image/png;base64,{qr_code_base64}"
+                response_data['secret'] = secret
+                response_data['provisioning_uri'] = provisioning_uri
+            
+            return Response(response_data)
+        except Exception as e:
+            import traceback
+            error_trace = traceback.format_exc()
+            print(f"Error in Get2FAStatusView: {str(e)}")
+            print(error_trace)
+            return Response(
+                {'error': f'Failed to get 2FA status: {str(e)}'}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+def _get_encryption_fernet():
+    """Get Fernet instance for encrypting/decrypting 2FA secrets"""
+    from django.conf import settings
+    # Derive encryption key from SECRET_KEY
+    key_material = settings.SECRET_KEY.encode()
+    key = base64.urlsafe_b64encode(hashlib.sha256(key_material).digest())
+    return Fernet(key)
+
+
+def _encrypt_secret(secret):
+    """Encrypt a secret using Fernet"""
+    f = _get_encryption_fernet()
+    return f.encrypt(secret.encode()).decode()
+
+
+def _decrypt_secret(encrypted_secret):
+    """Decrypt a secret using Fernet"""
+    f = _get_encryption_fernet()
+    return f.decrypt(encrypted_secret.encode()).decode()
+
+
+class Enable2FAView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request):
+        try:
+            user = request.user
+            
+            # Check if 2FA fields exist (in case migration hasn't been run)
+            if not hasattr(user, 'two_factor_enabled'):
+                return Response(
+                    {'error': '2FA fields not found in database. Please run migrations: python manage.py makemigrations && python manage.py migrate'}, 
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+            
+            if getattr(user, 'two_factor_enabled', False):
+                return Response(
+                    {'error': '2FA is already enabled'}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Generate secret and QR code
+            secret = pyotp.random_base32()
+            totp = pyotp.TOTP(secret)
+            
+            # Create provisioning URI
+            provisioning_uri = totp.provisioning_uri(
+                name=user.email,
+                issuer_name='MyCrewManager'
+            )
+            
+            # Generate QR code as base64
+            qr = qrcode.QRCode(version=1, box_size=10, border=5)
+            qr.add_data(provisioning_uri)
+            qr.make(fit=True)
+            img = qr.make_image(fill_color="black", back_color="white")
+            
+            buffer = BytesIO()
+            img.save(buffer, format='PNG')
+            qr_code_base64 = base64.b64encode(buffer.getvalue()).decode()
+            
+            # Store secret encrypted temporarily (will be enabled after verification)
+            encrypted_secret = _encrypt_secret(secret)
+            user.two_factor_secret = encrypted_secret
+            user.save(update_fields=['two_factor_secret'])
+            
+            return Response({
+                'qr_code': f"data:image/png;base64,{qr_code_base64}",
+                'secret': secret,
+                'provisioning_uri': provisioning_uri,
+                'message': 'Scan the QR code with your authenticator app and verify with a code'
+            })
+        except AttributeError as e:
+            return Response(
+                {'error': f'Database fields missing. Please run migrations: python manage.py makemigrations && python manage.py migrate. Error: {str(e)}'}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        except Exception as e:
+            import traceback
+            error_trace = traceback.format_exc()
+            print(f"Error in Enable2FAView: {str(e)}")
+            print(error_trace)
+            return Response(
+                {'error': f'Failed to enable 2FA: {str(e)}'}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+class Verify2FASetupView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request):
+        serializer = TwoFactorVerifySerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        code = serializer.validated_data['code']
+        
+        user = request.user
+        
+        if not user.two_factor_secret:
+            return Response(
+                {'error': 'No 2FA setup in progress. Please enable 2FA first.'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Decrypt the stored secret
+        try:
+            decrypted_secret = _decrypt_secret(user.two_factor_secret)
+        except Exception as e:
+            return Response(
+                {'error': 'Unable to retrieve secret. Please start 2FA setup again.'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        totp = pyotp.TOTP(decrypted_secret)
+        if totp.verify(code, valid_window=1):
+            # Verification successful - enable 2FA (secret is already stored encrypted)
+            user.two_factor_enabled = True
+            user.save(update_fields=['two_factor_enabled'])
+            
+            return Response({
+                'message': '2FA has been enabled successfully',
+                'enabled': True
+            })
+        else:
+            return Response(
+                {'error': 'Invalid verification code'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+
+class Disable2FAView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request):
+        serializer = TwoFactorDisableSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        password = serializer.validated_data['password']
+        
+        user = request.user
+        
+        if not user.two_factor_enabled:
+            return Response(
+                {'error': '2FA is not enabled'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Verify password
+        if not user.check_password(password):
+            return Response(
+                {'error': 'Incorrect password'}, 
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+        
+        # Disable 2FA and clear secret
+        user.two_factor_enabled = False
+        user.two_factor_secret = None
+        user.save(update_fields=['two_factor_enabled', 'two_factor_secret'])
+        
+        return Response({
+            'message': '2FA has been disabled successfully',
+            'enabled': False
+        })
+
+
+class Verify2FALoginView(APIView):
+    def post(self, request):
+        serializer = TwoFactorLoginVerifySerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        temp_token = serializer.validated_data['temp_token']
+        code = serializer.validated_data['code']
+        
+        # Find temp token
+        now = timezone.now()
+        temp_token_obj = TwoFactorTempToken.objects.filter(
+            token=temp_token,
+            expires_at__gt=now
+        ).first()
+        
+        if not temp_token_obj:
+            return Response(
+                {'error': 'Invalid or expired temporary token'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        user = temp_token_obj.user
+        
+        # Verify 2FA code
+        if not user.two_factor_enabled or not user.two_factor_secret:
+            temp_token_obj.delete()
+            return Response(
+                {'error': '2FA is not enabled for this account'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Decrypt the stored secret
+        try:
+            decrypted_secret = _decrypt_secret(user.two_factor_secret)
+            totp = pyotp.TOTP(decrypted_secret)
+        except Exception as e:
+            return Response(
+                {'error': 'Unable to verify code. Please disable and re-enable 2FA.'}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        
+        if totp.verify(code, valid_window=1):
+            # Verification successful
+            # Delete temp token
+            temp_token_obj.delete()
+            
+            # Create permanent auth token
+            token, created = Token.objects.get_or_create(user=user)
+            
+            return Response({
+                'id': str(user.user_id),
+                'email': user.email,
+                'name': user.name,
+                'role': user.role,
+                'token': token.key,
+            })
+        else:
+            return Response(
+                {'error': 'Invalid verification code'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )

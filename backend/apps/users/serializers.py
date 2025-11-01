@@ -53,3 +53,20 @@ class EmailVerifySerializer(serializers.Serializer):
 class AccountDeleteSerializer(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField(write_only=True, trim_whitespace=False)
+
+
+class TwoFactorVerifySerializer(serializers.Serializer):
+    code = serializers.RegexField(regex=r'^\d{6}$', help_text='6-digit verification code')
+
+
+class TwoFactorEnableSerializer(serializers.Serializer):
+    code = serializers.RegexField(regex=r'^\d{6}$', required=False, help_text='6-digit verification code for initial setup')
+
+
+class TwoFactorDisableSerializer(serializers.Serializer):
+    password = serializers.CharField(write_only=True, trim_whitespace=False)
+
+
+class TwoFactorLoginVerifySerializer(serializers.Serializer):
+    temp_token = serializers.CharField()
+    code = serializers.RegexField(regex=r'^\d{6}$', help_text='6-digit verification code')
