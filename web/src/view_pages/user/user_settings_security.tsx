@@ -4,26 +4,31 @@ import Sidebar from "../../components/sidebarUser";
 import SettingsNavigation from "../../components/sidebarNavLayout_user"; 
 import TopNavbar from "../../components/topbarLayout_user";
 import { useTheme } from "../../components/themeContext";
+import { useNavigate } from "react-router-dom";
+import { API_BASE_URL } from "../../config/api";
 import { TwoFactorService, type TwoFAStatus } from "../../services/TwoFactorService";
 import Disable2FAModal from "../../components/Disable2FAModal";
+import DeleteAccountModal from "../../components/DeleteAccountModal";
+import { SavedAccountsManager } from "../../utils/SavedAccountsManager";
 import { 
   Shield, 
   Lock, 
   QrCode, 
   CheckCircle2, 
-  Clock, 
   Eye, 
   EyeOff,
   AlertCircle,
   Copy,
   Check,
   Smartphone,
-  X
+  X,
+  Trash2
 } from "lucide-react";
 
 const SecuritySettings = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { theme } = useTheme();
+  const navigate = useNavigate();
   const [twoFAStatus, setTwoFAStatus] = useState<TwoFAStatus | null>(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ text: string; type: 'error' | 'success' } | null>(null);
@@ -34,10 +39,45 @@ const SecuritySettings = () => {
   const [showDisableModal, setShowDisableModal] = useState(false);
   const [showSecret, setShowSecret] = useState(false);
   const [copied, setCopied] = useState(false);
+  
+  // Delete account state
+  const [email, setEmail] = useState("");
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletePassword, setDeletePassword] = useState("");
+  const [deleteError, setDeleteError] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteEmail, setDeleteEmail] = useState("");
+  const [deleteSuccess, setDeleteSuccess] = useState(false);
 
   useEffect(() => {
     load2FAStatus();
+    loadUserEmail();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const loadUserEmail = async () => {
+    const token = sessionStorage.getItem("token");
+    if (!token) {
+      navigate("/signin");
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/user/me/`, {
+        headers: {
+          Authorization: `Token ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setEmail(data.email || "");
+      }
+    } catch (error) {
+      console.error("Failed to fetch user email:", error);
+    }
+  };
 
   const load2FAStatus = async () => {
     try {
@@ -151,8 +191,132 @@ const SecuritySettings = () => {
     }
   };
 
+  const handleDeleteAccount = async () => {
+    // Reset previous errors
+    setDeleteError("");
+
+    // Validate inputs
+    if (!deleteEmail.trim()) {
+      setDeleteError("Please enter your email address");
+      return;
+    }
+
+    if (!deletePassword.trim()) {
+      setDeleteError("Please enter your password to confirm deletion");
+      return;
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(deleteEmail)) {
+      setDeleteError("Please enter a valid email address");
+      return;
+    }
+
+    // Check if email matches
+    if (deleteEmail.toLowerCase().trim() !== email.toLowerCase().trim()) {
+      setDeleteError("Email does not match your account");
+      return;
+    }
+
+    setIsDeleting(true);
+
+    const token = sessionStorage.getItem("token");
+    if (!token) {
+      navigate("/signin");
+      return;
+    }
+
+    try {
+      console.log("Attempting to delete account with email:", deleteEmail.trim());
+      
+      const deleteResponse = await fetch(`${API_BASE_URL}/user/delete/`, {
+        method: "POST",
+        headers: {
+          Authorization: `Token ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: deleteEmail.trim(),
+          password: deletePassword
+        }),
+      });
+
+      console.log("Delete response status:", deleteResponse.status);
+
+      if (deleteResponse.ok) {
+        const responseData = await deleteResponse.json();
+        console.log("Delete success:", responseData);
+        
+        // Remove only this user's Remember Me data
+        SavedAccountsManager.removeAccount(email);
+        
+        // Remove this user's encryption key from sessionStorage
+        const keyStorageKey = `enc_key_${email.toLowerCase()}`;
+        sessionStorage.removeItem(keyStorageKey);
+        
+        // Clear authentication tokens
+        sessionStorage.removeItem("token");
+        sessionStorage.removeItem("userRole");
+        
+        // Remove only this user's specific localStorage items (if they exist)
+        // Note: user_country and user_nationality might be shared, so we'll only remove if needed
+        // localStorage.clear() would remove ALL users' Remember Me data, so we don't use it
+        
+        // Show success state
+        setDeleteSuccess(true);
+        setDeleteError("");
+        
+        // Redirect after showing success message
+        setTimeout(() => {
+          navigate("/signin", { 
+            state: { 
+              message: "Your account has been successfully deleted",
+              type: "success"
+            } 
+          });
+        }, 2000);
+        
+      } else {
+        const rawBody = await deleteResponse.text().catch(() => "");
+        let parsedBody: any = {};
+        try {
+          parsedBody = rawBody ? JSON.parse(rawBody) : {};
+        } catch {
+          // ignore JSON parse error; fall back to raw text
+        }
+
+        const serverMessage = (parsedBody && (parsedBody.error || parsedBody.detail || parsedBody.message)) || rawBody || "Unknown error occurred";
+        console.error("Delete error response:", {
+          status: deleteResponse.status,
+          statusText: deleteResponse.statusText,
+          body: rawBody,
+          parsed: parsedBody,
+        });
+        
+        // Handle specific error cases
+        if (deleteResponse.status === 401) {
+          setDeleteError("Incorrect password. Please try again.");
+        } else if (deleteResponse.status === 400) {
+          setDeleteError(serverMessage || "Invalid request. Please check your email and password.");
+        } else if (deleteResponse.status === 429) {
+          setDeleteError("Too many attempts. Please try again later.");
+        } else if (deleteResponse.status === 500) {
+          setDeleteError(serverMessage || "Server error. Please try again later or contact support.");
+        } else {
+          setDeleteError(serverMessage || "Failed to delete account. Please try again.");
+        }
+      }
+    } catch (error) {
+      console.error("Failed to delete account:", error);
+      setDeleteError("Network error. Please check your connection and try again.");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   return (
-    <div className={`flex min-h-screen w-screen ${theme === "dark" ? "bg-gray-900" : "bg-gray-50"}`}>
+    <div className={`flex min-h-screen w-full ${theme === "dark" ? "bg-gray-900" : "bg-gray-50"}`}>
       {/* Sidebar */}
       <Sidebar
         sidebarOpen={sidebarOpen}
@@ -412,61 +576,51 @@ const SecuritySettings = () => {
                       )}
                     </div>
 
-                    {/* Session Timeout Card */}
-                    <div className={`rounded-xl border ${theme === "dark" ? "border-gray-700 bg-gray-800/50" : "border-gray-200 bg-white"} p-6`}>
+                    {/* Delete Account Card */}
+                    <div className={`rounded-xl border ${theme === "dark" ? "border-red-700/50 bg-red-900/10" : "border-red-200 bg-red-50/50"} p-6`}>
                       <div className="flex items-center gap-3 mb-4">
-                        <div className={`p-2.5 rounded-lg ${theme === "dark" ? "bg-orange-900/30 text-orange-400" : "bg-orange-100 text-orange-600"}`}>
-                          <Clock className="w-5 h-5" />
+                        <div className={`p-2.5 rounded-lg ${theme === "dark" ? "bg-red-900/30 text-red-400" : "bg-red-100 text-red-600"}`}>
+                          <Trash2 className="w-5 h-5" />
                         </div>
                         <div>
                           <h2 className={`text-xl font-semibold ${theme === "dark" ? "text-white" : "text-gray-900"}`}>
-                            Session Timeout
+                            Delete Account
                           </h2>
                           <p className={`text-sm mt-1 ${theme === "dark" ? "text-gray-400" : "text-gray-600"}`}>
-                            Automatically log out after a period of inactivity
+                            Permanently delete your account and all associated data
                           </p>
                         </div>
                       </div>
-                      <select 
-                        className={`w-full md:w-64 px-4 py-2.5 border-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all ${theme === "dark" ? "bg-gray-900 border-gray-700 text-white" : "bg-white border-gray-300 text-gray-900"}`}
-                        defaultValue="30"
-                        aria-label="Session timeout duration"
-                      >
-                        <option value="15">15 minutes</option>
-                        <option value="30">30 minutes</option>
-                        <option value="60">1 hour</option>
-                        <option value="120">2 hours</option>
-                      </select>
-                    </div>
-
-                    {/* Public Profile Card */}
-                    <div className={`rounded-xl border ${theme === "dark" ? "border-gray-700 bg-gray-800/50" : "border-gray-200 bg-white"} p-6`}>
-                      <div className="flex items-center gap-3 mb-4">
-                        <div className={`p-2.5 rounded-lg ${theme === "dark" ? "bg-purple-900/30 text-purple-400" : "bg-purple-100 text-purple-600"}`}>
-                          <Eye className="w-5 h-5" />
-                        </div>
-                        <div>
-                          <h2 className={`text-xl font-semibold ${theme === "dark" ? "text-white" : "text-gray-900"}`}>
-                            Public Profile Visibility
-                          </h2>
-                          <p className={`text-sm mt-1 ${theme === "dark" ? "text-gray-400" : "text-gray-600"}`}>
-                            Control whether your profile information is visible to other users
-                          </p>
-                        </div>
-                      </div>
-                      <label className={`flex items-center gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                      <div className={`p-4 rounded-lg border mb-4 ${
                         theme === "dark" 
-                          ? "border-gray-700 hover:border-gray-600 bg-gray-900/50" 
-                          : "border-gray-200 hover:border-gray-300 bg-gray-50"
+                          ? "bg-red-900/20 border-red-700/50 text-red-200" 
+                          : "bg-red-50 border-red-200 text-red-800"
                       }`}>
-                        <input 
-                          type="checkbox" 
-                          className="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500 cursor-pointer" 
-                        />
-                        <span className={`font-medium ${theme === "dark" ? "text-gray-200" : "text-gray-700"}`}>
-                          Allow public profile
-                        </span>
-                      </label>
+                        <div className="flex items-start gap-2">
+                          <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                          <div>
+                            <p className={`text-sm font-medium mb-1 ${theme === "dark" ? "text-red-200" : "text-red-800"}`}>
+                              Warning: This action cannot be undone
+                            </p>
+                            <p className={`text-xs ${theme === "dark" ? "text-red-300/80" : "text-red-700"}`}>
+                              Deleting your account will permanently remove all your data, projects, and settings. This action is irreversible.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setShowDeleteModal(true);
+                          setDeleteEmail("");
+                          setDeletePassword("");
+                          setDeleteError("");
+                          setDeleteSuccess(false);
+                        }}
+                        className="flex items-center gap-2 px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-all shadow-sm hover:shadow-md"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        <span>Delete Account</span>
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -489,6 +643,24 @@ const SecuritySettings = () => {
         setDisablePassword={setDisablePassword}
         onDisable={handleDisable2FA}
         loading={loading}
+      />
+
+      {/* Delete Account Modal */}
+      <DeleteAccountModal
+        showDeleteModal={showDeleteModal}
+        setShowDeleteModal={setShowDeleteModal}
+        theme={theme}
+        email={email}
+        deleteEmail={deleteEmail}
+        setDeleteEmail={setDeleteEmail}
+        deletePassword={deletePassword}
+        setDeletePassword={setDeletePassword}
+        deleteError={deleteError}
+        setDeleteError={setDeleteError}
+        deleteSuccess={deleteSuccess}
+        setDeleteSuccess={setDeleteSuccess}
+        isDeleting={isDeleting}
+        handleDeleteAccount={handleDeleteAccount}
       />
     </div>
   );

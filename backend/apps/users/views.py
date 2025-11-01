@@ -12,7 +12,9 @@ from .serializers import EmailRequestSerializer, EmailVerifySerializer
 from .serializers import AccountDeleteSerializer
 from .serializers import (
     TwoFactorVerifySerializer, TwoFactorEnableSerializer,
-    TwoFactorDisableSerializer, TwoFactorLoginVerifySerializer
+    TwoFactorDisableSerializer, TwoFactorLoginVerifySerializer,
+    ChangeEmailPasswordVerifySerializer, ChangeEmailRequestSerializer,
+    ChangeEmailVerifySerializer
 )
 import pyotp
 import secrets
@@ -594,6 +596,262 @@ class EmailVerifyView(APIView):
             pass
 
         return Response({'verified': True})
+
+
+class ChangeEmailPasswordVerifyView(APIView):
+    """Step 1: Verify user's password before allowing email change"""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = ChangeEmailPasswordVerifySerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        password = serializer.validated_data['password']
+
+        # Verify password
+        if not request.user.check_password(password):
+            return Response(
+                {'error': 'Incorrect password. Please try again.'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+
+        return Response({'verified': True}, status=status.HTTP_200_OK)
+
+
+class ChangeEmailRequestView(APIView):
+    """Step 2: Request email change - send OTP to new email"""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = ChangeEmailRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        new_email = serializer.validated_data['new_email'].strip().lower()
+
+        # Check if new email is the same as current email
+        if new_email == request.user.email.lower():
+            return Response(
+                {'error': 'New email must be different from your current email'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Check if new email is already taken
+        if User.objects.filter(email=new_email).exclude(user_id=request.user.user_id).exists():
+            return Response(
+                {'error': 'This email address is already registered to another account'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Check cooldown period
+        now = timezone.now()
+        last = EmailVerification.objects.filter(email=new_email, status='PENDING').order_by('-created_at').first()
+        if last and (now - last.last_sent_at).total_seconds() < settings.VERIFICATION_RESEND_COOLDOWN_SEC:
+            return Response(
+                {'error': f'Please wait {settings.VERIFICATION_RESEND_COOLDOWN_SEC} seconds before requesting a new code'},
+                status=status.HTTP_429_TOO_MANY_REQUESTS
+            )
+
+        # Generate and send verification code
+        code = f"{__import__('random').randint(100000, 999999)}"
+        code_hash = make_password(code)
+        expires_at = now + timedelta(minutes=settings.VERIFICATION_CODE_TTL_MIN)
+
+        EmailVerification.objects.create(
+            email=new_email,
+            code_hash=code_hash,
+            expires_at=expires_at,
+            attempts=0,
+            status='PENDING',
+            ip=request.META.get('REMOTE_ADDR'),
+            user_agent=request.META.get('HTTP_USER_AGENT'),
+        )
+
+        # Send email with OTP
+        subject = 'Verify your new email address for My Crew Manager'
+        message = (
+            f"Your My Crew Manager email change verification code is {code}. "
+            f"It expires in {settings.VERIFICATION_CODE_TTL_MIN} minutes. "
+            f"If you did not request this change, please ignore this email."
+        )
+        html_message = f"""
+        <div style="background:#f8f9fc;padding:40px 0;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica Neue,Arial,sans-serif;color:#1f2937;">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                <tr>
+                <td align="center">
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" style="background:#ffffff;border-radius:16px;box-shadow:0 10px 40px rgba(0,0,0,0.1);overflow:hidden;border:1px solid #e5e7eb;">
+                    
+                    <!-- Header with Logo and Branding -->
+                    <tr>
+                        <td style="background:linear-gradient(135deg, #1a5f7a 0%, #2c7a9e 100%);color:#ffffff;padding:40px 40px 36px 40px;text-align:center;">
+                        <div style="font-size:32px;font-weight:700;letter-spacing:-1px;margin-bottom:8px;">MyCrewManager</div>
+                        <div style="opacity:.95;font-size:14px;font-weight:500;letter-spacing:0.5px;text-transform:uppercase;">Email Change Verification</div>
+                        </td>
+                    </tr>
+                    
+                    <!-- Main Content -->
+                    <tr>
+                        <td style="padding:48px 40px 24px 40px;">
+                        <div style="text-align:center;margin-bottom:32px;">
+                            <div style="display:inline-block;background:#f0f9ff;color:#1a5f7a;padding:8px 20px;border-radius:20px;font-size:13px;font-weight:600;margin-bottom:20px;">
+                            Action Required
+                            </div>
+                        </div>
+                        <div style="font-size:24px;font-weight:700;margin-bottom:16px;color:#111827;line-height:1.3;">Email Change Verification</div>
+                        <div style="font-size:15px;line-height:1.8;color:#4b5563;margin-bottom:8px;">
+                            A request has been made to change your email address to <strong style="color:#1a5f7a;">{new_email}</strong>. To complete this change, please verify your new email address using the code provided below.
+                        </div>
+                        <div style="font-size:14px;line-height:1.7;color:#6b7280;">
+                            This verification code will remain valid for <strong style="color:#1a5f7a;">{settings.VERIFICATION_CODE_TTL_MIN} minutes</strong> from the time of this email.
+                        </div>
+                        </td>
+                    </tr>
+                    
+                    <!-- Verification Code -->
+                    <tr>
+                        <td style="padding:16px 40px 24px 40px;">
+                        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                            <tr>
+                            <td align="center">
+                                <div style="background:linear-gradient(135deg, #1a5f7a 0%, #2c7a9e 100%);border-radius:12px;padding:32px 40px;box-shadow:0 6px 20px rgba(26,95,122,0.2);">
+                                <div style="color:#ffffff;opacity:0.9;font-size:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">Verification Code</div>
+                                <div style="color:#ffffff;font-size:36px;letter-spacing:10px;font-weight:700;font-family:Consolas,Monaco,Courier New,monospace;">
+                                    {code}
+                                </div>
+                                </div>
+                            </td>
+                            </tr>
+                        </table>
+                        </td>
+                    </tr>
+                    
+                    <!-- Instructions -->
+                    <tr>
+                        <td style="padding:16px 40px 32px 40px;">
+                        <div style="background:#fef3c7;border-left:4px solid #f59e0b;padding:20px 24px;border-radius:8px;">
+                            <div style="font-size:14px;font-weight:600;color:#92400e;margin-bottom:8px;">Important Security Information</div>
+                            <div style="font-size:13px;line-height:1.7;color:#78350f;">
+                            • Enter this code in the email change verification page<br>
+                            • If you did not request this email change, please ignore this message and consider changing your account password<br>
+                            • Never share this code with anyone, including MyCrewManager staff
+                            </div>
+                        </div>
+                        </td>
+                    </tr>
+                    
+                    <!-- Footer -->
+                    <tr>
+                        <td style="background:#f9fafb;padding:32px 40px;border-top:1px solid #e5e7eb;">
+                        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                            <tr>
+                            <td style="padding-bottom:16px;border-bottom:1px solid #e5e7eb;">
+                                <div style="font-size:13px;color:#6b7280;line-height:1.6;">
+                                <strong style="color:#374151;display:block;margin-bottom:4px;">This email was sent to:</strong>
+                                {new_email}
+                                </div>
+                            </td>
+                            </tr>
+                            <tr>
+                            <td style="padding-top:16px;">
+                                <div style="font-size:12px;color:#9ca3af;line-height:1.7;">
+                                This is an automated message from MyCrewManager's secure authentication system. Please do not reply directly to this email. For support inquiries, please visit our help center.
+                                </div>
+                                <div style="margin-top:16px;padding-top:16px;border-top:1px solid #e5e7eb;font-size:12px;color:#9ca3af;">
+                                &copy; {timezone.now().year} MyCrewManager. All rights reserved.<br>
+                                <span style="opacity:0.8;">Trusted workforce management solutions.</span>
+                                </div>
+                            </td>
+                            </tr>
+                        </table>
+                        </td>
+                    </tr>
+                    
+                    </table>
+                </td>
+                </tr>
+            </table>
+        </div>
+        """
+        try:
+            send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [new_email], html_message=html_message)
+        except Exception as e:
+            # Log error but don't leak it to clients
+            print(f"Failed to send email change verification: {e}")
+            return Response(
+                {'error': 'Failed to send verification email. Please try again.'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+        return Response({'message': 'Verification code sent to your new email address'}, status=status.HTTP_200_OK)
+
+
+class ChangeEmailVerifyView(APIView):
+    """Step 3: Verify OTP and update email"""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = ChangeEmailVerifySerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        new_email = serializer.validated_data['new_email'].strip().lower()
+        code = serializer.validated_data['code']
+
+        # Verify that this email change was requested by checking EmailVerification record
+        now = timezone.now()
+        rec = EmailVerification.objects.filter(email=new_email, status='PENDING').order_by('-created_at').first()
+        
+        if not rec:
+            return Response(
+                {'error': 'No verification code found for this email. Please request a new code.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if rec.expires_at <= now:
+            rec.status = 'EXPIRED'
+            rec.save(update_fields=['status'])
+            return Response(
+                {'error': 'Verification code has expired. Please request a new code.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if rec.attempts >= settings.VERIFICATION_MAX_ATTEMPTS:
+            rec.status = 'LOCKED'
+            rec.save(update_fields=['status'])
+            return Response(
+                {'error': 'Too many attempts. Please request a new code.'},
+                status=status.HTTP_429_TOO_MANY_REQUESTS
+            )
+
+        if not check_password(code, rec.code_hash):
+            rec.attempts = rec.attempts + 1
+            rec.save(update_fields=['attempts'])
+            return Response(
+                {'error': 'Invalid verification code. Please try again.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Check if new email is already taken (double check)
+        if User.objects.filter(email=new_email).exclude(user_id=request.user.user_id).exists():
+            rec.status = 'VERIFIED'  # Mark as verified even though we'll reject
+            rec.save(update_fields=['status'])
+            return Response(
+                {'error': 'This email address is already registered to another account'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Mark verification as verified and update user email
+        rec.status = 'VERIFIED'
+        rec.save(update_fields=['status'])
+
+        # Update user email
+        old_email = request.user.email
+        request.user.email = new_email
+        request.user.email_verified_at = now  # Mark new email as verified
+        request.user.save(update_fields=['email', 'email_verified_at'])
+
+        # Update all EmailVerification records for the old email to prevent confusion
+        EmailVerification.objects.filter(email=old_email.lower(), status='PENDING').update(status='CANCELLED')
+
+        return Response({
+            'message': 'Email address updated successfully',
+            'new_email': new_email
+        }, status=status.HTTP_200_OK)
 
 
 class Get2FAStatusView(APIView):

@@ -3,25 +3,32 @@ from django.urls import path
 from .views import SignupView, LoginView, LogoutView, RefreshTokenView, UserDetailView, UserListView, PasswordResetView
 from .views import EmailRequestView, EmailVerifyView
 from .views import AccountDeleteView
+from .views import ChangeEmailPasswordVerifyView, ChangeEmailRequestView, ChangeEmailVerifyView
 from .views import (
     Enable2FAView, Verify2FASetupView, Disable2FAView,
     Get2FAStatusView, Verify2FALoginView
 )
 
 urlpatterns = [
-    path('signup/', SignupView.as_view(), name='signup'),
-    path('login/', LoginView.as_view(), name='login'),
-    path('logout/', LogoutView.as_view(), name='logout'),
-    path('refresh-token/', RefreshTokenView.as_view(), name='refresh-token'),
-    path("me/", UserDetailView.as_view(), name="user-detail"),
-    path('', UserListView.as_view(), name='user_list'),
-    path('reset-password/', PasswordResetView.as_view(), name='reset-password'),
+    # Most specific patterns first
+    path('email/change/verify-password/', ChangeEmailPasswordVerifyView.as_view(), name='change-email-verify-password'),
+    path('email/change/request/', ChangeEmailRequestView.as_view(), name='change-email-request'),
+    path('email/change/verify/', ChangeEmailVerifyView.as_view(), name='change-email-verify'),
     path('email/request/', EmailRequestView.as_view(), name='email-request'),
     path('email/verify/', EmailVerifyView.as_view(), name='email-verify'),
-    path('delete/', AccountDeleteView.as_view(), name='account-delete'),
     path('2fa/enable/', Enable2FAView.as_view(), name='2fa-enable'),
     path('2fa/verify-setup/', Verify2FASetupView.as_view(), name='2fa-verify-setup'),
     path('2fa/disable/', Disable2FAView.as_view(), name='2fa-disable'),
     path('2fa/status/', Get2FAStatusView.as_view(), name='2fa-status'),
     path('2fa/verify-login/', Verify2FALoginView.as_view(), name='2fa-verify-login'),
+    # Standard auth endpoints
+    path('signup/', SignupView.as_view(), name='signup'),
+    path('login/', LoginView.as_view(), name='login'),
+    path('logout/', LogoutView.as_view(), name='logout'),
+    path('refresh-token/', RefreshTokenView.as_view(), name='refresh-token'),
+    path("me/", UserDetailView.as_view(), name="user-detail"),
+    path('reset-password/', PasswordResetView.as_view(), name='reset-password'),
+    path('delete/', AccountDeleteView.as_view(), name='account-delete'),
+    # Catch-all at the end
+    path('', UserListView.as_view(), name='user_list'),
 ]

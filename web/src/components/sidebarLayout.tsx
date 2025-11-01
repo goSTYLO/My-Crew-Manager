@@ -5,7 +5,10 @@ import {
   TrendingUp,
   Settings,
   LogOut,
-  MessageSquare
+  MessageSquare,
+  HelpCircle,
+  MessageCircle,
+  Users
 } from "lucide-react";
 import { API_BASE_URL } from "../config/api";
 import { useTheme } from "./themeContext";
@@ -63,6 +66,9 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
     { name: "Project", icon: FolderOpen, path: "/main-projects" },
     { name: "Team Chat", icon: MessageSquare, path: "/chat" },
     { name: "Leaderboard", icon: TrendingUp, path: "/leaderboard" },
+    { name: "Contact Support", icon: HelpCircle, path: "/contact-support" },
+    { name: "FAQ", icon: MessageCircle, path: "/faq" },
+    { name: "About Us", icon: Users, path: "/about-us" },
     { name: "Settings", icon: Settings, path: "/manager-settings" },
     { name: "Logout", icon: LogOut, action: () => setShowLogoutConfirm(true) },
   ];

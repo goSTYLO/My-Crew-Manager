@@ -70,3 +70,16 @@ class TwoFactorDisableSerializer(serializers.Serializer):
 class TwoFactorLoginVerifySerializer(serializers.Serializer):
     temp_token = serializers.CharField()
     code = serializers.RegexField(regex=r'^\d{6}$', help_text='6-digit verification code')
+
+
+class ChangeEmailPasswordVerifySerializer(serializers.Serializer):
+    password = serializers.CharField(write_only=True, trim_whitespace=False)
+
+
+class ChangeEmailRequestSerializer(serializers.Serializer):
+    new_email = serializers.EmailField()
+
+
+class ChangeEmailVerifySerializer(serializers.Serializer):
+    new_email = serializers.EmailField()
+    code = serializers.RegexField(regex=r'^\d{6}$', help_text='6-digit verification code')

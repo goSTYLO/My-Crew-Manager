@@ -5,8 +5,8 @@ import TopNavbar from "../../components/topbarLayouot";
 import { useTheme } from "../../components/themeContext";
 import { useNavigate } from "react-router-dom";
 import { API_BASE_URL } from "../../config/api";
-import { Camera, Phone, Mail, User, TrendingUp, Lock, Trash2 } from "lucide-react";
-import DeleteAccountModal from "../../components/DeleteAccountModal";
+import { Camera, Phone, Mail, User, TrendingUp, Lock, Edit2, X, CheckCircle2, AlertCircle } from "lucide-react";
+import { EmailChangeService } from "../../services/EmailChangeService";
 
 interface UserData {
     user_id: string;
@@ -38,13 +38,14 @@ const AccountSettings = () => {
     const [saveMessage, setSaveMessage] = useState("");
     const [country, setCountry] = useState("Philippines");
 
-    // Delete account modal state
-    const [showDeleteModal, setShowDeleteModal] = useState(false);
-    const [deletePassword, setDeletePassword] = useState("");
-    const [deleteError, setDeleteError] = useState("");
-    const [isDeleting, setIsDeleting] = useState(false);
-    const [deleteEmail, setDeleteEmail] = useState("");
-    const [deleteSuccess, setDeleteSuccess] = useState(false);
+    // Email change state
+    const [showEmailChangeModal, setShowEmailChangeModal] = useState(false);
+    const [emailChangeStep, setEmailChangeStep] = useState<1 | 2 | 3>(1);
+    const [emailChangePassword, setEmailChangePassword] = useState("");
+    const [newEmail, setNewEmail] = useState("");
+    const [emailOTP, setEmailOTP] = useState("");
+    const [emailChangeMessage, setEmailChangeMessage] = useState("");
+    const [emailChangeLoading, setEmailChangeLoading] = useState(false);
 
     const nationalities = [
         "Filipino", "American", "Canadian", "British", "Australian",
@@ -212,123 +213,129 @@ const AccountSettings = () => {
         }
     };
 
-    const handleDeleteAccount = async () => {
-        // Reset previous errors
-        setDeleteError("");
-
-        // Validate inputs
-        if (!deleteEmail.trim()) {
-            setDeleteError("Please enter your email address");
-            return;
-        }
-
-        if (!deletePassword.trim()) {
-            setDeleteError("Please enter your password to confirm deletion");
-            return;
-        }
-
-        // Validate email format
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(deleteEmail)) {
-            setDeleteError("Please enter a valid email address");
-            return;
-        }
-
-        // Check if email matches
-        if (deleteEmail.toLowerCase().trim() !== email.toLowerCase().trim()) {
-            setDeleteError("Email does not match your account");
-            return;
-        }
-
-        setIsDeleting(true);
-
-        const token = sessionStorage.getItem("token");
-        if (!token) {
-            navigate("/signin");
-            return;
-        }
-
-        try {
-            console.log("Attempting to delete account with email:", deleteEmail.trim());
-            
-            const deleteResponse = await fetch(`${API_BASE_URL}/user/delete/`, {
-                method: "POST",
-                headers: {
-                    Authorization: `Token ${token}`,
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    email: deleteEmail.trim(),
-                    password: deletePassword
-                }),
-            });
-
-            console.log("Delete response status:", deleteResponse.status);
-
-            if (deleteResponse.ok) {
-                const responseData = await deleteResponse.json();
-                console.log("Delete success:", responseData);
-                
-                // Clear authentication
-                sessionStorage.removeItem("token");
-                localStorage.removeItem("user_country");
-                localStorage.removeItem("user_nationality");
-                localStorage.clear();
-                
-                // Show success state
-                setDeleteSuccess(true);
-                setDeleteError("");
-                
-                // Redirect after showing success message
-                setTimeout(() => {
-                    navigate("/signin", { 
-                        state: { 
-                            message: "Your account has been successfully deleted",
-                            type: "success"
-                        } 
-                    });
-                }, 2000);
-                
-            } else {
-                const rawBody = await deleteResponse.text().catch(() => "");
-                let parsedBody: any = {};
-                try {
-                    parsedBody = rawBody ? JSON.parse(rawBody) : {};
-                } catch {
-                    // ignore JSON parse error; fall back to raw text
-                }
-
-                const serverMessage = (parsedBody && (parsedBody.error || parsedBody.detail || parsedBody.message)) || rawBody || "Unknown error occurred";
-                console.error("Delete error response:", {
-                    status: deleteResponse.status,
-                    statusText: deleteResponse.statusText,
-                    body: rawBody,
-                    parsed: parsedBody,
-                });
-                
-                // Handle specific error cases
-                if (deleteResponse.status === 401) {
-                    setDeleteError("Incorrect password. Please try again.");
-                } else if (deleteResponse.status === 400) {
-                    setDeleteError(serverMessage || "Invalid request. Please check your email and password.");
-                } else if (deleteResponse.status === 429) {
-                    setDeleteError("Too many attempts. Please try again later.");
-                } else if (deleteResponse.status === 500) {
-                    setDeleteError(serverMessage || "Server error. Please try again later or contact support.");
-                } else {
-                    setDeleteError(serverMessage || "Failed to delete account. Please try again.");
-                }
-            }
-        } catch (error) {
-            console.error("Failed to delete account:", error);
-            setDeleteError("Network error. Please check your connection and try again.");
-        } finally {
-            setIsDeleting(false);
-        }
-    };
 
     const getUserInitials = (name: string) => {
         return name.split(' ').map(word => word[0]).join('').toUpperCase().slice(0, 2);
+    };
+
+    // Email change handlers
+    const handleEmailChangePasswordVerify = async () => {
+        if (!emailChangePassword) {
+            setEmailChangeMessage("Please enter your password");
+            return;
+        }
+
+        setEmailChangeLoading(true);
+        setEmailChangeMessage("");
+
+        try {
+            const result = await EmailChangeService.verifyPassword(emailChangePassword);
+            if (result.success) {
+                setEmailChangeStep(2);
+                setEmailChangeMessage("");
+            } else {
+                setEmailChangeMessage(result.message || "Password verification failed");
+            }
+        } catch (error) {
+            setEmailChangeMessage("An error occurred. Please try again.");
+        } finally {
+            setEmailChangeLoading(false);
+        }
+    };
+
+    const handleEmailChangeRequest = async () => {
+        if (!newEmail) {
+            setEmailChangeMessage("Please enter a new email address");
+            return;
+        }
+
+        if (newEmail.toLowerCase() === email.toLowerCase()) {
+            setEmailChangeMessage("New email must be different from your current email");
+            return;
+        }
+
+        setEmailChangeLoading(true);
+        setEmailChangeMessage("");
+
+        try {
+            const result = await EmailChangeService.requestEmailChange(newEmail);
+            if (result.success) {
+                setEmailChangeStep(3);
+                setEmailChangeMessage(result.message || "Verification code sent to your new email");
+            } else {
+                setEmailChangeMessage(result.message || "Failed to send verification code");
+            }
+        } catch (error) {
+            setEmailChangeMessage("An error occurred. Please try again.");
+        } finally {
+            setEmailChangeLoading(false);
+        }
+    };
+
+    const handleEmailChangeVerify = async () => {
+        if (emailOTP.length !== 6) {
+            setEmailChangeMessage("Please enter a valid 6-digit code");
+            return;
+        }
+
+        setEmailChangeLoading(true);
+        setEmailChangeMessage("");
+
+        try {
+            const result = await EmailChangeService.verifyEmailChange(newEmail, emailOTP);
+            if (result.success) {
+                setEmailChangeMessage(result.message || "Email updated successfully!");
+                // Update local state
+                setEmail(result.new_email || newEmail);
+                if (userData) {
+                    setUserData({ ...userData, email: result.new_email || newEmail });
+                }
+                
+                // Refresh user data
+                const token = sessionStorage.getItem("token");
+                if (token) {
+                    const response = await fetch(`${API_BASE_URL}/user/me/`, {
+                        headers: {
+                            Authorization: `Token ${token}`,
+                            "Content-Type": "application/json",
+                        },
+                    });
+                    if (response.ok) {
+                        const data = await response.json();
+                        setUserData(data);
+                        setEmail(data.email);
+                        
+                        // Dispatch event to update other components
+                        window.dispatchEvent(
+                            new CustomEvent("userDataUpdated", {
+                                detail: {
+                                    name: data.name,
+                                    email: data.email,
+                                    role: data.role,
+                                    profile_picture: data.profile_picture,
+                                },
+                            })
+                        );
+                    }
+                }
+
+                // Close modal after 2 seconds
+                setTimeout(() => {
+                    setShowEmailChangeModal(false);
+                    setEmailChangeStep(1);
+                    setEmailChangePassword("");
+                    setNewEmail("");
+                    setEmailOTP("");
+                    setEmailChangeMessage("");
+                }, 2000);
+            } else {
+                setEmailChangeMessage(result.message || "Verification failed");
+            }
+        } catch (error) {
+            setEmailChangeMessage("An error occurred. Please try again.");
+        } finally {
+            setEmailChangeLoading(false);
+        }
     };
 
     if (loading) {
@@ -399,9 +406,30 @@ const AccountSettings = () => {
                                     </div>
 
                                     <div>
-                                        <label className={`block text-sm font-medium mb-2 ${theme === "dark" ? "text-gray-300" : "text-gray-700"}`}>
-                                            Email Address
-                                        </label>
+                                        <div className="flex items-center justify-between mb-2">
+                                            <label className={`block text-sm font-medium ${theme === "dark" ? "text-gray-300" : "text-gray-700"}`}>
+                                                Email Address
+                                            </label>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setShowEmailChangeModal(true);
+                                                    setEmailChangeStep(1);
+                                                    setEmailChangePassword("");
+                                                    setNewEmail("");
+                                                    setEmailOTP("");
+                                                    setEmailChangeMessage("");
+                                                }}
+                                                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                                                    theme === "dark"
+                                                        ? "text-blue-400 hover:bg-blue-900/20 hover:text-blue-300"
+                                                        : "text-blue-600 hover:bg-blue-50 hover:text-blue-700"
+                                                }`}
+                                            >
+                                                <Edit2 className="w-3.5 h-3.5" />
+                                                Change Email
+                                            </button>
+                                        </div>
                                         <div className="relative">
                                             <input
                                                 type="email"
@@ -413,7 +441,7 @@ const AccountSettings = () => {
                                             <Lock className={`absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 ${theme === "dark" ? "text-gray-600" : "text-gray-400"}`} />
                                         </div>
                                         <p className={`text-xs mt-1 ${theme === "dark" ? "text-gray-500" : "text-gray-500"}`}>
-                                            Email cannot be changed for security reasons
+                                            Click "Change Email" to update your email address
                                         </p>
                                     </div>
 
@@ -492,20 +520,6 @@ const AccountSettings = () => {
                                             className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg transition duration-200 shadow-sm hover:shadow-md"
                                         >
                                             Save Changes
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                setShowDeleteModal(true);
-                                                setDeleteEmail("");
-                                                setDeletePassword("");
-                                                setDeleteError("");
-                                                setDeleteSuccess(false);
-                                            }}
-                                            className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-medium py-3 px-6 rounded-lg transition duration-200 shadow-sm hover:shadow-md"
-                                        >
-                                            <Trash2 className="w-5 h-5" />
-                                            Delete Account
                                         </button>
                                     </div>
                                 </form>
@@ -696,23 +710,238 @@ const AccountSettings = () => {
                 </main>
             </div>
 
-            {/* Delete Account Modal */}
-            <DeleteAccountModal
-            showDeleteModal={showDeleteModal}
-            setShowDeleteModal={setShowDeleteModal}
-            theme={theme}
-            email={email}
-            deleteEmail={deleteEmail}
-            setDeleteEmail={setDeleteEmail}
-            deletePassword={deletePassword}
-            setDeletePassword={setDeletePassword}
-            deleteError={deleteError}
-            setDeleteError={setDeleteError}
-            deleteSuccess={deleteSuccess}
-            setDeleteSuccess={setDeleteSuccess}
-            isDeleting={isDeleting}
-            handleDeleteAccount={handleDeleteAccount}
-            />
+            {/* Email Change Modal */}
+            {showEmailChangeModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className={`${theme === "dark" ? "bg-gray-800" : "bg-white"} rounded-lg p-6 max-w-md w-full mx-4 relative max-h-[90vh] overflow-y-auto`}>
+                        {/* Modal Header */}
+                        <div className="flex items-center justify-between mb-6">
+                            <h3 className={`text-xl font-semibold ${theme === "dark" ? "text-white" : "text-gray-900"}`}>
+                                Change Email Address
+                            </h3>
+                            <button
+                                onClick={() => {
+                                    setShowEmailChangeModal(false);
+                                    setEmailChangeStep(1);
+                                    setEmailChangePassword("");
+                                    setNewEmail("");
+                                    setEmailOTP("");
+                                    setEmailChangeMessage("");
+                                }}
+                                className={`p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ${theme === "dark" ? "text-gray-400 hover:text-gray-200" : "text-gray-600 hover:text-gray-800"}`}
+                                aria-label="Close modal"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        {/* Step Indicator */}
+                        <div className="flex items-center gap-2 mb-6">
+                            <div className={`flex-1 h-2 rounded-full ${emailChangeStep >= 1 ? (theme === "dark" ? "bg-blue-600" : "bg-blue-500") : (theme === "dark" ? "bg-gray-700" : "bg-gray-200")}`}></div>
+                            <div className={`flex-1 h-2 rounded-full ${emailChangeStep >= 2 ? (theme === "dark" ? "bg-blue-600" : "bg-blue-500") : (theme === "dark" ? "bg-gray-700" : "bg-gray-200")}`}></div>
+                            <div className={`flex-1 h-2 rounded-full ${emailChangeStep >= 3 ? (theme === "dark" ? "bg-blue-600" : "bg-blue-500") : (theme === "dark" ? "bg-gray-700" : "bg-gray-200")}`}></div>
+                        </div>
+
+                        {/* Message Display */}
+                        {emailChangeMessage && (
+                            <div className={`mb-4 p-3 rounded-lg flex items-start gap-2 ${
+                                emailChangeMessage.includes("error") || emailChangeMessage.includes("Error") || emailChangeMessage.includes("failed") || emailChangeMessage.includes("Failed") || emailChangeMessage.includes("Invalid") || emailChangeMessage.includes("incorrect")
+                                    ? theme === "dark"
+                                        ? "bg-red-900/20 border border-red-700/50 text-red-200"
+                                        : "bg-red-50 border border-red-200 text-red-800"
+                                    : theme === "dark"
+                                        ? "bg-green-900/20 border border-green-700/50 text-green-200"
+                                        : "bg-green-50 border border-green-200 text-green-800"
+                            }`}>
+                                {emailChangeMessage.includes("error") || emailChangeMessage.includes("Error") || emailChangeMessage.includes("failed") || emailChangeMessage.includes("Failed") || emailChangeMessage.includes("Invalid") || emailChangeMessage.includes("incorrect") ? (
+                                    <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                                ) : (
+                                    <CheckCircle2 className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                                )}
+                                <p className="text-sm flex-1">{emailChangeMessage}</p>
+                            </div>
+                        )}
+
+                        {/* Step 1: Password Verification */}
+                        {emailChangeStep === 1 && (
+                            <div className="space-y-4">
+                                <div>
+                                    <p className={`text-sm mb-4 ${theme === "dark" ? "text-gray-300" : "text-gray-600"}`}>
+                                        For security reasons, please enter your current password to proceed with changing your email address.
+                                    </p>
+                                    <label className={`block text-sm font-medium mb-2 ${theme === "dark" ? "text-gray-300" : "text-gray-700"}`}>
+                                        Current Password
+                                    </label>
+                                    <input
+                                        type="password"
+                                        value={emailChangePassword}
+                                        onChange={(e) => setEmailChangePassword(e.target.value)}
+                                        className={`w-full px-4 py-2.5 border-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all ${
+                                            theme === "dark"
+                                                ? "bg-gray-900 border-gray-700 text-white"
+                                                : "bg-white border-gray-300 text-gray-900"
+                                        }`}
+                                        placeholder="Enter your password"
+                                        disabled={emailChangeLoading}
+                                        onKeyDown={(e) => {
+                                            if (e.key === "Enter" && emailChangePassword && !emailChangeLoading) {
+                                                handleEmailChangePasswordVerify();
+                                            }
+                                        }}
+                                    />
+                                </div>
+                                <div className="flex gap-3 justify-end">
+                                    <button
+                                        onClick={() => {
+                                            setShowEmailChangeModal(false);
+                                            setEmailChangeStep(1);
+                                            setEmailChangePassword("");
+                                            setEmailChangeMessage("");
+                                        }}
+                                        disabled={emailChangeLoading}
+                                        className={`px-4 py-2 border rounded-lg font-medium transition-colors ${
+                                            theme === "dark"
+                                                ? "border-gray-700 hover:bg-gray-700 text-gray-300"
+                                                : "border-gray-300 hover:bg-gray-50 text-gray-700"
+                                        } disabled:opacity-50`}
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={handleEmailChangePasswordVerify}
+                                        disabled={!emailChangePassword || emailChangeLoading}
+                                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        {emailChangeLoading ? "Verifying..." : "Continue"}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Step 2: New Email Input */}
+                        {emailChangeStep === 2 && (
+                            <div className="space-y-4">
+                                <div>
+                                    <p className={`text-sm mb-4 ${theme === "dark" ? "text-gray-300" : "text-gray-600"}`}>
+                                        Enter your new email address. We'll send a verification code to confirm ownership.
+                                    </p>
+                                    <label className={`block text-sm font-medium mb-2 ${theme === "dark" ? "text-gray-300" : "text-gray-700"}`}>
+                                        New Email Address
+                                    </label>
+                                    <input
+                                        type="email"
+                                        value={newEmail}
+                                        onChange={(e) => setNewEmail(e.target.value.toLowerCase())}
+                                        className={`w-full px-4 py-2.5 border-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all ${
+                                            theme === "dark"
+                                                ? "bg-gray-900 border-gray-700 text-white"
+                                                : "bg-white border-gray-300 text-gray-900"
+                                        }`}
+                                        placeholder="Enter new email address"
+                                        disabled={emailChangeLoading}
+                                        onKeyDown={(e) => {
+                                            if (e.key === "Enter" && newEmail && !emailChangeLoading) {
+                                                handleEmailChangeRequest();
+                                            }
+                                        }}
+                                    />
+                                </div>
+                                <div className="flex gap-3 justify-end">
+                                    <button
+                                        onClick={() => {
+                                            setEmailChangeStep(1);
+                                            setEmailChangePassword("");
+                                            setNewEmail("");
+                                            setEmailChangeMessage("");
+                                        }}
+                                        disabled={emailChangeLoading}
+                                        className={`px-4 py-2 border rounded-lg font-medium transition-colors ${
+                                            theme === "dark"
+                                                ? "border-gray-700 hover:bg-gray-700 text-gray-300"
+                                                : "border-gray-300 hover:bg-gray-50 text-gray-700"
+                                        } disabled:opacity-50`}
+                                    >
+                                        Back
+                                    </button>
+                                    <button
+                                        onClick={handleEmailChangeRequest}
+                                        disabled={!newEmail || newEmail === email.toLowerCase() || emailChangeLoading}
+                                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        {emailChangeLoading ? "Sending..." : "Send Code"}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Step 3: OTP Verification */}
+                        {emailChangeStep === 3 && (
+                            <div className="space-y-4">
+                                <div>
+                                    <p className={`text-sm mb-4 ${theme === "dark" ? "text-gray-300" : "text-gray-600"}`}>
+                                        Enter the 6-digit verification code sent to <strong>{newEmail}</strong>
+                                    </p>
+                                    <label className={`block text-sm font-medium mb-2 ${theme === "dark" ? "text-gray-300" : "text-gray-700"}`}>
+                                        Verification Code
+                                    </label>
+                                    <input
+                                        type="text"
+                                        inputMode="numeric"
+                                        pattern="[0-9]*"
+                                        value={emailOTP}
+                                        onChange={(e) => setEmailOTP(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                                        className={`w-full px-4 py-2.5 border-2 rounded-lg text-center text-2xl tracking-[0.5em] font-mono focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all ${
+                                            theme === "dark"
+                                                ? "bg-gray-900 border-gray-700 text-white"
+                                                : "bg-white border-gray-300 text-gray-900"
+                                        }`}
+                                        placeholder="000000"
+                                        maxLength={6}
+                                        disabled={emailChangeLoading}
+                                        autoFocus
+                                        onKeyDown={(e) => {
+                                            if (e.key === "Enter" && emailOTP.length === 6 && !emailChangeLoading) {
+                                                handleEmailChangeVerify();
+                                            }
+                                        }}
+                                    />
+                                    <button
+                                        onClick={handleEmailChangeRequest}
+                                        disabled={emailChangeLoading}
+                                        className={`mt-2 text-sm ${theme === "dark" ? "text-blue-400 hover:text-blue-300" : "text-blue-600 hover:text-blue-700"} disabled:opacity-50`}
+                                    >
+                                        Resend code
+                                    </button>
+                                </div>
+                                <div className="flex gap-3 justify-end">
+                                    <button
+                                        onClick={() => {
+                                            setEmailChangeStep(2);
+                                            setEmailOTP("");
+                                            setEmailChangeMessage("");
+                                        }}
+                                        disabled={emailChangeLoading}
+                                        className={`px-4 py-2 border rounded-lg font-medium transition-colors ${
+                                            theme === "dark"
+                                                ? "border-gray-700 hover:bg-gray-700 text-gray-300"
+                                                : "border-gray-300 hover:bg-gray-50 text-gray-700"
+                                        } disabled:opacity-50`}
+                                    >
+                                        Back
+                                    </button>
+                                    <button
+                                        onClick={handleEmailChangeVerify}
+                                        disabled={emailOTP.length !== 6 || emailChangeLoading}
+                                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        {emailChangeLoading ? "Verifying..." : "Verify & Update"}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

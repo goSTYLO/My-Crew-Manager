@@ -33,6 +33,9 @@ import UserSettingsApperance from './view_pages/user/user_settings_apperance';
 /* ---------------- Components ---------------- */
 import ForgotPassword from './components/forgotpassword';
 import LandingPage from './components/landingpage';
+import ContactSupportPage from './components/ContactSupportPage';
+import FAQPage from './components/FAQPage';
+import AboutUsPage from './components/AboutUsPage';
 
 // Component to handle Remember Me session check
 const RememberMeHandler: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -118,6 +121,9 @@ const App: React.FC = () => {
 
             {/* Components */}
             <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/contact-support" element={<ContactSupportPage />} />
+            <Route path="/faq" element={<FAQPage />} />
+            <Route path="/about-us" element={<AboutUsPage />} />
 
             {/* User Routes */}
             <Route path="/projects-user" element={<ProjectUser />} />

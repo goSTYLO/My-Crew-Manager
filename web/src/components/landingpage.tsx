@@ -101,7 +101,7 @@ export default function LandingPage() {
     },
     { 
       name: "Angel Kurt Pawig", 
-      role: "Full-Stack Developer",
+      role: "Frontend Developer (Mobile)",
       description: "Bridges frontend and backend systems, developing integrated solutions that enhance both user experience and functionality.",
       initials: "AP"
     },
@@ -482,7 +482,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <ContactSupport />
+      <ContactSupport forceLight={true} />
 
       {/* Footer */}
       <footer className="bg-gray-900 text-gray-300 py-12 px-4 sm:px-6 lg:px-8">
