@@ -1,3 +1,4 @@
+from logging import Logger
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -18,6 +19,10 @@ from datetime import timedelta
 from django.db import transaction, connection, IntegrityError
 from django.db.models.deletion import ProtectedError
 from django.db.utils import OperationalError, ProgrammingError
+import logging
+
+# Get a logger instance for this module
+logger = logging.getLogger(__name__)
 
 class SignupView(APIView):
     def post(self, request):
@@ -36,9 +41,11 @@ class SignupView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class LoginView(APIView):
+
     def post(self, request):
         email = request.data.get('email')
         password = request.data.get('password')
+        logger.info(f"User is logging in with email: {email}")
         user = authenticate(email=email, password=password)
         if user:
             token, created = Token.objects.get_or_create(user=user)
@@ -55,7 +62,11 @@ class LoginView(APIView):
 class LogoutView(APIView):
     permission_classes = [IsAuthenticated]
 
+
     def post(self, request):
+        user = request.user
+        # Log the logout attempt
+        logger.info(f"User '{user.name}' is logging out.")
         request.user.auth_token.delete()
         return Response({"message": "Logged out successfully"})
     

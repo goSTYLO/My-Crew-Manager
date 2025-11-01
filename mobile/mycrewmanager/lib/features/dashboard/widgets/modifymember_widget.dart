@@ -13,7 +13,8 @@ class ModifyMemberBottomSheet extends StatefulWidget {
   });
 
   @override
-  State<ModifyMemberBottomSheet> createState() => _ModifyMemberBottomSheetState();
+  State<ModifyMemberBottomSheet> createState() =>
+      _ModifyMemberBottomSheetState();
 }
 
 class _ModifyMemberBottomSheetState extends State<ModifyMemberBottomSheet> {
@@ -96,10 +97,9 @@ class _ModifyMemberBottomSheetState extends State<ModifyMemberBottomSheet> {
 
           // Dropdown for role
           DropdownButtonFormField<String>(
-            initialValue: _selectedRole,
+            value: _selectedRole,
             items: roles
-                .map((role) =>
-                    DropdownMenuItem(value: role, child: Text(role)))
+                .map((role) => DropdownMenuItem(value: role, child: Text(role)))
                 .toList(),
             onChanged: (val) {
               setState(() => _selectedRole = val);

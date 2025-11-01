@@ -11,6 +11,8 @@ node_modules/
 
 # Environment variables
 .env
+venv/
+backend/venv/
 
 # Editor directories and files
 .idea

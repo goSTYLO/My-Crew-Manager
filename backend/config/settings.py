@@ -34,7 +34,7 @@ DEBUG = config("DEBUG", default=False, cast=bool)
 
 # Update ALLOWED_HOSTS section
 DEVICE_IP = os.getenv('DEVICE_IP', 'localhost')
-ALLOWED_HOSTS = ['*', DEVICE_IP, 'localhost', '127.0.0.1', '10.0.2.2']
+ALLOWED_HOSTS = ['*', DEVICE_IP, 'localhost', '127.0.0.1', '10.0.2.2', '192.168.1.10']
 
 
 # Application definition
@@ -212,6 +212,20 @@ LOGGING = {
             'format': '[{asctime}] {levelname} in {name}: {message}',
             'style': '{',
         },
+        'colored': {
+            '()': 'colorlog.ColoredFormatter',
+            'format': (
+                '%(log_color)s[%(asctime)s] %(levelname)s '
+                '%(name)s: %(message)s'
+            ),
+            'log_colors': {
+                'DEBUG': 'cyan',
+                'INFO': 'bold_green',
+                'WARNING': 'bold_yellow',
+                'ERROR': 'red',
+                'CRITICAL': 'bold_red',
+            },
+        },
     },
     'handlers': {
         'file': {
@@ -223,7 +237,7 @@ LOGGING = {
         'console': {
             'level': 'DEBUG',
             'class': 'logging.StreamHandler',
-            'formatter': 'simple',
+            'formatter': 'colored',
         },
         'error_file': {
             'level': 'ERROR',
@@ -253,7 +267,7 @@ LOGGING = {
     'loggers': {
         'django': {
             'handlers': ['file', 'console'],
-            'level': 'INFO',
+            'level': 'WARNING',
             'propagate': True,
         },
         'django.request': {
@@ -263,6 +277,11 @@ LOGGING = {
         },
         'apps.ai_api': {
             'handlers': ['ai_api_file', 'console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'apps.users': {
+            'handlers': ['file', 'console'],
             'level': 'INFO',
             'propagate': False,
         },

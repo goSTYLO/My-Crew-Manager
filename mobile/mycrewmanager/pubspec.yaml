@@ -50,6 +50,18 @@ dev_dependencies:
   retrofit_generator: ^10.0.5
   build_runner: ^2.8.0
   json_serializable: ^6.11.1
+  flutter_launcher_icons: ^0.14.4
+
+flutter_icons:
+  android: true
+  ios: true
+  image_path: "lib/core/assets/images/app_logo.png"
+  adaptive_icon_foreground: "lib/core/assets/images/fore_ground_icon.png"
+  adaptive_icon_background: "#FFFFFF"
+  icon_background_color: "#FFFFFF"
+  prefix: "MI"
+  remove_alpha_ios: true
+  prefix_android: "MI"
 
 flutter:
   uses-material-design: true # CRITICAL: Required for Material icon font - DO NOT REMOVE

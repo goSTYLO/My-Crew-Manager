@@ -13,7 +13,6 @@ import 'package:mycrewmanager/features/dashboard/presentation/pages/projects_pag
 import 'package:mycrewmanager/core/utils/role_formatter.dart';
 import 'package:mycrewmanager/core/constants/constants.dart';
 
-
 class DashboardPage extends StatefulWidget {
   static Route route() =>
       MaterialPageRoute(builder: (context) => const DashboardPage());
@@ -43,8 +42,7 @@ class _DashboardPageState extends State<DashboardPage> {
           title: const Text('Dashboard'),
           backgroundColor: Colors.white,
           foregroundColor: const Color.fromARGB(255, 0, 0, 0),
-          actions: [
-          ],
+          actions: [],
         ),
         body: Container(
           decoration: BoxDecoration(
@@ -79,7 +77,7 @@ class _DashboardPageState extends State<DashboardPage> {
           ),
         ),
       ),
-    );   
+    );
   }
 
   Widget _buildAppDrawer(BuildContext context) {
@@ -87,7 +85,7 @@ class _DashboardPageState extends State<DashboardPage> {
       builder: (context, state) {
         String userName = 'User';
         String userRole = 'User';
-        
+
         if (state is AuthSuccess) {
           userName = state.user.name;
           userRole = RoleFormatter.formatRole(state.user.role);
@@ -109,7 +107,8 @@ class _DashboardPageState extends State<DashboardPage> {
                       // Profile picture
                       CircleAvatar(
                         radius: 28,
-                        backgroundImage: state is AuthSuccess && state.user.profilePicture != null
+                        backgroundImage: state is AuthSuccess &&
+                                state.user.profilePicture != null
                             ? NetworkImage(
                                 '${Constants.baseUrl.replaceAll('/api/', '')}${state.user.profilePicture!}',
                               )
@@ -123,7 +122,7 @@ class _DashboardPageState extends State<DashboardPage> {
                       const SizedBox(height: 10),
                       // Name
                       Text(
-                        '$userName!',
+                        '$userName',
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 18,
@@ -160,7 +159,9 @@ class _DashboardPageState extends State<DashboardPage> {
                   },
                 ),
                 // Hide Tasks menu item for developers
-                if (RoleFormatter.getRoleForComparison(state is AuthSuccess ? state.user.role : null) != 'developer')
+                if (RoleFormatter.getRoleForComparison(
+                        state is AuthSuccess ? state.user.role : null) !=
+                    'developer')
                   _DrawerItem(
                     icon: Icons.description_outlined,
                     label: 'Tasks',
@@ -198,36 +199,37 @@ class _DashboardPageState extends State<DashboardPage> {
                   label: 'Logout',
                   onTap: () {
                     showDialog(
-                    context: context,
-                    builder: (BuildContext context) {
-                      return AlertDialog(
-                        title: const Text('Logout'),
-                        content: const Text('Are you sure you want to logout?'),
-                        actions: [
-                          TextButton(
-                            style: TextButton.styleFrom(
-                              foregroundColor: Colors.black,
+                      context: context,
+                      builder: (BuildContext context) {
+                        return AlertDialog(
+                          title: const Text('Logout'),
+                          content:
+                              const Text('Are you sure you want to logout?'),
+                          actions: [
+                            TextButton(
+                              style: TextButton.styleFrom(
+                                foregroundColor: Colors.black,
+                              ),
+                              onPressed: () => Navigator.pop(context),
+                              child: const Text('Cancel'),
                             ),
-                            onPressed: () => Navigator.pop(context),
-                            child: const Text('Cancel'),
-                          ),
-                          TextButton(
-                            style: TextButton.styleFrom(
-                              foregroundColor: Colors.black,
+                            TextButton(
+                              style: TextButton.styleFrom(
+                                foregroundColor: Colors.black,
+                              ),
+                              onPressed: () {
+                                Navigator.pop(context); // Close dialog
+                                // Dispatch logout event to AuthBloc
+                                context.read<AuthBloc>().add(AuthLogout());
+                              },
+                              child: const Text('Logout'),
                             ),
-                            onPressed: () {
-                              Navigator.pop(context); // Close dialog
-                              // Dispatch logout event to AuthBloc
-                              context.read<AuthBloc>().add(AuthLogout());
-                            },
-                            child: const Text('Logout'),
-                          ),
-                        ],
-                      );
-                    },
-                  );
-                },
-              ),
+                          ],
+                        );
+                      },
+                    );
+                  },
+                ),
 
                 const Spacer(),
               ],
@@ -261,4 +263,3 @@ class _DrawerItem extends StatelessWidget {
     );
   }
 }
-

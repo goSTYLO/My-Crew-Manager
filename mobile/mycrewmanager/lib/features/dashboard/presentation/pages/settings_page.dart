@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:mycrewmanager/core/theme/app_theme.dart';
 import 'package:mycrewmanager/features/authentication/presentation/bloc/auth_bloc.dart';
 import 'package:mycrewmanager/core/tokenhandlers/token_storage.dart';
 import 'package:mycrewmanager/core/constants/constants.dart';
@@ -20,7 +19,6 @@ class SettingsPage extends StatefulWidget {
 
 class _SettingsPageState extends State<SettingsPage>
     with SingleTickerProviderStateMixin {
-
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
@@ -30,11 +28,26 @@ class _SettingsPageState extends State<SettingsPage>
           elevation: 0,
           backgroundColor: Colors.white,
           foregroundColor: Colors.black87,
-          title: const Text('Settings'),
+          title: const Text(
+            'Settings',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              letterSpacing: -0.5,
+            ),
+          ),
           bottom: const TabBar(
             labelColor: Colors.blue,
             unselectedLabelColor: Colors.black54,
             indicatorColor: Colors.blue,
+            labelStyle: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+            ),
+            unselectedLabelStyle: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w500,
+            ),
             tabs: [
               Tab(text: 'Profile'),
               Tab(text: 'Preferences'),
@@ -59,7 +72,8 @@ class _ProfileTabState extends State<_ProfileTab> {
   File? _avatar;
   late TextEditingController _nameController;
   late TextEditingController _emailController;
-  bool _isUploading = false;
+  bool _isSaving = false;
+  String _originalName = '';
 
   @override
   void initState() {
@@ -123,24 +137,16 @@ class _ProfileTabState extends State<_ProfileTab> {
     }
   }
 
-
-  Future<void> _uploadProfilePicture() async {
-    if (_avatar == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a profile picture first')),
-      );
-      return;
-    }
-
+  Future<void> _saveProfileChanges() async {
     setState(() {
-      _isUploading = true;
+      _isSaving = true;
     });
 
     try {
       final dio = Dio();
       final tokenStorage = TokenStorage();
       final token = await tokenStorage.getToken();
-      
+
       if (token == null) {
         throw Exception('No authentication token found');
       }
@@ -149,18 +155,23 @@ class _ProfileTabState extends State<_ProfileTab> {
       dio.options.headers['Authorization'] = 'Token $token';
       dio.options.baseUrl = Constants.baseUrl;
 
-      // Check if file exists
-      if (!await _avatar!.exists()) {
-        throw Exception('Selected file does not exist');
-      }
+      // Create form data with name and optional profile picture
+      final Map<String, dynamic> formDataMap = {
+        'name': _nameController.text.trim(),
+      };
 
-      // Create form data
-      final formData = FormData.fromMap({
-        'profile_picture': await MultipartFile.fromFile(
+      // Add profile picture if one was selected
+      if (_avatar != null) {
+        if (!await _avatar!.exists()) {
+          throw Exception('Selected file does not exist');
+        }
+        formDataMap['profile_picture'] = await MultipartFile.fromFile(
           _avatar!.path,
           filename: 'profile_picture.jpg',
-        ),
-      });
+        );
+      }
+
+      final formData = FormData.fromMap(formDataMap);
 
       final response = await dio.put(
         'user/me/',
@@ -168,27 +179,42 @@ class _ProfileTabState extends State<_ProfileTab> {
       );
 
       if (response.statusCode == 200) {
-        // Dispatch refresh event to update the auth state with new profile picture
+        // Dispatch refresh event to update the auth state
         if (context.mounted) {
-          // Add a small delay to ensure backend has processed the upload
+          // Add a small delay to ensure backend has processed the update
           await Future.delayed(const Duration(milliseconds: 500));
           context.read<AuthBloc>().add(RefreshUserData());
+          // Clear the selected avatar after successful upload
+          setState(() {
+            _avatar = null;
+            _originalName = _nameController.text.trim();
+          });
         }
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Profile picture updated successfully!')),
+          const SnackBar(
+            content: Text('Profile updated successfully!'),
+            backgroundColor: Colors.green,
+          ),
         );
       } else {
-        throw Exception('Upload failed with status: ${response.statusCode}');
+        throw Exception('Update failed with status: ${response.statusCode}');
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error uploading profile picture: $e')),
-      );
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error updating profile: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     } finally {
-      setState(() {
-        _isUploading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+      }
     }
   }
 
@@ -205,12 +231,21 @@ class _ProfileTabState extends State<_ProfileTab> {
       builder: (context, authState) {
         // Load user data when the auth state is available
         if (authState is AuthSuccess) {
-          _nameController.text = authState.user.name;
-          _emailController.text = authState.user.email;
+          final currentName = authState.user.name;
+          final currentEmail = authState.user.email;
+
+          // Only update controllers if values have changed to avoid cursor jumping
+          if (_nameController.text != currentName || _originalName.isEmpty) {
+            _nameController.text = currentName;
+            _originalName = currentName;
+          }
+          if (_emailController.text != currentEmail) {
+            _emailController.text = currentEmail;
+          }
         }
 
         return SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -219,17 +254,31 @@ class _ProfileTabState extends State<_ProfileTab> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'Profile',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                      'Profile Information',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.black87,
+                        letterSpacing: -0.5,
+                      ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 24),
                     Center(
                       child: Stack(
+                        clipBehavior: Clip.none,
                         children: [
-                          // Current profile picture from backend
-                          if (authState is AuthSuccess && authState.user.profilePicture != null)
+                          // Current profile picture from backend or selected avatar
+                          if (_avatar != null)
                             CircleAvatar(
-                              radius: 50,
+                              radius: 60,
+                              backgroundColor: Colors.grey[200],
+                              backgroundImage: FileImage(_avatar!),
+                            )
+                          else if (authState is AuthSuccess &&
+                              authState.user.profilePicture != null)
+                            CircleAvatar(
+                              radius: 60,
+                              backgroundColor: Colors.grey[200],
                               backgroundImage: NetworkImage(
                                 '${Constants.baseUrl.replaceAll('/api/', '')}${authState.user.profilePicture!}',
                               ),
@@ -237,17 +286,20 @@ class _ProfileTabState extends State<_ProfileTab> {
                           else
                             // Placeholder when no profile picture
                             Container(
-                              width: 100,
-                              height: 100,
+                              width: 120,
+                              height: 120,
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 color: Colors.grey[200],
-                                border: Border.all(color: Colors.grey[400]!, width: 2),
+                                border: Border.all(
+                                  color: Colors.grey[300]!,
+                                  width: 2.5,
+                                ),
                               ),
                               child: Icon(
                                 Icons.person,
-                                size: 50,
-                                color: Colors.grey[600],
+                                size: 60,
+                                color: Colors.grey[500],
                               ),
                             ),
                           // Overlay for clickable area
@@ -255,8 +307,14 @@ class _ProfileTabState extends State<_ProfileTab> {
                             child: Material(
                               color: Colors.transparent,
                               child: InkWell(
-                                borderRadius: BorderRadius.circular(50),
+                                borderRadius: BorderRadius.circular(60),
                                 onTap: () => _showImageSourceDialog(context),
+                                child: Container(
+                                  decoration: const BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: Colors.transparent,
+                                  ),
+                                ),
                               ),
                             ),
                           ),
@@ -265,84 +323,142 @@ class _ProfileTabState extends State<_ProfileTab> {
                             bottom: 0,
                             right: 0,
                             child: Container(
-                              width: 32,
-                              height: 32,
+                              width: 40,
+                              height: 40,
                               decoration: BoxDecoration(
                                 color: Colors.blue,
                                 shape: BoxShape.circle,
-                                border: Border.all(color: Colors.white, width: 2),
+                                border: Border.all(
+                                  color: Colors.white,
+                                  width: 3,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.2),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
                               ),
                               child: const Icon(
                                 Icons.camera_alt,
                                 color: Colors.white,
-                                size: 16,
+                                size: 20,
                               ),
                             ),
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 32),
                     _LabeledField(
                       label: 'Full Name',
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-                        decoration: BoxDecoration(
-                          color: Colors.grey[100],
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: Colors.grey[300]!),
+                      child: TextField(
+                        controller: _nameController,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          color: Colors.black87,
+                          fontWeight: FontWeight.w400,
                         ),
-                        child: Text(
-                          _nameController.text,
-                          style: const TextStyle(
+                        decoration: InputDecoration(
+                          filled: true,
+                          fillColor: Colors.grey[50],
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 16,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(
+                              color: Colors.grey[300]!,
+                              width: 1,
+                            ),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(
+                              color: Colors.grey[300]!,
+                              width: 1,
+                            ),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(
+                              color: Colors.blue,
+                              width: 2,
+                            ),
+                          ),
+                          hintText: 'Enter your full name',
+                          hintStyle: TextStyle(
+                            color: Colors.grey[400],
                             fontSize: 16,
-                            color: Colors.black87,
                           ),
                         ),
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 20),
                     _LabeledField(
                       label: 'Email Address',
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 18,
+                        ),
                         decoration: BoxDecoration(
-                          color: Colors.grey[100],
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: Colors.grey[300]!),
+                          color: Colors.grey[50],
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: Colors.grey[300]!,
+                            width: 1,
+                          ),
                         ),
                         child: Text(
                           _emailController.text,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 16,
-                            color: Colors.black87,
+                            color: Colors.grey[600],
+                            fontWeight: FontWeight.w400,
                           ),
                         ),
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 32),
                     SizedBox(
                       width: double.infinity,
-                      height: 48,
+                      height: 52,
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.blue,
                           foregroundColor: Colors.white,
+                          elevation: 0,
+                          shadowColor: Colors.transparent,
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
+                            borderRadius: BorderRadius.circular(12),
                           ),
                         ),
-                        onPressed: _isUploading ? null : _uploadProfilePicture,
-                        child: _isUploading
+                        onPressed:
+                            (_isSaving || _nameController.text.trim().isEmpty)
+                                ? null
+                                : _saveProfileChanges,
+                        child: _isSaving
                             ? const SizedBox(
-                                width: 20,
-                                height: 20,
+                                width: 24,
+                                height: 24,
                                 child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                  strokeWidth: 2.5,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.white,
+                                  ),
                                 ),
                               )
-                            : const Text('Save Changes'),
+                            : const Text(
+                                'Save Changes',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
                       ),
                     ),
                   ],
@@ -372,7 +488,7 @@ class _PreferencesTabState extends State<_PreferencesTab> {
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -381,10 +497,15 @@ class _PreferencesTabState extends State<_PreferencesTab> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'General',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                  'General Settings',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.black87,
+                    letterSpacing: -0.5,
+                  ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 24),
                 _LabeledField(
                   label: 'Language',
                   child: _Dropdown(
@@ -393,7 +514,7 @@ class _PreferencesTabState extends State<_PreferencesTab> {
                     onChanged: (_) {},
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 20),
                 _LabeledField(
                   label: 'Timezone',
                   child: _Dropdown(
@@ -402,12 +523,16 @@ class _PreferencesTabState extends State<_PreferencesTab> {
                     onChanged: (_) {},
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 24),
                 const Text(
-                  'Time format',
-                  style: TextStyle(fontWeight: FontWeight.w600),
+                  'Time Format',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                  ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 12),
                 Row(
                   children: [
                     _Choice(
@@ -432,46 +557,107 @@ class _PreferencesTabState extends State<_PreferencesTab> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Notifications',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                  'Notification Preferences',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.black87,
+                    letterSpacing: -0.5,
+                  ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 16),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('Push Notifications'),
+                  title: const Text(
+                    'Push Notifications',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  subtitle: Text(
+                    'Receive push notifications on your device',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.grey[600],
+                    ),
+                  ),
                   value: _pushNotifications,
                   onChanged: (v) => setState(() => _pushNotifications = v),
                 ),
+                const Divider(height: 1),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('Email Notifications'),
+                  title: const Text(
+                    'Email Notifications',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  subtitle: Text(
+                    'Receive notifications via email',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.grey[600],
+                    ),
+                  ),
                   value: _emailNotifications,
                   onChanged: (v) => setState(() => _emailNotifications = v),
                 ),
+                const Divider(height: 1),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('Dark Theme'),
+                  title: const Text(
+                    'Dark Theme',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  subtitle: Text(
+                    'Enable dark mode for the app',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.grey[600],
+                    ),
+                  ),
                   value: _darkTheme,
                   onChanged: (v) => setState(() => _darkTheme = v),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 24),
                 SizedBox(
                   width: double.infinity,
-                  height: 48,
+                  height: 52,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blue,
                       foregroundColor: Colors.white,
+                      elevation: 0,
+                      shadowColor: Colors.transparent,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(12),
                       ),
                     ),
                     onPressed: () {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Preferences saved')),
+                        const SnackBar(
+                          content: Text('Preferences saved'),
+                          backgroundColor: Colors.green,
+                        ),
                       );
                     },
-                    child: const Text('Save Changes'),
+                    child: const Text(
+                      'Save Changes',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -491,15 +677,22 @@ class _Card extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(),
-            blurRadius: 24,
-            offset: const Offset(0, 8),
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+            spreadRadius: 0,
+          ),
+          BoxShadow(
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+            spreadRadius: 0,
           ),
         ],
       ),
@@ -518,8 +711,15 @@ class _LabeledField extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
-        const SizedBox(height: 8),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+            color: Colors.black87,
+          ),
+        ),
+        const SizedBox(height: 10),
         child,
       ],
     );
@@ -539,12 +739,60 @@ class _Dropdown extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DropdownButtonFormField<String>(
-      initialValue: value,
-      items:
-          items.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+      value: value,
+      items: items
+          .map(
+            (e) => DropdownMenuItem(
+              value: e,
+              child: Text(
+                e,
+                style: const TextStyle(
+                  fontSize: 16,
+                  color: Colors.black87,
+                ),
+              ),
+            ),
+          )
+          .toList(),
       onChanged: onChanged,
-      decoration: AppTheme.inputDecoration(value),
-      icon: const Icon(Icons.keyboard_arrow_down_rounded),
+      decoration: InputDecoration(
+        filled: true,
+        fillColor: Colors.grey[50],
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 16,
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+            color: Colors.grey[300]!,
+            width: 1,
+          ),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+            color: Colors.grey[300]!,
+            width: 1,
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(
+            color: Colors.blue,
+            width: 2,
+          ),
+        ),
+      ),
+      icon: Icon(
+        Icons.keyboard_arrow_down_rounded,
+        color: Colors.grey[600],
+      ),
+      style: const TextStyle(
+        fontSize: 16,
+        color: Colors.black87,
+        fontWeight: FontWeight.w400,
+      ),
     );
   }
 }
@@ -565,26 +813,35 @@ class _Choice extends StatelessWidget {
     return Expanded(
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(12),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: selected ? Colors.blue : Colors.grey[300]!,
+              width: selected ? 2 : 1,
             ),
-            color: selected ? Colors.blue.withValues(alpha: 0.11) : Colors.white,
+            color:
+                selected ? Colors.blue.withValues(alpha: 0.1) : Colors.grey[50],
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(
                 selected ? Icons.radio_button_checked : Icons.radio_button_off,
-                color: selected ? Colors.blue : Colors.grey,
-                size: 18,
+                color: selected ? Colors.blue : Colors.grey[400],
+                size: 20,
               ),
-              const SizedBox(width: 8),
-              Text(label),
+              const SizedBox(width: 10),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                  color: selected ? Colors.blue : Colors.black87,
+                ),
+              ),
             ],
           ),
         ),

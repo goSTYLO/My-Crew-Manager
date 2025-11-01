@@ -11,14 +11,12 @@ import 'package:mycrewmanager/init_dependencies.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initDependencies();
-  runApp(MultiBlocProvider(
-      providers: [
-        BlocProvider(create: (_) => serviceLocator<AuthBloc>()),
-        BlocProvider(create: (_) => serviceLocator<ProjectBloc>()),
-        BlocProvider(create: (_) => serviceLocator<NotificationBloc>()),
-        BlocProvider(create: (_) => serviceLocator<InvitationBloc>()),
-      ],
-      child: MainApp()));
+  runApp(MultiBlocProvider(providers: [
+    BlocProvider(create: (_) => serviceLocator<AuthBloc>()),
+    BlocProvider(create: (_) => serviceLocator<ProjectBloc>()),
+    BlocProvider(create: (_) => serviceLocator<NotificationBloc>()),
+    BlocProvider(create: (_) => serviceLocator<InvitationBloc>()),
+  ], child: MainApp()));
 }
 
 class MainApp extends StatelessWidget {

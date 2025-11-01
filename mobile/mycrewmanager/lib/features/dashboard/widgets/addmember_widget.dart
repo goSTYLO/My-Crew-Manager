@@ -14,7 +14,7 @@ class _AddMemberBottomSheetState extends State<AddMemberBottomSheet> {
 
   final List<String> roles = [
     "Frontend Developer",
-    "Backend Developer", 
+    "Backend Developer",
     "Designer",
     "Project Manager",
     "QA Tester",
@@ -77,7 +77,7 @@ class _AddMemberBottomSheetState extends State<AddMemberBottomSheet> {
 
             // Role Dropdown
             DropdownButtonFormField<String>(
-              initialValue: selectedRole,
+              value: selectedRole,
               items: roles.map((role) {
                 return DropdownMenuItem(
                   value: role,
@@ -102,8 +102,8 @@ class _AddMemberBottomSheetState extends State<AddMemberBottomSheet> {
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: () {
-                  if (_nameController.text.isNotEmpty && 
-                      _emailController.text.isNotEmpty && 
+                  if (_nameController.text.isNotEmpty &&
+                      _emailController.text.isNotEmpty &&
                       selectedRole != null) {
                     Navigator.pop(context, {
                       "name": _nameController.text,
@@ -135,7 +135,8 @@ class _AddMemberBottomSheetState extends State<AddMemberBottomSheet> {
                     borderRadius: BorderRadius.circular(8),
                   ),
                 ),
-                child: const Text("Cancel", style: TextStyle(color: Colors.black)),
+                child:
+                    const Text("Cancel", style: TextStyle(color: Colors.black)),
               ),
             ),
           ],
