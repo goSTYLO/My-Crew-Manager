@@ -116,7 +116,7 @@
     },
     {
       "name": "retrofit_generator",
-      "version": "10.1.1",
+      "version": "10.0.6",
       "dependencies": [
         "analyzer",
         "build",
@@ -124,7 +124,6 @@
         "code_builder",
         "dart_style",
         "dio",
-        "lean_builder",
         "protobuf",
         "retrofit",
         "source_gen"
@@ -141,28 +140,18 @@
       "name": "flutter_test",
       "version": "0.0.0",
       "dependencies": [
-        "async",
-        "boolean_selector",
-        "characters",
         "clock",
         "collection",
         "fake_async",
         "flutter",
-        "leak_tracker",
         "leak_tracker_flutter_testing",
-        "leak_tracker_testing",
         "matcher",
-        "material_color_utilities",
         "meta",
         "path",
-        "source_span",
         "stack_trace",
         "stream_channel",
-        "string_scanner",
-        "term_glyph",
         "test_api",
-        "vector_math",
-        "vm_service"
+        "vector_math"
       ]
     },
     {
@@ -191,7 +180,7 @@
     },
     {
       "name": "retrofit",
-      "version": "4.8.0",
+      "version": "4.7.3",
       "dependencies": [
         "dio",
         "meta"
@@ -262,7 +251,7 @@
     },
     {
       "name": "fpdart",
-      "version": "1.2.0",
+      "version": "1.1.1",
       "dependencies": []
     },
     {
@@ -355,7 +344,7 @@
     },
     {
       "name": "fluttertoast",
-      "version": "8.2.14",
+      "version": "8.2.12",
       "dependencies": [
         "flutter",
         "flutter_web_plugins",
@@ -428,7 +417,7 @@
     },
     {
       "name": "google_fonts",
-      "version": "6.3.2",
+      "version": "6.3.1",
       "dependencies": [
         "crypto",
         "flutter",
@@ -480,23 +469,6 @@
       "name": "path",
       "version": "1.9.1",
       "dependencies": []
-    },
-    {
-      "name": "image",
-      "version": "4.5.4",
-      "dependencies": [
-        "archive",
-        "meta",
-        "xml"
-      ]
-    },
-    {
-      "name": "cli_util",
-      "version": "0.4.2",
-      "dependencies": [
-        "meta",
-        "path"
-      ]
     },
     {
       "name": "checked_yaml",
@@ -604,7 +576,7 @@
     },
     {
       "name": "analyzer",
-      "version": "8.1.1",
+      "version": "8.4.0",
       "dependencies": [
         "_fe_analyzer_shared",
         "collection",
@@ -789,7 +761,7 @@
     },
     {
       "name": "protobuf",
-      "version": "5.0.0",
+      "version": "4.2.0",
       "dependencies": [
         "collection",
         "fixnum",
@@ -797,48 +769,9 @@
       ]
     },
     {
-      "name": "lean_builder",
-      "version": "0.1.2",
-      "dependencies": [
-        "_fe_analyzer_shared",
-        "analyzer",
-        "ansicolor",
-        "args",
-        "collection",
-        "dart_style",
-        "frontend_server_client",
-        "glob",
-        "hotreloader",
-        "meta",
-        "path",
-        "source_span",
-        "stack_trace",
-        "watcher",
-        "xxh3",
-        "yaml"
-      ]
-    },
-    {
       "name": "lints",
       "version": "5.1.1",
       "dependencies": []
-    },
-    {
-      "name": "vm_service",
-      "version": "15.0.0",
-      "dependencies": []
-    },
-    {
-      "name": "term_glyph",
-      "version": "1.2.2",
-      "dependencies": []
-    },
-    {
-      "name": "string_scanner",
-      "version": "1.4.1",
-      "dependencies": [
-        "source_span"
-      ]
     },
     {
       "name": "stream_channel",
@@ -848,57 +781,8 @@
       ]
     },
     {
-      "name": "source_span",
-      "version": "1.10.1",
-      "dependencies": [
-        "collection",
-        "path",
-        "term_glyph"
-      ]
-    },
-    {
-      "name": "material_color_utilities",
-      "version": "0.11.1",
-      "dependencies": [
-        "collection"
-      ]
-    },
-    {
-      "name": "leak_tracker_testing",
-      "version": "3.0.1",
-      "dependencies": [
-        "leak_tracker",
-        "matcher",
-        "meta"
-      ]
-    },
-    {
-      "name": "leak_tracker",
-      "version": "10.0.9",
-      "dependencies": [
-        "clock",
-        "collection",
-        "meta",
-        "path",
-        "vm_service"
-      ]
-    },
-    {
-      "name": "characters",
-      "version": "1.4.0",
-      "dependencies": []
-    },
-    {
-      "name": "boolean_selector",
-      "version": "2.1.2",
-      "dependencies": [
-        "source_span",
-        "string_scanner"
-      ]
-    },
-    {
       "name": "leak_tracker_flutter_testing",
-      "version": "3.0.9",
+      "version": "3.0.10",
       "dependencies": [
         "flutter",
         "leak_tracker",
@@ -909,7 +793,7 @@
     },
     {
       "name": "vector_math",
-      "version": "2.1.4",
+      "version": "2.2.0",
       "dependencies": []
     },
     {
@@ -945,7 +829,7 @@
     },
     {
       "name": "test_api",
-      "version": "0.7.4",
+      "version": "0.7.6",
       "dependencies": [
         "async",
         "boolean_selector",
@@ -1099,6 +983,15 @@
       ]
     },
     {
+      "name": "source_span",
+      "version": "1.10.1",
+      "dependencies": [
+        "collection",
+        "path",
+        "term_glyph"
+      ]
+    },
+    {
       "name": "html",
       "version": "0.15.6",
       "dependencies": [
@@ -1120,7 +1013,7 @@
     },
     {
       "name": "cross_file",
-      "version": "0.3.5",
+      "version": "0.3.4+2",
       "dependencies": [
         "meta",
         "web"
@@ -1147,7 +1040,7 @@
     },
     {
       "name": "flutter_plugin_android_lifecycle",
-      "version": "2.0.31",
+      "version": "2.0.30",
       "dependencies": [
         "flutter"
       ]
@@ -1156,12 +1049,7 @@
       "name": "flutter_web_plugins",
       "version": "0.0.0",
       "dependencies": [
-        "characters",
-        "collection",
-        "flutter",
-        "material_color_utilities",
-        "meta",
-        "vector_math"
+        "flutter"
       ]
     },
     {
@@ -1219,7 +1107,7 @@
     },
     {
       "name": "image_picker_platform_interface",
-      "version": "2.11.1",
+      "version": "2.11.0",
       "dependencies": [
         "cross_file",
         "flutter",
@@ -1268,7 +1156,7 @@
     },
     {
       "name": "image_picker_android",
-      "version": "0.8.13+1",
+      "version": "0.8.13+2",
       "dependencies": [
         "flutter",
         "flutter_plugin_android_lifecycle",
@@ -1288,7 +1176,7 @@
     },
     {
       "name": "camera_platform_interface",
-      "version": "2.11.0",
+      "version": "2.10.0",
       "dependencies": [
         "cross_file",
         "flutter",
@@ -1307,7 +1195,7 @@
     },
     {
       "name": "camera_android",
-      "version": "0.10.10+6",
+      "version": "0.10.10+7",
       "dependencies": [
         "camera_platform_interface",
         "flutter",
@@ -1460,7 +1348,7 @@
     },
     {
       "name": "shared_preferences_android",
-      "version": "2.4.13",
+      "version": "2.4.12",
       "dependencies": [
         "flutter",
         "shared_preferences_platform_interface"
@@ -1498,26 +1386,27 @@
       "dependencies": []
     },
     {
-      "name": "xml",
-      "version": "6.6.1",
+      "name": "material_color_utilities",
+      "version": "0.11.1",
       "dependencies": [
-        "collection",
-        "meta",
-        "petitparser"
+        "collection"
       ]
     },
     {
-      "name": "archive",
-      "version": "4.0.7",
+      "name": "characters",
+      "version": "1.4.0",
+      "dependencies": []
+    },
+    {
+      "name": "string_scanner",
+      "version": "1.4.1",
       "dependencies": [
-        "crypto",
-        "path",
-        "posix"
+        "source_span"
       ]
     },
     {
       "name": "_fe_analyzer_shared",
-      "version": "88.0.0",
+      "version": "91.0.0",
       "dependencies": [
         "meta"
       ]
@@ -1543,34 +1432,37 @@
       "dependencies": []
     },
     {
-      "name": "hotreloader",
-      "version": "4.3.0",
+      "name": "leak_tracker_testing",
+      "version": "3.0.2",
       "dependencies": [
+        "leak_tracker",
+        "matcher",
+        "meta"
+      ]
+    },
+    {
+      "name": "leak_tracker",
+      "version": "11.0.2",
+      "dependencies": [
+        "clock",
         "collection",
-        "logging",
+        "meta",
         "path",
-        "stream_transform",
-        "vm_service",
-        "watcher"
+        "vm_service"
       ]
     },
     {
-      "name": "frontend_server_client",
-      "version": "4.0.0",
+      "name": "term_glyph",
+      "version": "1.2.2",
+      "dependencies": []
+    },
+    {
+      "name": "boolean_selector",
+      "version": "2.1.2",
       "dependencies": [
-        "async",
-        "path"
+        "source_span",
+        "string_scanner"
       ]
-    },
-    {
-      "name": "ansicolor",
-      "version": "2.0.3",
-      "dependencies": []
-    },
-    {
-      "name": "xxh3",
-      "version": "1.2.0",
-      "dependencies": []
     },
     {
       "name": "js",
@@ -1619,7 +1511,7 @@
     },
     {
       "name": "path_provider_android",
-      "version": "2.2.19",
+      "version": "2.2.18",
       "dependencies": [
         "flutter",
         "path_provider_platform_interface"
@@ -1653,7 +1545,7 @@
     },
     {
       "name": "url_launcher_macos",
-      "version": "3.2.3",
+      "version": "3.2.4",
       "dependencies": [
         "flutter",
         "url_launcher_platform_interface"
@@ -1669,7 +1561,7 @@
     },
     {
       "name": "url_launcher_ios",
-      "version": "6.3.4",
+      "version": "6.3.5",
       "dependencies": [
         "flutter",
         "url_launcher_platform_interface"
@@ -1677,7 +1569,7 @@
     },
     {
       "name": "url_launcher_android",
-      "version": "6.3.20",
+      "version": "6.3.24",
       "dependencies": [
         "flutter",
         "url_launcher_platform_interface"
@@ -1856,6 +1748,15 @@
       ]
     },
     {
+      "name": "xml",
+      "version": "6.6.1",
+      "dependencies": [
+        "collection",
+        "meta",
+        "petitparser"
+      ]
+    },
+    {
       "name": "path_parsing",
       "version": "1.1.0",
       "dependencies": [
@@ -1864,21 +1765,9 @@
       ]
     },
     {
-      "name": "petitparser",
-      "version": "7.0.1",
-      "dependencies": [
-        "collection",
-        "meta"
-      ]
-    },
-    {
-      "name": "posix",
-      "version": "6.0.3",
-      "dependencies": [
-        "ffi",
-        "meta",
-        "path"
-      ]
+      "name": "vm_service",
+      "version": "15.0.2",
+      "dependencies": []
     },
     {
       "name": "platform",
@@ -1950,7 +1839,7 @@
     },
     {
       "name": "sqflite_android",
-      "version": "2.4.1",
+      "version": "2.4.2+2",
       "dependencies": [
         "flutter",
         "path",
@@ -1959,9 +1848,52 @@
       ]
     },
     {
+      "name": "petitparser",
+      "version": "7.0.1",
+      "dependencies": [
+        "collection",
+        "meta"
+      ]
+    },
+    {
       "name": "synchronized",
       "version": "3.4.0",
       "dependencies": []
+    },
+    {
+      "name": "cli_util",
+      "version": "0.4.2",
+      "dependencies": [
+        "meta",
+        "path"
+      ]
+    },
+    {
+      "name": "image",
+      "version": "4.5.4",
+      "dependencies": [
+        "archive",
+        "meta",
+        "xml"
+      ]
+    },
+    {
+      "name": "archive",
+      "version": "4.0.7",
+      "dependencies": [
+        "crypto",
+        "path",
+        "posix"
+      ]
+    },
+    {
+      "name": "posix",
+      "version": "6.0.3",
+      "dependencies": [
+        "ffi",
+        "meta",
+        "path"
+      ]
     }
   ],
   "configVersion": 1

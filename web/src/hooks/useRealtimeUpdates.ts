@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { useWebSocket } from '../contexts/WebSocketContext';
 
 interface RealtimeUpdateCallbacks {
@@ -23,95 +23,105 @@ export const useRealtimeUpdates = ({ projectId, callbacks }: UseRealtimeUpdatesO
   console.log('🔧 useRealtimeUpdates: Hook initialized with projectId:', projectId);
   const { subscribe } = useWebSocket();
 
-  // Create stable callback references
+  // Store callbacks in ref to avoid re-subscriptions when callbacks change
+  const callbacksRef = useRef(callbacks);
+  const projectIdRef = useRef(projectId);
+  
+  // Update refs when they change
+  useEffect(() => {
+    callbacksRef.current = callbacks;
+    projectIdRef.current = projectId;
+  }, [callbacks, projectId]);
+
+  // Create stable callback references that use refs
   const stableCallbacks = useCallback(() => {
     const handlers: { [key: string]: (data: any) => void } = {};
+    const currentCallbacks = callbacksRef.current;
+    const currentProjectId = projectIdRef.current;
 
-    if (callbacks.onProjectUpdate) {
+    if (currentCallbacks.onProjectUpdate) {
       handlers.project_update = (data: any) => {
-        if (!projectId || data.project_id === projectId) {
-          callbacks.onProjectUpdate!(data);
+        if (!currentProjectId || data.project_id === currentProjectId) {
+          currentCallbacks.onProjectUpdate!(data);
         }
       };
     }
 
-    if (callbacks.onEpicUpdate) {
+    if (currentCallbacks.onEpicUpdate) {
       handlers.epic_update = (data: any) => {
-        if (!projectId || data.project_id === projectId) {
-          callbacks.onEpicUpdate!(data);
+        if (!currentProjectId || data.project_id === currentProjectId) {
+          currentCallbacks.onEpicUpdate!(data);
         }
       };
     }
 
-    if (callbacks.onSubEpicUpdate) {
+    if (currentCallbacks.onSubEpicUpdate) {
       handlers.sub_epic_update = (data: any) => {
-        if (!projectId || data.project_id === projectId) {
-          callbacks.onSubEpicUpdate!(data);
+        if (!currentProjectId || data.project_id === currentProjectId) {
+          currentCallbacks.onSubEpicUpdate!(data);
         }
       };
     }
 
-    if (callbacks.onUserStoryUpdate) {
+    if (currentCallbacks.onUserStoryUpdate) {
       handlers.user_story_update = (data: any) => {
-        if (!projectId || data.project_id === projectId) {
-          callbacks.onUserStoryUpdate!(data);
+        if (!currentProjectId || data.project_id === currentProjectId) {
+          currentCallbacks.onUserStoryUpdate!(data);
         }
       };
     }
 
-    if (callbacks.onTaskUpdate) {
+    if (currentCallbacks.onTaskUpdate) {
       handlers.task_update = (data: any) => {
-        if (!projectId || data.project_id === projectId) {
-          callbacks.onTaskUpdate!(data);
+        if (!currentProjectId || data.project_id === currentProjectId) {
+          currentCallbacks.onTaskUpdate!(data);
         }
       };
     }
 
-    if (callbacks.onMemberUpdate) {
+    if (currentCallbacks.onMemberUpdate) {
       handlers.member_update = (data: any) => {
-        if (!projectId || data.project_id === projectId) {
-          callbacks.onMemberUpdate!(data);
+        if (!currentProjectId || data.project_id === currentProjectId) {
+          currentCallbacks.onMemberUpdate!(data);
         }
       };
     }
 
-    if (callbacks.onRepositoryUpdate) {
+    if (currentCallbacks.onRepositoryUpdate) {
       handlers.repository_update = (data: any) => {
-        if (!projectId || data.project_id === projectId) {
-          callbacks.onRepositoryUpdate!(data);
+        if (!currentProjectId || data.project_id === currentProjectId) {
+          currentCallbacks.onRepositoryUpdate!(data);
         }
       };
     }
 
-    if (callbacks.onBacklogRegenerated) {
+    if (currentCallbacks.onBacklogRegenerated) {
       handlers.backlog_regenerated = (data: any) => {
-        if (!projectId || data.project_id === projectId) {
-          callbacks.onBacklogRegenerated!(data);
+        if (!currentProjectId || data.project_id === currentProjectId) {
+          currentCallbacks.onBacklogRegenerated!(data);
         }
       };
     }
 
-    if (callbacks.onOverviewRegenerated) {
+    if (currentCallbacks.onOverviewRegenerated) {
       handlers.overview_regenerated = (data: any) => {
-        if (!projectId || data.project_id === projectId) {
-          callbacks.onOverviewRegenerated!(data);
+        if (!currentProjectId || data.project_id === currentProjectId) {
+          currentCallbacks.onOverviewRegenerated!(data);
         }
       };
     }
 
-    if (callbacks.onNotification) {
+    if (currentCallbacks.onNotification) {
       handlers.notification = (data: any) => {
-        callbacks.onNotification!(data);
+        currentCallbacks.onNotification!(data);
       };
     }
 
     return handlers;
-  }, [callbacks, projectId]);
+  }, []); // Empty deps - use refs instead
 
   useEffect(() => {
     console.log('🔧 useRealtimeUpdates: Setting up WebSocket subscription');
-    const handlers = stableCallbacks();
-    console.log('🔧 useRealtimeUpdates: Available handlers:', Object.keys(handlers));
     
     // Create a single handler that routes messages based on type
     const messageHandler = (message: any) => {
@@ -127,6 +137,9 @@ export const useRealtimeUpdates = ({ projectId, callbacks }: UseRealtimeUpdatesO
       
       console.log('🔧 useRealtimeUpdates: Message received:', message);
       console.log('🔧 useRealtimeUpdates: Event type:', eventType);
+      
+      // Get current handlers (will use latest callbacks from ref)
+      const handlers = stableCallbacks();
       console.log('🔧 useRealtimeUpdates: Available handlers:', Object.keys(handlers));
       
       const handler = handlers[eventType];
@@ -147,7 +160,7 @@ export const useRealtimeUpdates = ({ projectId, callbacks }: UseRealtimeUpdatesO
       console.log('🔧 useRealtimeUpdates: Cleaning up subscription');
       unsubscribe();
     };
-  }, [subscribe, stableCallbacks]);
+  }, [subscribe, stableCallbacks]); // stableCallbacks is stable (empty deps), subscribe is stable from context
 
   // Return connection status and utility functions
   const { connectionStatus, getConnectionStatus } = useWebSocket();

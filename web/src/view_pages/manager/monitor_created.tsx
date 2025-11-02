@@ -705,8 +705,6 @@ export default function ProjectDetailsUI() {
         }
         
         showRealtimeUpdate('Task Updated', message, data.actor);
-
-        fetchBacklog();
       },
       onMemberUpdate: (data) => {
         console.log('📡 Real-time member update received:', data);

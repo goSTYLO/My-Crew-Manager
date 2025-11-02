@@ -168,9 +168,7 @@ class LogoutView(APIView):
         response = Response({"message": "Logged out successfully"})
         response.delete_cookie(
             settings.REFRESH_TOKEN_COOKIE_NAME,
-            path='/',
-            samesite=settings.REFRESH_TOKEN_COOKIE_SAMESITE,
-            secure=settings.REFRESH_TOKEN_COOKIE_SECURE
+            path='/'
         )
         
         return response
@@ -204,9 +202,7 @@ class RefreshTokenView(APIView):
             )
             response.delete_cookie(
                 settings.REFRESH_TOKEN_COOKIE_NAME,
-                path='/',
-                samesite=settings.REFRESH_TOKEN_COOKIE_SAMESITE,
-                secure=settings.REFRESH_TOKEN_COOKIE_SECURE
+                path='/'
             )
             return response
         

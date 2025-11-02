@@ -16,6 +16,13 @@ from decouple import config
 import os
 from dotenv import load_dotenv
 
+# Check if colorlog is available for colored logging
+try:
+    import colorlog
+    COLORLOG_AVAILABLE = True
+except ImportError:
+    COLORLOG_AVAILABLE = False
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -208,38 +215,48 @@ REFRESH_TOKEN_COOKIE_HTTPONLY = True
 REFRESH_TOKEN_COOKIE_SECURE = not DEBUG  # Only use Secure in production
 REFRESH_TOKEN_COOKIE_SAMESITE = 'Lax'
 
-# Logging Configuration
+# Logging Configuration - Build formatters conditionally
+_log_formatters = {
+    'verbose': {
+        'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+        'style': '{',
+    },
+    'simple': {
+        'format': '{levelname} {message}',
+        'style': '{',
+    },
+    'detailed': {
+        'format': '[{asctime}] {levelname} in {name}: {message}',
+        'style': '{',
+    },
+}
+
+# Add colored formatter if colorlog is available
+if COLORLOG_AVAILABLE:
+    _log_formatters['colored'] = {
+        '()': 'colorlog.ColoredFormatter',
+        'format': (
+            '%(log_color)s[%(asctime)s] %(levelname)s '
+            '%(name)s: %(message)s'
+        ),
+        'log_colors': {
+            'DEBUG': 'cyan',
+            'INFO': 'bold_green',
+            'WARNING': 'bold_yellow',
+            'ERROR': 'red',
+            'CRITICAL': 'bold_red',
+        },
+    }
+else:
+    _log_formatters['colored'] = {
+        'format': '[%(asctime)s] %(levelname)s %(name)s: %(message)s',
+        'style': '%',
+    }
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
-    'formatters': {
-        'verbose': {
-            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
-            'style': '{',
-        },
-        'simple': {
-            'format': '{levelname} {message}',
-            'style': '{',
-        },
-        'detailed': {
-            'format': '[{asctime}] {levelname} in {name}: {message}',
-            'style': '{',
-        },
-        'colored': {
-            '()': 'colorlog.ColoredFormatter',
-            'format': (
-                '%(log_color)s[%(asctime)s] %(levelname)s '
-                '%(name)s: %(message)s'
-            ),
-            'log_colors': {
-                'DEBUG': 'cyan',
-                'INFO': 'bold_green',
-                'WARNING': 'bold_yellow',
-                'ERROR': 'red',
-                'CRITICAL': 'bold_red',
-            },
-        },
-    },
+    'formatters': _log_formatters,
     'handlers': {
         'file': {
             'level': 'INFO',
