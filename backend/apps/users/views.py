@@ -1,4 +1,4 @@
-from logging import Logger
+import logging
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -95,11 +95,18 @@ class SignupView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class LoginView(APIView):
+    logger = logging.getLogger('apps.users')
 
     def post(self, request):
         email = request.data.get('email')
         password = request.data.get('password')
         remember_me = request.data.get('remember_me', False)
+        
+        # Log login attempt
+        self.logger.info(f'🔐 Login attempt from IP: {self._get_client_ip(request)}, Email: {email}')
+        self.logger.debug(f'Request headers: {dict(request.headers)}')
+        self.logger.debug(f'Request data keys: {list(request.data.keys())}')
+        
         user = authenticate(email=email, password=password)
         if user:
             # Check if 2FA is enabled (using getattr in case migration hasn't been run)
@@ -145,8 +152,19 @@ class LoginView(APIView):
                     refresh_token = _create_refresh_token(user, remember_me=True, request=request)
                     _set_refresh_token_cookie(response, refresh_token, remember_me=True)
                 
+                self.logger.info(f'✅ Login successful for user: {user.email}, User ID: {user.user_id}')
                 return response
+        self.logger.warning(f'❌ Login failed - Invalid credentials for email: {email}, IP: {self._get_client_ip(request)}')
         return Response({'message': 'Invalid email or password'}, status=status.HTTP_401_UNAUTHORIZED)
+    
+    def _get_client_ip(self, request):
+        """Get client IP address from request"""
+        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+        if x_forwarded_for:
+            ip = x_forwarded_for.split(',')[0]
+        else:
+            ip = request.META.get('REMOTE_ADDR')
+        return ip
     
 class LogoutView(APIView):
     permission_classes = [IsAuthenticated]

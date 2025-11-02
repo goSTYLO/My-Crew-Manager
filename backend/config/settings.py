@@ -63,6 +63,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'core.middleware.request_logging.RequestLoggingMiddleware',  # Log all requests first
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -302,7 +303,7 @@ LOGGING = {
         },
         'django.request': {
             'handlers': ['error_file', 'console'],
-            'level': 'ERROR',
+            'level': 'INFO',  # Changed to INFO to see all requests
             'propagate': False,
         },
         'apps.ai_api': {

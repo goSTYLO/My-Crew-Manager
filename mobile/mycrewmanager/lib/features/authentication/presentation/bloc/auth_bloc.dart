@@ -38,15 +38,20 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   void _onAuthLogin(AuthLogin event, Emitter<AuthState> emit) async {
     emit(AuthLoading());
     
+    logger.i('🔐 Login attempt for email: ${event.email}');
+    logger.d('📡 Base URL: ${Constants.baseUrl}');
+    
     final res = await _userLogin(
       UserLoginParams(email: event.email, password: event.password),
     );
 
     await res.fold(
       (failure) async {
+        logger.e('❌ Login failed: ${failure.message}');
         emit(AuthFailure(failure.message));
       },
       (user) async {
+        logger.i('✅ Login successful, saving token and fetching user data...');
         await _tokenStorage.saveToken(user.token);
         
         // Fetch complete user data including profile picture
@@ -55,6 +60,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           dio.options.headers['Authorization'] = 'Token ${user.token}';
           dio.options.baseUrl = Constants.baseUrl;
           
+          logger.d('📡 Fetching user profile from: ${Constants.baseUrl}user/me/');
           final response = await dio.get('user/me/');
           
           if (response.statusCode == 200) {
@@ -68,12 +74,16 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
               profilePicture: userData['profile_picture'],
             );
             
+            logger.i('✅ User profile fetched successfully');
             emit(AuthSuccess(completeUser));
           } else {
+            logger.w('⚠️ User profile fetch returned status ${response.statusCode}, using basic user data');
             // Fallback to basic user data if complete data fetch fails
             emit(AuthSuccess(user));
           }
-        } catch (e) {
+        } catch (e, stackTrace) {
+          logger.e('❌ Error fetching user profile: $e');
+          logger.e('   Stack trace: $stackTrace');
           // Fallback to basic user data if complete data fetch fails
           emit(AuthSuccess(user));
         }
@@ -161,12 +171,14 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     final token = await _tokenStorage.getToken();
     
     if (token == null) {
+      logger.d('ℹ️ No token found, user is logged out');
       emit(AuthLoggedOut());
       return;
     }
     
     // Try to get user data with the existing token
     try {
+      logger.d('🔍 Checking existing token validity...');
       final dio = Dio();
       dio.options.headers['Authorization'] = 'Token $token';
       dio.options.baseUrl = Constants.baseUrl;
@@ -184,12 +196,16 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           profilePicture: userData['profile_picture'],
         );
         
+        logger.i('✅ Token is valid, user is authenticated');
         emit(AuthSuccess(user));
       } else {
+        logger.w('⚠️ Token validation returned status ${response.statusCode}, clearing token');
         await _tokenStorage.clearToken();
         emit(AuthLoggedOut());
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      logger.e('❌ Error validating token: $e');
+      logger.e('   Stack trace: $stackTrace');
       await _tokenStorage.clearToken();
       emit(AuthLoggedOut());
     }
@@ -215,10 +231,12 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     
     final currentState = state;
     if (currentState is! AuthSuccess) {
+      logger.w('⚠️ Cannot refresh user data - user not authenticated');
       return;
     }
 
     try {
+      logger.d('🔄 Refreshing user data...');
       final dio = Dio();
       dio.options.headers['Authorization'] = 'Token ${currentState.user.token}';
       dio.options.baseUrl = Constants.baseUrl;
@@ -237,11 +255,15 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           profilePicture: userData['profile_picture'] ?? currentState.user.profilePicture,
         );
         
+        logger.i('✅ User data refreshed successfully');
         emit(AuthSuccess(updatedUser));
       } else {
+        logger.w('⚠️ User data refresh returned status ${response.statusCode}, preserving current state');
         // Don't emit anything on failure to preserve current state
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      logger.e('❌ Error refreshing user data: $e');
+      logger.e('   Stack trace: $stackTrace');
       // Don't emit anything on error to preserve current state
     }
   }

@@ -1,7 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:get_it/get_it.dart';
 import 'package:internet_connection_checker_plus/internet_connection_checker_plus.dart';
-import 'package:logger/logger.dart';
 import 'package:mycrewmanager/core/network/api_client.dart';
 import 'package:mycrewmanager/core/network/connection_checker.dart';
 import 'package:mycrewmanager/core/tokenhandlers/token_storage.dart';
@@ -45,7 +44,7 @@ import 'package:mycrewmanager/features/invitation/domain/repository/invitation_r
 import 'package:mycrewmanager/features/invitation/presentation/bloc/invitation_bloc.dart';
 
 final serviceLocator = GetIt.I;
-final logger = Logger();
+// Logger is imported from constants.dart to use the configured version with logcat output
 
 Future<void> initDependencies() async {
 

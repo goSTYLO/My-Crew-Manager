@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:mycrewmanager/features/notification/data/models/notification_model.dart';
+import 'package:mycrewmanager/core/constants/constants.dart';
 
 class NotificationWsService {
   WebSocketChannel? _channel;
@@ -24,9 +25,23 @@ class NotificationWsService {
 
   Future<void> _connect() async {
     try {
+      if (_token == null) {
+        throw Exception('No authentication token available');
+      }
       
-      final uri = Uri.parse('ws://localhost:8000/ws/notifications/');
-      _channel = WebSocketChannel.connect(uri);
+      // Parse the HTTP base URL properly
+      final httpUri = Uri.parse(Constants.baseUrl);
+      
+      // Construct WebSocket URI using Uri builder
+      final wsUri = Uri(
+        scheme: httpUri.scheme == 'https' ? 'wss' : 'ws',
+        host: httpUri.host,
+        port: httpUri.port,
+        path: '/ws/notifications/',
+        queryParameters: {'token': _token!},
+      );
+      
+      _channel = WebSocketChannel.connect(wsUri);
       
       _channel!.stream.listen(
         _onMessage,

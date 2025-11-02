@@ -134,11 +134,21 @@ class _ProjectOverviewPageState extends State<ProjectOverviewPage> {
   String _getInitials(String name) {
     if (name.isEmpty) return '?';
     
-    final words = name.trim().split(' ');
+    // Split and filter out empty strings (handles multiple spaces)
+    final words = name.trim().split(' ').where((w) => w.isNotEmpty).toList();
+    
+    if (words.isEmpty) return '?';
+    
     if (words.length == 1) {
+      // Ensure the word has at least 1 character
+      if (words[0].isEmpty) return '?';
       return words[0].substring(0, 1).toUpperCase();
     } else {
-      return (words[0].substring(0, 1) + words[1].substring(0, 1)).toUpperCase();
+      // Take first character from first two non-empty words
+      final first = words[0].isNotEmpty ? words[0].substring(0, 1) : '';
+      final second = words.length > 1 && words[1].isNotEmpty ? words[1].substring(0, 1) : '';
+      if (first.isEmpty && second.isEmpty) return '?';
+      return (first + second).toUpperCase();
     }
   }
 
@@ -587,11 +597,21 @@ class _ProjectAvatar extends StatelessWidget {
   String _getProjectInitials(String projectName) {
     if (projectName.isEmpty) return '?';
     
-    final words = projectName.trim().split(' ');
+    // Split and filter out empty strings (handles multiple spaces)
+    final words = projectName.trim().split(' ').where((w) => w.isNotEmpty).toList();
+    
+    if (words.isEmpty) return '?';
+    
     if (words.length == 1) {
+      // Ensure the word has at least 1 character
+      if (words[0].isEmpty) return '?';
       return words[0].substring(0, 1).toUpperCase();
     } else {
-      return (words[0].substring(0, 1) + words[1].substring(0, 1)).toUpperCase();
+      // Take first character from first two non-empty words
+      final first = words[0].isNotEmpty ? words[0].substring(0, 1) : '';
+      final second = words.length > 1 && words[1].isNotEmpty ? words[1].substring(0, 1) : '';
+      if (first.isEmpty && second.isEmpty) return '?';
+      return (first + second).toUpperCase();
     }
   }
 

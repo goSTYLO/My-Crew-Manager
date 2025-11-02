@@ -329,7 +329,7 @@ class _TaskOverviewPageState extends State<TaskOverviewPage> {
                                     style: TextStyle(fontWeight: FontWeight.w500, color: Colors.black54),
                                   ),
                                   const SizedBox(width: 8),
-                                  if (currentTask.assigneeName != null) ...[
+                                  if (currentTask.assigneeName != null && currentTask.assigneeName!.isNotEmpty) ...[
                                     CircleAvatar(
                                       radius: 16,
                                       backgroundColor: Colors.blue.withOpacity(0.1),
