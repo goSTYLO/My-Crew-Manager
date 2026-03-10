@@ -7,7 +7,6 @@ import 'package:mycrewmanager/features/invitation/domain/entities/invitation.dar
 import 'package:mycrewmanager/features/invitation/domain/repository/invitation_repository.dart';
 import 'package:mycrewmanager/features/invitation/data/data_sources/invitation_remote_interface.dart';
 import 'package:mycrewmanager/features/invitation/data/models/invitation_model.dart';
-import 'package:mycrewmanager/init_dependencies.dart';
 
 class InvitationRepositoryImpl implements InvitationRepository {
   final InvitationRemoteDataSourceInterface remoteDataSource;

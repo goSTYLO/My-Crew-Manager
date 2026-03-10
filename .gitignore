@@ -5,14 +5,19 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 dev-debug.log
+backend/logs/*.log
 
 # Dependency directories
 node_modules/
+web/node_modules/
+package-lock.json
+web/package-lock.json
 
 # Environment variables
 .env
 venv/
 backend/venv/
+.venv/
 
 # Editor directories and files
 .idea
@@ -22,16 +27,61 @@ backend/venv/
 *.njsproj
 *.sln
 *.sw?
-.venv/
+
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
-# Django migrations
+*.pyc
+.Python
+
+# Django
 */migrations/
 */migrations/*
 !*/migrations/__init__.py
+backend/staticfiles/
+backend/staticfiles/**
+*.sqlite3
+*.sqlite
+*.db
+
+# Flutter
+mobile/mycrewmanager/build/
+mobile/mycrewmanager/.dart_tool/
+mobile/mycrewmanager/.flutter-plugins
+mobile/mycrewmanager/.flutter-plugins-dependencies
+mobile/mycrewmanager/.pub-cache/
+mobile/mycrewmanager/.pub/
+mobile/mycrewmanager/**/build/
+*.apk
+*.aab
+*.app
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Build artifacts
+dist/
+dist-ssr/
+*.local
+.cache/
 
 # OS specific
 .DS_Store
-.env
-/backend/apps/ai_api/migrations
+Thumbs.db
+desktop.ini
+
+# Redis
+redis/dump.rdb
+*.rdb
+
+# Database dumps
+*.sql
+!backend/scripts/*.sql
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*.swo
+*~

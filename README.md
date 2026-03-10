@@ -456,7 +456,7 @@ python backend/manage.py purge_old_invitations --days=30 --dry-run
 ## 🛠️ Installation & Setup
 
 ### Prerequisites
-- Python 3.8+
+- Python 3.12+ (3.13 works for backend setup in this repository)
 - Node.js 16+
 - Flutter SDK (for mobile development)
 
@@ -466,20 +466,27 @@ python backend/manage.py purge_old_invitations --days=30 --dry-run
 git clone <repository-url>
 cd My-Crew-Manager
 
+# Create and activate one centralized virtual environment at repo root
+py -3.13 -m venv .venv
+.venv\Scripts\activate
+
+# Install backend + AI dependencies
+pip install -r backend/requirements.txt
+
+# Install PyTorch for CUDA 12.8 (RTX 4050 path)
+pip install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cu128
+
 # Navigate to backend directory
 cd backend
 
-# Install Python dependencies
-pip install -r requirements.txt
-
 # Run migrations
-python backend/manage.py migrate
+python manage.py migrate
 
 # Create superuser
-python backend/manage.py createsuperuser
+python manage.py createsuperuser
 
 # Start development server
-python backend/manage.py runserver
+python manage.py runserver
 ```
 
 ### Frontend Setup

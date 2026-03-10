@@ -6,7 +6,6 @@ import 'package:mycrewmanager/core/constants/constants.dart' as constants;
 import 'package:mycrewmanager/features/notification/domain/entities/notification.dart';
 import 'package:mycrewmanager/features/notification/domain/repository/notification_repository.dart';
 import 'package:mycrewmanager/features/notification/data/data_sources/notification_remote.dart';
-import 'package:mycrewmanager/init_dependencies.dart';
 
 class NotificationRepositoryImpl implements NotificationRepository {
   final NotificationRemoteDataSource remoteDataSource;

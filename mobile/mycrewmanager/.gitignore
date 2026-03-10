@@ -32,8 +32,14 @@ pubspec.lock
 .flutter-plugins-dependencies
 .pub-cache/
 .pub/
-/build/
-/web/
+build/
+web/
+*.apk
+*.aab
+*.app
+*.ipa
+*.dSYM.zip
+*.dSYM
 
 # Symbolication related
 app.*.symbols

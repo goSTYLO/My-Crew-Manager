@@ -1,5 +1,4 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:mycrewmanager/init_dependencies.dart';
 import 'package:mycrewmanager/features/invitation/domain/repository/invitation_repository.dart';
 import 'package:mycrewmanager/features/invitation/presentation/bloc/invitation_event.dart';
 import 'package:mycrewmanager/features/invitation/presentation/bloc/invitation_state.dart';
