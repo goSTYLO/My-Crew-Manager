@@ -86,3 +86,4 @@ redis/dump.rdb
 *.swo
 *~
 .env
+.env
