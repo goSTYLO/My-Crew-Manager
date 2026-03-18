@@ -15,65 +15,8 @@ const RememberMeHandler: React.FC<{ children: React.ReactNode }> = ({ children }
   const location = useLocation();
   const [isChecking, setIsChecking] = useState(true);
 
-  // Listen for session changes from other tabs
   useEffect(() => {
-    const handleStorageChange = (e: StorageEvent) => {
-      // Only listen for active_session changes (ignore other localStorage changes)
-      if (e.key !== 'active_session') {
-        return;
-      }
-      
-      const currentEmail = TokenManager.getEmail();
-      
-      if (!currentEmail || !TokenManager.isAuthenticated()) {
-        // Not logged in, no action needed
-        return;
-      }
-      
-      const normalizedCurrentEmail = currentEmail.toLowerCase().trim();
-      
-      // Get the NEW value from the storage event (what was just set)
-      let newActiveSession: ActiveSession | null = null;
-      try {
-        if (e.newValue) {
-          newActiveSession = JSON.parse(e.newValue);
-        }
-      } catch (err) {
-        console.error('Error parsing new active session:', err);
-        return;
-      }
-      
-      // If new session is null, it means active_session was cleared
-      if (!newActiveSession) {
-        // Session was cleared - don't auto-logout (might be different account login or actual logout)
-        // Only logout on explicit session_ended event for same account
-        console.log('ℹ️ Active session cleared - not auto-logging out (might be different account login)');
-        return;
-      }
-      
-      // New session exists - check if it's for the same or different account
-      const normalizedNewEmail = newActiveSession.email.toLowerCase().trim();
-      
-      if (normalizedNewEmail === normalizedCurrentEmail) {
-        // SAME ACCOUNT - check if it's from this tab or another tab
-        const currentSessionId = TokenManager.getCurrentSessionIdPublic();
-        if (newActiveSession.sessionId !== currentSessionId) {
-          // Same account but different sessionId means another tab logged in
-          // This shouldn't happen (LoginController should block it), but if it does, log out
-          console.warn('⚠️ Same account logged in from another tab (unexpected), logging out this tab...');
-          TokenManager.clearAll();
-          window.location.replace('/sign-in');
-        }
-        // Same sessionId means it's this tab - continue (no action needed)
-      } else {
-        // DIFFERENT ACCOUNT - explicitly stay logged in (multi-account mode)
-        console.log('✅ Different account logged in from another tab - staying logged in (multi-account mode)');
-        // DO NOT logout - allow multiple accounts simultaneously
-        // This is the key fix: different accounts can coexist
-      }
-    };
-
-    // Listen for custom session-change events
+    // Listen for custom session-change events (same-tab only; active_session is in sessionStorage now)
     const handleSessionChange = (e: Event) => {
       const customEvent = e as CustomEvent;
       const currentEmail = TokenManager.getEmail();
@@ -118,11 +61,9 @@ const RememberMeHandler: React.FC<{ children: React.ReactNode }> = ({ children }
       }
     };
 
-    window.addEventListener('storage', handleStorageChange);
     window.addEventListener('session-change', handleSessionChange as EventListener);
 
     return () => {
-      window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('session-change', handleSessionChange as EventListener);
     };
   }, []);
@@ -141,7 +82,7 @@ const RememberMeHandler: React.FC<{ children: React.ReactNode }> = ({ children }
           const currentEmail = TokenManager.getEmail();
           
           // CRITICAL: If we have a token and email, we're authenticated for this tab
-          // The active_session in localStorage is ONLY a hint for SAME-account conflict detection
+          // The active_session in sessionStorage is per-tab only (no cross-tab conflict detection)
           // Different accounts can ALWAYS coexist - we never log out based on active_session for different accounts
           
           if (currentEmail) {

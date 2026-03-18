@@ -1374,7 +1374,7 @@ const ChatApp = () => {
         formData.append('picture', selectedFile);
         
         const token = getAuthToken();
-        const response = await fetch(`${API_BASE_URL}/rooms/${selectedChat}/`, {
+        const response = await fetch(`${API_BASE_URL}/chat/rooms/${selectedChat}/`, {
           method: 'PATCH',
           headers: {
             'Authorization': `Token ${token}`,

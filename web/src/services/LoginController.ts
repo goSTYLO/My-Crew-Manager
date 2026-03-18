@@ -18,29 +18,7 @@ export class LoginController {
       throw new Error(Object.values(validation.errors).join(", "));
     }
 
-    // Check if this account is already logged in from another tab
     const normalizedEmail = user.email.toLowerCase().trim();
-    const activeSession = TokenManager.getActiveSession();
-    
-    // Only prevent login if SAME account is already logged in from another tab
-    // Different accounts can login simultaneously (multi-account mode)
-    if (activeSession && activeSession.email === normalizedEmail && activeSession.sessionId !== TokenManager.getCurrentSessionIdPublic()) {
-      console.warn('⚠️ Account is already logged in from another tab:', normalizedEmail);
-      
-      return {
-        success: false,
-        message: 'This account is already logged in from another browser tab. Please log out from the other tab first, or close it and try again.',
-        redirect: '',
-        concurrentSession: true,
-      };
-    }
-    
-    // If active session is for a different account, allow login (multi-account mode)
-    if (activeSession && activeSession.email !== normalizedEmail) {
-      console.log('✅ Different account already logged in - allowing login (multi-account mode)');
-      // Continue with login - TokenManager.setToken() will handle session registration with force=true
-    }
-
     console.log("🔄 Sending login request with:", { email: user.email, rememberMe });
 
     const response = await fetch(`${API_BASE_URL}/user/login/`, {

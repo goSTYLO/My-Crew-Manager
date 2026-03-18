@@ -2,7 +2,7 @@ import os
 import re
 import logging
 from typing import Dict, Optional
-from apps.ai_api.tasks import CancellationToken, TaskCancelledException
+from llms.tasks import CancellationToken, TaskCancelledException
 from llms.models import BacklogModel, EpicModel, SubEpicModel, UserStoryModel, TaskModel
 from llms.llm_cache import get_cached_backlog_llm
 

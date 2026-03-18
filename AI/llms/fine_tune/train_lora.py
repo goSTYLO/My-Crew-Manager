@@ -1,21 +1,25 @@
+from pathlib import Path
+
 from datasets import load_from_disk
-from transformers import AutoModelForCausalLM, TrainingArguments, Trainer, AutoTokenizer
+from transformers import AutoModelForCausalLM, AutoTokenizer, TrainingArguments, Trainer
 from peft import get_peft_model, LoraConfig, TaskType
 
 # Supported models and their tokenized dataset paths
+# Paths relative to fine_tune/ (run prepare_dataset.py first)
+_SCRIPT_DIR = Path(__file__).resolve().parent
 MODELS = {
     "phi": {
         "model_id": "microsoft/phi-2",
-        "dataset_path": "datasets/tokenized_project_management_phi"
+        "dataset_path": str(_SCRIPT_DIR / "tokenized" / "tokenized_project_management_phi"),
     },
     "tinyllama": {
         "model_id": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
-        "dataset_path": "datasets/tokenized_project_management_tinyllama"
+        "dataset_path": str(_SCRIPT_DIR / "tokenized" / "tokenized_project_management_tinyllama"),
     },
     "qwen": {
         "model_id": "Qwen/Qwen2-0.5B-Instruct",
-        "dataset_path": "datasets/tokenized_project_management_qwen"
-    }
+        "dataset_path": str(_SCRIPT_DIR / "tokenized" / "tokenized_project_management_qwen"),
+    },
 }
 
 # LoRA configuration
@@ -63,7 +67,7 @@ for name, config in MODELS.items():
     # Train
     trainer.train()
 
-    # Save fine-tuned model
-    save_path = f"LLMs/fine_tune/{name}_project_manager_lora"
-    trainer.save_model(save_path)
+    # Save fine-tuned model (LoRA adapter)
+    save_path = _SCRIPT_DIR / f"{name}_project_manager_lora"
+    trainer.save_model(str(save_path))
     print(f"Saved fine-tuned {name.upper()} model to {save_path}")

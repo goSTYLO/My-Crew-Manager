@@ -121,8 +121,8 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
         const data = await response.json();
         setNotifications(data.results || data);
       }
-    } catch (error) {
-      console.error('Error fetching notifications:', error);
+    } catch {
+      // Silently fail - notifications are non-critical
     } finally {
       setLoadingNotifications(false);
     }
@@ -145,11 +145,9 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
       if (response.ok) {
         const data = await response.json();
         setAllNotifications(data.results || data);
-      } else {
-        console.error('Failed to fetch all notifications');
       }
-    } catch (error) {
-      console.error('Error fetching all notifications:', error);
+    } catch {
+      // Silently fail
     } finally {
       setLoadingAllNotifications(false);
     }
@@ -176,8 +174,8 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
           )
         );
       }
-    } catch (error) {
-      console.error('Error marking notification as read:', error);
+    } catch {
+      // Silently fail
     }
   };
 
@@ -200,8 +198,8 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
           prev.map(notif => ({ ...notif, is_read: true }))
         );
       }
-    } catch (error) {
-      console.error('Error marking all notifications as read:', error);
+    } catch {
+      // Silently fail
     }
   };
 
@@ -232,9 +230,7 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
         }
       });
     },
-    onError: (error) => {
-      console.error('Notification polling error:', error);
-    }
+    onError: () => {}
   });
 
   // WebSocket subscription for real-time notifications
@@ -242,8 +238,6 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
     const unsubscribe = subscribe((message) => {
       // Handle notification messages - backend sends type: 'notification'
       if (message.type === 'notification' || message.action === 'notification_created') {
-        console.log('🔔 Received WebSocket notification:', message);
-        // Refetch notifications to get the latest
         fetchNotifications();
         
         // Show toast for the new notification
@@ -321,8 +315,7 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
       setTimeout(() => {
         window.location.replace("/sign-in");
       }, 1200);
-    } catch (error) {
-      console.error("Logout error:", error);
+    } catch {
       // Clear session even if API call fails
       TokenManager.clearAll();
 
@@ -350,11 +343,7 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
   useEffect(() => {
     const fetchUserData = async () => {
       const token = TokenManager.getToken();
-      console.log('🔍 TopNavbar - Token check:', token ? 'Found' : 'Not found');
-      console.log('📍 TopNavbar - Current pathname:', window.location.pathname);
       if (!token) {
-        console.log('❌ TopNavbar - No token, redirecting to sign-in');
-        console.log('🔄 TopNavbar - About to navigate to /sign-in');
         navigate("/sign-in");
         return;
       }
@@ -369,7 +358,6 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
   
         if (response.ok) {
           const data = await response.json();
-          console.log('✅ TopNavbar - User data fetched successfully');
   
           // ✅ Fix the profile picture path
           const fixedData = {
@@ -383,14 +371,10 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
   
           setUserData(fixedData);
         } else {
-          console.log('❌ TopNavbar - API call failed, status:', response.status);
-          console.log('🔄 TopNavbar - About to remove token and redirect to /sign-in');
           sessionStorage.removeItem("token");
           navigate("/sign-in");
         }
-      } catch (error) {
-        console.error("❌ TopNavbar - Error fetching user data:", error);
-        console.log('🔄 TopNavbar - About to redirect to /sign-in due to error');
+      } catch {
         sessionStorage.removeItem("token");
         navigate("/sign-in");
       }
@@ -812,16 +796,11 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
                           : "bg-blue-50 border-blue-200 text-gray-800 hover:bg-blue-100"
                       }`}
                       onClick={() => {
-                        console.log('🔔 Notification clicked:', note);
-                        console.log('📍 Action URL:', note.action_url);
-                        console.log('📋 Notification type:', note.notification_type);
-                        
                         if (!note.is_read) {
                           markNotificationAsRead(note.id);
                         }
                         if (note.action_url) {
                           const transformedUrl = transformNotificationUrl(note.action_url, userData?.role ?? null, note.notification_type);
-                          console.log('🎯 Transformed URL:', transformedUrl);
                           navigate(transformedUrl);
                           setShowAllNotificationsModal(false);
                         }

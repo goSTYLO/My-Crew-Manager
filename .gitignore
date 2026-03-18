@@ -85,3 +85,4 @@ redis/dump.rdb
 *.swp
 *.swo
 *~
+.env

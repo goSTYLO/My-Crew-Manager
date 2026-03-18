@@ -66,7 +66,6 @@ export const useNotificationPolling = ({
   const fetchNotifications = useCallback(async () => {
     const token = getAuthToken();
     if (!token) {
-      console.log('🔔 No auth token, skipping notification poll');
       return;
     }
 
@@ -86,21 +85,15 @@ export const useNotificationPolling = ({
       const data = await response.json();
       const notifications = data.results || data.notifications || data || [];
 
-      console.log('🔔 Polling response:', { data, notifications });
-
       if (notifications.length > 0) {
-        console.log(`🔔 Polling: Found ${notifications.length} new notifications:`, notifications);
         onNewNotifications?.(notifications);
         setLastUpdate(new Date());
-      } else {
-        console.log('🔔 Polling: No new notifications');
       }
 
       // Update last fetch time
       lastFetchRef.current = new Date();
       setError(null);
     } catch (err: any) {
-      console.error('🔔 Notification polling error:', err);
       setError(err.message || 'Failed to fetch notifications');
       onError?.(err);
     }
@@ -110,9 +103,6 @@ export const useNotificationPolling = ({
   const poll = useCallback(() => {
     // Disable polling if WebSocket is connected (avoid duplicates)
     if (!enabled || !isVisibleRef.current || websocketConnected) {
-      if (websocketConnected) {
-        console.log('🔔 Polling disabled: WebSocket is connected');
-      }
       return;
     }
 
@@ -204,7 +194,6 @@ export const useNotificationPolling = ({
   // Manual refresh function
   const refresh = useCallback(() => {
     if (enabled) {
-      console.log('🔔 Manual notification refresh');
       fetchNotifications();
     }
   }, [enabled, fetchNotifications]);

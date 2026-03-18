@@ -20,7 +20,7 @@ import { useToast } from "../../components/ToastContext";
 import { useRealtimeUpdates } from "../../hooks/useRealtimeUpdates";
 
 // API configuration
-const API_BASE_URL = 'http://localhost:8000/api';
+import { API_BASE_URL } from '../../config/api';
 const AI_API_BASE_URL = `${API_BASE_URL}/ai`;
 
 const getAuthToken = () => {

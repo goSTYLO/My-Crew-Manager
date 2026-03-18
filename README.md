@@ -608,6 +608,9 @@ DATABASE_URL=sqlite:///db.sqlite3
 SECRET_KEY=your_secret_key
 DEBUG=True
 
+# AI Service (FastAPI at AI/)
+AI_SERVICE_URL=http://localhost:8002
+
 # AI API Keys (optional)
 OPENAI_API_KEY=your_openai_key
 ANTHROPIC_API_KEY=your_anthropic_key

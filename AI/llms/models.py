@@ -56,6 +56,11 @@ class UserStoryListOutputModel(BaseModel):
 class TaskListOutputModel(BaseModel):
     tasks: List[TaskModel] = Field(default_factory=list)
 
+# 🧩 Goal Model (for overview)
+class GoalModel(BaseModel):
+    title: str = ""
+    role: str = ""
+
 # 🧩 Timeline Models
 class TimelineGoalModel(BaseModel):
     title: str
@@ -70,7 +75,7 @@ class ProjectModel(BaseModel):
     summary: Optional[str] = None
     features: List[str] = Field(default_factory=list)
     roles: List[TeamMemberModel] = Field(default_factory=list)
-    goals: List[str] = Field(default_factory=list)  
+    goals: List[GoalModel] = Field(default_factory=list)  
     timeline: List[TimelineWeekModel] = Field(default_factory=list)
     epics: List[EpicModel] = Field(default_factory=list)
 

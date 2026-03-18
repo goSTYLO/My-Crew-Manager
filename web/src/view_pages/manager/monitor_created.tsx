@@ -115,7 +115,6 @@ export default function ProjectDetailsUI() {
 
   const getAuthHeaders = () => {
     const token = sessionStorage.getItem('token');
-    console.log('🔍 Token from sessionStorage:', token ? 'Found' : 'Not found');
     return {
       'Authorization': `Token ${token}`,
       'Content-Type': 'application/json',
@@ -123,8 +122,7 @@ export default function ProjectDetailsUI() {
   };
 
   const handleApiError = (error: any, operation: string) => {
-    console.error(`Error ${operation}:`, error);
-    if (error.status === 401) {
+    if (error?.status === 401) {
       showError('Authentication Failed', 'Please log in again.');
       sessionStorage.removeItem('token');
       navigate('/sign-in');
@@ -172,18 +170,14 @@ export default function ProjectDetailsUI() {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const data = await response.json();
-      console.log('✅ Overview regenerated:', data);
-      
-
+      await response.json();
       await fetchProjectData();
       
 
       setRegenerationType('overview');
       setShowRegenerationModal(true);
-    } catch (error) {
-      console.error('❌ Error regenerating overview:', error);
-      handleApiError(error, 'regenerate overview');
+    } catch (err) {
+      handleApiError(err, 'regenerate overview');
     } finally {
       setLoadingState(null);
     }
@@ -212,8 +206,7 @@ export default function ProjectDetailsUI() {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const data = await response.json();
-      console.log('✅ Backlog regenerated:', data);
+      await response.json();
       
 
       await fetchBacklog();
@@ -221,9 +214,8 @@ export default function ProjectDetailsUI() {
 
       setRegenerationType('backlog');
       setShowRegenerationModal(true);
-    } catch (error) {
-      console.error('❌ Error regenerating backlog:', error);
-      handleApiError(error, 'regenerate backlog');
+    } catch (err) {
+      handleApiError(err, 'regenerate backlog');
     } finally {
       setLoadingState(null);
     }
@@ -242,21 +234,16 @@ export default function ProjectDetailsUI() {
 
   const fetchProjectData = async () => {
     try {
-      console.log('🔍 Fetching project data for projectId:', projectId);
-      
-
       const projectRes = await fetch(`${AI_API_BASE_URL}/projects/${projectId}/`, {
         headers: getAuthHeaders(),
         credentials: 'include',
       });
 
       if (!projectRes.ok) {
-        console.error('❌ Project fetch failed:', projectRes.status);
         throw new Error(`HTTP error! status: ${projectRes.status}`);
       }
 
       const project = await projectRes.json();
-      console.log('✅ Project data fetched:', project);
 
       // Set project status fields
       setProjectStatus(project.status || 'in_progress');
@@ -284,24 +271,20 @@ export default function ProjectDetailsUI() {
       ]);
 
 
-      const features = featuresRes.status === 'fulfilled' && featuresRes.value.ok 
-        ? await featuresRes.value.json() 
-        : [];
-      const roles = rolesRes.status === 'fulfilled' && rolesRes.value.ok 
-        ? await rolesRes.value.json() 
-        : [];
-      const goals = goalsRes.status === 'fulfilled' && goalsRes.value.ok 
-        ? await goalsRes.value.json() 
-        : [];
-      const timeline = timelineRes.status === 'fulfilled' && timelineRes.value.ok
-        ? await timelineRes.value.json()
-        : [];
+      const featuresOk = featuresRes.status === 'fulfilled' && featuresRes.value.ok;
+      const rolesOk = rolesRes.status === 'fulfilled' && rolesRes.value.ok;
+      const goalsOk = goalsRes.status === 'fulfilled' && goalsRes.value.ok;
+      const timelineOk = timelineRes.status === 'fulfilled' && timelineRes.value.ok;
 
+      const features = featuresOk ? await featuresRes.value.json() : [];
+      const roles = rolesOk ? await rolesRes.value.json() : [];
+      const goals = goalsOk ? await goalsRes.value.json() : [];
+      const timeline = timelineOk ? await timelineRes.value.json() : [];
+
+      const overviewNotGenerated = !featuresOk && !rolesOk && !goalsOk && !timelineOk;
 
       const roleNames = roles.map((role: any) => role.role || role.name).filter(Boolean);
       setProjectRoles(roleNames);
-
-      console.log('✅ Related data fetched:', { features, roles, goals, timeline });
 
       const processedTimeline = (timeline || []).map((week: any) => ({
         id: week.id,
@@ -313,69 +296,36 @@ export default function ProjectDetailsUI() {
         id: project.id,
         title: project.title,
         aiSummary: project.summary,
-        created_by: project.created_by, // Add this field
+        created_by: project.created_by,
         roles: (roles || []).map((role: any) => ({ id: role.id, role: role.role, ai: role.ai })),
         features: (features || []).map((feature: any) => ({ id: feature.id, title: feature.title, ai: feature.ai })),
         goals: (goals || []).map((goal: any) => ({ id: goal.id, title: goal.title, ai: goal.ai })),
         timeline: processedTimeline
       });
+      return { overviewNotGenerated };
     } catch (error) {
-      console.error('❌ Error in fetchProjectData:', error);
       handleApiError(error, 'fetch project data');
+      return {};
     }
   };
 
 
   const fetchBacklog = async () => {
     try {
-      console.log('🔍 Fetching backlog for projectId:', projectId);
       const response = await fetch(`${AI_API_BASE_URL}/projects/${projectId}/backlog/`, {
         headers: getAuthHeaders(),
         credentials: 'include',
       });
 
       if (!response.ok) {
-        console.error('❌ Backlog fetch failed:', response.status);
+        if (response.status === 404 || response.status === 403) {
+          setBacklog({ epics: [] });
+          return { backlogNotGenerated: true };
+        }
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       const data = await response.json();
-      console.log('✅ Backlog data fetched:', data);
-      
-      // Debug due dates specifically
-      console.log('🔍 DEBUGGING DUE DATES:');
-      if (data.epics && Array.isArray(data.epics)) {
-        data.epics.forEach((epic: any, epicIndex: number) => {
-          if (epic.sub_epics) {
-            epic.sub_epics.forEach((subEpic: any, subEpicIndex: number) => {
-              if (subEpic.user_stories) {
-                subEpic.user_stories.forEach((story: any, storyIndex: number) => {
-                  if (story.tasks) {
-                    story.tasks.forEach((task: any, taskIndex: number) => {
-                      console.log(`📅 Task [${epicIndex}.${subEpicIndex}.${storyIndex}.${taskIndex}] ID: ${task.id}, Title: "${task.title}", Due Date: "${task.due_date}" (type: ${typeof task.due_date})`);
-                    });
-                  }
-                });
-              }
-            });
-          }
-        });
-      }
-
-      if (data.epics && data.epics.length > 0) {
-        const firstEpic = data.epics[0];
-        if (firstEpic.sub_epics && firstEpic.sub_epics.length > 0) {
-          const firstSubEpic = firstEpic.sub_epics[0];
-          if (firstSubEpic.user_stories && firstSubEpic.user_stories.length > 0) {
-            const firstStory = firstSubEpic.user_stories[0];
-            if (firstStory.tasks && firstStory.tasks.length > 0) {
-              const firstTask = firstStory.tasks[0];
-              console.log('🔍 First task assignee details:', firstTask.assignee_details);
-            }
-          }
-        }
-      }
-      
 
       const transformedBacklog = {
         epics: (data.epics || []).map((epic: any) => ({
@@ -411,27 +361,30 @@ export default function ProjectDetailsUI() {
       };
 
       setBacklog(transformedBacklog);
+      return {};
     } catch (error) {
-      handleApiError(error, 'fetch backlog');
+      setBacklog({ epics: [] });
+      return { backlogNotGenerated: true };
     }
   };
 
 
   const fetchMembers = async () => {
     try {
-      console.log('🔍 Fetching members for projectId:', projectId);
       const response = await fetch(`${AI_API_BASE_URL}/project-members/?project_id=${projectId}`, {
         headers: getAuthHeaders(),
         credentials: 'include',
       });
 
       if (!response.ok) {
-        console.error('❌ Members fetch failed:', response.status);
+        if (response.status === 404 || response.status === 403) {
+          setMembers([]);
+          return { membersNotAvailable: true };
+        }
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       const data = await response.json();
-      console.log('✅ Members data fetched:', data);
       
 
       const transformedMembers = data.map((member: any) => ({
@@ -444,33 +397,32 @@ export default function ProjectDetailsUI() {
       }));
 
       setMembers(transformedMembers);
+      return {};
     } catch (error) {
-      handleApiError(error, 'fetch members');
+      setMembers([]);
+      return { membersNotAvailable: true };
     }
   };
 
 
   const fetchPendingInvitations = async () => {
     try {
-      console.log('🔍 Fetching pending invitations for projectId:', projectId);
       const response = await fetch(`${AI_API_BASE_URL}/invitations/?project_id=${projectId}`, {
         headers: getAuthHeaders(),
         credentials: 'include',
       });
 
       if (!response.ok) {
-        console.error('❌ Invitations fetch failed:', response.status);
+        if (response.status === 404 || response.status === 403) return [];
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       const data = await response.json();
-      console.log('✅ Pending invitations data fetched:', data);
       
 
       const pendingInvitations = data.filter((invitation: any) => invitation.status === 'pending');
       return pendingInvitations;
-    } catch (error) {
-      console.error('❌ Error fetching invitations:', error);
+    } catch {
       return [];
     }
   };
@@ -501,29 +453,22 @@ export default function ProjectDetailsUI() {
 
   const fetchRepositories = async () => {
     try {
-      console.log('🔍 Fetching repositories for projectId:', projectId);
       const response = await fetch(`${AI_API_BASE_URL}/repositories/?project_id=${projectId}`, {
         headers: getAuthHeaders(),
         credentials: 'include',
       });
 
       if (!response.ok) {
-        if (response.status === 404) {
-          console.log('ℹ️ No repositories found for this project (404) - this is normal');
-          setRepositories([]);
-          return;
-        }
-        console.error('❌ Repositories fetch failed:', response.status);
-        throw new Error(`HTTP error! status: ${response.status}`);
+        setRepositories([]);
+        return { repositoriesNotGenerated: true };
       }
 
       const data = await response.json();
-      console.log('✅ Repositories data fetched:', data);
       setRepositories(data);
-    } catch (error) {
-      console.error('❌ Error in fetchRepositories:', error);
-
+      return {};
+    } catch {
       setRepositories([]);
+      return { repositoriesNotGenerated: true };
     }
   };
 
@@ -538,12 +483,15 @@ export default function ProjectDetailsUI() {
       if (response.ok) {
         const data = await response.json();
         setCurrentProposal(data);
+        return {};
       } else if (response.status === 404) {
         setCurrentProposal(null);
+        return { proposalNotGenerated: true };
       }
-    } catch (error) {
-      console.error('Error fetching proposal:', error);
+      return {};
+    } catch {
       setCurrentProposal(null);
+      return { proposalNotGenerated: true };
     }
   };
 
@@ -559,9 +507,7 @@ export default function ProjectDetailsUI() {
 
       if (response.ok) {
         showSuccess('Task Assigned', 'Task assignment updated successfully');
-        console.log('🔄 Refreshing backlog after assignment...');
-        await fetchBacklog(); // Refresh backlog to show updated assignee
-        console.log('✅ Backlog refreshed');
+        await fetchBacklog();
       } else {
         const errorData = await response.json();
         showError('Assignment Failed', errorData.error || 'Failed to assign task');
@@ -631,35 +577,43 @@ export default function ProjectDetailsUI() {
 
   useEffect(() => {
     if (projectId) {
-      console.log('🚀 Starting to load all data for projectId:', projectId);
       const loadAllData = async () => {
         setLoading(true);
         setError(null);
         try {
-          console.log('📡 Making parallel API calls...');
-          await Promise.all([
+          const settled = await Promise.allSettled([
             fetchProjectData(),
             fetchBacklog(),
             fetchMembers(),
             fetchRepositories(),
             fetchCurrentProposal()
           ]);
-          
-
           const invitations = await fetchPendingInvitations();
           setPendingInvitations(invitations);
-          console.log('✅ All data loaded successfully');
+
+          const getResult = (s: PromiseSettledResult<any>) => (s.status === 'fulfilled' ? s.value : {});
+          const projectResult = getResult(settled[0]);
+          const backlogResult = getResult(settled[1]);
+          const membersResult = getResult(settled[2]);
+          const reposResult = getResult(settled[3]);
+          const proposalResult = getResult(settled[4]);
+
+          const needsOverview = projectResult?.overviewNotGenerated || backlogResult?.backlogNotGenerated;
+          const needsOther = membersResult?.membersNotAvailable || reposResult?.repositoriesNotGenerated || proposalResult?.proposalNotGenerated;
+
+          if (needsOverview || needsOther) {
+            const msg = needsOverview
+              ? 'Project overview and backlog haven\'t been generated yet. Use the Overview tab to generate the overview, then the Backlog tab for tasks.'
+              : 'Some project data (members, repositories, or proposal) isn\'t available yet.';
+            showWarning('Data Not Generated Yet', msg);
+          }
         } catch (error) {
-          console.error('❌ Error loading data:', error);
           setError('Failed to load project data');
         } finally {
-          console.log('🏁 Setting loading to false');
           setLoading(false);
         }
       };
       loadAllData();
-    } else {
-      console.log('❌ No projectId provided');
     }
   }, [projectId]);
 
@@ -668,46 +622,35 @@ export default function ProjectDetailsUI() {
     projectId: projectId ? parseInt(projectId) : undefined,
     callbacks: {
       onProjectUpdate: (data) => {
-        console.log('📡 Real-time project update received:', data);
         showRealtimeUpdate('Project Updated', `${data.action} project`, data.actor);
-
         fetchProjectData();
       },
       onEpicUpdate: (data) => {
-        console.log('📡 Real-time epic update received:', data);
         showRealtimeUpdate('Epic Updated', `Epic ${data.action}`, data.actor);
 
         fetchBacklog();
       },
       onSubEpicUpdate: (data) => {
-        console.log('📡 Real-time sub-epic update received:', data);
         showRealtimeUpdate('Sub-Epic Updated', `Sub-epic ${data.action}`, data.actor);
 
         fetchBacklog();
       },
       onUserStoryUpdate: (data) => {
-        console.log('📡 Real-time user story update received:', data);
         showRealtimeUpdate('User Story Updated', `User story ${data.action}`, data.actor);
 
         fetchBacklog();
       },
       onTaskUpdate: (data) => {
-        console.log('📡 Real-time task update received:', data);
-        
-        // Refresh backlog to get updated task data
         fetchBacklog();
-
         let message = `Task ${data.action}`;
         if (data.action === 'updated' && data.data && data.data.status === 'done') {
           message = 'Task completed';
         } else if (data.action === 'updated' && data.data && data.data.assignee) {
           message = 'Task assigned';
         }
-        
         showRealtimeUpdate('Task Updated', message, data.actor);
       },
       onMemberUpdate: (data) => {
-        console.log('📡 Real-time member update received:', data);
         
         const message = data.action === 'joined' 
           ? `${data.actor.name} joined the project`
@@ -719,29 +662,22 @@ export default function ProjectDetailsUI() {
         fetchPendingInvitations();
       },
       onRepositoryUpdate: (data) => {
-        console.log('📡 Real-time repository update received:', data);
         showRealtimeUpdate('Repository Updated', `Repository ${data.action}`, data.actor);
 
         fetchRepositories();
       },
       onBacklogRegenerated: (data) => {
-        console.log('📡 Real-time backlog regeneration received:', data);
         showRealtimeUpdate('Backlog Regenerated', 'Project backlog has been regenerated', data.actor);
 
         fetchBacklog();
       },
       onOverviewRegenerated: (data) => {
-        console.log('📡 Real-time overview regeneration received:', data);
         showRealtimeUpdate('Overview Regenerated', 'Project overview has been regenerated', data.actor);
 
         fetchProjectData();
       },
       onNotification: (data) => {
-        console.log('📡 Real-time notification received:', data);
-        
-        // Handle project status change notifications
         if (data.notification && data.notification.type === 'project_status_changed') {
-          console.log('📡 Project status change notification received:', data);
           
           // Update the status state with the new data
           if (data.notification.message) {
@@ -871,14 +807,12 @@ export default function ProjectDetailsUI() {
 
   useEffect(() => {
     if (backlog) {
-      console.log('📊 Calculating analytics for backlog:', backlog);
       const stats = calculateTaskStats(backlog, analyticsConfig);
       setTaskStats(stats);
       
       const weekly = generateWeeklyData(backlog, analyticsConfig);
       setWeeklyData(weekly);
       
-      console.log('📈 Analytics calculated:', { stats, weekly });
     }
   }, [backlog, analyticsConfig]);
 
@@ -908,7 +842,6 @@ export default function ProjectDetailsUI() {
       );
 
       if (!usersResponse.ok) {
-        console.warn(`Failed to lookup user with email ${inviteForm.email}`);
         showError('User Not Found', `User with email ${inviteForm.email} not found. Please make sure they have an account.`);
         return;
       }
@@ -916,7 +849,6 @@ export default function ProjectDetailsUI() {
       const users = await usersResponse.json();
       
       if (users.length === 0) {
-        console.warn(`User with email ${inviteForm.email} not found`);
         showError('User Not Found', `User with email ${inviteForm.email} not found. Please make sure they have an account.`);
         return;
       }
@@ -1240,7 +1172,6 @@ export default function ProjectDetailsUI() {
       setModifiedItems(new Set());
       setIsEditingBacklog(false);
       
-      console.log('✅ All backlog changes saved successfully');
     } catch (error) {
       console.error('❌ Error saving backlog changes:', error);
       showError('Save Failed', 'Failed to save some changes. Please try again.');
@@ -3085,15 +3016,7 @@ export default function ProjectDetailsUI() {
                               {/* Due Date Badge / Editor */}
                               {!isEditingBacklog ? (
                                 <>
-                                  {(() => {
-                                    console.log('🔍 Due date check for task', task.id, ':', {
-                                      hasDueDateProperty: 'due_date' in task,
-                                      dueDateValue: task.due_date,
-                                      dueDateType: typeof task.due_date,
-                                      willShow: ('due_date' in task) && task.due_date
-                                    });
-                                    return ('due_date' in task) && task.due_date;
-                                  })() && (
+                                  {('due_date' in task) && task.due_date && (
                                     <span className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium ${
                                       (() => {
                                         const today = new Date().toISOString().slice(0,10);
@@ -3120,11 +3043,7 @@ export default function ProjectDetailsUI() {
                                       type="date"
                                       value={(task as any).due_date || ''}
                                       onChange={(e) => {
-                                        console.log('📅 Date picker changed for task', task.id, 'from', (task as any).due_date, 'to', e.target.value);
                                         updateTaskDueDate(task.id, e.target.value || null);
-                                      }}
-                                      onFocus={() => {
-                                        console.log('📅 Date picker focused for task', task.id, 'current value:', (task as any).due_date);
                                       }}
                                       className={`px-4 py-3 border rounded-lg text-sm font-medium shadow-sm focus:outline-none focus:ring-2 transition-all duration-200 ${
                                         theme === "dark" 

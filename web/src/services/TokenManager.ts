@@ -21,7 +21,6 @@ interface ActiveSession {
  * - Handles token expiration
  * - Prevents race conditions in token refresh
  * - Provides secure token access
- * - Prevents concurrent logins from multiple tabs
  */
 export class TokenManager {
   private static readonly TOKEN_KEY = 'token';
@@ -31,7 +30,7 @@ export class TokenManager {
   private static readonly USERNAME_KEY = 'username';
   private static readonly EMAIL_KEY = 'email';
   
-  // Session management keys (localStorage - shared across tabs)
+  // Session management keys (sessionStorage - per-tab, no cross-tab sync)
   static readonly ACTIVE_SESSION_KEY = 'active_session';
   static readonly SESSION_ID_KEY = 'current_session_id';
 
@@ -67,28 +66,11 @@ export class TokenManager {
   }
 
   /**
-   * Check if there's an active session for a different tab
+   * Check if there's an active session for a different tab.
+   * With sessionStorage (per-tab), we can never see another tab's data - always returns false.
    */
-  static hasActiveSessionInOtherTab(email: string): boolean {
-    try {
-      const activeSessionStr = localStorage.getItem(this.ACTIVE_SESSION_KEY);
-      if (!activeSessionStr) {
-        return false;
-      }
-
-      const activeSession: ActiveSession = JSON.parse(activeSessionStr);
-      const currentSessionId = this.getCurrentSessionId();
-
-      // If session exists and is not from this tab, return true
-      if (activeSession.email === email && activeSession.sessionId !== currentSessionId) {
-        return true;
-      }
-
-      return false;
-    } catch (error) {
-      console.error('Error checking active session:', error);
-      return false;
-    }
+  static hasActiveSessionInOtherTab(_email: string): boolean {
+    return false;
   }
 
   /**
@@ -137,102 +119,55 @@ export class TokenManager {
   }
 
   /**
-   * Register active session (prevents concurrent logins for SAME account only)
-   * In multi-account mode, different accounts can coexist
-   * When force=true (during login), it will overwrite existing session even if different account
+   * Register active session for this tab (sessionStorage - per-tab only).
+   * With sessionStorage, no cross-tab coordination; each tab manages its own session.
    */
-  static registerActiveSession(email: string, force = false): void {
+  static registerActiveSession(email: string, _force = false): void {
     const normalizedEmail = email.toLowerCase().trim();
     const sessionId = this.getCurrentSessionId();
-    
-    // Check if there's already an active session
     const existingSession = this.getActiveSession();
-    
-    if (existingSession) {
-      if (existingSession.email === normalizedEmail) {
-        // Active session exists for this SAME email
-        if (existingSession.sessionId === sessionId) {
-          // This tab already has the active session - just update timestamp
-          const updatedSession: ActiveSession = {
-            ...existingSession,
-            timestamp: Date.now(),
-          };
-          localStorage.setItem(this.ACTIVE_SESSION_KEY, JSON.stringify(updatedSession));
-          console.log('🔐 Active session timestamp updated for:', email);
-          return;
-        } else {
-          // Active session exists for same email but from a different tab
-          // Prevent concurrent login for same account - LoginController should have blocked this already
-          console.warn('⚠️ Cannot register session - account already logged in from another tab:', email);
-          throw new Error('Account is already logged in from another browser tab');
-        }
-      } else {
-        // Active session exists for a DIFFERENT email (multi-account mode)
-        if (force) {
-          // During login (force=true), we can overwrite existing session (different account login)
-          // This is OK in multi-account mode - the other account's tab will stay logged in
-          // because RememberMeHandler checks for different emails and doesn't log out
-          console.log('🔐 Different account logging in - overwriting active_session (other account stays logged in via multi-account mode)');
-          // The old session will be replaced, triggering session_started event for the new account
-          // Tabs with the old account will check in RememberMeHandler and NOT log out (different email)
-        } else {
-          // Not forcing - in multi-account mode, we can't register (active_session already taken by different account)
-          // This is OK - the tab can still work, it just won't have active_session set
-          // RememberMeHandler will allow it to continue since it has a token
-          console.log('ℹ️ Cannot register active session - different account is already active (multi-account mode, continuing anyway)');
-          // Don't throw error - allow the tab to continue without active_session registration
-          // The tab will still work because it has a token and RememberMeHandler allows multi-account mode
-          return; // Exit without registering, but don't throw error
-        }
-      }
+
+    if (existingSession && existingSession.email === normalizedEmail && existingSession.sessionId === sessionId) {
+      // This tab already has the active session - just update timestamp
+      const updatedSession: ActiveSession = {
+        ...existingSession,
+        timestamp: Date.now(),
+      };
+      sessionStorage.setItem(this.ACTIVE_SESSION_KEY, JSON.stringify(updatedSession));
+      console.log('🔐 Active session timestamp updated for:', email);
+      return;
     }
-    
-    // Register new active session (either no existing session, or force=true)
+
     const activeSession: ActiveSession = {
       email: normalizedEmail,
-      sessionId: sessionId,
+      sessionId,
       timestamp: Date.now(),
     };
-
-    localStorage.setItem(this.ACTIVE_SESSION_KEY, JSON.stringify(activeSession));
-    
-    // Broadcast session change to other tabs
-    // Other tabs will check if same account and log out if needed
-    // Different account tabs will stay logged in (multi-account mode)
+    sessionStorage.setItem(this.ACTIVE_SESSION_KEY, JSON.stringify(activeSession));
     this.broadcastSessionChange('session_started', activeSession);
-    
     console.log('🔐 Active session registered for:', email);
   }
 
   /**
-   * Clear active session (on logout)
-   * Only clears if this tab is the owner of the active session
-   * This prevents copied tabs from clearing the original tab's session
+   * Clear active session (on logout).
+   * Clears active_session from sessionStorage (per-tab).
    */
   static clearActiveSession(): void {
     const currentSession = this.getActiveSession();
-    const currentSessionId = this.getCurrentSessionId();
-    
-    // Only clear active session if this tab owns it (prevents copied tabs from clearing original)
-    if (currentSession && currentSession.sessionId === currentSessionId) {
-      localStorage.removeItem(this.ACTIVE_SESSION_KEY);
+    if (currentSession) {
       this.broadcastSessionChange('session_ended', currentSession);
-      console.log('🔐 Active session cleared (by owner tab)');
-    } else {
-      // This tab doesn't own the session, just clear local session storage
-      console.log('🔐 Clearing local session (this tab does not own active session)');
     }
-    
-    // Always clear this tab's session ID
+    sessionStorage.removeItem(this.ACTIVE_SESSION_KEY);
     sessionStorage.removeItem(this.SESSION_ID_KEY);
+    console.log('🔐 Active session cleared');
   }
 
   /**
-   * Get current active session info
+   * Get current active session info (from sessionStorage, per-tab).
    */
   static getActiveSession(): ActiveSession | null {
     try {
-      const activeSessionStr = localStorage.getItem(this.ACTIVE_SESSION_KEY);
+      const activeSessionStr = sessionStorage.getItem(this.ACTIVE_SESSION_KEY);
       if (!activeSessionStr) {
         return null;
       }
@@ -244,11 +179,9 @@ export class TokenManager {
   }
 
   /**
-   * Broadcast session change to other tabs via StorageEvent
+   * Broadcast session change via custom event (same-tab only; sessionStorage is per-tab).
    */
   private static broadcastSessionChange(eventType: 'session_started' | 'session_ended', session: ActiveSession): void {
-    // StorageEvent is automatically fired when localStorage changes
-    // But we can also dispatch a custom event for more control
     window.dispatchEvent(new CustomEvent('session-change', {
       detail: { eventType, session }
     }));
@@ -269,25 +202,9 @@ export class TokenManager {
     // Keep legacy 'access' key for backward compatibility during migration
     sessionStorage.setItem(this.ACCESS_KEY, token);
     
-    // Register active session if email provided
+    // Register active session if email provided (sessionStorage, per-tab)
     if (email) {
-      try {
-        this.registerActiveSession(email, forceRegister);
-      } catch (error) {
-        // If registration fails for SAME account (concurrent session), clear the token
-        // But if it's a different account, we already handle it silently in registerActiveSession
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        if (errorMessage.includes('already logged in from another browser tab')) {
-          // Same account concurrent session - this is an error, clear and throw
-          console.error('Failed to register session (same account conflict):', error);
-          this.clearAll();
-          throw error; // Re-throw to let caller handle
-        } else {
-          // Different account or other issue - log but don't clear (multi-account mode)
-          console.log('ℹ️ Could not register active session (different account active) - continuing anyway (multi-account mode)');
-          // Token is still stored, tab can continue working
-        }
-      }
+      this.registerActiveSession(email, forceRegister);
     }
     
     console.log('🔐 Token stored securely');
@@ -396,7 +313,7 @@ export class TokenManager {
               ...existingSession,
               timestamp: Date.now(),
             };
-            localStorage.setItem(this.ACTIVE_SESSION_KEY, JSON.stringify(updatedSession));
+            sessionStorage.setItem(this.ACTIVE_SESSION_KEY, JSON.stringify(updatedSession));
           } else {
             // Just store token without registering session (remember me refresh from different tab)
             sessionStorage.setItem(this.TOKEN_KEY, result.token);

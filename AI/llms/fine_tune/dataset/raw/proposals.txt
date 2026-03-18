@@ -1,0 +1,5 @@
+# Sample proposals for dataset building
+# Add one proposal per block (separated by blank lines)
+# Use these in build_synthetic.py or manual JSONL creation
+
+Build a task management web app for small teams. Features: Kanban boards, real-time updates, role-based access. Team: 1 PM, 2 devs, 1 QA. Timeline: 8 weeks.

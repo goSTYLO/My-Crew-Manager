@@ -5,10 +5,11 @@ from llms.models import (
     ProjectModel,
     TeamMemberModel,
     TimelineWeekModel,
-    TimelineGoalModel
+    TimelineGoalModel,
+    GoalModel,
 )
 from typing import Dict, Optional
-from apps.ai_api.tasks import CancellationToken, TaskCancelledException
+from llms.tasks import CancellationToken, TaskCancelledException
 from llms.llm_cache import get_cached_llm
 
 logger = logging.getLogger('llms')
@@ -182,7 +183,7 @@ def run_pipeline_from_text(proposal_text: str, task_id: Optional[str] = None) ->
         if current_goal:
             parsed_goals.append(current_goal)
 
-        project_model.goals = parsed_goals
+        project_model.goals = [GoalModel(**g) for g in parsed_goals]
 
     if "timeline" in raw_outputs:
         try:
@@ -217,7 +218,7 @@ def model_to_dict(project_model: ProjectModel) -> dict:
         "summary": project_model.summary,
         "features": project_model.features,
         "roles": [r.role for r in project_model.roles],
-        "goals": project_model.goals,
+        "goals": [{"title": g.title, "role": g.role} for g in project_model.goals],
         "timeline": [
             {
                 "week_number": week.week_number,

@@ -1,10 +1,16 @@
+import os
 import threading
 import torch
 import time
 import gc
 import logging
+from pathlib import Path
 from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
 from langchain_huggingface import HuggingFacePipeline
+try:
+    from peft import PeftModel
+except ImportError:
+    PeftModel = None
 try:
     from transformers import BitsAndBytesConfig
 except Exception:
@@ -12,7 +18,10 @@ except Exception:
 
 logger = logging.getLogger('llms')
 
-MODEL_ID = "unsloth/mistral-7b-instruct-v0.3-bnb-4bit"
+# Model ID from env; default Qwen2-0.5B for 6GB VRAM (Windows-friendly)
+_MODEL_ID_ENV = os.getenv("MODEL_ID", "Qwen/Qwen2-0.5B-Instruct")
+_PEFT_ADAPTER_PATH_ENV = os.getenv("PEFT_ADAPTER_PATH", "").strip() or None
+MODEL_ID = _MODEL_ID_ENV
 
 # Global variables for singleton pattern
 _model_instance = None
@@ -26,16 +35,43 @@ _cleanup_lock = threading.Lock()
 
 def _create_llm_pipeline() -> HuggingFacePipeline:
     """Create a new LLM pipeline instance. Internal helper function."""
+    model_id = MODEL_ID
+    peft_path = _PEFT_ADAPTER_PATH_ENV
+
     logger.info("Loading LLM model...")
-    logger.info(f"Model ID: {MODEL_ID}")
-    
+    logger.info(f"Model ID: {model_id}")
+    if peft_path:
+        logger.info(f"PEFT adapter path: {peft_path}")
+
     logger.info("Loading tokenizer...")
-    tokenizer = AutoTokenizer.from_pretrained(MODEL_ID, trust_remote_code=True)
+    tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True)
     logger.info("Tokenizer loaded")
 
     use_cuda = torch.cuda.is_available()
     quant_cfg = None
-    
+
+    # Resolve PEFT adapter path (relative to AI/ or project root)
+    resolved_peft_path = None
+    if peft_path:
+        p = Path(peft_path)
+        if not p.is_absolute():
+            # Try AI/llms/fine_tune/ relative to this file
+            base = Path(__file__).resolve().parent
+            candidates = [
+                base / peft_path,
+                base / "fine_tune" / peft_path,
+                Path.cwd() / peft_path,
+                Path.cwd() / "AI" / peft_path,
+            ]
+            for c in candidates:
+                if c.exists():
+                    resolved_peft_path = str(c)
+                    break
+            if not resolved_peft_path:
+                resolved_peft_path = str(Path.cwd() / peft_path)
+        else:
+            resolved_peft_path = peft_path
+
     # Only try quantization if CUDA is available AND bitsandbytes is properly installed
     if use_cuda and BitsAndBytesConfig is not None:
         try:
@@ -58,7 +94,7 @@ def _create_llm_pipeline() -> HuggingFacePipeline:
             logger.info("Using 4-bit quantization for memory efficiency...")
             # CUDA with 4-bit (requires bitsandbytes, best on Linux)
             model = AutoModelForCausalLM.from_pretrained(
-                MODEL_ID,
+                model_id,
                 device_map="auto",
                 trust_remote_code=True,
                 quantization_config=quant_cfg,
@@ -68,7 +104,7 @@ def _create_llm_pipeline() -> HuggingFacePipeline:
             logger.info("Loading model without quantization...")
             # CUDA without bitsandbytes: load then move explicitly to GPU
             model = AutoModelForCausalLM.from_pretrained(
-                MODEL_ID,
+                model_id,
                 device_map=None,
                 dtype=torch.float16,
                 trust_remote_code=True,
@@ -91,12 +127,21 @@ def _create_llm_pipeline() -> HuggingFacePipeline:
         logger.info("CUDA not available, loading model to CPU...")
         # CPU fallback (slower). Avoid 4-bit config on CPU.
         model = AutoModelForCausalLM.from_pretrained(
-            MODEL_ID,
+            model_id,
             device_map=None,
             dtype=torch.float32,
             trust_remote_code=True,
         )
         logger.info("Model loaded to CPU")
+
+    # Load LoRA adapter if PEFT_ADAPTER_PATH is set
+    if resolved_peft_path and PeftModel is not None:
+        if Path(resolved_peft_path).exists():
+            logger.info(f"Loading PEFT adapter from {resolved_peft_path}")
+            model = PeftModel.from_pretrained(model, resolved_peft_path)
+            logger.info("PEFT adapter loaded successfully")
+        else:
+            logger.warning(f"PEFT adapter path does not exist: {resolved_peft_path}")
         logger.info("Creating text generation pipeline...")
         pipe = pipeline(
             "text-generation",

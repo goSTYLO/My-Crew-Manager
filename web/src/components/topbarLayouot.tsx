@@ -106,7 +106,6 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
   // Fetch notifications from API
   const fetchNotifications = useCallback(async () => {
     try {
-      console.log('🔔 Manager TopNavbar: fetchNotifications called');
       setLoadingNotifications(true);
       const token = TokenManager.getToken();
       if (!token) return;
@@ -120,13 +119,10 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
 
       if (response.ok) {
         const data = await response.json();
-        console.log('🔔 Manager TopNavbar: Fetch response:', data);
-        const notifications = data.results || data;
-        console.log('🔔 Manager TopNavbar: Notifications updated:', notifications);
-        setNotifications(notifications);
+        setNotifications(data.results || data);
       }
-    } catch (error) {
-      console.error('Error fetching notifications:', error);
+    } catch {
+      // Silently fail - notifications are non-critical
     } finally {
       setLoadingNotifications(false);
     }
@@ -217,13 +213,8 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
     enabled: true,
     websocketConnected: isWebSocketConnected,
     onNewNotifications: (newNotifications) => {
-      console.log('🔔 TopNavbar: Received new notifications:', newNotifications);
       // Add new notifications to the list
-      setNotifications(prev => {
-        const updated = [...newNotifications, ...prev];
-        console.log('🔔 TopNavbar: Updated notifications list:', updated);
-        return updated;
-      });
+      setNotifications(prev => [...newNotifications, ...prev]);
       
       // Show toast for important notifications
       const importantTypes = [
@@ -243,20 +234,12 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
         }
       });
     },
-    onError: (error) => {
-      console.error('🔔 TopNavbar: Notification polling error:', error);
-    }
+    onError: () => {}
   });
 
-  // WebSocket subscription for real-time notifications
   useEffect(() => {
-    console.log('🔔 Manager TopNavbar: Setting up WebSocket subscription');
     const unsubscribe = subscribe((message) => {
-      console.log('🔔 Manager TopNavbar: WebSocket message received:', message);
-      // Handle notification messages - backend sends type: 'notification'
       if (message.type === 'notification' || message.action === 'notification_created') {
-        console.log('🔔 Manager TopNavbar: Processing notification message:', message);
-        // Refetch notifications to get the latest
         fetchNotifications();
         
         // Show toast for the new notification
@@ -363,9 +346,7 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
   useEffect(() => {
     const fetchUserData = async () => {
       const token = TokenManager.getToken();
-      console.log('🔍 TopNavbar - Token check:', token ? 'Found' : 'Not found');
       if (!token) {
-        console.log('❌ TopNavbar - No token, redirecting to sign-in');
         navigate("/signin");
         return;
       }
@@ -380,7 +361,6 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
   
         if (response.ok) {
           const data = await response.json();
-          console.log('✅ TopNavbar - User data fetched successfully');
   
           // ✅ Fix the profile picture path
           const fixedData = {
@@ -394,12 +374,11 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
   
           setUserData(fixedData);
         } else {
-          console.log('❌ TopNavbar - API call failed, status:', response.status);
           sessionStorage.removeItem("token");
           navigate("/signin");
         }
-      } catch (error) {
-        console.error("Failed to fetch user data:", error);
+      } catch {
+        // Silently fail - user dropdown will show empty
       }
     };
   

@@ -10,7 +10,7 @@ import {
 import { useTheme } from "../../components/themeContext";
 
 // API Configuration
-const API_BASE_URL = 'http://localhost:8000/api';
+import { API_BASE_URL } from '../../config/api';
 
 const getAuthToken = () => {
   return sessionStorage.getItem('token');

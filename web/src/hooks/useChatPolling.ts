@@ -83,20 +83,13 @@ export const useChatPolling = ({
       interval = 15000; // 15 seconds when idle
     }
     
-    const timestamp = new Date().toLocaleTimeString();
-    console.log(`⏱️ [${timestamp}] 💬 INTERVAL: ${interval}ms (${interval/1000}s) - visible=${isVisible}, active=${isActive}`);
-    
     return interval;
   }, []);
 
   // Fetch messages for a specific room
   const fetchMessages = useCallback(async (roomId: string, afterId?: number) => {
-    const timestamp = new Date().toLocaleTimeString();
-    console.log(`📡 [${timestamp}] 💬 FETCHING MESSAGES: room ${roomId}, afterId: ${afterId}`);
-    
     const token = getAuthToken();
     if (!token) {
-      console.log(`📡 [${timestamp}] 💬 FETCH SKIPPED: no auth token`);
       return;
     }
 
@@ -108,8 +101,6 @@ export const useChatPolling = ({
       } else {
         url += `&offset=${offsetRef.current}`;
       }
-      
-      console.log(`📡 [${timestamp}] 💬 API REQUEST: ${url}`);
 
       const response = await fetch(url, {
         headers: {
@@ -124,11 +115,8 @@ export const useChatPolling = ({
 
       const data = await response.json();
       const messages = data.results || data.messages || [];
-      const responseTimestamp = new Date().toLocaleTimeString();
 
       if (messages.length > 0) {
-        console.log(`📡 [${responseTimestamp}] 💬 API RESPONSE: Found ${messages.length} messages for room ${roomId}`);
-        
         // Update last message ID
         const latestMessage = messages[messages.length - 1];
         if (latestMessage && latestMessage.message_id > (lastMessageIdRef.current || 0)) {
@@ -138,12 +126,9 @@ export const useChatPolling = ({
         // Always call onNewMessages when messages are found
         // The chat components handle duplicate prevention
         if (messages.length > 0) {
-          console.log(`📡 [${responseTimestamp}] 💬 CALLING onNewMessages: ${messages.length} messages`);
           onNewMessages?.(messages);
         }
         setLastUpdate(new Date());
-      } else {
-        console.log(`📡 [${responseTimestamp}] 💬 API RESPONSE: No new messages for room ${roomId}`);
       }
 
       // Update pagination info
@@ -151,7 +136,6 @@ export const useChatPolling = ({
       setTotalMessages(data.total_count || 0);
       setError(null);
     } catch (err: any) {
-      console.error('💬 Message polling error:', err);
       setError(err.message || 'Failed to fetch messages');
       onError?.(err);
     }
@@ -161,7 +145,6 @@ export const useChatPolling = ({
   const fetchRooms = useCallback(async () => {
     const token = getAuthToken();
     if (!token) {
-      console.log('💬 No auth token, skipping room poll');
       return;
     }
 
@@ -187,7 +170,6 @@ export const useChatPolling = ({
 
       setError(null);
     } catch (err: any) {
-      console.error('💬 Room polling error:', err);
       setError(err.message || 'Failed to fetch rooms');
       onError?.(err);
     }
