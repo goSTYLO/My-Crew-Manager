@@ -1,9 +1,7 @@
 import request from 'supertest';
-import mongoose from 'mongoose';
 
 import app from '../../app.js';
-import { connectTestDB, disconnectTestDB } from '../db-helper.js';
-import { User, Token, Room, Message } from '../../models/index.js';
+import { connectTestDB, disconnectTestDB, truncateTestData } from '../db-helper.js';
 
 describe('Chat routes (integration)', () => {
   let authToken;
@@ -17,10 +15,7 @@ describe('Chat routes (integration)', () => {
   });
 
   beforeEach(async () => {
-    await User.deleteMany({});
-    await Token.deleteMany({});
-    await Room.deleteMany({});
-    await Message.deleteMany({});
+    await truncateTestData();
     const signup = await request(app)
       .post('/api/user/signup/')
       .send({ email: `chat-${Date.now()}@example.com`, name: 'Chat User', password: 'pw' });

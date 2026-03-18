@@ -1,0 +1,605 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model ai_api_epic {
+  id             BigInt           @id @default(autoincrement())
+  title          String           @db.VarChar(512)
+  description    String?
+  ai             Boolean
+  project_id     Int
+  is_complete    Boolean
+  ai_api_project ai_api_project   @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "ai_api_epic_project_id_a5a59277_fk_ai_api_project_id")
+  ai_api_subepic ai_api_subepic[]
+
+  @@index([project_id], map: "ai_api_epic_project_id_a5a59277")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model ai_api_notification {
+  id                                          BigInt               @id @default(autoincrement())
+  notification_type                           String               @db.VarChar(50)
+  title                                       String               @db.VarChar(255)
+  message                                     String
+  object_id                                   Int?
+  is_read                                     Boolean
+  read_at                                     DateTime?            @db.Timestamptz(6)
+  created_at                                  DateTime             @db.Timestamptz(6)
+  action_url                                  String?              @db.VarChar(500)
+  actor_id                                    Int?
+  content_type_id                             Int?
+  recipient_id                                Int
+  user_ai_api_notification_actor_idTouser     user?                @relation("ai_api_notification_actor_idTouser", fields: [actor_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction, map: "ai_api_notification_actor_id_02e9252a_fk_user_user_id")
+  django_content_type                         django_content_type? @relation(fields: [content_type_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "ai_api_notification_content_type_id_7a31c973_fk_django_co")
+  user_ai_api_notification_recipient_idTouser user                 @relation("ai_api_notification_recipient_idTouser", fields: [recipient_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction, map: "ai_api_notification_recipient_id_dabcaa2d_fk_user_user_id")
+
+  @@index([notification_type], map: "ai_api_noti_notific_f8a275_idx")
+  @@index([recipient_id, is_read], map: "ai_api_noti_recipie_299b0f_idx")
+  @@index([recipient_id, created_at], map: "ai_api_noti_recipie_760867_idx")
+  @@index([actor_id], map: "ai_api_notification_actor_id_02e9252a")
+  @@index([content_type_id], map: "ai_api_notification_content_type_id_7a31c973")
+  @@index([recipient_id], map: "ai_api_notification_recipient_id_dabcaa2d")
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model ai_api_project {
+  id                       Int                        @id @default(autoincrement())
+  title                    String                     @db.VarChar(255)
+  summary                  String?
+  created_at               DateTime                   @db.Timestamptz(6)
+  created_by_id            BigInt
+  updated_at               DateTime?                  @default(now()) @db.Timestamptz(6)
+  status                   String                     @db.VarChar(20)
+  status_updated_at        DateTime?                  @db.Timestamptz(6)
+  status_updated_by_id     Int?
+  ai_api_epic              ai_api_epic[]
+  user                     user?                      @relation("ProjectStatusUpdatedBy", fields: [status_updated_by_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction, map: "ai_api_project_status_updated_by_id_cb3d0d65_fk_user_user_id")
+  ai_api_projectfeature    ai_api_projectfeature[]
+  ai_api_projectgoal       ai_api_projectgoal[]
+  ai_api_projectinvitation ai_api_projectinvitation[]
+  ai_api_projectmember     ai_api_projectmember[]
+  ai_api_projectrole       ai_api_projectrole[]
+  ai_api_proposal          ai_api_proposal[]
+  ai_api_repository        ai_api_repository[]
+  ai_api_timelineweek      ai_api_timelineweek[]
+
+  @@index([created_by_id], map: "ai_api_project_created_by_id_9ad6bc36")
+  @@index([status_updated_by_id], map: "ai_api_project_status_updated_by_id_cb3d0d65")
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model ai_api_projectfeature {
+  id             BigInt         @id @default(autoincrement())
+  title          String         @db.VarChar(512)
+  project_id     Int
+  ai_api_project ai_api_project @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "ai_api_projectfeature_project_id_ce7046c2_fk_ai_api_project_id")
+
+  @@index([project_id], map: "ai_api_projectfeature_project_id_ce7046c2")
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model ai_api_projectgoal {
+  id             BigInt         @id @default(autoincrement())
+  title          String         @db.VarChar(512)
+  role           String?        @db.VarChar(255)
+  project_id     Int
+  ai_api_project ai_api_project @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "ai_api_projectgoal_project_id_502c88f7_fk_ai_api_project_id")
+
+  @@index([project_id], map: "ai_api_projectgoal_project_id_502c88f7")
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model ai_api_projectinvitation {
+  id                                                BigInt         @id @default(autoincrement())
+  status                                            String         @db.VarChar(20)
+  message                                           String         @db.VarChar(500)
+  created_at                                        DateTime       @db.Timestamptz(6)
+  updated_at                                        DateTime       @db.Timestamptz(6)
+  invited_by_id                                     Int
+  invitee_id                                        Int
+  project_id                                        Int
+  role                                              String         @db.VarChar(255)
+  ai_api_project                                    ai_api_project @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "ai_api_projectinvita_project_id_40614acd_fk_ai_api_pr")
+  user_ai_api_projectinvitation_invited_by_idTouser user           @relation("ai_api_projectinvitation_invited_by_idTouser", fields: [invited_by_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction, map: "ai_api_projectinvitation_invited_by_id_619f6fa0_fk_user_user_id")
+  user_ai_api_projectinvitation_invitee_idTouser    user           @relation("ai_api_projectinvitation_invitee_idTouser", fields: [invitee_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction, map: "ai_api_projectinvitation_invitee_id_e633efd4_fk_user_user_id")
+
+  @@unique([project_id, invitee_id], map: "ai_api_projectinvitation_project_id_invitee_id_97390a1f_uniq")
+  @@index([invitee_id, status], map: "ai_api_proj_invitee_ebe3f0_idx")
+  @@index([project_id, status], map: "ai_api_proj_project_c05732_idx")
+  @@index([invited_by_id], map: "ai_api_projectinvitation_invited_by_id_619f6fa0")
+  @@index([invitee_id], map: "ai_api_projectinvitation_invitee_id_e633efd4")
+  @@index([project_id], map: "ai_api_projectinvitation_project_id_40614acd")
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model ai_api_projectmember {
+  id                BigInt              @id @default(autoincrement())
+  role              String              @db.VarChar(255)
+  joined_at         DateTime            @db.Timestamptz(6)
+  project_id        Int
+  user_id           BigInt
+  user_email        String              @db.VarChar(254)
+  user_name         String              @db.VarChar(255)
+  ai_api_project    ai_api_project      @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "ai_api_projectmember_project_id_086d6fd5_fk_ai_api_project_id")
+  ai_api_repository ai_api_repository[]
+  ai_api_storytask  ai_api_storytask[]
+
+  @@unique([project_id, user_id], map: "ai_api_projectmember_project_id_user_id_3ff14e43_uniq")
+  @@index([project_id], map: "ai_api_projectmember_project_id_086d6fd5")
+  @@index([user_id], map: "ai_api_projectmember_user_id_545c7624")
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model ai_api_projectrole {
+  id             BigInt         @id @default(autoincrement())
+  role           String         @db.VarChar(255)
+  project_id     Int
+  ai_api_project ai_api_project @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "ai_api_projectrole_project_id_66c4b909_fk_ai_api_project_id")
+
+  @@index([project_id], map: "ai_api_projectrole_project_id_66c4b909")
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model ai_api_proposal {
+  id             Int            @id @default(autoincrement())
+  file           String         @db.VarChar(100)
+  parsed_text    String?
+  uploaded_at    DateTime       @db.Timestamptz(6)
+  project_id     Int
+  uploaded_by_id BigInt?
+  ai_api_project ai_api_project @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "ai_api_proposal_project_id_13855955_fk_ai_api_project_id")
+
+  @@index([project_id], map: "ai_api_proposal_project_id_13855955")
+  @@index([uploaded_by_id], map: "ai_api_proposal_uploaded_by_id_f50f2561")
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model ai_api_repository {
+  id                   BigInt                @id @default(autoincrement())
+  name                 String                @db.VarChar(255)
+  url                  String                @db.VarChar(200)
+  branch               String                @db.VarChar(100)
+  created_at           DateTime              @db.Timestamptz(6)
+  assigned_to_id       BigInt?
+  project_id           Int
+  updated_at           DateTime              @db.Timestamptz(6)
+  ai_api_projectmember ai_api_projectmember? @relation(fields: [assigned_to_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "ai_api_repository_assigned_to_id_ea8c7b41_fk_ai_api_pr")
+  ai_api_project       ai_api_project        @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "ai_api_repository_project_id_786699f6_fk_ai_api_project_id")
+
+  @@index([project_id], map: "ai_api_repo_project_339f11_idx")
+  @@index([assigned_to_id], map: "ai_api_repository_assigned_to_id_ea8c7b41")
+  @@index([project_id], map: "ai_api_repository_project_id_786699f6")
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model ai_api_storytask {
+  id                   BigInt                @id @default(autoincrement())
+  title                String                @db.VarChar(512)
+  status               String                @db.VarChar(50)
+  ai                   Boolean
+  user_story_id        BigInt
+  assignee_id          BigInt?
+  commit_branch        String?               @db.VarChar(255)
+  commit_title         String?               @db.VarChar(512)
+  due_date             DateTime?             @db.Date
+  created_at           DateTime?             @db.Timestamptz(6)
+  updated_at           DateTime?             @db.Timestamptz(6)
+  ai_api_projectmember ai_api_projectmember? @relation(fields: [assignee_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "ai_api_storytask_assignee_id_90c2a377_fk_ai_api_pr")
+  ai_api_userstory     ai_api_userstory      @relation(fields: [user_story_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "ai_api_storytask_user_story_id_7d170e4b_fk_ai_api_userstory_id")
+
+  @@index([assignee_id], map: "ai_api_storytask_assignee_id_90c2a377")
+  @@index([user_story_id], map: "ai_api_storytask_user_story_id_7d170e4b")
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model ai_api_subepic {
+  id               BigInt             @id @default(autoincrement())
+  title            String             @db.VarChar(512)
+  ai               Boolean
+  epic_id          BigInt
+  is_complete      Boolean
+  ai_api_epic      ai_api_epic        @relation(fields: [epic_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "ai_api_subepic_epic_id_7c55c4ed_fk_ai_api_epic_id")
+  ai_api_userstory ai_api_userstory[]
+
+  @@index([epic_id], map: "ai_api_subepic_epic_id_7c55c4ed")
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model ai_api_timelineitem {
+  id                  BigInt              @id @default(autoincrement())
+  title               String              @db.VarChar(512)
+  week_id             BigInt
+  ai_api_timelineweek ai_api_timelineweek @relation(fields: [week_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "ai_api_timelineitem_week_id_f6946004_fk_ai_api_timelineweek_id")
+
+  @@index([week_id], map: "ai_api_timelineitem_week_id_f6946004")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model ai_api_timelineweek {
+  id                  BigInt                @id @default(autoincrement())
+  week_number         Int
+  project_id          Int
+  ai_api_timelineitem ai_api_timelineitem[]
+  ai_api_project      ai_api_project        @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "ai_api_timelineweek_project_id_e42a726c_fk_ai_api_project_id")
+
+  @@index([project_id], map: "ai_api_timelineweek_project_id_e42a726c")
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model ai_api_userstory {
+  id               BigInt             @id @default(autoincrement())
+  title            String             @db.VarChar(512)
+  ai               Boolean
+  sub_epic_id      BigInt
+  is_complete      Boolean
+  ai_api_storytask ai_api_storytask[]
+  ai_api_subepic   ai_api_subepic     @relation(fields: [sub_epic_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "ai_api_userstory_sub_epic_id_51041fd2_fk_ai_api_subepic_id")
+
+  @@index([sub_epic_id], map: "ai_api_userstory_sub_epic_id_51041fd2")
+}
+
+model auth_group {
+  id                     Int                      @id @default(autoincrement())
+  name                   String                   @unique @db.VarChar(150)
+  auth_group_permissions auth_group_permissions[]
+  user_groups            user_groups[]
+
+  @@index([name], map: "auth_group_name_a6ea08ec_like")
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model auth_group_permissions {
+  id              BigInt          @id @default(autoincrement())
+  group_id        Int
+  permission_id   Int
+  auth_permission auth_permission @relation(fields: [permission_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "auth_group_permissio_permission_id_84c5c92e_fk_auth_perm")
+  auth_group      auth_group      @relation(fields: [group_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "auth_group_permissions_group_id_b120cbf9_fk_auth_group_id")
+
+  @@unique([group_id, permission_id], map: "auth_group_permissions_group_id_permission_id_0cd325b0_uniq")
+  @@index([group_id], map: "auth_group_permissions_group_id_b120cbf9")
+  @@index([permission_id], map: "auth_group_permissions_permission_id_84c5c92e")
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model auth_permission {
+  id                     Int                      @id @default(autoincrement())
+  name                   String                   @db.VarChar(255)
+  content_type_id        Int
+  codename               String                   @db.VarChar(100)
+  auth_group_permissions auth_group_permissions[]
+  django_content_type    django_content_type      @relation(fields: [content_type_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "auth_permission_content_type_id_2f476e4b_fk_django_co")
+  user_user_permissions  user_user_permissions[]
+
+  @@unique([content_type_id, codename], map: "auth_permission_content_type_id_codename_01ab375a_uniq")
+  @@index([content_type_id], map: "auth_permission_content_type_id_2f476e4b")
+}
+
+model authtoken_token {
+  key     String   @id @db.VarChar(40)
+  created DateTime @db.Timestamptz(6)
+  user_id BigInt   @unique
+
+  @@index([key], map: "authtoken_token_key_10f0b77e_like")
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model backlog {
+  backlog_id  Int      @id @default(autoincrement())
+  createdDate DateTime @db.Timestamptz(6)
+  lastUpdated DateTime @db.Timestamptz(6)
+  project_id  Int
+  project     project  @relation(fields: [project_id], references: [project_id], onDelete: NoAction, onUpdate: NoAction, map: "backlog_project_id_504476bd_fk_project_project_id")
+
+  @@index([project_id], map: "backlog_project_id_504476bd")
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model chat_message {
+  message_id         Int            @id @default(autoincrement())
+  content            String
+  created_at         DateTime       @db.Timestamptz(6)
+  edited_at          DateTime?      @db.Timestamptz(6)
+  is_deleted         Boolean
+  sender_id          BigInt
+  room_id            Int
+  message_type       String         @db.VarChar(20)
+  reply_to_id        Int?
+  chat_message       chat_message?  @relation("chat_messageTochat_message", fields: [reply_to_id], references: [message_id], onDelete: NoAction, onUpdate: NoAction, map: "chat_message_reply_to_id_afede338_fk_chat_message_message_id")
+  other_chat_message chat_message[] @relation("chat_messageTochat_message")
+  chat_room          chat_room      @relation(fields: [room_id], references: [room_id], onDelete: NoAction, onUpdate: NoAction, map: "chat_message_room_id_5e7d8d78_fk_chat_room_room_id")
+
+  @@index([reply_to_id], map: "chat_message_reply_to_id_afede338")
+  @@index([room_id], map: "chat_message_room_id_5e7d8d78")
+  @@index([sender_id], map: "chat_message_sender_id_991c686c")
+}
+
+model chat_room {
+  room_id              Int                    @id @default(autoincrement())
+  name                 String?                @db.VarChar(255)
+  is_private           Boolean
+  created_at           DateTime               @db.Timestamptz(6)
+  created_by_id        BigInt
+  chat_message         chat_message[]
+  chat_room_membership chat_room_membership[]
+
+  @@index([created_by_id], map: "chat_room_created_by_id_4a8daea8")
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model chat_room_membership {
+  membership_id Int       @id @default(autoincrement())
+  is_admin      Boolean
+  joined_at     DateTime  @db.Timestamptz(6)
+  room_id       Int
+  user_id       BigInt
+  chat_room     chat_room @relation(fields: [room_id], references: [room_id], onDelete: NoAction, onUpdate: NoAction, map: "chat_room_membership_room_id_e82ef636_fk_chat_room_room_id")
+
+  @@unique([room_id, user_id], map: "chat_room_membership_room_id_user_id_f0aa69a7_uniq")
+  @@index([room_id], map: "chat_room_membership_room_id_e82ef636")
+  @@index([user_id], map: "chat_room_membership_user_id_7fbf842b")
+}
+
+model commit {
+  commit_id  Int      @id @default(autoincrement())
+  hash       String   @unique @db.VarChar(40)
+  message    String
+  timestamp  DateTime @db.Timestamptz(6)
+  created_at DateTime @db.Timestamptz(6)
+  user_id    BigInt
+
+  @@index([hash], map: "commit_hash_b0934651_like")
+  @@index([user_id], map: "commit_user_id_ec7b5308")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model django_admin_log {
+  id                  Int                  @id @default(autoincrement())
+  action_time         DateTime             @db.Timestamptz(6)
+  object_id           String?
+  object_repr         String               @db.VarChar(200)
+  action_flag         Int                  @db.SmallInt
+  change_message      String
+  content_type_id     Int?
+  user_id             BigInt
+  django_content_type django_content_type? @relation(fields: [content_type_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "django_admin_log_content_type_id_c4bce8eb_fk_django_co")
+
+  @@index([content_type_id], map: "django_admin_log_content_type_id_c4bce8eb")
+  @@index([user_id], map: "django_admin_log_user_id_c564eba6")
+}
+
+model django_content_type {
+  id                  Int                   @id @default(autoincrement())
+  app_label           String                @db.VarChar(100)
+  model               String                @db.VarChar(100)
+  ai_api_notification ai_api_notification[]
+  auth_permission     auth_permission[]
+  django_admin_log    django_admin_log[]
+
+  @@unique([app_label, model], map: "django_content_type_app_label_model_76bd3d3b_uniq")
+}
+
+model django_migrations {
+  id      BigInt   @id @default(autoincrement())
+  app     String   @db.VarChar(255)
+  name    String   @db.VarChar(255)
+  applied DateTime @db.Timestamptz(6)
+}
+
+model django_session {
+  session_key  String   @id @db.VarChar(40)
+  session_data String
+  expire_date  DateTime @db.Timestamptz(6)
+
+  @@index([expire_date], map: "django_session_expire_date_a5c62663")
+  @@index([session_key], map: "django_session_session_key_c0390e0f_like")
+}
+
+model moodcheckin {
+  checkin_id Int      @id @default(autoincrement())
+  mood       String   @db.VarChar(20)
+  notes      String?
+  timestamp  DateTime @db.Timestamptz(6)
+  user_id    BigInt
+
+  @@index([user_id], map: "moodcheckin_user_id_a1bde05a")
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model project {
+  project_id   Int       @id @default(autoincrement())
+  name         String    @db.VarChar(255)
+  description  String?
+  start_date   DateTime  @db.Date
+  end_date     DateTime  @db.Date
+  created_at   DateTime  @db.Timestamptz(6)
+  updated_at   DateTime  @db.Timestamptz(6)
+  team_id      Int
+  project_type String    @db.VarChar(20)
+  backlog      backlog[]
+  team         team      @relation(fields: [team_id], references: [team_id], onDelete: NoAction, onUpdate: NoAction, map: "project_team_id_c5ec7099_fk_team_team_id")
+  sprint       sprint[]
+
+  @@index([team_id], map: "project_team_id_c5ec7099")
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model report {
+  report_id    Int      @id @default(autoincrement())
+  type         String   @db.VarChar(30)
+  generated_at DateTime @db.Timestamptz(6)
+  data         Json
+  sprint_id    Int
+  sprint       sprint   @relation(fields: [sprint_id], references: [sprint_id], onDelete: NoAction, onUpdate: NoAction, map: "report_sprint_id_4eb7e6d5_fk_sprint_sprint_id")
+
+  @@index([sprint_id], map: "report_sprint_id_4eb7e6d5")
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model sprint {
+  sprint_id   Int      @id @default(autoincrement())
+  title       String   @db.VarChar(255)
+  start_date  DateTime @db.Date
+  end_date    DateTime @db.Date
+  methodology String   @db.VarChar(20)
+  created_at  DateTime @db.Timestamptz(6)
+  updated_at  DateTime @db.Timestamptz(6)
+  project_id  Int
+  report      report[]
+  project     project  @relation(fields: [project_id], references: [project_id], onDelete: NoAction, onUpdate: NoAction, map: "sprint_project_id_a881adad_fk_project_project_id")
+  task        task[]
+
+  @@index([project_id], map: "sprint_project_id_a881adad")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model task {
+  task_id        Int      @id @default(autoincrement())
+  title          String   @db.VarChar(255)
+  description    String?
+  status         String   @db.VarChar(20)
+  points         Int
+  created_at     DateTime @db.Timestamptz(6)
+  updated_at     DateTime @db.Timestamptz(6)
+  assigned_to_id BigInt?
+  sprint_id      Int
+  sprint         sprint   @relation(fields: [sprint_id], references: [sprint_id], onDelete: NoAction, onUpdate: NoAction, map: "task_sprint_id_e8525007_fk_sprint_sprint_id")
+
+  @@index([assigned_to_id], map: "task_assigned_to_id_6be2a74f")
+  @@index([sprint_id], map: "task_sprint_id_e8525007")
+}
+
+model team {
+  team_id     Int           @id @default(autoincrement())
+  name        String        @db.VarChar(255)
+  created_at  DateTime      @db.Timestamptz(6)
+  updated_at  DateTime      @db.Timestamptz(6)
+  project     project[]
+  team_member team_member[]
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model team_member {
+  id           BigInt   @id @default(autoincrement())
+  joined_at    DateTime @db.Timestamptz(6)
+  role_in_team String?  @db.VarChar(100)
+  team_id      Int
+  user_id      BigInt
+  team         team     @relation(fields: [team_id], references: [team_id], onDelete: NoAction, onUpdate: NoAction, map: "team_member_team_id_26812b86_fk_team_team_id")
+
+  @@unique([team_id, user_id], map: "team_member_team_id_user_id_2d050ad0_uniq")
+  @@index([team_id], map: "team_member_team_id_26812b86")
+  @@index([user_id], map: "team_member_user_id_9e3ae43b")
+}
+
+model user {
+  last_login                                                            DateTime?                  @db.Timestamptz(6)
+  is_superuser                                                          Boolean
+  email                                                                 String                     @unique(map: "users_user_email_key") @db.VarChar(254)
+  name                                                                  String                     @db.VarChar(255)
+  password                                                              String                     @db.VarChar(128)
+  role                                                                  String?                    @db.VarChar(50)
+  is_active                                                             Boolean
+  profile_picture                                                       String?
+  created_at                                                            DateTime                   @db.Timestamptz(6)
+  user_id                                                               Int                        @id(map: "users_user_pkey") @default(autoincrement())
+  is_staff                                                              Boolean
+  email_verified_at                                                     DateTime?                  @db.Timestamptz(6)
+  two_factor_enabled                                                    Boolean
+  two_factor_secret                                                     String?                    @db.VarChar(500)
+  ai_api_notification_ai_api_notification_actor_idTouser                ai_api_notification[]      @relation("ai_api_notification_actor_idTouser")
+  ai_api_notification_ai_api_notification_recipient_idTouser            ai_api_notification[]      @relation("ai_api_notification_recipient_idTouser")
+  ai_api_project                                                        ai_api_project[]           @relation("ProjectStatusUpdatedBy")
+  ai_api_projectinvitation_ai_api_projectinvitation_invited_by_idTouser ai_api_projectinvitation[] @relation("ai_api_projectinvitation_invited_by_idTouser")
+  ai_api_projectinvitation_ai_api_projectinvitation_invitee_idTouser    ai_api_projectinvitation[] @relation("ai_api_projectinvitation_invitee_idTouser")
+  users_refreshtoken                                                    users_refreshtoken[]
+  users_twofactortemptoken                                              users_twofactortemptoken[]
+
+  @@index([email], map: "users_user_email_243f6e77_like")
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model user_groups {
+  id         BigInt     @id(map: "users_user_groups_pkey") @default(autoincrement())
+  user_id    BigInt
+  group_id   Int
+  auth_group auth_group @relation(fields: [group_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "users_user_groups_group_id_9afc8d0e_fk_auth_group_id")
+
+  @@unique([user_id, group_id], map: "users_user_groups_user_id_group_id_b88eab82_uniq")
+  @@index([group_id], map: "users_user_groups_group_id_9afc8d0e")
+  @@index([user_id], map: "users_user_groups_user_id_5f6f5a90")
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model user_user_permissions {
+  id              BigInt          @id(map: "users_user_user_permissions_pkey") @default(autoincrement())
+  user_id         BigInt
+  permission_id   Int
+  auth_permission auth_permission @relation(fields: [permission_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "users_user_user_perm_permission_id_0b93982e_fk_auth_perm")
+
+  @@unique([user_id, permission_id], map: "users_user_user_permissions_user_id_permission_id_43338c45_uniq")
+  @@index([permission_id], map: "users_user_user_permissions_permission_id_0b93982e")
+  @@index([user_id], map: "users_user_user_permissions_user_id_20aca447")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model users_emailverification {
+  id           BigInt   @id @default(autoincrement())
+  email        String   @db.VarChar(254)
+  code_hash    String   @db.VarChar(128)
+  expires_at   DateTime @db.Timestamptz(6)
+  attempts     Int
+  status       String   @db.VarChar(16)
+  last_sent_at DateTime @db.Timestamptz(6)
+  ip           String?  @db.Inet
+  user_agent   String?
+  created_at   DateTime @db.Timestamptz(6)
+  updated_at   DateTime @db.Timestamptz(6)
+
+  @@index([email, status], map: "users_email_email_f5abc9_idx")
+  @@index([expires_at], map: "users_email_expires_083d9c_idx")
+  @@index([email], map: "users_emailverification_email_5a147af2")
+  @@index([email], map: "users_emailverification_email_5a147af2_like")
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model users_refreshtoken {
+  id          BigInt   @id @default(autoincrement())
+  token       String   @unique @db.VarChar(128)
+  created_at  DateTime @db.Timestamptz(6)
+  expires_at  DateTime @db.Timestamptz(6)
+  remember_me Boolean
+  ip_address  String?  @db.Inet
+  user_agent  String?
+  user_id     Int
+  user        user     @relation(fields: [user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction, map: "users_refreshtoken_user_id_2df68a14_fk_user_user_id")
+
+  @@index([expires_at], map: "users_refre_expires_cdd00d_idx")
+  @@index([token], map: "users_refre_token_f0eac2_idx")
+  @@index([user_id, expires_at], map: "users_refre_user_id_95f8bb_idx")
+  @@index([token], map: "users_refreshtoken_token_522cb3ac_like")
+  @@index([user_id], map: "users_refreshtoken_user_id_2df68a14")
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model users_twofactortemptoken {
+  id         BigInt   @id @default(autoincrement())
+  token      String   @unique @db.VarChar(64)
+  created_at DateTime @db.Timestamptz(6)
+  expires_at DateTime @db.Timestamptz(6)
+  user_id    Int
+  user       user     @relation(fields: [user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction, map: "users_twofactortemptoken_user_id_099cded0_fk_user_user_id")
+
+  @@index([expires_at], map: "users_twofa_expires_7f20fc_idx")
+  @@index([token], map: "users_twofa_token_50a414_idx")
+  @@index([token], map: "users_twofactortemptoken_token_34bb337c_like")
+  @@index([user_id], map: "users_twofactortemptoken_user_id_099cded0")
+}

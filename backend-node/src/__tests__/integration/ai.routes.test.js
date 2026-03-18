@@ -1,8 +1,8 @@
 import request from 'supertest';
 
 import app from '../../app.js';
-import { connectTestDB, disconnectTestDB } from '../db-helper.js';
-import { User, Token, Project, ProjectMember, Proposal } from '../../models/index.js';
+import { connectTestDB, disconnectTestDB, truncateTestData } from '../db-helper.js';
+import { prisma } from '../../lib/prisma.js';
 
 describe('AI routes (integration)', () => {
   let authToken;
@@ -16,11 +16,7 @@ describe('AI routes (integration)', () => {
   });
 
   beforeEach(async () => {
-    await User.deleteMany({});
-    await Token.deleteMany({});
-    await Project.deleteMany({});
-    await ProjectMember.deleteMany({});
-    await Proposal.deleteMany({});
+    await truncateTestData();
     const signup = await request(app)
       .post('/api/user/signup/')
       .send({ email: `ai-${Date.now()}@example.com`, name: 'AI User', password: 'pw' });
@@ -60,20 +56,24 @@ describe('AI routes (integration)', () => {
         .post('/api/ai/projects/')
         .set('Authorization', `Token ${authToken}`)
         .send({ title: 'Ingest Project' });
-      const projectId = createProj.body.id;
-      const project = await Project.findById(projectId);
-      const proposal = await Proposal.create({
-        project: project._id,
-        parsedText: 'Some proposal text for ingestion',
-        uploadedBy: project.createdBy,
+      const projectId = parseInt(createProj.body.id, 10);
+      const project = await prisma.ai_api_project.findUnique({ where: { id: projectId } });
+      const proposal = await prisma.ai_api_proposal.create({
+        data: {
+          project_id: project.id,
+          file: 'proposal.pdf',
+          parsed_text: 'Some proposal text for ingestion',
+          uploaded_at: new Date(),
+          uploaded_by_id: project.created_by_id,
+        },
       });
       const res = await request(app)
-        .put(`/api/ai/projects/${projectId}/ingest-proposal/${proposal._id}`)
+        .put(`/api/ai/projects/${projectId}/ingest-proposal/${proposal.id}`)
         .set('Authorization', `Token ${authToken}`)
         .send({});
       // Accept 200 (Python proxy OK or mocked) or 500 (Python service unavailable)
       expect([200, 500]).toContain(res.status);
-      if (res.status === 200) expect(res.body).toHaveProperty('epics');
+      if (res.status === 200) expect(res.body).toHaveProperty('features');
     });
   });
 });

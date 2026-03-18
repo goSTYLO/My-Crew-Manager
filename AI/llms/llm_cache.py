@@ -21,11 +21,16 @@ logger = logging.getLogger('llms')
 # Model ID from env; default Qwen2-0.5B for 6GB VRAM (Windows-friendly)
 _MODEL_ID_ENV = os.getenv("MODEL_ID", "Qwen/Qwen2-0.5B-Instruct")
 _PEFT_ADAPTER_PATH_ENV = os.getenv("PEFT_ADAPTER_PATH", "").strip() or None
+_PEFT_ADAPTER_PATH_BACKLOG_ENV = os.getenv("PEFT_ADAPTER_PATH_BACKLOG", "").strip() or None
 MODEL_ID = _MODEL_ID_ENV
 
-# Global variables for singleton pattern
+# Global variables for singleton pattern (Model 1 = overview)
 _model_instance = None
 _model_lock = threading.Lock()
+
+# Separate cache for Model 2 (backlog)
+_backlog_model_instance = None
+_backlog_model_lock = threading.Lock()
 
 # Auto-cleanup variables
 _last_activity_time = None
@@ -33,12 +38,32 @@ _cleanup_thread = None
 _cleanup_interval = 1800  # 30 minutes in seconds
 _cleanup_lock = threading.Lock()
 
-def _create_llm_pipeline() -> HuggingFacePipeline:
-    """Create a new LLM pipeline instance. Internal helper function."""
-    model_id = MODEL_ID
-    peft_path = _PEFT_ADAPTER_PATH_ENV
+def _resolve_adapter_path(peft_path: str | None) -> str | None:
+    """Resolve relative PEFT adapter path to absolute."""
+    if not peft_path:
+        return None
+    p = Path(peft_path)
+    if p.is_absolute():
+        return peft_path
+    base = Path(__file__).resolve().parent
+    candidates = [
+        base / peft_path,
+        base / "fine_tune" / peft_path,
+        Path.cwd() / peft_path,
+        Path.cwd() / "AI" / peft_path,
+    ]
+    for c in candidates:
+        if c.exists():
+            return str(c)
+    return str(Path.cwd() / peft_path)
 
-    logger.info("Loading LLM model...")
+
+def _create_llm_pipeline() -> HuggingFacePipeline:
+    """Create a new LLM pipeline instance (Model 1 - overview)."""
+    model_id = MODEL_ID
+    peft_path = _resolve_adapter_path(_PEFT_ADAPTER_PATH_ENV)
+
+    logger.info("Loading LLM model (overview)...")
     logger.info(f"Model ID: {model_id}")
     if peft_path:
         logger.info(f"PEFT adapter path: {peft_path}")
@@ -50,27 +75,7 @@ def _create_llm_pipeline() -> HuggingFacePipeline:
     use_cuda = torch.cuda.is_available()
     quant_cfg = None
 
-    # Resolve PEFT adapter path (relative to AI/ or project root)
-    resolved_peft_path = None
-    if peft_path:
-        p = Path(peft_path)
-        if not p.is_absolute():
-            # Try AI/llms/fine_tune/ relative to this file
-            base = Path(__file__).resolve().parent
-            candidates = [
-                base / peft_path,
-                base / "fine_tune" / peft_path,
-                Path.cwd() / peft_path,
-                Path.cwd() / "AI" / peft_path,
-            ]
-            for c in candidates:
-                if c.exists():
-                    resolved_peft_path = str(c)
-                    break
-            if not resolved_peft_path:
-                resolved_peft_path = str(Path.cwd() / peft_path)
-        else:
-            resolved_peft_path = peft_path
+    resolved_peft_path = _resolve_adapter_path(peft_path) if peft_path else None
 
     # Only try quantization if CUDA is available AND bitsandbytes is properly installed
     if use_cuda and BitsAndBytesConfig is not None:
@@ -168,6 +173,55 @@ def _create_llm_pipeline() -> HuggingFacePipeline:
     
     return HuggingFacePipeline(pipeline=pipe)
 
+
+def _create_backlog_llm_pipeline() -> HuggingFacePipeline:
+    """Create backlog LLM pipeline (Model 2 - uses PEFT_ADAPTER_PATH_BACKLOG)."""
+    model_id = MODEL_ID
+    peft_path = _resolve_adapter_path(_PEFT_ADAPTER_PATH_BACKLOG_ENV)
+
+    logger.info("Loading backlog LLM model...")
+    logger.info(f"Model ID: {model_id}")
+    if peft_path:
+        logger.info(f"Backlog PEFT adapter path: {peft_path}")
+
+    tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True)
+    use_cuda = torch.cuda.is_available()
+
+    if use_cuda:
+        model = AutoModelForCausalLM.from_pretrained(
+            model_id,
+            device_map=None,
+            dtype=torch.float16,
+            trust_remote_code=True,
+        ).to("cuda")
+    else:
+        model = AutoModelForCausalLM.from_pretrained(
+            model_id,
+            device_map=None,
+            dtype=torch.float32,
+            trust_remote_code=True,
+        )
+
+    if peft_path and PeftModel is not None and Path(peft_path).exists():
+        logger.info(f"Loading backlog PEFT adapter from {peft_path}")
+        model = PeftModel.from_pretrained(model, peft_path)
+    elif peft_path:
+        logger.warning(f"Backlog adapter path does not exist: {peft_path}")
+
+    pipe = pipeline(
+        "text-generation",
+        model=model,
+        tokenizer=tokenizer,
+        max_new_tokens=768,
+        temperature=0.4,
+        top_p=0.9,
+        do_sample=True,
+        return_full_text=False,
+        use_cache=True,
+    )
+    return HuggingFacePipeline(pipeline=pipe)
+
+
 def get_cached_llm() -> HuggingFacePipeline:
     """
     Get or create a cached LLM instance (shared for all operations).
@@ -199,11 +253,25 @@ def get_cached_llm() -> HuggingFacePipeline:
 
 def get_cached_backlog_llm() -> HuggingFacePipeline:
     """
-    Get cached LLM instance (same as get_cached_llm).
-    Kept for backward compatibility.
+    Get or create cached backlog LLM (Model 2).
+    Uses PEFT_ADAPTER_PATH_BACKLOG if set; otherwise falls back to get_cached_llm().
     """
-    logger.debug("[LLM Cache] get_cached_backlog_llm() called - delegating to get_cached_llm()")
-    return get_cached_llm()
+    global _backlog_model_instance
+    _update_activity_time()
+
+    # If no backlog adapter configured, use overview model (backward compat)
+    if not _PEFT_ADAPTER_PATH_BACKLOG_ENV:
+        logger.debug("[LLM Cache] No PEFT_ADAPTER_PATH_BACKLOG, delegating to get_cached_llm()")
+        return get_cached_llm()
+
+    if _backlog_model_instance is not None:
+        return _backlog_model_instance
+
+    with _backlog_model_lock:
+        if _backlog_model_instance is not None:
+            return _backlog_model_instance
+        _backlog_model_instance = _create_backlog_llm_pipeline()
+        return _backlog_model_instance
 
 def clear_cache():
     """
@@ -220,11 +288,12 @@ def clear_cache():
             logger.debug("[LLM Cache] No cached model to clear")
 
 def clear_backlog_cache():
-    """
-    Clear cache (same as clear_cache, kept for compatibility).
-    """
-    logger.debug("[LLM Cache] clear_backlog_cache() called - delegating to clear_cache()")
-    clear_cache()
+    """Clear the cached backlog model instance."""
+    global _backlog_model_instance
+    with _backlog_model_lock:
+        if _backlog_model_instance is not None:
+            _backlog_model_instance = None
+            logger.debug("[LLM Cache] Backlog cache cleared")
 
 def _update_activity_time():
     """Update the last activity time to current timestamp."""
@@ -233,12 +302,19 @@ def _update_activity_time():
 
 def clear_cache_and_free_memory():
     """
-    Clear the cached model instance and free GPU memory.
-    This should be called when you want to free VRAM.
+    Clear the cached model instance(s) and free GPU memory.
     """
-    global _model_instance
+    global _model_instance, _backlog_model_instance
     logger.debug("[LLM Cache] clear_cache_and_free_memory() called")
-    
+
+    with _backlog_model_lock:
+        if _backlog_model_instance is not None:
+            if hasattr(_backlog_model_instance, 'pipeline') and hasattr(_backlog_model_instance.pipeline, 'model'):
+                del _backlog_model_instance.pipeline.model
+            if hasattr(_backlog_model_instance, 'pipeline') and hasattr(_backlog_model_instance.pipeline, 'tokenizer'):
+                del _backlog_model_instance.pipeline.tokenizer
+            _backlog_model_instance = None
+
     with _model_lock:
         if _model_instance is not None:
             logger.debug("[LLM Cache] Clearing model from GPU memory...")

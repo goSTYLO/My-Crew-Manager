@@ -1,19 +1,24 @@
-# My Crew Manager - Node.js Backend (MERN Migration)
+# My Crew Manager - Node.js Backend
 
-Node.js/Express backend replacing the Django backend. Uses MongoDB and the `ws` package for WebSockets.
+Node.js/Express backend for My Crew Manager. Uses **PostgreSQL** with **Prisma** ORM and the `ws` package for WebSockets.
 
 ## Setup
 
 1. Install dependencies: `npm install`
-2. **Env:** backend-node loads from the **project root `.env`** (shared with web, Django, mobile). Add these if missing:
+2. **Database:** Use PostgreSQL. Configure connection via env:
+   - `DATABASE_URL` - Full connection string: `postgresql://user:pass@host:5432/mycrewmanager_db`
+   - Or use `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT` (backend-node builds `DATABASE_URL` from these)
+3. **Env** (from project root `.env`):
    - `SECRET_KEY` - Application secret
    - `JWT_SECRET` - JWT signing secret (can match SECRET_KEY)
-   - `MONGODB_URI` - MongoDB connection string (default: `mongodb://localhost:27017/my_crew_manager`)
    - `AI_SERVICE_URL` - URL of the FastAPI AI microservice (default: `http://localhost:8002`)
-   - `DISABLE_2FA` - Set to `true` to fully disable 2FA (login skips 2FA, 2FA endpoints return 503). Default: `false`
-   - `RATE_LIMIT_MAX` - Requests per 15 min. Dev default 500; production 100. Increase (e.g. `1000`) if polling causes 429.
+   - `DISABLE_2FA` - Set to `true` to fully disable 2FA (default: `false`)
+   - `RATE_LIMIT_MAX` - Requests per 15 min. Dev default 500; production 100.
 
-3. Run: `npm run dev` (or `npm start`)
+4. Generate Prisma client: `npm run db:generate` (or `npx prisma generate`)
+5. For existing DB: schema is maintained via `prisma/schema.prisma`. Use `npx prisma db pull` to introspect and regenerate if the DB structure changes.
+6. Seed: `npm run seed` or `npm run seed:reset` to populate with PM/Dev accounts and sample data
+7. Run: `npm run dev` (or `npm start`)
 
 ## Python AI Microservice
 
@@ -23,7 +28,7 @@ The FastAPI AI service at `AI/` exposes `POST /generate-overview` and `POST /gen
 
 ## Testing
 
-Run `npm test` for Jest unit and integration tests. Uses `mongodb-memory-server` for integration tests. Set `DISABLE_2FA=true` in test env to simplify auth flows.
+Run `npm test` for Jest unit and integration tests. Uses PostgreSQL (same DB or `DB_NAME_test` when `NODE_ENV=test`). Ensure a test database exists. Set `DISABLE_2FA=true` in test env to simplify auth flows.
 
 ## API
 
@@ -41,6 +46,18 @@ Run `npm test` for Jest unit and integration tests. Uses `mongodb-memory-server`
 - `ws://host/ws/chat/notifications/?token=<token>` - Chat notifications
 - `ws://host/ws/chat/<room_id>/?token=<token>` - Room chat
 
-## Data Migration
+## Database
 
-Run `npm run migrate` after configuring PostgreSQL connection in the migration script to transfer data from the Django/PostgreSQL backend to MongoDB.
+- Prisma schema: `prisma/schema.prisma`
+- Generate client: `npm run db:generate`
+- Open Prisma Studio: `npm run db:studio`
+
+### Troubleshooting DB connection
+
+If you see `Authentication failed against the database server`:
+
+1. **Verify PostgreSQL is running** – `psql -U postgres -h localhost -c "SELECT 1"`
+2. **Check credentials** – Root `.env` uses `DB_USER=postgres`, `DB_PASSWORD=1401`. Ensure your PostgreSQL `postgres` user has this password (or update `.env`).
+3. **Test connection** – `psql -U postgres -h localhost -d mycrewmanager_db` (enter password when prompted)
+4. **Restore from dump** – If the DB is empty, restore: `pg_restore -d mycrewmanager_db -U postgres MycrewManager_db_2.sql`
+5. **Extract sample data** – Without a live DB, use `pg_restore --data-only -f restore_projects.sql -t ai_api_project ... MycrewManager_db_2.sql`, then `node scripts/parse-dump-to-md.js` to regenerate `sample-outputs.md`

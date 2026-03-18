@@ -1,3 +1,4 @@
+import json
 import os
 import re
 import logging
@@ -13,6 +14,16 @@ from llms.tasks import CancellationToken, TaskCancelledException
 from llms.llm_cache import get_cached_llm
 
 logger = logging.getLogger('llms')
+
+# Prompt for single-call Part 1 JSON output (Model 1 / new pipeline)
+OVERVIEW_JSON_PROMPT = """Convert this project description to structured JSON with summary, roles, features, goals, timeline.
+
+Description:
+{description}
+
+Output valid JSON only (no markdown). Structure:
+{"summary": "...", "roles": ["...", "..."], "features": ["...", "..."], "goals": [{"epic": "...", "role": "..."}], "timeline": {"week1": ["task1", "task2"], "week2": [...], ...}}
+"""
 
 # Cache prompt templates in memory to avoid disk I/O on every call
 _PROMPT_CACHE = {}
@@ -92,125 +103,99 @@ def generate_section(llm, section: str, prompt: str, max_retries: int = 3, max_t
             continue
     return ""
 
+
+def _extract_json_from_response(text: str) -> dict | None:
+    """Extract JSON from LLM response (handles markdown code blocks)."""
+    text = (text or "").strip()
+    match = re.search(r"```(?:json)?\s*([\s\S]*?)\s*```", text)
+    if match:
+        text = match.group(1).strip()
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        start = text.find("{")
+        if start >= 0:
+            depth = 0
+            for i in range(start, len(text)):
+                if text[i] == "{":
+                    depth += 1
+                elif text[i] == "}":
+                    depth -= 1
+                    if depth == 0:
+                        try:
+                            return json.loads(text[start : i + 1])
+                        except json.JSONDecodeError:
+                            break
+    return None
+
+
+def _part1_json_to_project_model(data: dict) -> ProjectModel:
+    """Map Part 1 JSON to ProjectModel."""
+    model = ProjectModel()
+    model.summary = (data.get("summary") or "").strip()
+    if model.summary:
+        first_sent = re.match(r"^(.*?\.)", model.summary)
+        model.title = first_sent.group(1).strip() if first_sent else model.summary[:50]
+    else:
+        model.title = "Project from Proposal"
+
+    model.roles = [TeamMemberModel(role=str(r)) for r in (data.get("roles") or [])[:20]]
+    model.features = [str(f) for f in (data.get("features") or [])[:10]]
+
+    goals_data = data.get("goals") or []
+    model.goals = [
+        GoalModel(title=str(g.get("epic", "")), role=str(g.get("role", "")))
+        for g in goals_data if isinstance(g, dict)
+    ][:20]
+
+    timeline_data = data.get("timeline") or {}
+    weeks = []
+    for key in sorted(timeline_data.keys()):
+        m = re.match(r"week(\d+)", key, re.IGNORECASE)
+        if m:
+            week_num = int(m.group(1))
+            tasks = timeline_data[key]
+            if isinstance(tasks, list):
+                goals = [TimelineGoalModel(title=str(t)) for t in tasks[:20]]
+            else:
+                goals = []
+            weeks.append(TimelineWeekModel(week_number=week_num, goals=goals))
+    model.timeline = weeks
+    return model
+
+
 def run_pipeline_from_text(proposal_text: str, task_id: Optional[str] = None) -> ProjectModel:
+    """Generate Part 1 overview from description. Single LLM call with JSON output."""
     if not proposal_text:
         return ProjectModel()
 
-    # Create cancellation token if task_id is provided
     cancellation_token = CancellationToken(task_id) if task_id else None
+    if cancellation_token:
+        cancellation_token.check_cancelled()
 
-    llm = get_cached_llm()  # Uses singleton cache - model loaded only once per server lifetime
-    project_model = ProjectModel()
-    raw_outputs = {}
-    sections = ["summary", "features", "roles", "goals", "timeline"]
-    
-    # Section-specific token limits for optimal performance
-    section_token_limits = {
-        "summary": 256,    # Short paragraph
-        "features": 256,   # List of 5-6 items
-        "roles": 256,      # List of 5-8 roles
-        "goals": 384,      # 8 goals with titles/roles
-        "timeline": 384,   # 4 weeks with tasks
-    }
+    llm = get_cached_llm()
+    prompt = OVERVIEW_JSON_PROMPT.format(description=proposal_text.strip())
 
-    context = {
-        "proposal_text": proposal_text,
-        "project_title": "",
-        "project_summary": "",
-        "overarching_goals": "",
-        "additional_roles": "",
-        "goals": ""
-    }
-
-    for section in sections:
-        # Check for cancellation before each section
-        if cancellation_token:
-            cancellation_token.check_cancelled()
-        
-        context["project_title"] = project_model.title or ""
-        context["project_summary"] = project_model.summary or ""
-        context["overarching_goals"] = ", ".join(project_model.features)
-        context["additional_roles"] = "\n".join([r.role for r in project_model.roles]) if project_model.roles else ""
-
-        if section == "timeline" and "goals" in raw_outputs:
-            goal_titles = []
-            for line in raw_outputs["goals"].splitlines():
-                if line.strip().startswith("- title:"):
-                    title = line.strip()[len("- title:"):].strip()
-                    goal_titles.append(title)
-            context["goals"] = "\n".join(goal_titles)
-
-        prompt = build_prompt(section, proposal_text, context)
-        if prompt:
-            max_tokens = section_token_limits.get(section, 512)
-            raw_response = generate_section(llm, section, prompt, max_tokens=max_tokens, cancellation_token=cancellation_token)
-            if raw_response:
-                logger.debug(f"RAW {section.upper()}: {raw_response}")
-                raw_outputs[section] = raw_response
-
-    if "summary" in raw_outputs:
-        match = re.search(r"summary:\s*(.*)", raw_outputs["summary"], re.DOTALL | re.IGNORECASE)
-        if match:
-            project_model.summary = match.group(1).strip()
-            first_sentence = re.match(r"^(.*?\.)", project_model.summary)
-            project_model.title = first_sentence.group(1).strip() if first_sentence else "Project from Proposal"
-        else:
-            project_model.summary = raw_outputs["summary"]
-            project_model.title = "Project from Proposal"
-
-    if "features" in raw_outputs:
-        lines = [line.strip()[2:] for line in raw_outputs["features"].splitlines() if line.strip().startswith("- ")]
-        project_model.features = [re.sub(r"^\(Optional:\)\s*", "", line) for line in lines[:5]]
-
-    if "roles" in raw_outputs:
-        roles = [TeamMemberModel(role=line.strip()[2:].strip()) for line in raw_outputs["roles"].splitlines() if line.strip().startswith("- ")]
-        project_model.roles = roles
-
-    if "goals" in raw_outputs:
-        goal_lines = raw_outputs["goals"].splitlines()
-        parsed_goals = []
-        current_goal = {}
-
-        for line in goal_lines:
-            line = line.strip()
-            if line.startswith("- title:"):
-                if current_goal:
-                    parsed_goals.append(current_goal)
-                current_goal = {"title": line[len("- title:"):].strip(), "role": ""}
-            elif line.startswith("role:") and current_goal:
-                current_goal["role"] = line[len("role:"):].strip()
-
-        if current_goal:
-            parsed_goals.append(current_goal)
-
-        project_model.goals = [GoalModel(**g) for g in parsed_goals]
-
-    if "timeline" in raw_outputs:
+    text = None
+    if hasattr(llm, "pipeline"):
         try:
-            match = re.search(r"timeline:\s*\n([\s\S]*)", raw_outputs["timeline"], re.DOTALL | re.IGNORECASE)
-            if match:
-                timeline_str = match.group(1).strip()
-                weeks = []
-                current_week = None
-                current_goals = []
-                for line in timeline_str.splitlines():
-                    line = line.strip()
-                    week_match = re.match(r"^-?\s*week_number:\s*(\d+)", line, re.IGNORECASE)
-                    goal_match = re.match(r"^-\s*(.*)", line)
-                    if week_match:
-                        if current_week is not None:
-                            weeks.append(TimelineWeekModel(week_number=current_week, goals=current_goals))
-                        current_week = int(week_match.group(1))
-                        current_goals = []
-                    elif goal_match and current_week is not None:
-                        current_goals.append(TimelineGoalModel(title=goal_match.group(1).strip()))
-                if current_week is not None:
-                    weeks.append(TimelineWeekModel(week_number=current_week, goals=current_goals))
-                project_model.timeline = weeks
+            out = llm.pipeline(prompt, max_new_tokens=512)
+            if isinstance(out, list) and out and isinstance(out[0], dict) and "generated_text" in out[0]:
+                text = out[0]["generated_text"]
+            elif isinstance(out, str):
+                text = out
         except Exception:
             pass
+    if not text:
+        text = llm.invoke(prompt)
 
-    return project_model
+    response = (text or "").strip()
+    data = _extract_json_from_response(response)
+    if data and isinstance(data, dict) and data.get("summary"):
+        return _part1_json_to_project_model(data)
+
+    logger.warning("JSON parse failed, returning empty ProjectModel")
+    return ProjectModel()
 
 def model_to_dict(project_model: ProjectModel) -> dict:
     return {

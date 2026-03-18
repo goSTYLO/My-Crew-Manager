@@ -50,16 +50,21 @@ def _epic_to_item(epic):
 
 @router.post("", response_model=BacklogResponse)
 def generate_backlog(req: BacklogRequest):
-    """Generate backlog epics from proposal text."""
+    """Generate backlog epics. Prefer part1_json; fallback to proposal_text."""
     try:
         from llms.backlog_llm import run_backlog_pipeline
 
-        proposal_text = (req.proposal_text or "").strip()
-        if not proposal_text:
+        proposal_text = (req.proposal_text or "").strip() if req.proposal_text else None
+        part1_json = (req.part1_json or "").strip() if req.part1_json else None
+        if not part1_json and not proposal_text:
             return BacklogResponse()
 
-        context = {"proposal_text": proposal_text}
-        backlog_model = run_backlog_pipeline(proposal_text, context)
+        context = {"proposal_text": proposal_text or ""}
+        backlog_model = run_backlog_pipeline(
+            proposal_text=proposal_text,
+            context=context,
+            part1_json=part1_json,
+        )
         epics = [ _epic_to_item(e) for e in getattr(backlog_model, "epics", []) or [] ]
         return BacklogResponse(epics=epics)
     except OSError as e:

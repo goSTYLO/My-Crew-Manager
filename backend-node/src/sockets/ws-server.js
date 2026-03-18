@@ -1,14 +1,18 @@
 import { WebSocketServer } from 'ws';
 import { parse } from 'url';
-import { Token } from '../models/Token.js';
-import { User } from '../models/User.js';
-import { Room } from '../models/Room.js';
+import { prisma } from '../lib/prisma.js';
 import { joinRoom, leaveRoom, broadcast } from '../services/broadcast.service.js';
 
 async function getUserFromToken(tokenKey) {
   if (!tokenKey) return null;
-  const token = await Token.findOne({ key: tokenKey }).populate('user');
-  return token?.user || null;
+  const token = await prisma.authtoken_token.findUnique({
+    where: { key: tokenKey },
+  });
+  if (!token) return null;
+  const user = await prisma.user.findUnique({
+    where: { user_id: Number(token.user_id) },
+  });
+  return user?.is_active ? user : null;
 }
 
 function parseTokenFromUrl(url) {
@@ -28,7 +32,7 @@ export function setupWebSocketServer(server) {
 
     const tokenKey = parseTokenFromUrl(url);
     const user = await getUserFromToken(tokenKey);
-    if (!user || !user.isActive) {
+    if (!user) {
       socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
       socket.destroy();
       return;
@@ -38,7 +42,7 @@ export function setupWebSocketServer(server) {
     const path = pathname?.replace(/\/$/, '') || '';
 
     wss.handleUpgrade(request, socket, head, (ws) => {
-      ws.userId = user._id.toString();
+      ws.userId = String(user.user_id);
       ws.user = user;
 
       if (path === '/ws/project-updates') {
@@ -46,7 +50,7 @@ export function setupWebSocketServer(server) {
       } else if (path === '/ws/chat/notifications') {
         handleChatNotificationsConnect(ws);
       } else {
-        const chatMatch = path.match(/^\/ws\/chat\/(\d+|[a-f0-9]{24})$/);
+        const chatMatch = path.match(/^\/ws\/chat\/(\d+)$/);
         if (chatMatch) {
           handleChatRoomConnect(ws, chatMatch[1]);
         } else {
@@ -82,26 +86,30 @@ function handleChatNotificationsConnect(ws) {
   ws.on('close', () => leaveRoom(groupName, ws));
 }
 
-async function handleChatRoomConnect(ws, roomIdOrHex) {
-  const room = await Room.findOne({
-    $or: [
-      { _id: roomIdOrHex },
-      { roomId: parseInt(roomIdOrHex, 10) },
-    ],
+async function handleChatRoomConnect(ws, roomIdStr) {
+  const roomId = parseInt(roomIdStr, 10);
+  if (isNaN(roomId)) {
+    ws.close(1008, 'Room not found');
+    return;
+  }
+
+  const room = await prisma.chat_room.findUnique({
+    where: { room_id: roomId },
+    include: { chat_room_membership: true },
   });
   if (!room) {
     ws.close(1008, 'Room not found');
     return;
   }
 
-  const uid = ws.user._id?.toString() || ws.userId;
-  const isMember = room.memberships?.some((m) => m.user?.toString() === uid);
+  const uid = ws.user.user_id;
+  const isMember = room.chat_room_membership.some((m) => m.user_id === BigInt(uid));
   if (!isMember) {
     ws.close(1008, 'Not a member of this room');
     return;
   }
 
-  const groupName = `chat_${room._id}`;
+  const groupName = `chat_${room.room_id}`;
   joinRoom(groupName, ws);
 
   broadcast(groupName, {

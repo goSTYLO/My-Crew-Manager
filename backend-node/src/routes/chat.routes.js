@@ -6,28 +6,7 @@ const router = Router();
 
 router.use(authMiddleware);
 
-router.get('/rooms/unread-count', async (req, res, next) => {
-  try {
-    const { Room, Message } = await import('../models/index.js');
-    const rooms = await Room.find({ 'memberships.user': req.user._id });
-    let total = 0;
-    for (const room of rooms) {
-      const m = room.memberships?.find((x) => x.user?.toString() === req.user._id.toString());
-      const joinedAt = m?.createdAt || room.createdAt;
-      const unread = await Message.countDocuments({
-        room: room._id,
-        createdAt: { $gt: joinedAt },
-        isDeleted: false,
-        sender: { $ne: req.user._id },
-      });
-      total += unread;
-    }
-    return res.json({ unread_count: Math.max(0, total) });
-  } catch (err) {
-    next(err);
-  }
-});
-
+router.get('/rooms/unread-count', ctrl.getRoomsUnreadCount);
 router.post('/rooms/direct', ctrl.getDirectRoom);
 
 router.get('/rooms/', ctrl.listRooms);

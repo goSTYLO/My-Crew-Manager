@@ -1,10 +1,13 @@
 import jwt from 'jsonwebtoken';
-import { authMiddleware } from '../../middleware/auth.middleware.js';
-import { Token } from '@/models/Token.js';
-import { User } from '@/models/User.js';
+import { authMiddleware } from '@/middleware/auth.middleware.js';
+import { prisma } from '@/lib/prisma.js';
 
-jest.mock('@/models/Token.js');
-jest.mock('@/models/User.js');
+jest.mock('@/lib/prisma.js', () => ({
+  prisma: {
+    authtoken_token: { findUnique: jest.fn() },
+    user: { findUnique: jest.fn() },
+  },
+}));
 
 const mockReq = (authHeader) => ({
   headers: { authorization: authHeader },
@@ -40,37 +43,58 @@ describe('authMiddleware', () => {
   });
 
   test('returns 401 when Token scheme but token not found', async () => {
-    Token.findOne = jest.fn().mockReturnValue({
-      populate: jest.fn().mockResolvedValue(null),
-    });
+    prisma.authtoken_token.findUnique.mockResolvedValue(null);
     const req = mockReq('Token invalid-key');
     const res = mockRes();
     await authMiddleware(req, res, mockNext);
-    expect(Token.findOne).toHaveBeenCalledWith({ key: 'invalid-key' });
+    expect(prisma.authtoken_token.findUnique).toHaveBeenCalledWith({ where: { key: 'invalid-key' } });
     expect(res.status).toHaveBeenCalledWith(401);
     expect(mockNext).not.toHaveBeenCalled();
   });
 
   test('calls next when Token valid', async () => {
-    const mockUser = { _id: 'u1', name: 'Test' };
-    Token.findOne = jest.fn().mockReturnValue({
-      populate: jest.fn().mockResolvedValue({ user: mockUser }),
+    prisma.authtoken_token.findUnique.mockResolvedValue({ user_id: 1n });
+    prisma.user.findUnique.mockResolvedValue({
+      user_id: 1,
+      name: 'Test',
+      email: 'test@example.com',
+      role: null,
+      is_active: true,
+      is_staff: false,
+      profile_picture: null,
+      email_verified_at: null,
+      two_factor_enabled: false,
+      two_factor_secret: null,
+      password: 'hashed',
     });
     const req = mockReq('Token valid-key');
     const res = mockRes();
     await authMiddleware(req, res, mockNext);
-    expect(req.user).toEqual(mockUser);
+    expect(req.user).toBeDefined();
+    expect(req.user.name).toBe('Test');
     expect(mockNext).toHaveBeenCalled();
   });
 
   test('calls next when Bearer JWT valid', async () => {
-    const mockUser = { _id: 'u1', name: 'Test', isActive: true };
-    const token = jwt.sign({ userId: 'u1' }, process.env.JWT_SECRET || 'test-secret');
-    User.findById = jest.fn().mockResolvedValue(mockUser);
+    const token = jwt.sign({ userId: 1 }, process.env.JWT_SECRET || 'test-secret');
+    prisma.user.findUnique.mockResolvedValue({
+      user_id: 1,
+      name: 'Test',
+      email: 'test@example.com',
+      role: null,
+      is_active: true,
+      is_staff: false,
+      profile_picture: null,
+      email_verified_at: null,
+      two_factor_enabled: false,
+      two_factor_secret: null,
+      password: 'hashed',
+    });
     const req = mockReq(`Bearer ${token}`);
     const res = mockRes();
     await authMiddleware(req, res, mockNext);
-    expect(req.user).toEqual(mockUser);
+    expect(req.user).toBeDefined();
+    expect(req.user.name).toBe('Test');
     expect(mockNext).toHaveBeenCalled();
   });
 

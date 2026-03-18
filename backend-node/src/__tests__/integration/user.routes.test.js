@@ -1,9 +1,7 @@
 import request from 'supertest';
-import mongoose from 'mongoose';
 
 import app from '../../app.js';
-import { connectTestDB, disconnectTestDB } from '../db-helper.js';
-import { User, Token, RefreshToken, EmailVerification } from '../../models/index.js';
+import { connectTestDB, disconnectTestDB, truncateTestData } from '../db-helper.js';
 
 jest.mock('nodemailer');
 
@@ -17,10 +15,7 @@ describe('User routes (integration)', () => {
   });
 
   beforeEach(async () => {
-    await User.deleteMany({});
-    await Token.deleteMany({});
-    await RefreshToken.deleteMany({});
-    await EmailVerification.deleteMany({});
+    await truncateTestData();
   });
 
   describe('POST /api/user/signup/', () => {

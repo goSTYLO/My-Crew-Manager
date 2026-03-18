@@ -8,6 +8,19 @@ from llms.llm_cache import get_cached_backlog_llm
 
 logger = logging.getLogger('llms')
 
+# Model 2 prompt: Part 1 JSON -> backlog text
+BACKLOG_FROM_PART1_PROMPT = """Given this structured project overview (JSON), generate an Agile backlog with Epic → Sub-Epic → User Story → Task hierarchy. Output in the exact text format:
+Epic X: <Title> *(covers: <Goal>)*
+ -Sub-Epic X.1: <Sub-Epic Title>
+  -User Story X.1.1: As a <role>, I need <capability>
+   -Task X.1.1.1: <Task>
+   -Task X.1.1.2: <Task>
+
+Input JSON:
+{part1_json}
+
+Backlog:"""
+
 # Cache prompt templates in memory to avoid disk I/O on every call
 _PROMPT_CACHE = {}
 
@@ -147,21 +160,31 @@ def parse_backlog(raw_text: str) -> BacklogModel:
 
     return backlog
 
-def run_backlog_pipeline(proposal_text: str, context: Dict, task_id: Optional[str] = None) -> BacklogModel:
-    if not proposal_text:
-        return BacklogModel()
-
-    # Create cancellation token if task_id is provided
+def run_backlog_pipeline(
+    proposal_text: str | None = None,
+    context: Dict | None = None,
+    part1_json: str | None = None,
+    task_id: Optional[str] = None,
+) -> BacklogModel:
+    """Generate backlog. Prefer part1_json (Model 2); fallback to proposal_text (legacy)."""
     cancellation_token = CancellationToken(task_id) if task_id else None
-
-    # Check for cancellation before starting
     if cancellation_token:
         cancellation_token.check_cancelled()
 
-    llm = get_cached_backlog_llm()  # Uses dedicated backlog model cache - separate from project model
-    prompt = build_prompt("backlog", proposal_text, context)
+    # Prefer part1_json for Model 2 pipeline
+    if part1_json and part1_json.strip():
+        prompt = BACKLOG_FROM_PART1_PROMPT.format(part1_json=part1_json.strip())
+    elif proposal_text and proposal_text.strip():
+        ctx = context or {}
+        ctx.setdefault("proposal_text", proposal_text)
+        prompt = build_prompt("backlog", proposal_text, ctx)
+    else:
+        return BacklogModel()
+
     if not prompt:
         return BacklogModel()
+
+    llm = get_cached_backlog_llm()
 
     raw_backlog = generate_section(llm, "backlog", prompt, max_tokens=768, cancellation_token=cancellation_token)
     if not raw_backlog:

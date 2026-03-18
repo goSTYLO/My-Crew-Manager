@@ -4,7 +4,8 @@ from typing import List, Optional
 
 
 class BacklogRequest(BaseModel):
-    proposal_text: str
+    proposal_text: Optional[str] = None  # Legacy: raw proposal
+    part1_json: Optional[str] = None    # New: serialized Part 1 output (preferred for Model 2)
 
 
 class TaskItem(BaseModel):
