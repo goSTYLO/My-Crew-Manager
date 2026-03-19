@@ -1,0 +1,204 @@
+MODEL 1 INFERENCE TEST EXPORT
+Generated: 2026-03-19T23:16:28
+Dataset: c:\Users\Aaron\GitHub Repos\My-Crew-Manager\AI\llms\fine_tune\dataset\model1_description_to_part1.jsonl
+Selected rows (1-based): [6, 7, 8, 9, 10]
+Strict prompt integration active: True
+Strict prompt sections loaded: ['summary', 'roles', 'features', 'goals', 'timeline']
+Strict prompt rule lines injected: 20
+Examples run: 5
+Compliance summary: 5/5
+====================================================================================================
+
+----------------------------------------------------------------------------------------------------
+EXAMPLE 1 (dataset row 6)
+Best strategy: B: guided+few-shot | Score: 21 | Compliant: True
+Checks: missing=None, weeks=4/4, status=False, backlog=False, proposal=False, generic_timeline=False, duplicate_sections=False
+
+Proposal / Input:
+Develop SafeSchool, a web-based system for campus safety. It will include entrance monitoring, activity detection, and emergency alerts. Success will be measured by improved response times, reduced incidents, and stable deployment.
+
+Model Output:
+Title: SafeSchool Campus Safety System
+Summary:
+SafeSchool is a campus safety system designed to monitor entrances, detect activities, and send alerts in case of emergencies. It aims to improve response times, reduce incidents, and ensure a safer environment.
+Roles:
+System Architect
+Backend Developer 
+Frontend Developer
+Quality Assurance Engineer
+Security Specialist
+Project Manager
+Features:
+Entrance Monitoring
+Activity Detection
+Emergency Alerts
+Goals:
+Improve Entrance Monitoring
+Enhance Activity Detection
+Enable Emergency Alerts
+Reduce Incidents
+Stable Deployment
+Timeline:
+Week 1: Implement Entrance Monitoring Backend
+Week 2: Develop Activity Detection Module
+Week 3: Configure Emergency Alerts
+Week 4: Test Entrance Monitoring
+
+----------------------------------------------------------------------------------------------------
+EXAMPLE 2 (dataset row 7)
+Best strategy: C: guided+few-shot+anchor | Score: 21 | Compliant: True
+Checks: missing=None, weeks=4/4, status=False, backlog=False, proposal=False, generic_timeline=False, duplicate_sections=False
+
+Proposal / Input:
+Develop FarmLink, a web-based system that enables farmers to collaborate, share resources, and sell produce. The platform will include a marketplace, resource sharing, and AI demand forecasting. Success will be measured by farmer adoption, improved profitability, and stable deployment.
+
+Model Output:
+Title:
+FarmLink: Farmer Collaboration Marketplace
+Summary:
+Farmlink is a platform designed for farmers to connect, share resources efficiently, and sell their produce. It includes a marketplace for buyers to find local products, a resource-sharing module, and an AI-demand forecasting tool. The goal is to enhance farmer productivity, increase sales, and support sustainable agriculture.
+Roles:
+Project Manager
+Frontend Developer
+Backend Developer 
+Quality Assurance Engineer
+UI/UX Designer
+AI Engineer
+Features:
+Marketplace
+Resource Sharing
+AI Demand Forecasting
+Goals:
+Adopt farmer collaboration tools
+Enable resource sharing
+Implement AI demand forecasting
+Enhance farmer productivity
+Boost sales efficiency
+Timeline:
+Week 1: Setup backend framework, Build marketplace API
+Week 2: Design resource sharing module, Implement AI demand forecasting tool
+Week 3: Develop farmer collaboration features, Integrate AI demand forecasting API
+Week 4: Plan and execute key deliverables, Plan and execute key deliverables
+
+----------------------------------------------------------------------------------------------------
+EXAMPLE 3 (dataset row 8)
+Best strategy: C: guided+few-shot+anchor | Score: 21 | Compliant: True
+Checks: missing=None, weeks=4/4, status=False, backlog=False, proposal=False, generic_timeline=False, duplicate_sections=False
+
+Proposal / Input:
+Develop TutorAI, a mobile app that delivers personalized language lessons and practice. The system will include quizzes, conversation modules, and AI-driven progress tracking. Success will be measured by learner engagement, improved proficiency, and stable deployment.
+
+Model Output:
+Title:
+EventEase Smart Event Planning
+Summary:
+EventPlanning is a platform designed to assist event organizers in planning and managing events like weddings, conferences and parties. The platform offers AI-driven recommendations on venues, vendors and schedules, aiming to simplify event organization and reduce stress.
+Roles:
+Project Manager
+Frontend Developer
+Backend Developer 
+Quality Assurance Engineer
+UI/UX Designer
+Features:
+- Event Planning
+- Venue Scheduling
+- Vendor Recommendations
+- Schedule Management
+- AI Progress Tracking
+- Learner Engagement
+- Improved Proficiency
+- Stable Deployment
+Goals:
+- Develop Event Planning Module
+- Implement Venue Scheduling System
+- Create Vendor Recommendation Engine
+- Design Schedule Management Interface
+- Build AI Progress Tracker
+- Enhance Learner Engagement Features
+- Ensure Improved Proficiency Capabilities
+- Optimize Deployment Process
+- Test System for Stability
+- Deploy Event Planning App
+Timeline:
+Week 1: Plan and execute key deliverables, Plan and execute key deliverables
+Week 2: Plan and execute key deliverables, Plan and execute key deliverables
+Week 3: Plan and execute key deliverables, Plan and execute key deliverables
+Week 4: Plan and execute key deliverables, Plan and execute key deliverables
+
+----------------------------------------------------------------------------------------------------
+EXAMPLE 4 (dataset row 9)
+Best strategy: B: guided+few-shot | Score: 21 | Compliant: True
+Checks: missing=None, weeks=4/4, status=False, backlog=False, proposal=False, generic_timeline=False, duplicate_sections=False
+
+Proposal / Input:
+Develop GreenHome, a smart home app that monitors energy usage and provides AI-driven recommendations. The system will include appliance integration, alerts, and dashboards. Success will be measured by reduced energy consumption, user adoption, and stable deployment.
+
+Model Output:
+Title: GreenHome Smart Home App
+Summary:
+GreenHome is an AI-powered smart home app designed to monitor energy usage and provide recommendations for energy-saving appliances. It integrates with various devices and offers real-time energy analytics. The app aims to reduce energy waste and improve user comfort.
+Roles:
+Product Manager
+Backend Engineer
+Frontend Developer
+AI Engineer
+Quality Assurance Engineer
+UI/UX Designer
+Features:
+Energy Monitoring
+Appliance Integration
+AI Energy Recommendations
+Real-Time Analytics
+Alerts
+Goals:
+Reduce Energy Consumption
+Improve User Comfort
+Enable Appliance Integration
+Implement AI Energy Recommendations
+Enable Real-Time Analytics
+Test Energy Monitoring
+Deploy GreenHome
+Timeline:
+Week 1: Setup backend API, Implement energy monitoring
+Week 2: Develop appliance integration, Configure AI energy recommendations
+Week 3: Build real-time analytics, Test energy monitoring
+Week 4: Plan and execute key deliverables, Plan and execute key deliverables
+
+----------------------------------------------------------------------------------------------------
+EXAMPLE 5 (dataset row 10)
+Best strategy: C: guided+few-shot+anchor | Score: 21 | Compliant: True
+Checks: missing=None, weeks=4/4, status=False, backlog=False, proposal=False, generic_timeline=False, duplicate_sections=False
+
+Proposal / Input:
+Develop CityComm, a web-based system that connects residents with city services. It will include issue reporting, service access, and AI categorization. Success will be measured by improved response times, resident adoption, and stable deployment.
+
+Model Output:
+Title:
+CityComm: Smart City Services Platform
+Summary:
+CityCOMM is a smart city services platform designed to connect residents with city facilities. It includes an issue reporting system, service access portal, and AI-powered categorization. The goal is to enhance citizen engagement and streamline city operations.
+Roles:
+Project Manager
+Frontend Developer
+Backend Developer 
+Quality Assurance Engineer
+UI/UX Designer
+AI Engineer
+Features:
+Issue Reporting System
+Service Access Portal
+AI Categorization
+Response Time Optimization
+Citizen Engagement Enhancement
+Goals:
+Goal 1: Develop Issue Reporting System
+Goal 2: Implement Service Access Portal
+Goal 3: Design AI Categorization Module
+Goal 4: Enhance Citizen Engagement
+Goal 5: Optimize Response Times
+Goal 6: Deploy Smart City Services
+Timeline:
+Week 1: Setup Backend Framework, Configure Database
+Week 2: Build Issue Reporting System, Implement Service Access
+Week 3: Develop Categorization Model, Integrate with Backend
+Week 4: Test Citizen Engagement, Deploy Services

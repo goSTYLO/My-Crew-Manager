@@ -1,0 +1,469 @@
+MODEL 1 INFERENCE TEST EXPORT
+Generated: 2026-03-19T17:37:00
+Dataset: c:\Users\Aaron\GitHub Repos\My-Crew-Manager\AI\llms\fine_tune\dataset\model1_description_to_part1.jsonl
+Examples run: 10
+Compliance summary: 8/10
+====================================================================================================
+
+----------------------------------------------------------------------------------------------------
+EXAMPLE 1
+Best strategy: B: guided+few-shot | Score: 21 | Compliant: True
+Checks: missing=None, weeks=4/4, status=False, backlog=False, proposal=False, generic_timeline=False
+
+Proposal / Input:
+Develop the MyCrewManager platform, a web-based system that enables project managers to assign tasks, track progress, and receive AI-generated recommendations for team coordination and risk mitigation. The project will consist of a Django REST API backend, a React-based dashboard frontend, and AI integration using Hugging Face models, with the goal of creating a functional and scalable solution within 4 weeks. The team comprises a backend developer, frontend developer, AI engineer, and project manager. Success will be measured by the platform's ability to handle task assignments, AI recommendations, smooth team onboarding, and stable deployment. Challenges include limited VRAM, incomplete documentation, and potential OCR parsing issues.
+
+Model Output:
+Title: Crew Manager
+Summary: MyCrest is a crew management platform that allows project managers to track tasks, assign crew members, and receiveAI recommendations for coordination and risk management.
+Roles:
+Backend Developer
+Frontend Developer
+AI Engineer
+Project Manager
+Features:
+Task Tracking
+Crew Assignment
+AI Recommendations
+AI Integration
+Goals:
+Design task tracking system
+Implement crew assignment feature
+Enable AI crew recommendation
+Test crew management platform
+Timeline:
+Week 1: Setup backend framework, Configure database schema
+Week 2: Build task tracking system, Implement crew assignment feature 
+Week 3: Train AI crew recommendation model, Integrate with backend
+Week 4: Create crew management dashboard, Test platform
+Timeline:
+Day 1: Set up backend framework, Initialize Django models
+Day 2: Configure database schema, Define crew roles
+Day 3: Build task tracker system, Implement task tracking
+Day 4: Train AI recommendation model, Incorporate into backend
+Day 5: Create crew assignment feature, Implement crew selection
+Day 6: Test crew management platform, Verify features
+Day 7: Prepare project report, Submit proposal
+Day 8: Begin project implementation
+Day 9: Conduct user acceptance test
+Day 10: Finalize project, Submit proposal
+
+In this proposal, I've outlined the core components of the MyCrest crew
+
+----------------------------------------------------------------------------------------------------
+EXAMPLE 2
+Best strategy: B: guided+few-shot | Score: 21 | Compliant: True
+Checks: missing=None, weeks=4/4, status=False, backlog=False, proposal=False, generic_timeline=False
+
+Proposal / Input:
+Develop EventEase, a web-based system that enables users to plan events with AI recommendations for venues, vendors, and schedules. The project will consist of a backend API, a frontend dashboard, and AI integration for smart suggestions. Success will be measured by user adoption, ease of planning, and stable deployment.
+
+Model Output:
+Title: Crew Manager
+Summary:
+MyCrewManager is a crew management platform that allows project managers to schedule tasks, track performance, and receiveAI-driven recommendations for coordination and risk management.
+Roles:
+Project Manager
+Crew Manager
+AI Engineer
+Backend Developer
+Frontend Developer
+QA Engineer
+Features:
+Task Schedule
+Performance Tracking
+AI Recommendations
+Risk Management
+Goals:
+Design task scheduling module
+Implement performance tracking system
+Enable AI recommendation features
+Test crew management platform
+QA report
+Timeline:
+Week 1: Setup backend framework, Configure database schema
+Week 2: Build task scheduling module, Implement performance tracking
+Week 3: Train AI recommendation model, Integrate with backend
+Week 4: Create risk management system, Test crew management platform thoroughly
+Week 5: Prepare QA report, Deploy crew manager platform
+
+----------------------------------------------------------------------------------------------------
+EXAMPLE 3
+Best strategy: B: guided+few-shot | Score: 21 | Compliant: True
+Checks: missing=None, weeks=4/4, status=False, backlog=False, proposal=False, generic_timeline=False
+
+Proposal / Input:
+Develop PetCare, a mobile app that integrates with wearables and vet records to monitor pet health. The system will provide diet tracking, exercise monitoring, and AI-driven alerts. Success will be measured by user adoption, accuracy of alerts, and stable deployment.
+
+Model Output:
+Title: PetCare Manager
+Summary:
+The PetCare Manager platform is designed to manage pet care services, including diet tracking, pet exercise, and AI alerts. It uses APIs to integrate with veterinary clinics and social media platforms.
+Roles:
+Project Manager
+Backend Developer
+Frontend Developer
+AI Engineer
+Social Media Manager
+QA Engineer
+Features:
+Diet Tracking
+Exercise Monitoring
+AI Alerts
+Vet Records
+Goals:
+Design diet tracking system
+Implement exercise monitoring
+Enable AI alerts
+Build vet records system
+Test pet care manager
+Timeline:
+Week 1: Setup backend framework, Configure database schema
+Week 2: Build diet tracking system, Implement exercise monitoring
+Week 3: Train AI alert model, Integrate with backend
+Week 4: Create vet records system, Test pet care manager functionality
+Week 5: Deploy backend, Monitor performance
+Week 6: Conduct user adoption study
+Week 7: Conduct QA testing
+Week 8: Finalize project
+Note: This is just a breakdown and may need to adjust based on specific requirements and constraints.
+
+----------------------------------------------------------------------------------------------------
+EXAMPLE 4
+Best strategy: B: guided+few-shot | Score: 19 | Compliant: False
+Checks: missing=['roles'], weeks=4/4, status=False, backlog=False, proposal=False, generic_timeline=False
+
+Proposal / Input:
+Develop BuildWise, a web-based system for construction project management. It will include progress tracking, resource management, and AI delay prediction. Success will be measured by adoption among contractors, improved efficiency, and compliance reporting.
+
+Model Output:
+Title: BuildWise Project Management System
+Summary:
+BuildWise is a project management system for construction firms. It integrates progress tracking, scheduling, resource allocation, and AI delays prediction. The system aims to streamline workflows, reduce errors, and improve profitability. Roles:
+Project Manager
+QA Engineer
+Backend Developer
+AI Specialist
+Project Coordinator
+Features:
+Progress Tracking
+Scheduling
+Resource Allocation
+AI Delay Prediction
+Goals:
+Design progress tracking system
+Implement scheduling algorithm
+Enable resource allocation
+Test AI delay prediction
+Timeline:
+Week 1: Setup backend framework, Configure database schema
+Week 2: Build progress tracking module, Implement scheduling logic
+Week 3: Train AI delay model, Integrate with backend
+Week 4: Create resource allocation system, Test project functionality
+Week 5: Deploy project management system, Monitor performance
+Components:
+Backend Framework
+Database Schema
+QA Tools
+AI Model
+Tasks:
+Setup Backend Framework, Configure Database Schema, Build Progress Tracking Module, Implement Scheduling Logic, Train AI Delay Model, Integrate Backend with Database, Test Project Management System, Monitor Performance
+Assumptions:
+Backend Framework isORM-backed, Uses MongoDB for database
+QA Tools are Selenium, Chai
+AI Model is TensorFlow, Uses Hugging Face Transformers
+Requirements:
+Backend Framework requires ORM, Mongoose
+Database Schema defines tables for projects, tasks, resources, delays
+QA Tools require pytest, Chai for testing
+AI Model requires TensorFlow, Hugging Face
+Frontend Framework is React, Uses Redux for state management
+Tasks require Axios for API calls
+Backend Framework and Database setup are done in separate files
+AI Delay Model is trained on historical data
+Overall, BuildWise is an AI-powered project management system that automates workflows and reduces errors, improving profitability and efficiency.
+Roles:
+
+----------------------------------------------------------------------------------------------------
+EXAMPLE 5
+Best strategy: B: guided+few-shot | Score: 17 | Compliant: False
+Checks: missing=['features', 'goals'], weeks=4/4, status=False, backlog=False, proposal=False, generic_timeline=False
+
+Proposal / Input:
+Develop ShopBuddy, a mobile app that assists users with shopping lists, deal finding, and spending tracking. Success will be measured by user adoption, savings achieved, and stable deployment.
+
+Model Output:
+Title: Develop Shopbuddy A Mobile Project
+Roles:
+1. Backend Developer
+2. Mobile App Developer
+3. API Gateway Engineer
+4. Database Manager
+5. Security Engineer
+6. Testing Engineer
+7. Reporting Manager
+8. QA Team
+9. Support Team
+10
+
+This is a Python code snippet for a simple chatbot that uses the OpenAI GPT-3 model. It generates responses based on prompts and inputs. The chatbot should be able to answer questions about programming, history, and trivia. The code also includes a function to generate responses based on input prompts.
+Summary:
+
+Features:
+
+Goals:
+Timeline:
+Week 1: Plan and execute key deliverables, Plan and execute key deliverables
+Week 2: Plan and execute key deliverables, Plan and execute key deliverables
+Week 3: Plan and execute key deliverables, Plan and execute key deliverables
+Week 4: Plan and execute key deliverables, Plan and execute key deliverables
+
+----------------------------------------------------------------------------------------------------
+EXAMPLE 6
+Best strategy: B: guided+few-shot | Score: 21 | Compliant: True
+Checks: missing=None, weeks=4/4, status=False, backlog=False, proposal=False, generic_timeline=False
+
+Proposal / Input:
+Develop SafeSchool, a web-based system for campus safety. It will include entrance monitoring, activity detection, and emergency alerts. Success will be measured by improved response times, reduced incidents, and stable deployment.
+
+Model Output:
+Title: SafeSchool
+Summary:
+SafeSchool is a campus safety system designed to monitor entrance, activity detection systems, and alert emergency personnel. It integrates AI to predict potential risks and provide real-time alerts. The system aims to enhance security and reduce incidents. 
+Roles:
+Project Manager
+Backend Developer
+Frontend Developer
+AI Engineer
+Security Analyst
+QA Engineer
+Features:
+Entrance Monitoring
+Activity Detection
+Emergency Alerts
+AI Risk Prediction
+Goals:
+Design entrance monitoring system
+Implement activity detection
+Enable emergency alerts
+Develop AI risk prediction module
+Test safety system thoroughly
+Timeline:
+Week 1: Setup backend framework, Configure APIs
+Week 2: Build entrance monitoring system, Implement activity detection
+Week 3: Train emergency alert model, Integrate with backend
+Week 4: Create AI risk prediction feature, Test safety system
+Components:
+Backend Framework
+APIs
+Database
+AI Modules
+Tools:
+Node.js, PostgreSQL
+Jquery, Flask
+HTML, CSS
+QA Tools
+Yes
+Code:
+SafeSchool.js
+db = db.collection('students')
+aiRisk = aiRiskModel()
+aiRisk.fitDB(db)
+aiRisk.predict(db)
+aiRisks = aiRisk.getDB()
+aiRisk = AIRisk()
+aiRisk.setDB(db)
+app = Flask(__name__)
+@app.route('/entrance', methods=['POST'])
+def entrance():
+    data = request.json
+    return entrance(data)
+@app.route('/activity', methods=['GET'])
+def activity():
+    return activity()
+@app.route('/risk', methods=['PUT'])
+def risk():
+    data=request.json
+    risk = riskModel(data)
+    return riskModel.putDB(risk)
+@app.route('/', methods=['GET']) 
+def home():
+    return home()
+db.collection('students').addDocument({
+    'name': 'John',
+    'age': 20,
+    'email': 'john@example
+
+----------------------------------------------------------------------------------------------------
+EXAMPLE 7
+Best strategy: B: guided+few-shot | Score: 21 | Compliant: True
+Checks: missing=None, weeks=4/4, status=False, backlog=False, proposal=False, generic_timeline=False
+
+Proposal / Input:
+Develop FarmLink, a web-based system that enables farmers to collaborate, share resources, and sell produce. The platform will include a marketplace, resource sharing, and AI demand forecasting. Success will be measured by farmer adoption, improved profitability, and stable deployment.
+
+Model Output:
+Title: FarmLink Manager
+Summary:
+FarmLink Manager is a platform for managing farm operations, including crop tracking, harvesting, and marketing. It includes a scheduling system, resource allocation, and AI-driven recommendations for crop management. The manager communicates with farmers and suppliers.
+Roles:
+Project Manager
+Backend Developer
+Frontend Developer
+AI Engineer
+Supplier Manager
+QA Engineer
+Features:
+Crop Tracking
+Harvesting
+Marketing Recommendations
+AI Crop Management
+Goals:
+Design crop tracking system
+Implement harvesting module
+Enable marketing recommendations
+Integrate AI crop management
+Create supplier module
+Test farmlink manager
+Timeline:
+Week 1: Setup backend framework, Configure database schema
+Week 2: Build crop tracking system, Implement harvesting module
+Week 3: Train AI crop management model, Integrate with backend
+Week 4: Create supplier module, Test farmlink manager functionality
+Week 5: Report crop management performance, Optimize backend architecture
+Week 6: Finalize project, Conduct user acceptance test
+Week 7: Deploy farmlink manager, Monitor backend performance
+Week 8: Conduct final review, Submit project proposal
+Week 9: Prepare startup plan, Launch farmlink manager app
+Week 10: Train backend developers, Conduct QA testing
+Week 0: Start project, Define requirements and goals
+I hope this breakdown helps! Let me know if you need any further clarification.
+
+----------------------------------------------------------------------------------------------------
+EXAMPLE 8
+Best strategy: A: prompt-only | Score: 21 | Compliant: True
+Checks: missing=None, weeks=4/4, status=False, backlog=False, proposal=False, generic_timeline=False
+
+Proposal / Input:
+Develop TutorAI, a mobile app that delivers personalized language lessons and practice. The system will include quizzes, conversation modules, and AI-driven progress tracking. Success will be measured by learner engagement, improved proficiency, and stable deployment.
+
+Model Output:
+Title: TutorAI Language Learning App
+Summary:
+TutorAI is a language learning app that uses AI to personalize lessons and practice exercises. It includes quizzes, conversation models, and progress tracking. The app aims to improve language skills and confidence.
+Roles:
+Project Manager
+Backend Developer
+Frontend Developer
+AI Engineer
+Language Educator
+QA Engineer
+Features:
+Quizzes
+Conversation Models
+Progress Tracking
+AI Proficiency
+Languages:
+English, Spanish, French
+Goals:
+Design language learning app with quizzes and conversation modules
+Implement progress tracking and AI proficiency grading
+Enable language learning with AI
+Test app for accuracy and user interface
+Timeline:
+Week 1: Setup backend framework, Configure database schema
+Week 2: Build quiz module, Implement conversation models
+Week 3: Train AI language model, Integrate with backend
+Week 4: Create progress tracking system, Test language learning app
+Week 5: Deploy language learning app, Monitor performance
+Keywords:
+Backend Framework, Database Schema, Quiz Module, Conversation Models, AI Language Model, Progress Tracking, Language Learning, QA Engineer, TutorAI App
+Note:
+This is just a sample code for TutorAI language learning app. You need to implement features like quizzes, conversation model, progress tracking, and AI proficiency. Also, you need to design the backend system and integrate it with frontend. Finally, you need test the app and fix any bugs.
+
+----------------------------------------------------------------------------------------------------
+EXAMPLE 9
+Best strategy: B: guided+few-shot | Score: 21 | Compliant: True
+Checks: missing=None, weeks=4/4, status=False, backlog=False, proposal=False, generic_timeline=False
+
+Proposal / Input:
+Develop GreenHome, a smart home app that monitors energy usage and provides AI-driven recommendations. The system will include appliance integration, alerts, and dashboards. Success will be measured by reduced energy consumption, user adoption, and stable deployment.
+
+Model Output:
+Title: GreenHome App
+Summary:
+GreenHome is an AI-powered smart home app designed to optimize energy usage and reduce waste. It integrates appliances, sensors, and AI algorithms to provide real-time insights and recommendations. The app aims to improve sustainability and reduce costs for homeowners. 
+Roles:
+Project Manager
+Backend Developer
+Frontend Developer
+AI Engineer
+IoT Engineer
+QA Engineer
+Features:
+Appliance Monitoring
+Energy Usage Analysis
+AI Recommendations
+Dashboard
+Goals:
+Design appliance monitoring system
+Implement energy usage analysis
+Enable AI recommendations
+Develop dashboard for analytics
+Test smart home app
+Timeline:
+Week 1: Setup backend framework, Configure sensors for monitoring
+Week 2: Build appliance monitoring system, Implement energy usage analysis logic
+Week 3: Train AI recommendation model, Integrate with backend
+Week 4: Create dashboard for analytics, Test smart home app functionality
+Week 5: Prepare documentation, Conduct final review
+Week 6: Launch smart home app, Monitor user adoption
+Week 7: Optimize AI recommendation algorithm, Deploy app
+Week 8: Conduct final review, Finalize project
+Keywords: Smart Home, Appliance Monitoring, Energy Usage, AI Recommendations, Dashboard, Backend Framework
+It seems like you've provided a task description for a software project titled "MyCrewManager". The project involves developing a crew management system for a project manager. The system should allow for assigning tasks, tracking progress, and receiving AI recommendations for coordination and risk management. The backend should use Django REST framework, while the frontend uses React. The project aims to automate crew coordination and ensure safety protocols are in place. 
+
+The project also includes AI for crew coordination and risk assessment. The system is expected to integrate with existing project management tools and databases. The goal is to create a crew management platform that enhances project efficiency and safety. 
+
+Here's a summary of
+
+----------------------------------------------------------------------------------------------------
+EXAMPLE 10
+Best strategy: A: prompt-only | Score: 21 | Compliant: True
+Checks: missing=None, weeks=4/4, status=False, backlog=False, proposal=False, generic_timeline=False
+
+Proposal / Input:
+Develop CityComm, a web-based system that connects residents with city services. It will include issue reporting, service access, and AI categorization. Success will be measured by improved response times, resident adoption, and stable deployment.
+
+Model Output:
+Title: CityComm: A City Service Platform
+Summary:
+CityComm is an AI-powered platform that connects residents to city services. Residents can report issues, access services, and receive notifications. The system aims to improve efficiency and citizen engagement.
+Roles:
+Project Manager
+Backend Developer
+Frontend Developer
+AI Engineer
+Community Manager
+QA Engineer
+Features:
+Issues Reporting
+Service Access
+AI Categorization
+Notifications
+Goals:
+Design issues reporting system
+Implement service access
+Enable AI categorization
+Develop notifications module
+Test platform
+Timeline:
+Week 1: Setup backend framework, Configure database schema
+Week 2: Build issues reporting system, Implement service access
+Week 3: Train AI categorization model, Integrate with backend
+Week 4: Create notifications module, Test platform
+Week 5: Finalize project, Deploy platform
+Keywords:
+City Comm, Backend Framework, AI Categorization, Issues Reporting, Service Access
+This is a comprehensive city comm platform design. It includes a platform for residents to report issues, a service access system, and an AI categorization module. The design also includes features for notifications and integration with other systems. The code is structured in a modular way, with each module focusing on a specific aspect of the platform.
+The design follows best practices for software architecture and coding standards. It also includes documentation for each module, to help developers understand how to implement each feature. Overall, this design provides a solid foundation for building a city comm platform.

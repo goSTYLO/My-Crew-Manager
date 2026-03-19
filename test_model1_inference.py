@@ -8,8 +8,8 @@ import re
 import torch
 from copy import deepcopy
 
-MODEL_ID = 'Qwen/Qwen2-0.5B-Instruct'
-OUTPUT_DIR = Path('AI/llms/fine_tune/qwen_model1_overview_lora')
+MODEL_ID = 'Qwen/Qwen2-1.5B-Instruct'
+OUTPUT_DIR = Path('AI/llms/fine_tune/qwen_model1_overview_lora_1p5b')
 
 tokenizer = AutoTokenizer.from_pretrained(MODEL_ID, trust_remote_code=True)
 base_model = AutoModelForCausalLM.from_pretrained(MODEL_ID, dtype=torch.float16, trust_remote_code=True)

@@ -1,0 +1,264 @@
+MODEL 1 INFERENCE TEST EXPORT
+Generated: 2026-03-19T20:40:43
+Dataset: c:\Users\Aaron\GitHub Repos\My-Crew-Manager\AI\llms\fine_tune\dataset\model1_description_to_part1.jsonl
+Selected rows (1-based): [6, 7, 8, 9, 10]
+Strict prompt integration active: True
+Strict prompt sections loaded: ['summary', 'roles', 'features', 'goals', 'timeline']
+Strict prompt rule lines injected: 16
+Examples run: 5
+Compliance summary: 4/5
+====================================================================================================
+
+----------------------------------------------------------------------------------------------------
+EXAMPLE 1 (dataset row 6)
+Best strategy: B: guided+few-shot | Score: 21 | Compliant: True
+Checks: missing=None, weeks=4/4, status=False, backlog=False, proposal=False, generic_timeline=False
+
+Proposal / Input:
+Develop SafeSchool, a web-based system for campus safety. It will include entrance monitoring, activity detection, and emergency alerts. Success will be measured by improved response times, reduced incidents, and stable deployment.
+
+Model Output:
+Title: SafeSchool Campus Safety System
+Summary:
+SafeSchool is a campus safety system designed to monitor entrances, detect suspicious activities, and send emergency alerts. It aims to improve response times, reduce incidents, and ensure campus security.
+Roles:
+System Architect
+Backend Developer 
+Frontend Developer
+Quality Assurance Engineer
+Security Analyst
+Project Manager
+Features:
+Entrance Monitoring
+Activity Detection
+Emergency Alerts
+Goals:
+Improve Entrance Monitoring
+Enhance Activity Detection
+Enable Emergency Alerts
+Reduce Incidents
+Stable Deployment
+Timeline:
+Week 1: Implement Entrance Monitoring Backend
+Week 2: Develop Activity Detection Module
+Week 3: Configure Emergency Alerts
+Week 4: Test Campus Safety System
+
+Develop SafeSchool Campus Security System. It will monitor entrances, track student movements, and alert authorities in case of emergencies. Success will depend on effective incident response, reliable monitoring, and user-friendly interface. Title: Campus Security System
+Summary: SafeSchool is a security system designed to manage entrances, track students, and notify authorities in case emergencies. It aims for efficient incident handling, accurate monitoring, and intuitive user interface.
+Roles:
+Security Engineer
+Backend Developer  
+Frontend Developer  
+Quality Assurance Engineer  
+Project Manager
+Feature:
+Entrance Management
+Student Tracking
+Emergency Alerting
+Goals:
+Implement Entrance Management
+Enable Student Tracking
+Enable Emergency Alerting
+Train Incident Response
+Test Campus Security System  
+Timeline:
+Week1: Set Up Entrance Management Backend
+Week2: Build Student Tracking Module
+
+----------------------------------------------------------------------------------------------------
+EXAMPLE 2 (dataset row 7)
+Best strategy: B: guided+few-shot | Score: 21 | Compliant: True
+Checks: missing=None, weeks=4/4, status=False, backlog=False, proposal=False, generic_timeline=False
+
+Proposal / Input:
+Develop FarmLink, a web-based system that enables farmers to collaborate, share resources, and sell produce. The platform will include a marketplace, resource sharing, and AI demand forecasting. Success will be measured by farmer adoption, improved profitability, and stable deployment.
+
+Model Output:
+Roles:
+Project Manager 
+Backend Developer
+Frontend Developer
+Quality Assurance Engineer
+UI/UX Designer
+Features:
+Marketplace
+Resource Sharing
+AI Demand Forecasting
+Goals:
+FarmLink Adoption
+Profitability Improvement
+Demand Forecasting
+Timeline:
+Week 1: Implement Marketplace, Setup Resource Sharing
+Week 2: Add AI Demand Forecasting, Enhance User Interface
+Week 3: Deploy System, Train Demand Forecasting Model
+Week 4: Launch Farmers' Marketplace, Finalize AI Demand Forecast
+Summary:
+FarmLink is a platform designed to facilitate farmer-to-farmer transactions, streamline resource sharing, enable AI demand forecasting, and boost profitability. By integrating a marketplace, sharing resources, and utilizing AI, FarmLink aims to revolutionize the agricultural industry.
+Title: FarmLink Smart Agribusiness Platform
+Summary:
+The FarmLink smart agribusiness platform aims to connect farmers, streamline resource management, and forecast demand for produce. The system integrates a marketplace, AI demand forecasting tools, and resource sharing features to enhance profitability and improve efficiency.
+Roles:
+Backend Developer
+Backend Developer (Agribusiness)
+Frontend Developer (Agri)
+Quality Assurance Engineer (Agrib)
+UI/UX Design
+Features:
+Agribusiness Marketplace
+Resource Management
+AI Demand Prediction
+Goals:
+Agribusine Marketplace
+Resource Sharing System
+Demand Forecast Tool
+Timeline:
+Agrib Market Place
+Setup Resource Sharing
+Implement Marketplace
+AI Demand Predict
+Train Forecast Model
+Launch Farmers' Marketplace
+
+----------------------------------------------------------------------------------------------------
+EXAMPLE 3 (dataset row 8)
+Best strategy: B: guided+few-shot | Score: 19 | Compliant: False
+Checks: missing=['features'], weeks=4/4, status=False, backlog=False, proposal=False, generic_timeline=False
+
+Proposal / Input:
+Develop TutorAI, a mobile app that delivers personalized language lessons and practice. The system will include quizzes, conversation modules, and AI-driven progress tracking. Success will be measured by learner engagement, improved proficiency, and stable deployment.
+
+Model Output:
+Title: TutorAI Language Learning App
+Summary:
+TutorAI is a language learning app designed to provide personalized lessons and practice for English learners aged between 12 and 18. The app includes quizzes, conversation exercises, and AI-powered progress tracking. The goal is to improve learners' proficiency and engagement with the language.
+Roles:
+Product Manager
+UI/UX Designer
+Backend Developer 
+Frontend Developer
+QA Engineer
+Language Model
+Teacher
+Goals:
+EPIC 1: Develop Quiz System
+EPIC 2: Implement Conversation Module
+EPIC
+Timeline:
+Week 1: Setup Backend API, Configure Quiz System
+Week 2: Build Conversation Module, Integrate Quiz System
+Epic 3: Train Language Model, Create Progress Tracking System
+Weeks 3-4: Deploy App, Test AI Progress Tracking
+Goals:
+Week 3: Configure Quiz System, Train Language Model
+Week 4: Integrate Progress Tracking System, Deploy App
+Timeline:
+Epic 1: Set Up Backend API, Build Quiz System
+Epic 2: Configure Conversation Module, Train Language
+Model
+Epic
+Week 1:
+Week 2:
+Week 4:
+Goals:
+Week
+3:
+Week 5:
+Timeline:
+Epics
+1: Set
+Backend
+API
+, Build
+Quiz
+System
+Epic: Configure
+Conversation
+Module
+, Train
+Language
+Features:
+
+----------------------------------------------------------------------------------------------------
+EXAMPLE 4 (dataset row 9)
+Best strategy: B: guided+few-shot | Score: 21 | Compliant: True
+Checks: missing=None, weeks=4/4, status=False, backlog=False, proposal=False, generic_timeline=False
+
+Proposal / Input:
+Develop GreenHome, a smart home app that monitors energy usage and provides AI-driven recommendations. The system will include appliance integration, alerts, and dashboards. Success will be measured by reduced energy consumption, user adoption, and stable deployment.
+
+Model Output:
+Title: GreenHome Smart Home App
+Summary:
+GreenHome is an energy monitoring and management app for smart homes. It integrates appliances, provides AI-driven energy-saving recommendations, and displays real-time usage data. The goal is to reduce energy waste and improve home efficiency.
+Roles:
+Product Manager
+Backend Engineer
+Frontend Developer
+AI Engineer
+Quality Assurance Engineer
+UI/UX Designer
+Features:
+Appliance Integration
+AI Energy Recommendations
+Real-Time Usage Data
+Energy Saving Alerts
+Goals:
+Reduce Energy Consumption
+Improve Home Efficiency
+Enable AI Energy Management
+Test Appliance Integration
+Validate Energy Recommendations
+Implement Alerts System
+Timeline:
+Week 1: Setup Backend API, Plan and execute key deliverables
+Week 2: Plan and execute key deliverables, Plan and execute key deliverables
+Week 3: Integrate Appliances, Plan and execute key deliverables
+Week 4: Optimize Energy Models, Plan and execute key deliverables
+
+----------------------------------------------------------------------------------------------------
+EXAMPLE 5 (dataset row 10)
+Best strategy: C: guided+few-shot+anchor | Score: 21 | Compliant: True
+Checks: missing=None, weeks=4/4, status=False, backlog=False, proposal=False, generic_timeline=False
+
+Proposal / Input:
+Develop CityComm, a web-based system that connects residents with city services. It will include issue reporting, service access, and AI categorization. Success will be measured by improved response times, resident adoption, and stable deployment.
+
+Model Output:
+Title:
+CityComm: City Services Connect
+Summary:
+CityCOMM is a city services platform that connects residents to city services. The system includes an issue reporting feature, a service access module, and an AI categorization module. The goal is to improve response times, increase resident adoption, deploy the system stably.
+Roles:
+Project Manager
+Frontend Developer
+Backend Developer 
+Quality Assurance Engineer
+UI/UX Designer
+AI Engineer
+Features:
+Issue Reporting
+Service Access
+AI Categorization
+Response Times
+Resident Adoption
+Deployment Stability
+Goals:
+Goal 1: Develop Issue Reporting Module
+Goal 2: Implement Service Access Module
+Goal
+3: Build AI Categorization Module
+Goal
+
+4: Test Response Times
+Goal 5: Enhance Resident Adoption
+Goal 6: Deploy CityCOMM
+Goal 7: Ensure Deployment Stability
+Goal 8: Improve AI Categorisation Accuracy
+Timeline:
+Week 1: Setup Backend Framework, Configure Database, Implement Issue Reporting Module, Start Service Access Module Development
+Week 2: Finish Issue Reporting Module Development, Add Service Access Module, Train AI Categorizer, Implement Response Times Module
+Week 3: Test Response Time Module, Integrate AI Categoriser, Deploy CityCOMM, Start Resident Adoption Campaign
+Week 4: Complete Service Access Module Integration, Train AI Model, Ensure Deployment Stability, Evaluate Resident Adoption, Finalize Deployment
+Develop CityComm is a web-based platform that connects city residents with city government services. It features an issue reporting system, a

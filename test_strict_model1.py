@@ -15,8 +15,8 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 from peft import PeftModel
 import torch
 
-MODEL_ID = 'Qwen/Qwen2-0.5B-Instruct'
-OUTPUT_DIR = Path('AI/llms/fine_tune/qwen_model1_overview_lora')
+MODEL_ID = 'Qwen/Qwen2-1.5B-Instruct'
+OUTPUT_DIR = Path('AI/llms/fine_tune/qwen_model1_overview_lora_1p5b')
 DATASET_DIR = Path('AI/llms/fine_tune/dataset')
 
 tokenizer = AutoTokenizer.from_pretrained(MODEL_ID, trust_remote_code=True)

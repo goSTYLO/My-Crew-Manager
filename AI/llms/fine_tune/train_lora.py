@@ -17,7 +17,7 @@ MODELS = {
         "dataset_path": str(_SCRIPT_DIR / "tokenized" / "tokenized_project_management_tinyllama"),
     },
     "qwen": {
-        "model_id": "Qwen/Qwen2-0.5B-Instruct",
+        "model_id": "Qwen/Qwen2-1.5B-Instruct",
         "dataset_path": str(_SCRIPT_DIR / "tokenized" / "tokenized_project_management_qwen"),
     },
 }

@@ -1,0 +1,129 @@
+MODEL 1 INFERENCE TEST EXPORT
+Generated: 2026-03-19T19:57:21
+Dataset: c:\Users\Aaron\GitHub Repos\My-Crew-Manager\AI\llms\fine_tune\dataset\model1_description_to_part1.jsonl
+Examples run: 3
+Compliance summary: 1/3
+====================================================================================================
+
+----------------------------------------------------------------------------------------------------
+EXAMPLE 1
+Best strategy: B: guided+few-shot | Score: 21 | Compliant: True
+Checks: missing=None, weeks=4/4, status=False, backlog=False, proposal=False, generic_timeline=False
+
+Proposal / Input:
+Develop the MyCrewManager platform, a web-based system that enables project managers to assign tasks, track progress, and receive AI-generated recommendations for team coordination and risk mitigation. The project will consist of a Django REST API backend, a React-based dashboard frontend, and AI integration using Hugging Face models, with the goal of creating a functional and scalable solution within 4 weeks. The team comprises a backend developer, frontend developer, AI engineer, and project manager. Success will be measured by the platform's ability to handle task assignments, AI recommendations, smooth team onboarding, and stable deployment. Challenges include limited VRAM, incomplete documentation, and potential OCR parsing issues.
+
+Model Output:
+Title: MyCrew Manager Project
+Summary:
+MyCrew Manager is a project management tool designed to streamline team coordination and improve risk mitigation. It integrates a Django REST backend with a React frontend, leveraging Hugging Face AI for task assignment and risk analysis. The project aims to create a scalable, user-friendly platform within 4-weeks.
+Roles:
+Backend Developer
+Frontend Developer
+AI Engineer
+Project Manager
+Features:
+Task Assignment
+Progress Tracking
+AI Recommendations
+Team Coordination
+Risk Mitigation
+Goals:
+Create backend API for task assignment
+Implement progress tracking for team members
+Integrate AI recommendation engine
+Design team coordination features
+Implement risk mitigation functionality
+Test platform functionality
+Timeline:
+Week 1: Setup backend framework, Implement task assignment API
+Week 2: Develop progress tracking module, Integrate AI model
+Week 3: Build team coordination features, Implement risk analysis
+Week 4: Test platform, Deploy solution
+Epics:
+Backend API
+Progress Tracking Module
+Team Coordiation Features
+Risk Analysis
+Tasks:
+Setup Django framework
+Implement task assignment API 
+Create progress tracking module
+Train AI recommendation model
+Design team collaboration features
+Build risk mitigation module
+Test backend API
+Implement progress tracker
+Enable team coordination
+Train risk analysis model
+Deploy platform
+Submit
+
+----------------------------------------------------------------------------------------------------
+EXAMPLE 2
+Best strategy: B: guided+few-shot | Score: 13 | Compliant: False
+Checks: missing=['summary', 'roles', 'features', 'goals'], weeks=4/4, status=False, backlog=False, proposal=False, generic_timeline=False
+
+Proposal / Input:
+Develop EventEase, a web-based system that enables users to plan events with AI recommendations for venues, vendors, and schedules. The project will consist of a backend API, a frontend dashboard, and AI integration for smart suggestions. Success will be measured by user adoption, ease of planning, and stable deployment.
+
+Model Output:
+Title: Develop Eventease A Web Project
+The system should prioritize simplicity, efficiency, and customization options for users. The backend API should support CRUD operations for event details, venue bookings, vendor bookings, and schedule management. The frontend dashboard should display event details, booking options, and AI-suggested schedules. The AI integration should use machine learning algorithms to provide personalized recommendations based on user preferences and past event data. The system must be scalable, secure, and compliant with industry standards. The project timeline includes design, development, testing, deployment, and maintenance phases. The first phase will involve designing the backend API and frontend dashboard. The second phase will focus on implementing the AI integration and backend API. The third phase will involve integrating the frontend dashboard and testing the system. The fourth phase will involve deploying the system and monitoring its performance. The final phase will involve maintaining the system and addressing any issues that arise. The project requirements include a clear understanding of the system's goals, features, and objectives. The project team should have experience with web development, AI, and backend programming. The project manager should oversee the project and ensure that it meets the desired outcomes. The backend developer should implement the backend API, handle database queries, and integrate with external systems. The frontend developer should build the frontend dashboard, create user interfaces, and test the system. Finally, the AI developer should develop the AI integration, train the machine learning models, and provide recommendations to users. The project should be completed within the specified time frame and budget, and should be reviewed for
+Summary:
+
+Roles:
+
+Features:
+
+Goals:
+Timeline:
+Week 1: Plan and execute key deliverables, Plan and execute key deliverables
+Week 2: Plan and execute key deliverables, Plan and execute key deliverables
+Week 3: Plan and execute key deliverables, Plan and execute key deliverables
+Week 4: Plan and execute key deliverables, Plan and execute key deliverables
+
+----------------------------------------------------------------------------------------------------
+EXAMPLE 3
+Best strategy: B: guided+few-shot | Score: 19 | Compliant: False
+Checks: missing=['roles'], weeks=4/4, status=False, backlog=False, proposal=False, generic_timeline=False
+
+Proposal / Input:
+Develop PetCare, a mobile app that integrates with wearables and vet records to monitor pet health. The system will provide diet tracking, exercise monitoring, and AI-driven alerts. Success will be measured by user adoption, accuracy of alerts, and stable deployment.
+
+Model Output:
+Title: PetCare
+Summary:
+PetCare is a mobile app designed to help pet owners monitor their pets' health and wellbeing. It integrates with wearabe
+Title: Event Ease
+Summary:
+The EventEase platform helps users plan, organize, and manage events like weddings, conferences and parties. The system provides AI-driven recommendation for venues, catering, and schedules, making event planning easier and more efficient. Roles:
+Project Manager Backend Developer Fron
+Features:
+Venue Booking Catering Scheduling AI Recommendation
+Goals:
+Implement venue booking system
+Create catering management module
+Design scheduling algorithm
+Enable AI recommendation system
+Test event planning features
+Deploy backend infrastructure
+Timeline:
+Week 1: Set up project team, define app architecture, design backend modules
+Week 2: Implement venue booking system, build catering management module, develop scheduling algorithm
+Week 3: Integrate AI recommendation system, test event planning features, deploy backend infrastructure
+Week 4: Train backend models, optimize scheduling algorithm, launch EventEase app
+Title: Smart Home Assistant
+Summary:
+SmartHomeAssistant is a home automation system that enables users to control smart devices like lights, thermostats, and security systems. It uses AI to learn user preferences and adjust settings automatically. Roles:
+AI Engineer Backend Developer Framer
+Features:
+Smart Devices Control AI Preferences Learning
+Goals:
+Develop smart device control module
+Implement AI preferences learning algorithm
+Train smart home assistant model
+Enable user preference customization
+Timeline:
+ Week 1: Define
+Roles:

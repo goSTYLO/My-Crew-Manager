@@ -18,8 +18,8 @@ except Exception:
 
 logger = logging.getLogger('llms')
 
-# Model ID from env; default Qwen2-0.5B for 6GB VRAM (Windows-friendly)
-_MODEL_ID_ENV = os.getenv("MODEL_ID", "Qwen/Qwen2-0.5B-Instruct")
+# Model ID from env; default Qwen2-1.5B for 6GB VRAM (Windows-friendly)
+_MODEL_ID_ENV = os.getenv("MODEL_ID", "Qwen/Qwen2-1.5B-Instruct")
 _PEFT_ADAPTER_PATH_ENV = os.getenv("PEFT_ADAPTER_PATH", "").strip() or None
 _PEFT_ADAPTER_PATH_BACKLOG_ENV = os.getenv("PEFT_ADAPTER_PATH_BACKLOG", "").strip() or None
 MODEL_ID = _MODEL_ID_ENV
