@@ -41,7 +41,8 @@ DATASET_DIR = _SCRIPT_DIR / "dataset"
 GEMINI_MODEL_FALLBACKS = [
     "gemini-2.0-flash",
     "gemini-2.5-flash",
-    "gemini-2.5-flash-lite",
+    "gemini-2.5-flash-lite"
+    "gemini-2.5-pro",
 ]
 
 # Proposal types for diversity

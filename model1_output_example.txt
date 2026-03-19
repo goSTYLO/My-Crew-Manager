@@ -1,0 +1,76 @@
+Title: MyCrest Manager Platform
+
+Summary:
+This project aims to develop a web application that allows project managers and teams to manage their projects, track their progress, receive AI recommendations for coordination and mitigation, and integrate with existing systems. The platform will utilize Django REST framework for backend development, React for frontend, HuggingFace for AI integration, and VRAM optimization for performance. The goal is to deliver a functional, scalable, and secure solution within the given timeframe.
+
+Roles:
+- Backend Developer
+- Frontend Developer
+  - React Developer
+    - ReactJS
+  -
+  - AI Engineer
+    -
+    - Huggingface Models
+- Project Manager
+
+Features:
+- Task Assignment
+- Progress Tracking
+- AI Recommendations
+- Team Coordination
+- Risk Mitigation
+- Integration with Existing Systems
+
+Goals:
+- Develop a fully functional, robust, and scalable MyCret Manager Platform within 10 days.
+- Optimize VRAM usage and ensure smooth deployment within 5 days.
+  - Prioritize AI integration and documentation.
+- Implement OCR parsing for better project management.
+- Ensure project manager's autonomy and flexibility.
+
+Timeline:
+Week 1: Backend Development
+Week 2: Frontend Development
+- React Development
+  Week 5: AI Integration
+  Month 1
+Weeks 3-4: Backend Deployment
+Weekends 5-6: Front-end Development
+Month 2
+Weekend 7: AI Training
+Week End 8: Documentation Review
+Week end 9: VRAM Optimization
+Week ends 11-12: Deployment
+Month end 13: Final Review
+Month start 14: Release
+
+Backlog:
+- Design UI/UX
+- Backend Testing
+- Feature Engineering
+- Deployment Testing
+  * Backend
+  ** Frontend
+  *** AI Integration
+
+Status:
+- Completed
+- Ready for release
+- Stable deployment
+- No issues found
+
+Proposal/Input:
+```markdown
+# MyCresst Manager Platform
+## Overview
+This project is designed to build a web platform that enables managing projects, tracking progress, receiving AI recommendations and coordinating team coordination. The backend will use Django REST Framework, while the frontend will be built using React. The AI integration will be done using HuggieFace models. The aim is to complete the platform within 2 weeks.
+
+## Requirements
+- Django REST
+- Python
+- Flask
+- Hugging face
+- VRAM Optimisation
+- Documentation
+- OCR Parsing

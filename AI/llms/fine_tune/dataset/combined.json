@@ -1,0 +1,1679 @@
+[
+  {
+    "title": "MyCrewManager",
+    "description": "Develop the MyCrewManager platform, a web-based system that enables project managers to assign tasks, track progress, and receive AI-generated recommendations for team coordination and risk mitigation. The project will consist of a Django REST API backend, a React-based dashboard frontend, and AI integration using Hugging Face models, with the goal of creating a functional and scalable solution within 4 weeks. The team comprises a backend developer, frontend developer, AI engineer, and project manager. Success will be measured by the platform's ability to handle task assignments, AI recommendations, smooth team onboarding, and stable deployment. Challenges include limited VRAM, incomplete documentation, and potential OCR parsing issues.",
+    "part1_output": {
+      "title": "MyCrewManager",
+      "summary": "Develop the MyCrewManager platform, a web-based system that enables project managers to assign tasks, track progress, and receive AI-generated recommendations for team coordination and risk mitigation. The project will consist of a Django REST API backend, a React-based dashboard frontend, and AI integration using Hugging Face models, with the goal of creating a functional and scalable solution within 4 weeks. The team comprises a backend developer, frontend developer, AI engineer, and project manager. Success will be measured by the platform's ability to handle task assignments, AI recommendations, smooth team onboarding, and stable deployment. Challenges include limited VRAM, incomplete documentation, and potential OCR parsing issues.",
+      "roles": [
+        "Project Manager",
+        "Backend Developer (Python, Django, DRF)",
+        "Frontend Developer (React, Tailwind)",
+        "AI Engineer (LLM orchestration, prompt design)",
+        "Quality Assurance Engineer",
+        "DevOps Engineer (CI/CD pipeline)",
+        "Data Scientist (Hugging Face, LangChain, internal dataset)",
+        "Technical Writer (onboarding documentation)"
+      ],
+      "features": [
+        "AI-Powered Task Generation",
+        "Project Progress Tracking",
+        "Task Assignment & Delegation",
+        "AI-Generated Recommendations",
+        "Real-time Updates Dashboard"
+      ],
+      "goals": [
+        {
+          "epic": "Design user authentication interface",
+          "role": "UI/UX Designer"
+        },
+        {
+          "epic": "Implement user registration and login flows",
+          "role": "Backend Developer"
+        },
+        {
+          "epic": "Enable AI integration within task manager platform",
+          "role": "AI Engineer"
+        },
+        {
+          "epic": "Develop OCR module for document parsing",
+          "role": "AI Engineer"
+        },
+        {
+          "epic": "Design and implement real-time updates for task dashboard",
+          "role": "Frontend Developer"
+        },
+        {
+          "epic": "Develop AI-generated recommendations for project managers",
+          "role": "AI Engineer"
+        },
+        {
+          "epic": "Test platform for stability and performance",
+          "role": "Quality Assurance Engineer"
+        },
+        {
+          "epic": "Manage team coordination and timeline for successful project launch",
+          "role": "Project Manager"
+        }
+      ],
+      "timeline": {
+        "week1": [
+          "Define project requirements and architecture",
+          "Set up development infrastructure"
+        ],
+        "week2": [
+          "Create database schema and models",
+          "Implement user registration and login flows"
+        ],
+        "week3": [
+          "Develop OCR module for document parsing",
+          "Design and implement real-time updates for task dashboard"
+        ],
+        "week4": [
+          "Develop AI-generated recommendations for project managers",
+          "Test platform for stability and performance"
+        ]
+      }
+    },
+    "part1_text": "=== MyCrewManager ===\nSummary:\nDevelop the MyCrewManager platform, a web-based system that enables project managers to assign tasks, track progress, and receive AI-generated recommendations for team coordination and risk mitigation. The project will consist of a Django REST API backend, a React-based dashboard frontend, and AI integration using Hugging Face models, with the goal of creating a functional and scalable solution within 4 weeks. The team comprises a backend developer, frontend developer, AI engineer, and project manager. Success will be measured by the platform's ability to handle task assignments, AI recommendations, smooth team onboarding, and stable deployment. Challenges include limited VRAM, incomplete documentation, and potential OCR parsing issues.\n\nRoles:\n- Project Manager\n- Backend Developer (Python, Django, DRF)\n- Frontend Developer (React, Tailwind)\n- AI Engineer (LLM orchestration, prompt design)\n- Quality Assurance Engineer\n- DevOps Engineer (CI/CD pipeline)\n- Data Scientist (Hugging Face, LangChain, internal dataset)\n- Technical Writer (onboarding documentation)\n\nFeatures:\n- AI-Powered Task Generation\n- Project Progress Tracking\n- Task Assignment & Delegation\n- AI-Generated Recommendations\n- Real-time Updates Dashboard\n\nGoals:\n- Design user authentication interface (UI/UX Designer)\n- Implement user registration and login flows (Backend Developer)\n- Enable AI integration within task manager platform (AI Engineer)\n- Develop OCR module for document parsing (AI Engineer)\n- Design and implement real-time updates for task dashboard (Frontend Developer)\n- Develop AI-generated recommendations for project managers (AI Engineer)\n- Test platform for stability and performance (Quality Assurance Engineer)\n- Manage team coordination and timeline for successful project launch (Project Manager)\n\nTimeline:\nWeek 1: Define project requirements and architecture, Set up development infrastructure\nWeek 2: Create database schema and models, Implement user registration and login flows\nWeek 3: Develop OCR module for document parsing, Design and implement real-time updates for task dashboard\nWeek 4: Develop AI-generated recommendations for project managers, Test platform for stability and performance",
+    "part2_output": "Goal 1: Design user authentication interface\n  -User Story 1.1: Integrate AI Engine with Django App\n    -Task 1.1.1: Define and implement Django API endpoints for communication with AI Engine\n    -Task 1.1.2: Test API endpoints for correctness\nGoal 2: Implement user registration and login flows\n  -User Story 2.1: Add AI Assistant UI Component\n    -Task 2.1.1: Design and implement UI components for task listing and assignment\n    -Task 2.1.2: Implement API calls to retrieve task data for UI display\nGoal 3: Enable AI integration within task manager platform\n  -User Story 3.1: Generate Recovery Plan Algorithm\n    -Task 3.1.1: Define algorithm for generating task dependency charts\n    -Task 3.1.2: Test algorithm for correctness\nGoal 4: Develop OCR module for document parsing\n  -User Story 4.1: Integrate OCR Results into UI\n    -Task 4.1.1: Install Donut model package in Django backend\n    -Task 4.1.2: Implement API endpoint for OCR processing\nGoal 5: Design and implement real-time updates for task dashboard\n  -User Story 5.1: As a Frontend Developer, I want to deliver design and implement real-time updates for task dashboard\n    -Task 5.1.1: Implement design and implement real-time updates for task dashboard\n    -Task 5.1.2: Validate design and implement real-time updates for task dashboard\nGoal 6: Develop AI-generated recommendations for project managers\n  -User Story 6.1: As a AI Engineer, I want to deliver develop ai-generated recommendations for project managers\n    -Task 6.1.1: Implement develop ai-generated recommendations for project managers\n    -Task 6.1.2: Validate develop ai-generated recommendations for project managers\nGoal 7: Test platform for stability and performance\n  -User Story 7.1: As a Quality Assurance Engineer, I want to deliver test platform for stability and performance\n    -Task 7.1.1: Implement test platform for stability and performance\n    -Task 7.1.2: Validate test platform for stability and performance\nGoal 8: Manage team coordination and timeline for successful project launch\n  -User Story 8.1: As a Project Manager, I want to deliver manage team coordination and timeline for successful project launch\n    -Task 8.1.1: Implement manage team coordination and timeline for successful project launch\n    -Task 8.1.2: Validate manage team coordination and timeline for successful project launch"
+  },
+  {
+    "title": "EventEase Smart Event Planner",
+    "description": "Develop EventEase, a web-based system that enables users to plan events with AI recommendations for venues, vendors, and schedules. The project will consist of a backend API, a frontend dashboard, and AI integration for smart suggestions. Success will be measured by user adoption, ease of planning, and stable deployment.",
+    "part1_output": {
+      "title": "EventEase Smart Event Planner",
+      "summary": "EventEase is a platform that helps users plan and manage events such as weddings, conferences, and parties. It provides AI-driven recommendations for venues, vendors, and schedules. The system aims to simplify event planning and reduce stress for organizers.",
+      "roles": [
+        "Project Manager",
+        "Backend Developer",
+        "Frontend Developer",
+        "AI Engineer",
+        "QA Engineer",
+        "DevOps Engineer"
+      ],
+      "features": [
+        "Venue Search",
+        "Vendor Management",
+        "Schedule Builder",
+        "AI Recommendations",
+        "Notifications"
+      ],
+      "goals": [
+        {
+          "epic": "Design venue search interface",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Implement vendor management system",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Enable AI recommendation engine",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Develop schedule builder",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Test event planner for usability and performance",
+          "role": "Project Manager"
+        }
+      ],
+      "timeline": {
+        "week1": [
+          "Define project requirements and architecture",
+          "Set up backend framework"
+        ],
+        "week2": [
+          "Build venue search module",
+          "Implement vendor management system"
+        ],
+        "week3": [
+          "Train AI recommendation model",
+          "Integrate with schedule builder"
+        ],
+        "week4": [
+          "Create notifications module",
+          "Test event planner"
+        ]
+      }
+    },
+    "part1_text": "=== EventEase Smart Event Planner ===\nSummary:\nEventEase is a platform that helps users plan and manage events such as weddings, conferences, and parties. It provides AI-driven recommendations for venues, vendors, and schedules. The system aims to simplify event planning and reduce stress for organizers.\n\nRoles:\n- Project Manager\n- Backend Developer\n- Frontend Developer\n- AI Engineer\n- QA Engineer\n- DevOps Engineer\n\nFeatures:\n- Venue Search\n- Vendor Management\n- Schedule Builder\n- AI Recommendations\n- Notifications\n\nGoals:\n- Design venue search interface (Project Manager)\n- Implement vendor management system (Project Manager)\n- Enable AI recommendation engine (Project Manager)\n- Develop schedule builder (Project Manager)\n- Test event planner for usability and performance (Project Manager)\n\nTimeline:\nWeek 1: Define project requirements and architecture, Set up backend framework\nWeek 2: Build venue search module, Implement vendor management system\nWeek 3: Train AI recommendation model, Integrate with schedule builder\nWeek 4: Create notifications module, Test event planner",
+    "part2_output": "Goal 1: Design venue search interface\n  -User Story 1.1: As a user, I want to search venues\n    -Task 1.1.1: Build venue search API\n    -Task 1.1.2: Create venue search UI\nGoal 2: Implement vendor management system\n  -User Story 2.1: As a user, I want to manage vendors\n    -Task 2.1.1: Build vendor API\n    -Task 2.1.2: Create vendor dashboard\nGoal 3: Enable AI recommendation engine\n  -User Story 3.1: As a user, I want AI suggestions\n    -Task 3.1.1: Train recommendation model\n    -Task 3.1.2: Integrate with backend\nGoal 4: Develop schedule builder\n  -User Story 4.1: As a user, I want to plan schedules\n    -Task 4.1.1: Build schedule API\n    -Task 4.1.2: Create schedule UI\nGoal 5: Test event planner for usability and performance\n  -User Story 5.1: As QA, I want to validate usability\n    -Task 5.1.1: Conduct usability tests\n    -Task 5.1.2: Report performance issues"
+  },
+  {
+    "title": "PetCare AI Health Monitor",
+    "description": "Develop PetCare, a mobile app that integrates with wearables and vet records to monitor pet health. The system will provide diet tracking, exercise monitoring, and AI-driven alerts. Success will be measured by user adoption, accuracy of alerts, and stable deployment.",
+    "part1_output": {
+      "title": "PetCare AI Health Monitor",
+      "summary": "PetCare is an AI-powered health monitoring app for pets. It tracks diet, exercise, and medical records, providing alerts for vaccinations and checkups. The platform aims to improve pet wellness and assist owners in proactive care.",
+      "roles": [
+        "Project Manager",
+        "Mobile Developer",
+        "Backend Developer",
+        "AI Engineer",
+        "Veterinarian Consultant",
+        "QA Engineer"
+      ],
+      "features": [
+        "Diet Tracking",
+        "Exercise Monitoring",
+        "Medical Records",
+        "Alerts"
+      ],
+      "goals": [
+        {
+          "epic": "Design diet tracking interface",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Implement exercise monitoring module",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Enable AI health alerts",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Integrate medical records",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Test app for accuracy and usability",
+          "role": "Project Manager"
+        }
+      ],
+      "timeline": {
+        "week1": [
+          "Setup mobile app framework",
+          "Configure backend APIs"
+        ],
+        "week2": [
+          "Build diet tracking system",
+          "Implement exercise monitoring"
+        ],
+        "week3": [
+          "Create medical records module",
+          "Integrate veterinarian inputs"
+        ],
+        "week4": [
+          "Develop alerts system",
+          "Test pet health monitor"
+        ]
+      }
+    },
+    "part1_text": "=== PetCare AI Health Monitor ===\nSummary:\nPetCare is an AI-powered health monitoring app for pets. It tracks diet, exercise, and medical records, providing alerts for vaccinations and checkups. The platform aims to improve pet wellness and assist owners in proactive care.\n\nRoles:\n- Project Manager\n- Mobile Developer\n- Backend Developer\n- AI Engineer\n- Veterinarian Consultant\n- QA Engineer\n\nFeatures:\n- Diet Tracking\n- Exercise Monitoring\n- Medical Records\n- Alerts\n\nGoals:\n- Design diet tracking interface (Project Manager)\n- Implement exercise monitoring module (Project Manager)\n- Enable AI health alerts (Project Manager)\n- Integrate medical records (Project Manager)\n- Test app for accuracy and usability (Project Manager)\n\nTimeline:\nWeek 1: Setup mobile app framework, Configure backend APIs\nWeek 2: Build diet tracking system, Implement exercise monitoring\nWeek 3: Create medical records module, Integrate veterinarian inputs\nWeek 4: Develop alerts system, Test pet health monitor",
+    "part2_output": "Goal 1: Design diet tracking interface\n  -User Story 1.1: As a pet owner, I want to log diet\n    -Task 1.1.1: Build diet API\n    -Task 1.1.2: Create diet UI\nGoal 2: Implement exercise monitoring module\n  -User Story 2.1: As a pet owner, I want to track exercise\n    -Task 2.1.1: Build exercise API\n    -Task 2.1.2: Create exercise UI\nGoal 3: Enable AI health alerts\n  -User Story 3.1: As a pet owner, I want vaccination reminders\n    -Task 3.1.1: Train alert model\n    -Task 3.1.2: Integrate with backend\nGoal 4: Integrate medical records\n  -User Story 4.1: As a vet, I want to view records\n    -Task 4.1.1: Build records API\n    -Task 4.1.2: Create records UI\nGoal 5: Test app for accuracy and usability\n  -User Story 5.1: As QA, I want to validate health alerts\n    -Task 5.1.1: Conduct accuracy tests\n    -Task 5.1.2: Report usability issues"
+  },
+  {
+    "title": "BuildWise Construction Manager",
+    "description": "Develop BuildWise, a web-based system for construction project management. It will include progress tracking, resource management, and AI delay prediction. Success will be measured by adoption among contractors, improved efficiency, and compliance reporting.",
+    "part1_output": {
+      "title": "BuildWise Construction Manager",
+      "summary": "BuildWise is a construction management tool that helps contractors track progress, manage resources, and ensure safety compliance. It integrates AI to predict delays and optimize resource allocation. The system aims to improve efficiency and reduce project risks.",
+      "roles": [
+        "Project Manager",
+        "Backend Developer",
+        "Frontend Developer",
+        "AI Engineer",
+        "Safety Officer",
+        "QA Engineer"
+      ],
+      "features": [
+        "Progress Tracking",
+        "Resource Management",
+        "AI Delay Prediction",
+        "Safety Compliance"
+      ],
+      "goals": [
+        {
+          "epic": "Design progress tracking interface",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Implement resource management system",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Enable AI delay prediction",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Develop safety compliance module",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Test system for accuracy and performance",
+          "role": "Project Manager"
+        }
+      ],
+      "timeline": {
+        "week1": [
+          "Setup backend framework",
+          "Configure database schema"
+        ],
+        "week2": [
+          "Build progress tracking system",
+          "Implement resource management"
+        ],
+        "week3": [
+          "Train AI delay prediction model",
+          "Integrate with dashboard"
+        ],
+        "week4": [
+          "Create safety compliance module",
+          "Test construction manager"
+        ]
+      }
+    },
+    "part1_text": "=== BuildWise Construction Manager ===\nSummary:\nBuildWise is a construction management tool that helps contractors track progress, manage resources, and ensure safety compliance. It integrates AI to predict delays and optimize resource allocation. The system aims to improve efficiency and reduce project risks.\n\nRoles:\n- Project Manager\n- Backend Developer\n- Frontend Developer\n- AI Engineer\n- Safety Officer\n- QA Engineer\n\nFeatures:\n- Progress Tracking\n- Resource Management\n- AI Delay Prediction\n- Safety Compliance\n\nGoals:\n- Design progress tracking interface (Project Manager)\n- Implement resource management system (Project Manager)\n- Enable AI delay prediction (Project Manager)\n- Develop safety compliance module (Project Manager)\n- Test system for accuracy and performance (Project Manager)\n\nTimeline:\nWeek 1: Setup backend framework, Configure database schema\nWeek 2: Build progress tracking system, Implement resource management\nWeek 3: Train AI delay prediction model, Integrate with dashboard\nWeek 4: Create safety compliance module, Test construction manager",
+    "part2_output": "Goal 1: Design progress tracking interface\n  -User Story 1.1: As a contractor, I want to track progress\n    -Task 1.1.1: Build progress API\n    -Task 1.1.2: Create progress UI\nGoal 2: Implement resource management system\n  -User Story 2.1: As a manager, I want to assign resources\n    -Task 2.1.1: Build resource API\n    -Task 2.1.2: Create resource UI\nGoal 3: Enable AI delay prediction\n  -User Story 3.1: As a contractor, I want delay forecasts\n    -Task 3.1.1: Train prediction model\n    -Task 3.1.2: Integrate with backend\nGoal 4: Develop safety compliance module\n  -User Story 4.1: As a safety officer, I want compliance reports\n    -Task 4.1.1: Build compliance API\n    -Task 4.1.2: Create compliance dashboard\nGoal 5: Test system for accuracy and performance\n  -User Story 5.1: As QA, I want to validate predictions\n    -Task 5.1.1: Conduct accuracy tests\n    -Task 5.1.2: Report performance issues"
+  },
+  {
+    "title": "ShopBuddy AI Shopping Assistant",
+    "description": "Develop ShopBuddy, a mobile app that assists users with shopping lists, deal finding, and spending tracking. Success will be measured by user adoption, savings achieved, and stable deployment.",
+    "part1_output": {
+      "title": "ShopBuddy AI Shopping Assistant",
+      "summary": "ShopBuddy is a shopping assistant app that helps users create lists, find deals, and track spending. It uses AI to recommend products and suggest budget-friendly alternatives. The platform aims to make shopping more efficient and cost-effective.",
+      "roles": [
+        "Project Manager",
+        "Mobile Developer",
+        "Backend Developer",
+        "AI Engineer",
+        "QA Engineer"
+      ],
+      "features": [
+        "Shopping Lists",
+        "Deal Finder",
+        "Spending Tracker",
+        "AI Recommendations"
+      ],
+      "goals": [
+        {
+          "epic": "Design shopping list interface",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Implement deal finder module",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Enable AI product recommendations",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Develop spending tracker",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Test app for usability and performance",
+          "role": "Project Manager"
+        }
+      ],
+      "timeline": {
+        "week1": [
+          "Setup mobile app framework",
+          "Configure backend APIs"
+        ],
+        "week2": [
+          "Build shopping list module",
+          "Implement deal finder"
+        ],
+        "week3": [
+          "Train AI recommendation model",
+          "Integrate with shopping lists"
+        ],
+        "week4": [
+          "Create spending tracker",
+          "Test shopping assistant"
+        ]
+      }
+    },
+    "part1_text": "=== ShopBuddy AI Shopping Assistant ===\nSummary:\nShopBuddy is a shopping assistant app that helps users create lists, find deals, and track spending. It uses AI to recommend products and suggest budget-friendly alternatives. The platform aims to make shopping more efficient and cost-effective.\n\nRoles:\n- Project Manager\n- Mobile Developer\n- Backend Developer\n- AI Engineer\n- QA Engineer\n\nFeatures:\n- Shopping Lists\n- Deal Finder\n- Spending Tracker\n- AI Recommendations\n\nGoals:\n- Design shopping list interface (Project Manager)\n- Implement deal finder module (Project Manager)\n- Enable AI product recommendations (Project Manager)\n- Develop spending tracker (Project Manager)\n- Test app for usability and performance (Project Manager)\n\nTimeline:\nWeek 1: Setup mobile app framework, Configure backend APIs\nWeek 2: Build shopping list module, Implement deal finder\nWeek 3: Train AI recommendation model, Integrate with shopping lists\nWeek 4: Create spending tracker, Test shopping assistant",
+    "part2_output": "Goal 1: Design shopping list interface\n  -User Story 1.1: As a shopper, I want to manage lists\n    -Task 1.1.1: Build list API\n    -Task 1.1.2: Create list UI\nGoal 2: Implement deal finder module\n  -User Story 2.1: As a shopper, I want to find deals\n    -Task 2.1.1: Build deal API\n    -Task 2.1.2: Create deal UI\nGoal 3: Enable AI product recommendations\n  -User Story 3.1: As a shopper, I want tailored deals\n    -Task 3.1.1: Train recommendation model\n    -Task 3.1.2: Display deals in app\nGoal 4: Develop spending tracker\n  -User Story 4.1: As a shopper, I want to track spending\n    -Task 4.1.1: Build spending API\n    -Task 4.1.2: Create spending dashboard\nGoal 5: Test app for usability and performance\n  -User Story 5.1: As QA, I want to validate usability\n    -Task 5.1.1: Conduct usability tests\n    -Task 5.1.2: Report performance issues"
+  },
+  {
+    "title": "SafeSchool Campus Security",
+    "description": "Develop SafeSchool, a web-based system for campus safety. It will include entrance monitoring, activity detection, and emergency alerts. Success will be measured by improved response times, reduced incidents, and stable deployment.",
+    "part1_output": {
+      "title": "SafeSchool Campus Security",
+      "summary": "SafeSchool is a campus security system that uses AI-powered surveillance and emergency alerts. It monitors entrances, detects unusual activity, and provides real-time notifications to staff. The system aims to improve student safety and streamline emergency response.",
+      "roles": [
+        "Project Manager",
+        "AI Engineer",
+        "Backend Developer",
+        "Frontend Developer",
+        "Security Officer",
+        "QA Engineer"
+      ],
+      "features": [
+        "Entrance Monitoring",
+        "Activity Detection",
+        "Emergency Alerts",
+        "Incident Reports"
+      ],
+      "goals": [
+        {
+          "epic": "Design entrance monitoring interface",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Implement activity detection module",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Enable emergency alerts",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Develop incident reporting dashboard",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Test system for accuracy and performance",
+          "role": "Project Manager"
+        }
+      ],
+      "timeline": {
+        "week1": [
+          "Setup backend framework",
+          "Configure surveillance APIs"
+        ],
+        "week2": [
+          "Build entrance monitoring system",
+          "Implement activity detection"
+        ],
+        "week3": [
+          "Train AI alert model",
+          "Integrate with notification system"
+        ],
+        "week4": [
+          "Create incident reporting module",
+          "Test campus security system"
+        ]
+      }
+    },
+    "part1_text": "=== SafeSchool Campus Security ===\nSummary:\nSafeSchool is a campus security system that uses AI-powered surveillance and emergency alerts. It monitors entrances, detects unusual activity, and provides real-time notifications to staff. The system aims to improve student safety and streamline emergency response.\n\nRoles:\n- Project Manager\n- AI Engineer\n- Backend Developer\n- Frontend Developer\n- Security Officer\n- QA Engineer\n\nFeatures:\n- Entrance Monitoring\n- Activity Detection\n- Emergency Alerts\n- Incident Reports\n\nGoals:\n- Design entrance monitoring interface (Project Manager)\n- Implement activity detection module (Project Manager)\n- Enable emergency alerts (Project Manager)\n- Develop incident reporting dashboard (Project Manager)\n- Test system for accuracy and performance (Project Manager)\n\nTimeline:\nWeek 1: Setup backend framework, Configure surveillance APIs\nWeek 2: Build entrance monitoring system, Implement activity detection\nWeek 3: Train AI alert model, Integrate with notification system\nWeek 4: Create incident reporting module, Test campus security system",
+    "part2_output": "Goal 1: Design entrance monitoring interface\n  -User Story 1.1: As a security officer, I want to monitor entrances\n    -Task 1.1.1: Build entrance API\n    -Task 1.1.2: Create entrance UI\nGoal 2: Implement activity detection module\n  -User Story 2.1: As a security officer, I want unusual activity alerts\n    -Task 2.1.1: Train detection model\n    -Task 2.1.2: Integrate with backend\nGoal 3: Enable emergency alerts\n  -User Story 3.1: As staff, I want real-time alerts\n    -Task 3.1.1: Build alert API\n    -Task 3.1.2: Create alert UI\nGoal 4: Develop incident reporting dashboard\n  -User Story 4.1: As an admin, I want incident reports\n    -Task 4.1.1: Build reporting API\n    -Task 4.1.2: Create reporting dashboard\nGoal 5: Test system for accuracy and performance\n  -User Story 5.1: As QA, I want to validate alerts\n    -Task 5.1.1: Conduct accuracy tests\n    -Task 5.1.2: Report performance issues"
+  },
+  {
+    "title": "FarmLink Cooperative Platform",
+    "description": "Develop FarmLink, a web-based system that enables farmers to collaborate, share resources, and sell produce. The platform will include a marketplace, resource sharing, and AI demand forecasting. Success will be measured by farmer adoption, improved profitability, and stable deployment.",
+    "part1_output": {
+      "title": "FarmLink Cooperative Platform",
+      "summary": "FarmLink is a cooperative platform that connects farmers to share resources, sell produce, and access training. It integrates AI to forecast demand and optimize distribution. The system aims to strengthen farming communities and improve profitability.",
+      "roles": [
+        "Project Manager",
+        "Backend Developer",
+        "Frontend Developer",
+        "AI Engineer",
+        "Community Manager",
+        "QA Engineer"
+      ],
+      "features": [
+        "Resource Sharing",
+        "Produce Marketplace",
+        "AI Demand Forecasting",
+        "Training Modules"
+      ],
+      "goals": [
+        {
+          "epic": "Design resource sharing system",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Implement marketplace",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Enable AI demand forecasting",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Develop training modules",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Test cooperative platform",
+          "role": "Project Manager"
+        }
+      ],
+      "timeline": {
+        "week1": [
+          "Setup backend framework",
+          "Configure database schema"
+        ],
+        "week2": [
+          "Build resource sharing system",
+          "Implement marketplace"
+        ],
+        "week3": [
+          "Train AI demand forecasting model",
+          "Integrate with marketplace"
+        ],
+        "week4": [
+          "Create training modules",
+          "Test cooperative platform"
+        ]
+      }
+    },
+    "part1_text": "=== FarmLink Cooperative Platform ===\nSummary:\nFarmLink is a cooperative platform that connects farmers to share resources, sell produce, and access training. It integrates AI to forecast demand and optimize distribution. The system aims to strengthen farming communities and improve profitability.\n\nRoles:\n- Project Manager\n- Backend Developer\n- Frontend Developer\n- AI Engineer\n- Community Manager\n- QA Engineer\n\nFeatures:\n- Resource Sharing\n- Produce Marketplace\n- AI Demand Forecasting\n- Training Modules\n\nGoals:\n- Design resource sharing system (Project Manager)\n- Implement marketplace (Project Manager)\n- Enable AI demand forecasting (Project Manager)\n- Develop training modules (Project Manager)\n- Test cooperative platform (Project Manager)\n\nTimeline:\nWeek 1: Setup backend framework, Configure database schema\nWeek 2: Build resource sharing system, Implement marketplace\nWeek 3: Train AI demand forecasting model, Integrate with marketplace\nWeek 4: Create training modules, Test cooperative platform",
+    "part2_output": "Goal 1: Design resource sharing system\n  -User Story 1.1: As a farmer, I want to share resources\n    -Task 1.1.1: Build sharing API\n    -Task 1.1.2: Create sharing UI\nGoal 2: Implement marketplace\n  -User Story 2.1: As a farmer, I want to sell produce\n    -Task 2.1.1: Build marketplace API\n    -Task 2.1.2: Create marketplace UI\nGoal 3: Enable AI demand forecasting\n  -User Story 3.1: As a farmer, I want demand forecasts\n    -Task 3.1.1: Train forecasting model\n    -Task 3.1.2: Integrate with backend\nGoal 4: Develop training modules\n  -User Story 4.1: As a farmer, I want training access\n    -Task 4.1.1: Build training API\n    -Task 4.1.2: Create training dashboard\nGoal 5: Test cooperative platform\n  -User Story 5.1: As QA, I want to validate marketplace\n    -Task 5.1.1: Conduct system tests\n    -Task 5.1.2: Report issues"
+  },
+  {
+    "title": "TutorAI Language Learning App",
+    "description": "Develop TutorAI, a mobile app that delivers personalized language lessons and practice. The system will include quizzes, conversation modules, and AI-driven progress tracking. Success will be measured by learner engagement, improved proficiency, and stable deployment.",
+    "part1_output": {
+      "title": "TutorAI Language Learning App",
+      "summary": "TutorAI is a language learning app that provides personalized lessons, quizzes, and conversation practice. It uses AI to adapt lessons based on progress and suggest improvements. The platform aims to make language learning more engaging and effective.",
+      "roles": [
+        "Project Manager",
+        "Mobile Developer",
+        "Backend Developer",
+        "AI Engineer",
+        "Language Specialist",
+        "QA Engineer"
+      ],
+      "features": [
+        "Lessons",
+        "Quizzes",
+        "Conversation Practice",
+        "Progress Tracking"
+      ],
+      "goals": [
+        {
+          "epic": "Design lesson module",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Implement quiz system",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Enable AI progress tracking",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Develop conversation practice feature",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Test language learning app",
+          "role": "Project Manager"
+        }
+      ],
+      "timeline": {
+        "week1": [
+          "Setup mobile app framework",
+          "Configure backend APIs"
+        ],
+        "week2": [
+          "Build lesson module",
+          "Implement quiz system"
+        ],
+        "week3": [
+          "Train AI progress tracking model",
+          "Integrate with lessons"
+        ],
+        "week4": [
+          "Create conversation practice feature",
+          "Test language learning app"
+        ]
+      }
+    },
+    "part1_text": "=== TutorAI Language Learning App ===\nSummary:\nTutorAI is a language learning app that provides personalized lessons, quizzes, and conversation practice. It uses AI to adapt lessons based on progress and suggest improvements. The platform aims to make language learning more engaging and effective.\n\nRoles:\n- Project Manager\n- Mobile Developer\n- Backend Developer\n- AI Engineer\n- Language Specialist\n- QA Engineer\n\nFeatures:\n- Lessons\n- Quizzes\n- Conversation Practice\n- Progress Tracking\n\nGoals:\n- Design lesson module (Project Manager)\n- Implement quiz system (Project Manager)\n- Enable AI progress tracking (Project Manager)\n- Develop conversation practice feature (Project Manager)\n- Test language learning app (Project Manager)\n\nTimeline:\nWeek 1: Setup mobile app framework, Configure backend APIs\nWeek 2: Build lesson module, Implement quiz system\nWeek 3: Train AI progress tracking model, Integrate with lessons\nWeek 4: Create conversation practice feature, Test language learning app",
+    "part2_output": "Goal 1: Design lesson module\n  -User Story 1.1: As a learner, I want lessons\n    -Task 1.1.1: Build lesson API\n    -Task 1.1.2: Create lesson UI\nGoal 2: Implement quiz system\n  -User Story 2.1: As a learner, I want quizzes\n    -Task 2.1.1: Build quiz API\n    -Task 2.1.2: Create quiz UI\nGoal 3: Enable AI progress tracking\n  -User Story 3.1: As a learner, I want progress feedback\n    -Task 3.1.1: Train tracking model\n    -Task 3.1.2: Integrate with backend\nGoal 4: Develop conversation practice feature\n  -User Story 4.1: As a learner, I want conversation practice\n    -Task 4.1.1: Build conversation API\n    -Task 4.1.2: Create practice UI\nGoal 5: Test language learning app\n  -User Story 5.1: As QA, I want to validate lessons\n    -Task 5.1.1: Conduct usability tests\n    -Task 5.1.2: Report issues"
+  },
+  {
+    "title": "GreenHome Energy Saver",
+    "description": "Develop GreenHome, a smart home app that monitors energy usage and provides AI-driven recommendations. The system will include appliance integration, alerts, and dashboards. Success will be measured by reduced energy consumption, user adoption, and stable deployment.",
+    "part1_output": {
+      "title": "GreenHome Energy Saver",
+      "summary": "GreenHome is a smart home system that tracks energy usage and provides recommendations to reduce consumption. It integrates with appliances and offers real-time alerts for inefficiencies. The platform aims to lower utility bills and promote sustainability.",
+      "roles": [
+        "Project Manager",
+        "IoT Engineer",
+        "Backend Developer",
+        "Mobile Developer",
+        "QA Engineer"
+      ],
+      "features": [
+        "Energy Monitoring",
+        "Appliance Integration",
+        "AI Recommendations",
+        "Alerts"
+      ],
+      "goals": [
+        {
+          "epic": "Design energy monitoring system",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Implement appliance integration",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Enable AI recommendations",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Develop alerts module",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Test energy saver system",
+          "role": "Project Manager"
+        }
+      ],
+      "timeline": {
+        "week1": [
+          "Setup IoT devices",
+          "Configure backend APIs"
+        ],
+        "week2": [
+          "Build energy monitoring system",
+          "Implement appliance integration"
+        ],
+        "week3": [
+          "Train AI recommendation model",
+          "Integrate with dashboard"
+        ],
+        "week4": [
+          "Create alerts module",
+          "Test energy saver system"
+        ]
+      }
+    },
+    "part1_text": "=== GreenHome Energy Saver ===\nSummary:\nGreenHome is a smart home system that tracks energy usage and provides recommendations to reduce consumption. It integrates with appliances and offers real-time alerts for inefficiencies. The platform aims to lower utility bills and promote sustainability.\n\nRoles:\n- Project Manager\n- IoT Engineer\n- Backend Developer\n- Mobile Developer\n- QA Engineer\n\nFeatures:\n- Energy Monitoring\n- Appliance Integration\n- AI Recommendations\n- Alerts\n\nGoals:\n- Design energy monitoring system (Project Manager)\n- Implement appliance integration (Project Manager)\n- Enable AI recommendations (Project Manager)\n- Develop alerts module (Project Manager)\n- Test energy saver system (Project Manager)\n\nTimeline:\nWeek 1: Setup IoT devices, Configure backend APIs\nWeek 2: Build energy monitoring system, Implement appliance integration\nWeek 3: Train AI recommendation model, Integrate with dashboard\nWeek 4: Create alerts module, Test energy saver system",
+    "part2_output": "Goal 1: Design energy monitoring system\n  -User Story 1.1: As a homeowner, I want to monitor energy\n    -Task 1.1.1: Build monitoring API\n    -Task 1.1.2: Create monitoring UI\nGoal 2: Implement appliance integration\n  -User Story 2.1: As a homeowner, I want appliance control\n    -Task 2.1.1: Build appliance API\n    -Task 2.1.2: Create appliance UI\nGoal 3: Enable AI recommendations\n  -User Story 3.1: As a homeowner, I want energy advice\n    -Task 3.1.1: Train recommendation model\n    -Task 3.1.2: Display advice\nGoal 4: Develop alerts module\n  -User Story 4.1: As a homeowner, I want alerts\n    -Task 4.1.1: Build alert API\n    -Task 4.1.2: Create alert UI\nGoal 5: Test energy saver system\n  -User Story 5.1: As QA, I want to validate recommendations\n    -Task 5.1.1: Conduct accuracy tests\n    -Task 5.1.2: Report issues"
+  },
+  {
+    "title": "CityComm Smart Communication Hub",
+    "description": "Develop CityComm, a web-based system that connects residents with city services. It will include issue reporting, service access, and AI categorization. Success will be measured by improved response times, resident adoption, and stable deployment.",
+    "part1_output": {
+      "title": "CityComm Smart Communication Hub",
+      "summary": "CityComm is a communication hub for city residents to report issues, access services, and receive updates. It integrates AI to categorize reports and prioritize urgent cases. The system aims to improve civic engagement and streamline city services.",
+      "roles": [
+        "Project Manager",
+        "Backend Developer",
+        "Frontend Developer",
+        "AI Engineer",
+        "Community Manager",
+        "QA Engineer"
+      ],
+      "features": [
+        "Issue Reporting",
+        "Service Access",
+        "AI Categorization",
+        "Notifications"
+      ],
+      "goals": [
+        {
+          "epic": "Design issue reporting system",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Implement service access",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Enable AI categorization",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Develop notifications module",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Test communication hub",
+          "role": "Project Manager"
+        }
+      ],
+      "timeline": {
+        "week1": [
+          "Setup backend framework",
+          "Configure database schema"
+        ],
+        "week2": [
+          "Build issue reporting system",
+          "Implement service access"
+        ],
+        "week3": [
+          "Train AI categorization model",
+          "Integrate with reporting system"
+        ],
+        "week4": [
+          "Create notifications module",
+          "Test communication hub"
+        ]
+      }
+    },
+    "part1_text": "=== CityComm Smart Communication Hub ===\nSummary:\nCityComm is a communication hub for city residents to report issues, access services, and receive updates. It integrates AI to categorize reports and prioritize urgent cases. The system aims to improve civic engagement and streamline city services.\n\nRoles:\n- Project Manager\n- Backend Developer\n- Frontend Developer\n- AI Engineer\n- Community Manager\n- QA Engineer\n\nFeatures:\n- Issue Reporting\n- Service Access\n- AI Categorization\n- Notifications\n\nGoals:\n- Design issue reporting system (Project Manager)\n- Implement service access (Project Manager)\n- Enable AI categorization (Project Manager)\n- Develop notifications module (Project Manager)\n- Test communication hub (Project Manager)\n\nTimeline:\nWeek 1: Setup backend framework, Configure database schema\nWeek 2: Build issue reporting system, Implement service access\nWeek 3: Train AI categorization model, Integrate with reporting system\nWeek 4: Create notifications module, Test communication hub",
+    "part2_output": "Goal 1: Design issue reporting system\n  -User Story 1.1: As a resident, I want to report issues\n    -Task 1.1.1: Build reporting API\n    -Task 1.1.2: Create reporting UI\nGoal 2: Implement service access\n  -User Story 2.1: As a resident, I want to access services\n    -Task 2.1.1: Build service API\n    -Task 2.1.2: Create service UI\nGoal 3: Enable AI categorization\n  -User Story 3.1: As a city admin, I want categorized reports\n    -Task 3.1.1: Train categorization model\n    -Task 3.1.2: Integrate with backend\nGoal 4: Develop notifications module\n  -User Story 4.1: As a resident, I want updates\n    -Task 4.1.1: Build notification API\n    -Task 4.1.2: Create notification UI\nGoal 5: Test communication hub\n  -User Story 5.1: As QA, I want to validate reporting\n    -Task 5.1.1: Conduct system tests\n    -Task 5.1.2: Report issues"
+  },
+  {
+    "title": "HealthSync Patient Data Exchange",
+    "description": "Develop HealthSync, a web-based system for secure patient data exchange. It will include privacy compliance, AI validation, and reporting. Success will be measured by hospital adoption, improved collaboration, and stable deployment.",
+    "part1_output": {
+      "title": "HealthSync Patient Data Exchange",
+      "summary": "HealthSync is a platform that enables secure exchange of patient data between hospitals and clinics. It uses AI to detect inconsistencies and ensure compliance with privacy regulations. The system aims to improve collaboration and patient outcomes.",
+      "roles": [
+        "Project Manager",
+        "Backend Developer",
+        "Security Specialist",
+        "AI Engineer",
+        "QA Engineer"
+      ],
+      "features": [
+        "Data Exchange",
+        "Privacy Compliance",
+        "AI Validation",
+        "Reports"
+      ],
+      "goals": [
+        {
+          "epic": "Design data exchange system",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Implement privacy compliance",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Enable AI validation",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Develop reporting module",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Test patient data exchange",
+          "role": "Project Manager"
+        }
+      ],
+      "timeline": {
+        "week1": [
+          "Setup backend framework",
+          "Configure security protocols"
+        ],
+        "week2": [
+          "Build data exchange system",
+          "Implement privacy compliance"
+        ],
+        "week3": [
+          "Train AI validation model",
+          "Integrate with backend"
+        ],
+        "week4": [
+          "Create reporting module",
+          "Test patient data exchange"
+        ]
+      }
+    },
+    "part1_text": "=== HealthSync Patient Data Exchange ===\nSummary:\nHealthSync is a platform that enables secure exchange of patient data between hospitals and clinics. It uses AI to detect inconsistencies and ensure compliance with privacy regulations. The system aims to improve collaboration and patient outcomes.\n\nRoles:\n- Project Manager\n- Backend Developer\n- Security Specialist\n- AI Engineer\n- QA Engineer\n\nFeatures:\n- Data Exchange\n- Privacy Compliance\n- AI Validation\n- Reports\n\nGoals:\n- Design data exchange system (Project Manager)\n- Implement privacy compliance (Project Manager)\n- Enable AI validation (Project Manager)\n- Develop reporting module (Project Manager)\n- Test patient data exchange (Project Manager)\n\nTimeline:\nWeek 1: Setup backend framework, Configure security protocols\nWeek 2: Build data exchange system, Implement privacy compliance\nWeek 3: Train AI validation model, Integrate with backend\nWeek 4: Create reporting module, Test patient data exchange",
+    "part2_output": "Goal 1: Design data exchange system\n  -User Story 1.1: As a doctor, I want to share patient data\n    -Task 1.1.1: Build exchange API\n    -Task 1.1.2: Create exchange UI\nGoal 2: Implement privacy compliance\n  -User Story 2.1: As a hospital admin, I want compliance checks\n    -Task 2.1.1: Build compliance API\n    -Task 2.1.2: Create compliance dashboard\nGoal 3: Enable AI validation\n  -User Story 3.1: As a doctor, I want validated records\n    -Task 3.1.1: Train validation model\n    -Task 3.1.2: Integrate with backend\nGoal 4: Develop reporting module\n  -User Story 4.1: As an admin, I want reports\n    -Task 4.1.1: Build reporting API\n    -Task 4.1.2: Create reporting UI\nGoal 5: Test patient data exchange\n  -User Story 5.1: As QA, I want to validate compliance\n    -Task 5.1.1: Conduct security tests\n    -Task 5.1.2: Report issues"
+  },
+  {
+    "title": "EduLearn E-Learning Platform",
+    "description": "Develop EduLearn, a web-based platform that delivers interactive courses with AI tutoring. The system will include course management, quizzes, and progress tracking. Success will be measured by student adoption, improved learning outcomes, and stable deployment.",
+    "part1_output": {
+      "title": "EduLearn E-Learning Platform",
+      "summary": "EduLearn is an e-learning platform that provides interactive courses for students worldwide. It integrates AI tutoring, quizzes, and progress tracking to personalize learning. The system aims to improve accessibility and engagement in education.",
+      "roles": [
+        "Project Manager",
+        "Backend Developer",
+        "Frontend Developer",
+        "AI Engineer",
+        "QA Engineer",
+        "Content Creator"
+      ],
+      "features": [
+        "Course Management",
+        "Quizzes",
+        "AI Tutoring",
+        "Progress Tracking"
+      ],
+      "goals": [
+        {
+          "epic": "Design course management system",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Implement quiz module",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Enable AI tutoring",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Develop progress tracking dashboard",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Test e-learning platform",
+          "role": "Project Manager"
+        }
+      ],
+      "timeline": {
+        "week1": [
+          "Setup backend framework",
+          "Define course schema"
+        ],
+        "week2": [
+          "Build quiz module",
+          "Implement student dashboard UI"
+        ],
+        "week3": [
+          "Train AI tutor model",
+          "Integrate tutor with backend"
+        ],
+        "week4": [
+          "Conduct system testing",
+          "Deploy platform"
+        ]
+      }
+    },
+    "part1_text": "=== EduLearn E-Learning Platform ===\nSummary:\nEduLearn is an e-learning platform that provides interactive courses for students worldwide. It integrates AI tutoring, quizzes, and progress tracking to personalize learning. The system aims to improve accessibility and engagement in education.\n\nRoles:\n- Project Manager\n- Backend Developer\n- Frontend Developer\n- AI Engineer\n- QA Engineer\n- Content Creator\n\nFeatures:\n- Course Management\n- Quizzes\n- AI Tutoring\n- Progress Tracking\n\nGoals:\n- Design course management system (Project Manager)\n- Implement quiz module (Project Manager)\n- Enable AI tutoring (Project Manager)\n- Develop progress tracking dashboard (Project Manager)\n- Test e-learning platform (Project Manager)\n\nTimeline:\nWeek 1: Setup backend framework, Define course schema\nWeek 2: Build quiz module, Implement student dashboard UI\nWeek 3: Train AI tutor model, Integrate tutor with backend\nWeek 4: Conduct system testing, Deploy platform",
+    "part2_output": "Goal 1: Design course management system\n  -User Story 1.1: As an instructor, I want to create courses\n    -Task 1.1.1: Build course API\n    -Task 1.1.2: Create course UI\nGoal 2: Implement quiz module\n  -User Story 2.1: As a student, I want quizzes\n    -Task 2.1.1: Build quiz API\n    -Task 2.1.2: Create quiz UI\nGoal 3: Enable AI tutoring\n  -User Story 3.1: As a student, I want personalized tutoring\n    -Task 3.1.1: Train tutor model\n    -Task 3.1.2: Integrate with backend\nGoal 4: Develop progress tracking dashboard\n  -User Story 4.1: As a student, I want to track progress\n    -Task 4.1.1: Build tracking API\n    -Task 4.1.2: Create tracking UI\nGoal 5: Test e-learning platform\n  -User Story 5.1: As QA, I want to validate learning features\n    -Task 5.1.1: Conduct usability tests\n    -Task 5.1.2: Report issues"
+  },
+  {
+    "title": "MedAssist Remote Healthcare",
+    "description": "Develop MedAssist, a web-based telemedicine platform with video consultations and AI symptom analysis. The system will include appointment scheduling and patient record management. Success will be measured by patient adoption, improved accessibility, and stable deployment.",
+    "part1_output": {
+      "title": "MedAssist Remote Healthcare",
+      "summary": "MedAssist is a telemedicine platform that connects patients with doctors through secure video calls. It integrates AI symptom checking, appointment scheduling, and patient records. The system aims to improve healthcare accessibility and efficiency.",
+      "roles": [
+        "Project Manager",
+        "Backend Developer",
+        "Frontend Developer",
+        "AI Engineer",
+        "Doctor Consultant",
+        "QA Engineer"
+      ],
+      "features": [
+        "Video Consultation",
+        "Symptom Checker",
+        "Appointment Scheduling",
+        "Patient Records"
+      ],
+      "goals": [
+        {
+          "epic": "Design video consultation module",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Implement symptom checker",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Enable appointment scheduling",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Develop patient records system",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Test telemedicine platform",
+          "role": "Project Manager"
+        }
+      ],
+      "timeline": {
+        "week1": [
+          "Setup backend framework",
+          "Configure video APIs"
+        ],
+        "week2": [
+          "Build video consultation module",
+          "Implement appointment scheduling"
+        ],
+        "week3": [
+          "Train AI symptom checker model",
+          "Integrate with backend"
+        ],
+        "week4": [
+          "Create patient records system",
+          "Test telemedicine platform"
+        ]
+      }
+    },
+    "part1_text": "=== MedAssist Remote Healthcare ===\nSummary:\nMedAssist is a telemedicine platform that connects patients with doctors through secure video calls. It integrates AI symptom checking, appointment scheduling, and patient records. The system aims to improve healthcare accessibility and efficiency.\n\nRoles:\n- Project Manager\n- Backend Developer\n- Frontend Developer\n- AI Engineer\n- Doctor Consultant\n- QA Engineer\n\nFeatures:\n- Video Consultation\n- Symptom Checker\n- Appointment Scheduling\n- Patient Records\n\nGoals:\n- Design video consultation module (Project Manager)\n- Implement symptom checker (Project Manager)\n- Enable appointment scheduling (Project Manager)\n- Develop patient records system (Project Manager)\n- Test telemedicine platform (Project Manager)\n\nTimeline:\nWeek 1: Setup backend framework, Configure video APIs\nWeek 2: Build video consultation module, Implement appointment scheduling\nWeek 3: Train AI symptom checker model, Integrate with backend\nWeek 4: Create patient records system, Test telemedicine platform",
+    "part2_output": "Goal 1: Design video consultation module\n  -User Story 1.1: As a patient, I want video calls\n    -Task 1.1.1: Build video API\n    -Task 1.1.2: Create video UI\nGoal 2: Implement symptom checker\n  -User Story 2.1: As a patient, I want symptom analysis\n    -Task 2.1.1: Train checker model\n    -Task 2.1.2: Integrate with backend\nGoal 3: Enable appointment scheduling\n  -User Story 3.1: As a patient, I want to book appointments\n    -Task 3.1.1: Build scheduling API\n    -Task 3.1.2: Create scheduling UI\nGoal 4: Develop patient records system\n  -User Story 4.1: As a doctor, I want patient records\n    -Task 4.1.1: Build records API\n    -Task 4.1.2: Create records dashboard\nGoal 5: Test telemedicine platform\n  -User Story 5.1: As QA, I want to validate consultations\n    -Task 5.1.1: Conduct system tests\n    -Task 5.1.2: Report issues"
+  },
+  {
+    "title": "TravelMate AI Trip Planner",
+    "description": "Develop TravelMate, a mobile app that assists users in planning trips with AI recommendations. The system will include itinerary building, accommodation search, and attraction discovery. Success will be measured by user adoption, improved travel experiences, and stable deployment.",
+    "part1_output": {
+      "title": "TravelMate AI Trip Planner",
+      "summary": "TravelMate is a trip planning app that helps users design itineraries, find accommodations, and discover attractions. It uses AI to recommend destinations and optimize travel schedules. The system aims to simplify travel planning and enhance experiences.",
+      "roles": [
+        "Project Manager",
+        "Mobile Developer",
+        "Backend Developer",
+        "AI Engineer",
+        "QA Engineer",
+        "Travel Consultant"
+      ],
+      "features": [
+        "Itinerary Builder",
+        "Accommodation Search",
+        "Attraction Discovery",
+        "AI Recommendations"
+      ],
+      "goals": [
+        {
+          "epic": "Design itinerary builder",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Implement accommodation search",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Enable AI travel recommendations",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Develop attraction discovery module",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Test trip planner app",
+          "role": "Project Manager"
+        }
+      ],
+      "timeline": {
+        "week1": [
+          "Setup mobile app framework",
+          "Configure backend APIs"
+        ],
+        "week2": [
+          "Build itinerary builder",
+          "Implement accommodation search"
+        ],
+        "week3": [
+          "Train AI recommendation model",
+          "Integrate with itinerary builder"
+        ],
+        "week4": [
+          "Create attraction discovery module",
+          "Test trip planner app"
+        ]
+      }
+    },
+    "part1_text": "=== TravelMate AI Trip Planner ===\nSummary:\nTravelMate is a trip planning app that helps users design itineraries, find accommodations, and discover attractions. It uses AI to recommend destinations and optimize travel schedules. The system aims to simplify travel planning and enhance experiences.\n\nRoles:\n- Project Manager\n- Mobile Developer\n- Backend Developer\n- AI Engineer\n- QA Engineer\n- Travel Consultant\n\nFeatures:\n- Itinerary Builder\n- Accommodation Search\n- Attraction Discovery\n- AI Recommendations\n\nGoals:\n- Design itinerary builder (Project Manager)\n- Implement accommodation search (Project Manager)\n- Enable AI travel recommendations (Project Manager)\n- Develop attraction discovery module (Project Manager)\n- Test trip planner app (Project Manager)\n\nTimeline:\nWeek 1: Setup mobile app framework, Configure backend APIs\nWeek 2: Build itinerary builder, Implement accommodation search\nWeek 3: Train AI recommendation model, Integrate with itinerary builder\nWeek 4: Create attraction discovery module, Test trip planner app",
+    "part2_output": "Goal 1: Design itinerary builder\n  -User Story 1.1: As a traveler, I want itineraries\n    -Task 1.1.1: Build itinerary API\n    -Task 1.1.2: Create itinerary UI\nGoal 2: Implement accommodation search\n  -User Story 2.1: As a traveler, I want hotel options\n    -Task 2.1.1: Build accommodation API\n    -Task 2.1.2: Create accommodation UI\nGoal 3: Enable AI travel recommendations\n  -User Story 3.1: As a traveler, I want destination suggestions\n    -Task 3.1.1: Train recommendation model\n    -Task 3.1.2: Display suggestions\nGoal 4: Develop attraction discovery module\n  -User Story 4.1: As a traveler, I want attractions\n    -Task 4.1.1: Build attraction API\n    -Task 4.1.2: Create attraction UI\nGoal 5: Test trip planner app\n  -User Story 5.1: As QA, I want to validate itineraries\n    -Task 5.1.1: Conduct usability tests\n    -Task 5.1.2: Report issues"
+  },
+  {
+    "title": "FinTrack Personal Finance Manager",
+    "description": "Develop FinTrack, a mobile app that manages personal finances with AI insights. The system will include budgeting, expense tracking, and financial advice. Success will be measured by user adoption, improved savings, and stable deployment.",
+    "part1_output": {
+      "title": "FinTrack Personal Finance Manager",
+      "summary": "FinTrack is a personal finance app that helps users manage budgets, track expenses, and receive AI-driven financial advice. It integrates with bank accounts and provides real-time insights. The system aims to improve financial literacy and stability.",
+      "roles": [
+        "Project Manager",
+        "Mobile Developer",
+        "Backend Developer",
+        "AI Engineer",
+        "Financial Consultant",
+        "QA Engineer"
+      ],
+      "features": [
+        "Budgeting",
+        "Expense Tracking",
+        "AI Financial Advice",
+        "Bank Integration"
+      ],
+      "goals": [
+        {
+          "epic": "Design budgeting module",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Implement expense tracking",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Enable AI financial advice",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Develop bank integration",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Test finance manager app",
+          "role": "Project Manager"
+        }
+      ],
+      "timeline": {
+        "week1": [
+          "Setup mobile app framework",
+          "Configure backend APIs"
+        ],
+        "week2": [
+          "Build budgeting module",
+          "Implement expense tracking"
+        ],
+        "week3": [
+          "Train AI financial advice model",
+          "Integrate with backend"
+        ],
+        "week4": [
+          "Create bank integration",
+          "Test finance manager app"
+        ]
+      }
+    },
+    "part1_text": "=== FinTrack Personal Finance Manager ===\nSummary:\nFinTrack is a personal finance app that helps users manage budgets, track expenses, and receive AI-driven financial advice. It integrates with bank accounts and provides real-time insights. The system aims to improve financial literacy and stability.\n\nRoles:\n- Project Manager\n- Mobile Developer\n- Backend Developer\n- AI Engineer\n- Financial Consultant\n- QA Engineer\n\nFeatures:\n- Budgeting\n- Expense Tracking\n- AI Financial Advice\n- Bank Integration\n\nGoals:\n- Design budgeting module (Project Manager)\n- Implement expense tracking (Project Manager)\n- Enable AI financial advice (Project Manager)\n- Develop bank integration (Project Manager)\n- Test finance manager app (Project Manager)\n\nTimeline:\nWeek 1: Setup mobile app framework, Configure backend APIs\nWeek 2: Build budgeting module, Implement expense tracking\nWeek 3: Train AI financial advice model, Integrate with backend\nWeek 4: Create bank integration, Test finance manager app",
+    "part2_output": "Goal 1: Design budgeting module\n  -User Story 1.1: As a user, I want to manage budgets\n    -Task 1.1.1: Build budgeting API\n    -Task 1.1.2: Create budgeting UI\nGoal 2: Implement expense tracking\n  -User Story 2.1: As a user, I want to track expenses\n    -Task 2.1.1: Build expense API\n    -Task 2.1.2: Create expense UI\nGoal 3: Enable AI financial advice\n  -User Story 3.1: As a user, I want financial tips\n    -Task 3.1.1: Train advice model\n    -Task 3.1.2: Display tips\nGoal 4: Develop bank integration\n  -User Story 4.1: As a user, I want account sync\n    -Task 4.1.1: Build integration API\n    -Task 4.1.2: Create sync UI\nGoal 5: Test finance manager app\n  -User Story 5.1: As QA, I want to validate budgeting\n    -Task 5.1.1: Conduct accuracy tests\n    -Task 5.1.2: Report issues"
+  },
+  {
+    "title": "FoodiePal Recipe Assistant",
+    "description": "Develop FoodiePal, a mobile app that assists users with recipes and grocery planning. The system will include recipe discovery, grocery lists, and AI cooking tips. Success will be measured by user adoption, improved cooking habits, and stable deployment.",
+    "part1_output": {
+      "title": "FoodiePal Recipe Assistant",
+      "summary": "FoodiePal is a recipe assistant app that helps users discover meals, plan grocery lists, and receive AI-driven cooking tips. It integrates with dietary preferences and provides personalized recommendations. The system aims to make cooking easier and healthier.",
+      "roles": [
+        "Project Manager",
+        "Mobile Developer",
+        "Backend Developer",
+        "AI Engineer",
+        "Nutritionist",
+        "QA Engineer"
+      ],
+      "features": [
+        "Recipe Discovery",
+        "Grocery Lists",
+        "AI Cooking Tips",
+        "Dietary Preferences"
+      ],
+      "goals": [
+        {
+          "epic": "Design recipe discovery module",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Implement grocery list system",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Enable AI cooking tips",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Develop dietary preference integration",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Test recipe assistant app",
+          "role": "Project Manager"
+        }
+      ],
+      "timeline": {
+        "week1": [
+          "Setup mobile app framework",
+          "Configure backend APIs"
+        ],
+        "week2": [
+          "Build recipe discovery module",
+          "Implement grocery list system"
+        ],
+        "week3": [
+          "Train AI cooking tips model",
+          "Integrate with backend"
+        ],
+        "week4": [
+          "Create dietary preference integration",
+          "Test recipe assistant app"
+        ]
+      }
+    },
+    "part1_text": "=== FoodiePal Recipe Assistant ===\nSummary:\nFoodiePal is a recipe assistant app that helps users discover meals, plan grocery lists, and receive AI-driven cooking tips. It integrates with dietary preferences and provides personalized recommendations. The system aims to make cooking easier and healthier.\n\nRoles:\n- Project Manager\n- Mobile Developer\n- Backend Developer\n- AI Engineer\n- Nutritionist\n- QA Engineer\n\nFeatures:\n- Recipe Discovery\n- Grocery Lists\n- AI Cooking Tips\n- Dietary Preferences\n\nGoals:\n- Design recipe discovery module (Project Manager)\n- Implement grocery list system (Project Manager)\n- Enable AI cooking tips (Project Manager)\n- Develop dietary preference integration (Project Manager)\n- Test recipe assistant app (Project Manager)\n\nTimeline:\nWeek 1: Setup mobile app framework, Configure backend APIs\nWeek 2: Build recipe discovery module, Implement grocery list system\nWeek 3: Train AI cooking tips model, Integrate with backend\nWeek 4: Create dietary preference integration, Test recipe assistant app",
+    "part2_output": "Goal 1: Design recipe discovery module\n  -User Story 1.1: As a user, I want recipes\n    -Task 1.1.1: Build recipe API\n    -Task 1.1.2: Create recipe UI\nGoal 2: Implement grocery list system\n  -User Story 2.1: As a user, I want grocery lists\n    -Task 2.1.1: Build list API\n    -Task 2.1.2: Create list UI\nGoal 3: Enable AI cooking tips\n  -User Story 3.1: As a user, I want cooking advice\n    -Task 3.1.1: Train tips model\n    -Task 3.1.2: Display advice\nGoal 4: Develop dietary preference integration\n  -User Story 4.1: As a user, I want personalized recipes\n    -Task 4.1.1: Build preference API\n    -Task 4.1.2: Create preference UI\nGoal 5: Test recipe assistant app\n  -User Story 5.1: As QA, I want to validate recipes\n    -Task 5.1.1: Conduct usability tests\n    -Task 5.1.2: Report issues"
+  },
+  {
+    "title": "WorkFlowPro Team Collaboration Tool",
+    "description": "Develop WorkFlowPro, a web-based collaboration tool with task management, communication channels, and AI prioritization. Success will be measured by team adoption, improved productivity, and stable deployment.",
+    "part1_output": {
+      "title": "WorkFlowPro Team Collaboration Tool",
+      "summary": "WorkFlowPro is a collaboration platform designed to streamline communication, task management, and document sharing for teams. It integrates AI to suggest task prioritization and improve productivity. The system aims to reduce inefficiencies and enhance teamwork.",
+      "roles": [
+        "Project Manager",
+        "Backend Developer",
+        "Frontend Developer",
+        "AI Engineer",
+        "QA Engineer",
+        "Documentation Specialist"
+      ],
+      "features": [
+        "Task Management",
+        "Communication Channels",
+        "Document Sharing",
+        "AI Prioritization"
+      ],
+      "goals": [
+        {
+          "epic": "Design task management system",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Implement communication channels",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Enable AI prioritization",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Develop document sharing module",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Test collaboration tool",
+          "role": "Project Manager"
+        }
+      ],
+      "timeline": {
+        "week1": [
+          "Setup backend framework",
+          "Configure database schema"
+        ],
+        "week2": [
+          "Build task management system",
+          "Implement communication channels"
+        ],
+        "week3": [
+          "Train AI prioritization model",
+          "Integrate with backend"
+        ],
+        "week4": [
+          "Create document sharing module",
+          "Test collaboration tool"
+        ]
+      }
+    },
+    "part1_text": "=== WorkFlowPro Team Collaboration Tool ===\nSummary:\nWorkFlowPro is a collaboration platform designed to streamline communication, task management, and document sharing for teams. It integrates AI to suggest task prioritization and improve productivity. The system aims to reduce inefficiencies and enhance teamwork.\n\nRoles:\n- Project Manager\n- Backend Developer\n- Frontend Developer\n- AI Engineer\n- QA Engineer\n- Documentation Specialist\n\nFeatures:\n- Task Management\n- Communication Channels\n- Document Sharing\n- AI Prioritization\n\nGoals:\n- Design task management system (Project Manager)\n- Implement communication channels (Project Manager)\n- Enable AI prioritization (Project Manager)\n- Develop document sharing module (Project Manager)\n- Test collaboration tool (Project Manager)\n\nTimeline:\nWeek 1: Setup backend framework, Configure database schema\nWeek 2: Build task management system, Implement communication channels\nWeek 3: Train AI prioritization model, Integrate with backend\nWeek 4: Create document sharing module, Test collaboration tool",
+    "part2_output": "Goal 1: Design task management system\n  -User Story 1.1: As a team member, I want to manage tasks\n    -Task 1.1.1: Build task API\n    -Task 1.1.2: Create task UI\nGoal 2: Implement communication channels\n  -User Story 2.1: As a team member, I want to chat\n    -Task 2.1.1: Build chat API\n    -Task 2.1.2: Create chat UI\nGoal 3: Enable AI prioritization\n  -User Story 3.1: As a team member, I want task suggestions\n    -Task 3.1.1: Train prioritization model\n    -Task 3.1.2: Display suggestions\nGoal 4: Develop document sharing module\n  -User Story 4.1: As a team member, I want to share files\n    -Task 4.1.1: Build sharing API\n    -Task 4.1.2: Create sharing UI\nGoal 5: Test collaboration tool\n  -User Story 5.1: As QA, I want to validate communication\n    -Task 5.1.1: Conduct usability tests\n    -Task 5.1.2: Report issues"
+  },
+  {
+    "title": "AgroSense Smart Farming System",
+    "description": "Develop AgroSense, a web-based system that integrates sensors and AI for farm monitoring. Success will be measured by farmer adoption, improved yield, and reduced costs.",
+    "part1_output": {
+      "title": "AgroSense Smart Farming System",
+      "summary": "AgroSense is a smart farming system that uses sensors and AI to monitor soil, crops, and weather. It provides recommendations for irrigation, fertilization, and pest control. The system aims to increase yield and reduce resource waste.",
+      "roles": [
+        "Project Manager",
+        "IoT Engineer",
+        "Backend Developer",
+        "AI Engineer",
+        "Agronomist",
+        "QA Engineer"
+      ],
+      "features": [
+        "Soil Monitoring",
+        "Crop Health Analysis",
+        "Weather Forecasting",
+        "AI Recommendations"
+      ],
+      "goals": [
+        {
+          "epic": "Design soil monitoring system",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Implement crop health analysis",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Enable AI recommendations",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Develop weather forecasting module",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Test smart farming system",
+          "role": "Project Manager"
+        }
+      ],
+      "timeline": {
+        "week1": [
+          "Setup IoT devices",
+          "Configure backend APIs"
+        ],
+        "week2": [
+          "Build soil monitoring system",
+          "Implement crop health analysis"
+        ],
+        "week3": [
+          "Train AI recommendation model",
+          "Integrate with backend"
+        ],
+        "week4": [
+          "Create weather forecasting module",
+          "Test farming system"
+        ]
+      }
+    },
+    "part1_text": "=== AgroSense Smart Farming System ===\nSummary:\nAgroSense is a smart farming system that uses sensors and AI to monitor soil, crops, and weather. It provides recommendations for irrigation, fertilization, and pest control. The system aims to increase yield and reduce resource waste.\n\nRoles:\n- Project Manager\n- IoT Engineer\n- Backend Developer\n- AI Engineer\n- Agronomist\n- QA Engineer\n\nFeatures:\n- Soil Monitoring\n- Crop Health Analysis\n- Weather Forecasting\n- AI Recommendations\n\nGoals:\n- Design soil monitoring system (Project Manager)\n- Implement crop health analysis (Project Manager)\n- Enable AI recommendations (Project Manager)\n- Develop weather forecasting module (Project Manager)\n- Test smart farming system (Project Manager)\n\nTimeline:\nWeek 1: Setup IoT devices, Configure backend APIs\nWeek 2: Build soil monitoring system, Implement crop health analysis\nWeek 3: Train AI recommendation model, Integrate with backend\nWeek 4: Create weather forecasting module, Test farming system",
+    "part2_output": "Goal 1: Design soil monitoring system\n  -User Story 1.1: As a farmer, I want soil data\n    -Task 1.1.1: Build soil API\n    -Task 1.1.2: Create soil UI\nGoal 2: Implement crop health analysis\n  -User Story 2.1: As a farmer, I want crop health reports\n    -Task 2.1.1: Build crop API\n    -Task 2.1.2: Create crop UI\nGoal 3: Enable AI recommendations\n  -User Story 3.1: As a farmer, I want farming advice\n    -Task 3.1.1: Train recommendation model\n    -Task 3.1.2: Display advice\nGoal 4: Develop weather forecasting module\n  -User Story 4.1: As a farmer, I want forecasts\n    -Task 4.1.1: Build forecast API\n    -Task 4.1.2: Create forecast UI\nGoal 5: Test smart farming system\n  -User Story 5.1: As QA, I want to validate recommendations\n    -Task 5.1.1: Conduct accuracy tests\n    -Task 5.1.2: Report issues"
+  },
+  {
+    "title": "SkillUp Career Development Platform",
+    "description": "Develop SkillUp, a web-based platform for skill learning and career development. Success will be measured by user adoption, improved career outcomes, and stable deployment.",
+    "part1_output": {
+      "title": "SkillUp Career Development Platform",
+      "summary": "SkillUp is a career development platform that helps users learn new skills, track progress, and connect with mentors. It uses AI to recommend courses and career paths. The system aims to improve employability and career growth.",
+      "roles": [
+        "Project Manager",
+        "Backend Developer",
+        "Frontend Developer",
+        "AI Engineer",
+        "Mentor Coordinator",
+        "QA Engineer"
+      ],
+      "features": [
+        "Course Recommendations",
+        "Progress Tracking",
+        "Mentorship Matching",
+        "Career Path Guidance"
+      ],
+      "goals": [
+        {
+          "epic": "Design course recommendation system",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Implement progress tracking",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Enable mentorship matching",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Develop career path guidance",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Test career development platform",
+          "role": "Project Manager"
+        }
+      ],
+      "timeline": {
+        "week1": [
+          "Setup backend framework",
+          "Configure database schema"
+        ],
+        "week2": [
+          "Build course recommendation system",
+          "Implement progress tracking"
+        ],
+        "week3": [
+          "Train mentorship matching model",
+          "Integrate with backend"
+        ],
+        "week4": [
+          "Create career path guidance module",
+          "Test platform"
+        ]
+      }
+    },
+    "part1_text": "=== SkillUp Career Development Platform ===\nSummary:\nSkillUp is a career development platform that helps users learn new skills, track progress, and connect with mentors. It uses AI to recommend courses and career paths. The system aims to improve employability and career growth.\n\nRoles:\n- Project Manager\n- Backend Developer\n- Frontend Developer\n- AI Engineer\n- Mentor Coordinator\n- QA Engineer\n\nFeatures:\n- Course Recommendations\n- Progress Tracking\n- Mentorship Matching\n- Career Path Guidance\n\nGoals:\n- Design course recommendation system (Project Manager)\n- Implement progress tracking (Project Manager)\n- Enable mentorship matching (Project Manager)\n- Develop career path guidance (Project Manager)\n- Test career development platform (Project Manager)\n\nTimeline:\nWeek 1: Setup backend framework, Configure database schema\nWeek 2: Build course recommendation system, Implement progress tracking\nWeek 3: Train mentorship matching model, Integrate with backend\nWeek 4: Create career path guidance module, Test platform",
+    "part2_output": "Goal 1: Design course recommendation system\n  -User Story 1.1: As a learner, I want course suggestions\n    -Task 1.1.1: Build recommendation API\n    -Task 1.1.2: Create recommendation UI\nGoal 2: Implement progress tracking\n  -User Story 2.1: As a learner, I want to track progress\n    -Task 2.1.1: Build tracking API\n    -Task 2.1.2: Create tracking UI\nGoal 3: Enable mentorship matching\n  -User Story 3.1: As a learner, I want mentor connections\n    -Task 3.1.1: Train matching model\n    -Task 3.1.2: Integrate with backend\nGoal 4: Develop career path guidance\n  -User Story 4.1: As a learner, I want career advice\n    -Task 4.1.1: Build guidance API\n    -Task 4.1.2: Create guidance UI\nGoal 5: Test career development platform\n  -User Story 5.1: As QA, I want to validate mentorship\n    -Task 5.1.1: Conduct usability tests\n    -Task 5.1.2: Report issues"
+  },
+  {
+    "title": "SafeRide Transportation Safety System",
+    "description": "Develop SafeRide, a web-based system for transportation safety. Success will be measured by adoption among transport companies, reduced incidents, and stable deployment.",
+    "part1_output": {
+      "title": "SafeRide Transportation Safety System",
+      "summary": "SafeRide is a transportation safety system that monitors vehicles, tracks routes, and provides AI-driven alerts for risks. It integrates GPS, driver monitoring, and emergency response. The system aims to improve passenger safety and reduce accidents.",
+      "roles": [
+        "Project Manager",
+        "Backend Developer",
+        "Frontend Developer",
+        "AI Engineer",
+        "Safety Officer",
+        "QA Engineer"
+      ],
+      "features": [
+        "Route Tracking",
+        "Driver Monitoring",
+        "AI Risk Alerts",
+        "Emergency Response"
+      ],
+      "goals": [
+        {
+          "epic": "Design route tracking system",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Implement driver monitoring",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Enable AI risk alerts",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Develop emergency response module",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Test transportation safety system",
+          "role": "Project Manager"
+        }
+      ],
+      "timeline": {
+        "week1": [
+          "Setup backend framework",
+          "Configure GPS APIs"
+        ],
+        "week2": [
+          "Build route tracking system",
+          "Implement driver monitoring"
+        ],
+        "week3": [
+          "Train AI risk alert model",
+          "Integrate with backend"
+        ],
+        "week4": [
+          "Create emergency response module",
+          "Test safety system"
+        ]
+      }
+    },
+    "part1_text": "=== SafeRide Transportation Safety System ===\nSummary:\nSafeRide is a transportation safety system that monitors vehicles, tracks routes, and provides AI-driven alerts for risks. It integrates GPS, driver monitoring, and emergency response. The system aims to improve passenger safety and reduce accidents.\n\nRoles:\n- Project Manager\n- Backend Developer\n- Frontend Developer\n- AI Engineer\n- Safety Officer\n- QA Engineer\n\nFeatures:\n- Route Tracking\n- Driver Monitoring\n- AI Risk Alerts\n- Emergency Response\n\nGoals:\n- Design route tracking system (Project Manager)\n- Implement driver monitoring (Project Manager)\n- Enable AI risk alerts (Project Manager)\n- Develop emergency response module (Project Manager)\n- Test transportation safety system (Project Manager)\n\nTimeline:\nWeek 1: Setup backend framework, Configure GPS APIs\nWeek 2: Build route tracking system, Implement driver monitoring\nWeek 3: Train AI risk alert model, Integrate with backend\nWeek 4: Create emergency response module, Test safety system",
+    "part2_output": "Goal 1: Design route tracking system\n  -User Story 1.1: As a passenger, I want route tracking\n    -Task 1.1.1: Build tracking API\n    -Task 1.1.2: Create tracking UI\nGoal 2: Implement driver monitoring\n  -User Story 2.1: As a company, I want driver reports\n    -Task 2.1.1: Build monitoring API\n    -Task 2.1.2: Create monitoring UI\nGoal 3: Enable AI risk alerts\n  -User Story 3.1: As a passenger, I want safety alerts\n    -Task 3.1.1: Train alert model\n    -Task 3.1.2: Display alerts\nGoal 4: Develop emergency response module\n  -User Story 4.1: As a company, I want emergency response\n    -Task 4.1.1: Build response API\n    -Task 4.1.2: Create response UI\nGoal 5: Test transportation safety system\n  -User Story 5.1: As QA, I want to validate alerts\n    -Task 5.1.1: Conduct system tests\n    -Task 5.1.2: Report issues"
+  },
+  {
+    "title": "EcoTrack Environmental Monitoring",
+    "description": "Develop EcoTrack, a web-based system for environmental monitoring. Success will be measured by adoption among communities, improved awareness, and stable deployment.",
+    "part1_output": {
+      "title": "EcoTrack Environmental Monitoring",
+      "summary": "EcoTrack is an environmental monitoring system that tracks air quality, water levels, and pollution. It uses AI to predict risks and provide alerts. The system aims to improve sustainability and protect communities.",
+      "roles": [
+        "Project Manager",
+        "Backend Developer",
+        "Frontend Developer",
+        "AI Engineer",
+        "Environmental Scientist",
+        "QA Engineer"
+      ],
+      "features": [
+        "Air Quality Monitoring",
+        "Water Level Tracking",
+        "Pollution Detection",
+        "AI Risk Prediction"
+      ],
+      "goals": [
+        {
+          "epic": "Design air quality monitoring system",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Implement water level tracking",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Enable pollution detection",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Develop AI risk prediction",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Test environmental monitoring system",
+          "role": "Project Manager"
+        }
+      ],
+      "timeline": {
+        "week1": [
+          "Setup backend framework",
+          "Configure sensors"
+        ],
+        "week2": [
+          "Build air quality monitoring system",
+          "Implement water level tracking"
+        ],
+        "week3": [
+          "Train pollution detection model",
+          "Integrate with backend"
+        ],
+        "week4": [
+          "Create AI risk prediction module",
+          "Test monitoring system"
+        ]
+      }
+    },
+    "part1_text": "=== EcoTrack Environmental Monitoring ===\nSummary:\nEcoTrack is an environmental monitoring system that tracks air quality, water levels, and pollution. It uses AI to predict risks and provide alerts. The system aims to improve sustainability and protect communities.\n\nRoles:\n- Project Manager\n- Backend Developer\n- Frontend Developer\n- AI Engineer\n- Environmental Scientist\n- QA Engineer\n\nFeatures:\n- Air Quality Monitoring\n- Water Level Tracking\n- Pollution Detection\n- AI Risk Prediction\n\nGoals:\n- Design air quality monitoring system (Project Manager)\n- Implement water level tracking (Project Manager)\n- Enable pollution detection (Project Manager)\n- Develop AI risk prediction (Project Manager)\n- Test environmental monitoring system (Project Manager)\n\nTimeline:\nWeek 1: Setup backend framework, Configure sensors\nWeek 2: Build air quality monitoring system, Implement water level tracking\nWeek 3: Train pollution detection model, Integrate with backend\nWeek 4: Create AI risk prediction module, Test monitoring system",
+    "part2_output": "Goal 1: Design air quality monitoring system\n  -User Story 1.1: As a citizen, I want air quality data\n    -Task 1.1.1: Build air API\n    -Task 1.1.2: Create air UI\nGoal 2: Implement water level tracking\n  -User Story 2.1: As a citizen, I want water level data\n    -Task 2.1.1: Build water API\n    -Task 2.1.2: Create water UI\nGoal 3: Enable pollution detection\n  -User Story 3.1: As a citizen, I want pollution alerts\n    -Task 3.1.1: Train detection model\n    -Task 3.1.2: Display alerts\nGoal 4: Develop AI risk prediction\n  -User Story 4.1: As a citizen, I want risk forecasts\n    -Task 4.1.1: Train prediction model\n    -Task 4.1.2: Integrate with backend\nGoal 5: Test environmental monitoring system\n  -User Story 5.1: As QA, I want to validate alerts\n    -Task 5.1.1: Conduct accuracy tests\n    -Task 5.1.2: Report issues"
+  },
+  {
+    "title": "FitTrack Wellness App",
+    "description": "Develop FitTrack, a mobile app that combines fitness tracking, nutrition logging, and AI-driven wellness advice. Success will be measured by user adoption, improved health outcomes, and stable deployment.",
+    "part1_output": {
+      "title": "FitTrack Wellness App",
+      "summary": "FitTrack is a wellness app that helps users monitor fitness, nutrition, and mental health. It integrates AI to provide personalized workout plans, diet suggestions, and mindfulness reminders. The system aims to improve overall health and lifestyle balance.",
+      "roles": [
+        "Project Manager",
+        "Mobile Developer",
+        "Backend Developer",
+        "AI Engineer",
+        "Nutritionist",
+        "QA Engineer"
+      ],
+      "features": [
+        "Fitness Tracking",
+        "Nutrition Logging",
+        "AI Wellness Advice",
+        "Mindfulness Reminders"
+      ],
+      "goals": [
+        {
+          "epic": "Design fitness tracking module",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Implement nutrition logging",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Enable AI wellness advice",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Develop mindfulness reminders",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Test wellness app",
+          "role": "Project Manager"
+        }
+      ],
+      "timeline": {
+        "week1": [
+          "Setup mobile app framework",
+          "Configure backend APIs"
+        ],
+        "week2": [
+          "Build fitness tracking module",
+          "Implement nutrition logging"
+        ],
+        "week3": [
+          "Train AI wellness model",
+          "Integrate with backend"
+        ],
+        "week4": [
+          "Create mindfulness reminders",
+          "Test wellness app"
+        ]
+      }
+    },
+    "part1_text": "=== FitTrack Wellness App ===\nSummary:\nFitTrack is a wellness app that helps users monitor fitness, nutrition, and mental health. It integrates AI to provide personalized workout plans, diet suggestions, and mindfulness reminders. The system aims to improve overall health and lifestyle balance.\n\nRoles:\n- Project Manager\n- Mobile Developer\n- Backend Developer\n- AI Engineer\n- Nutritionist\n- QA Engineer\n\nFeatures:\n- Fitness Tracking\n- Nutrition Logging\n- AI Wellness Advice\n- Mindfulness Reminders\n\nGoals:\n- Design fitness tracking module (Project Manager)\n- Implement nutrition logging (Project Manager)\n- Enable AI wellness advice (Project Manager)\n- Develop mindfulness reminders (Project Manager)\n- Test wellness app (Project Manager)\n\nTimeline:\nWeek 1: Setup mobile app framework, Configure backend APIs\nWeek 2: Build fitness tracking module, Implement nutrition logging\nWeek 3: Train AI wellness model, Integrate with backend\nWeek 4: Create mindfulness reminders, Test wellness app",
+    "part2_output": "Goal 1: Design fitness tracking module\n  -User Story 1.1: As a user, I want to track workouts\n    -Task 1.1.1: Build fitness API\n    -Task 1.1.2: Create fitness UI\nGoal 2: Implement nutrition logging\n  -User Story 2.1: As a user, I want to log meals\n    -Task 2.1.1: Build nutrition API\n    -Task 2.1.2: Create nutrition UI\nGoal 3: Enable AI wellness advice\n  -User Story 3.1: As a user, I want health tips\n    -Task 3.1.1: Train wellness model\n    -Task 3.1.2: Display advice\nGoal 4: Develop mindfulness reminders\n  -User Story 4.1: As a user, I want reminders\n    -Task 4.1.1: Build reminder API\n    -Task 4.1.2: Create reminder UI\nGoal 5: Test wellness app\n  -User Story 5.1: As QA, I want to validate tracking\n    -Task 5.1.1: Conduct usability tests\n    -Task 5.1.2: Report issues"
+  },
+  {
+    "title": "EduMentor Student Guidance System",
+    "description": "Develop EduMentor, a web-based system for student guidance and mentorship. Success will be measured by student adoption, improved academic outcomes, and stable deployment.",
+    "part1_output": {
+      "title": "EduMentor Student Guidance System",
+      "summary": "EduMentor is a guidance system that connects students with mentors for academic and career support. It integrates AI to match students with mentors and track progress. The system aims to improve student success and career readiness.",
+      "roles": [
+        "Project Manager",
+        "Backend Developer",
+        "Frontend Developer",
+        "AI Engineer",
+        "Mentor Coordinator",
+        "QA Engineer"
+      ],
+      "features": [
+        "Mentor Matching",
+        "Progress Tracking",
+        "Career Guidance",
+        "Academic Support"
+      ],
+      "goals": [
+        {
+          "epic": "Design mentor matching system",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Implement progress tracking",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Enable career guidance",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Develop academic support module",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Test guidance system",
+          "role": "Project Manager"
+        }
+      ],
+      "timeline": {
+        "week1": [
+          "Setup backend framework",
+          "Configure database schema"
+        ],
+        "week2": [
+          "Build mentor matching system",
+          "Implement progress tracking"
+        ],
+        "week3": [
+          "Train career guidance model",
+          "Integrate with backend"
+        ],
+        "week4": [
+          "Create academic support module",
+          "Test guidance system"
+        ]
+      }
+    },
+    "part1_text": "=== EduMentor Student Guidance System ===\nSummary:\nEduMentor is a guidance system that connects students with mentors for academic and career support. It integrates AI to match students with mentors and track progress. The system aims to improve student success and career readiness.\n\nRoles:\n- Project Manager\n- Backend Developer\n- Frontend Developer\n- AI Engineer\n- Mentor Coordinator\n- QA Engineer\n\nFeatures:\n- Mentor Matching\n- Progress Tracking\n- Career Guidance\n- Academic Support\n\nGoals:\n- Design mentor matching system (Project Manager)\n- Implement progress tracking (Project Manager)\n- Enable career guidance (Project Manager)\n- Develop academic support module (Project Manager)\n- Test guidance system (Project Manager)\n\nTimeline:\nWeek 1: Setup backend framework, Configure database schema\nWeek 2: Build mentor matching system, Implement progress tracking\nWeek 3: Train career guidance model, Integrate with backend\nWeek 4: Create academic support module, Test guidance system",
+    "part2_output": "Goal 1: Design mentor matching system\n  -User Story 1.1: As a student, I want mentor connections\n    -Task 1.1.1: Build matching API\n    -Task 1.1.2: Create matching UI\nGoal 2: Implement progress tracking\n  -User Story 2.1: As a student, I want to track progress\n    -Task 2.1.1: Build tracking API\n    -Task 2.1.2: Create tracking UI\nGoal 3: Enable career guidance\n  -User Story 3.1: As a student, I want career advice\n    -Task 3.1.1: Train guidance model\n    -Task 3.1.2: Display advice\nGoal 4: Develop academic support module\n  -User Story 4.1: As a student, I want academic help\n    -Task 4.1.1: Build support API\n    -Task 4.1.2: Create support UI\nGoal 5: Test guidance system\n  -User Story 5.1: As QA, I want to validate mentorship\n    -Task 5.1.1: Conduct usability tests\n    -Task 5.1.2: Report issues"
+  },
+  {
+    "title": "HomeGuard Smart Security",
+    "description": "Develop HomeGuard, a web-based system for smart home security. Success will be measured by user adoption, reduced incidents, and stable deployment.",
+    "part1_output": {
+      "title": "HomeGuard Smart Security",
+      "summary": "HomeGuard is a smart home security system that monitors entrances, detects unusual activity, and provides AI-driven alerts. It integrates cameras, sensors, and emergency notifications. The system aims to improve household safety and peace of mind.",
+      "roles": [
+        "Project Manager",
+        "IoT Engineer",
+        "Backend Developer",
+        "Frontend Developer",
+        "AI Engineer",
+        "QA Engineer"
+      ],
+      "features": [
+        "Entrance Monitoring",
+        "Activity Detection",
+        "AI Alerts",
+        "Emergency Notifications"
+      ],
+      "goals": [
+        {
+          "epic": "Design entrance monitoring system",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Implement activity detection",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Enable AI alerts",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Develop emergency notifications",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Test smart security system",
+          "role": "Project Manager"
+        }
+      ],
+      "timeline": {
+        "week1": [
+          "Setup IoT devices",
+          "Configure backend APIs"
+        ],
+        "week2": [
+          "Build entrance monitoring system",
+          "Implement activity detection"
+        ],
+        "week3": [
+          "Train AI alert model",
+          "Integrate with backend"
+        ],
+        "week4": [
+          "Create emergency notifications",
+          "Test security system"
+        ]
+      }
+    },
+    "part1_text": "=== HomeGuard Smart Security ===\nSummary:\nHomeGuard is a smart home security system that monitors entrances, detects unusual activity, and provides AI-driven alerts. It integrates cameras, sensors, and emergency notifications. The system aims to improve household safety and peace of mind.\n\nRoles:\n- Project Manager\n- IoT Engineer\n- Backend Developer\n- Frontend Developer\n- AI Engineer\n- QA Engineer\n\nFeatures:\n- Entrance Monitoring\n- Activity Detection\n- AI Alerts\n- Emergency Notifications\n\nGoals:\n- Design entrance monitoring system (Project Manager)\n- Implement activity detection (Project Manager)\n- Enable AI alerts (Project Manager)\n- Develop emergency notifications (Project Manager)\n- Test smart security system (Project Manager)\n\nTimeline:\nWeek 1: Setup IoT devices, Configure backend APIs\nWeek 2: Build entrance monitoring system, Implement activity detection\nWeek 3: Train AI alert model, Integrate with backend\nWeek 4: Create emergency notifications, Test security system",
+    "part2_output": "Goal 1: Design entrance monitoring system\n  -User Story 1.1: As a homeowner, I want entrance monitoring\n    -Task 1.1.1: Build monitoring API\n    -Task 1.1.2: Create monitoring UI\nGoal 2: Implement activity detection\n  -User Story 2.1: As a homeowner, I want unusual activity alerts\n    -Task 2.1.1: Train detection model\n    -Task 2.1.2: Integrate with backend\nGoal 3: Enable AI alerts\n  -User Story 3.1: As a homeowner, I want safety alerts\n    -Task 3.1.1: Train alert model\n    -Task 3.1.2: Display alerts\nGoal 4: Develop emergency notifications\n  -User Story 4.1: As a homeowner, I want emergency response\n    -Task 4.1.1: Build notification API\n    -Task 4.1.2: Create notification UI\nGoal 5: Test smart security system\n  -User Story 5.1: As QA, I want to validate alerts\n    -Task 5.1.1: Conduct accuracy tests\n    -Task 5.1.2: Report issues"
+  },
+  {
+    "title": "MarketLink Small Business Hub",
+    "description": "Develop MarketLink, a web-based hub for small businesses. Success will be measured by business adoption, improved sales, and stable deployment.",
+    "part1_output": {
+      "title": "MarketLink Small Business Hub",
+      "summary": "MarketLink is a hub for small businesses to sell products, manage inventory, and access AI-driven sales insights. It integrates e-commerce tools, analytics, and customer engagement features. The system aims to empower small businesses and boost growth.",
+      "roles": [
+        "Project Manager",
+        "Backend Developer",
+        "Frontend Developer",
+        "AI Engineer",
+        "Business Consultant",
+        "QA Engineer"
+      ],
+      "features": [
+        "Product Listings",
+        "Inventory Management",
+        "AI Sales Insights",
+        "Customer Engagement"
+      ],
+      "goals": [
+        {
+          "epic": "Design product listing system",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Implement inventory management",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Enable AI sales insights",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Develop customer engagement module",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Test business hub",
+          "role": "Project Manager"
+        }
+      ],
+      "timeline": {
+        "week1": [
+          "Setup backend framework",
+          "Configure database schema"
+        ],
+        "week2": [
+          "Build product listing system",
+          "Implement inventory management"
+        ],
+        "week3": [
+          "Train AI sales insights model",
+          "Integrate with backend"
+        ],
+        "week4": [
+          "Create customer engagement module",
+          "Test business hub"
+        ]
+      }
+    },
+    "part1_text": "=== MarketLink Small Business Hub ===\nSummary:\nMarketLink is a hub for small businesses to sell products, manage inventory, and access AI-driven sales insights. It integrates e-commerce tools, analytics, and customer engagement features. The system aims to empower small businesses and boost growth.\n\nRoles:\n- Project Manager\n- Backend Developer\n- Frontend Developer\n- AI Engineer\n- Business Consultant\n- QA Engineer\n\nFeatures:\n- Product Listings\n- Inventory Management\n- AI Sales Insights\n- Customer Engagement\n\nGoals:\n- Design product listing system (Project Manager)\n- Implement inventory management (Project Manager)\n- Enable AI sales insights (Project Manager)\n- Develop customer engagement module (Project Manager)\n- Test business hub (Project Manager)\n\nTimeline:\nWeek 1: Setup backend framework, Configure database schema\nWeek 2: Build product listing system, Implement inventory management\nWeek 3: Train AI sales insights model, Integrate with backend\nWeek 4: Create customer engagement module, Test business hub",
+    "part2_output": "Goal 1: Design product listing system\n  -User Story 1.1: As a business owner, I want product listings\n    -Task 1.1.1: Build listing API\n    -Task 1.1.2: Create listing UI\nGoal 2: Implement inventory management\n  -User Story 2.1: As a business owner, I want inventory control\n    -Task 2.1.1: Build inventory API\n    -Task 2.1.2: Create inventory UI\nGoal 3: Enable AI sales insights\n  -User Story 3.1: As a business owner, I want sales advice\n    -Task 3.1.1: Train insights model\n    -Task 3.1.2: Display advice\nGoal 4: Develop customer engagement module\n  -User Story 4.1: As a business owner, I want customer interaction\n    -Task 4.1.1: Build engagement API\n    -Task 4.1.2: Create engagement UI\nGoal 5: Test business hub\n  -User Story 5.1: As QA, I want to validate listings\n    -Task 5.1.1: Conduct usability tests\n    -Task 5.1.2: Report issues"
+  },
+  {
+    "title": "GreenCity Urban Planning Tool",
+    "description": "Develop GreenCity, a web-based tool for urban planning. Success will be measured by adoption among city officials, improved sustainability, and stable deployment.",
+    "part1_output": {
+      "title": "GreenCity Urban Planning Tool",
+      "summary": "GreenCity is an urban planning tool that helps city officials design sustainable infrastructure. It integrates AI to simulate traffic, energy use, and environmental impact. The system aims to improve city planning and sustainability.",
+      "roles": [
+        "Project Manager",
+        "Backend Developer",
+        "Frontend Developer",
+        "AI Engineer",
+        "Urban Planner",
+        "QA Engineer"
+      ],
+      "features": [
+        "Traffic Simulation",
+        "Energy Use Analysis",
+        "Environmental Impact Reports",
+        "AI Recommendations"
+      ],
+      "goals": [
+        {
+          "epic": "Design traffic simulation system",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Implement energy use analysis",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Enable environmental impact reports",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Develop AI recommendations",
+          "role": "Project Manager"
+        },
+        {
+          "epic": "Test urban planning tool",
+          "role": "Project Manager"
+        }
+      ],
+      "timeline": {
+        "week1": [
+          "Setup backend framework",
+          "Configure simulation APIs"
+        ],
+        "week2": [
+          "Build traffic simulation system",
+          "Implement energy use analysis"
+        ],
+        "week3": [
+          "Train environmental impact model",
+          "Integrate with backend"
+        ],
+        "week4": [
+          "Create AI recommendations",
+          "Test planning tool"
+        ]
+      }
+    },
+    "part1_text": "=== GreenCity Urban Planning Tool ===\nSummary:\nGreenCity is an urban planning tool that helps city officials design sustainable infrastructure. It integrates AI to simulate traffic, energy use, and environmental impact. The system aims to improve city planning and sustainability.\n\nRoles:\n- Project Manager\n- Backend Developer\n- Frontend Developer\n- AI Engineer\n- Urban Planner\n- QA Engineer\n\nFeatures:\n- Traffic Simulation\n- Energy Use Analysis\n- Environmental Impact Reports\n- AI Recommendations\n\nGoals:\n- Design traffic simulation system (Project Manager)\n- Implement energy use analysis (Project Manager)\n- Enable environmental impact reports (Project Manager)\n- Develop AI recommendations (Project Manager)\n- Test urban planning tool (Project Manager)\n\nTimeline:\nWeek 1: Setup backend framework, Configure simulation APIs\nWeek 2: Build traffic simulation system, Implement energy use analysis\nWeek 3: Train environmental impact model, Integrate with backend\nWeek 4: Create AI recommendations, Test planning tool",
+    "part2_output": "Goal 1: Design traffic simulation system\n  -User Story 1.1: As a planner, I want traffic simulations\n    -Task 1.1.1: Build simulation API\n    -Task 1.1.2: Create simulation UI\nGoal 2: Implement energy use analysis\n  -User Story 2.1: As a planner, I want energy reports\n    -Task 2.1.1: Build energy API\n    -Task 2.1.2: Create energy UI\nGoal 3: Enable environmental impact reports\n  -User Story 3.1: As a planner, I want impact data\n    -Task 3.1.1: Train impact model\n    -Task 3.1.2: Display reports\nGoal 4: Develop AI recommendations\n  -User Story 4.1: As a planner, I want planning advice\n    -Task 4.1.1: Train recommendation model\n    -Task 4.1.2: Display advice\nGoal 5: Test urban planning tool\n  -User Story 5.1: As QA, I want to validate simulations\n    -Task 5.1.1: Conduct accuracy tests\n    -Task 5.1.2: Report issues"
+  }
+]

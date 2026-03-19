@@ -1,0 +1,73 @@
+=== MyCrewManager ===
+
+Summary:
+Develop the MyCrewManager platform, a web-based system that enables project managers to assign tasks, track progress, and receive AI-generated recommendations for team coordination and risk mitigation. The project will consist of a Django REST API backend, a React-based dashboard frontend, and AI integration using Hugging Face models, with the goal of creating a functional and scalable solution within 4 weeks. The team comprises a backend developer, frontend developer, AI engineer, and project manager. Success will be measured by the platform's ability to handle task assignments, AI recommendations, smooth team onboarding, and stable deployment. Challenges include limited VRAM, incomplete documentation, and potential OCR parsing issues.
+
+Status:
+in_progress
+
+Proposal / Input:
+Develop the MyCrewManager platform, a web-based system that enables project managers to assign tasks, track progress, and receive AI-generated recommendations for team coordination and risk mitigation. The project will consist of a Django REST API backend, a React-based dashboard frontend, and AI integration using Hugging Face models, with the goal of creating a functional and scalable solution within 4 weeks. The team comprises a backend developer, frontend developer, AI engineer, and project manager. Success will be measured by the platform's ability to handle task assignments, AI recommendations, smooth team onboarding, and stable deployment. Challenges include limited VRAM, incomplete documentation, and potential OCR parsing issues.
+
+Roles:
+Project Manager
+Backend Developer (Python, Django, DRF)
+Frontend Developer (React, Tailwind)
+AI Engineer (LLM orchestration, prompt design)
+Quality Assurance Engineer
+DevOps Engineer (CI/CD pipeline)
+Data Scientist (Hugging Face, LangChain, internal dataset)
+Technical Writer (onboarding documentation)
+
+Features:
+AI-Powered Task Generation
+Project Progress Tracking
+Task Assignment & Delegation
+AI-Generated Recommendations
+Real-time Updates Dashboard
+
+Goals:
+Design user authentication interface (UI/UX Designer)
+Implement user registration and login flows (Backend Developer)
+Enable AI integration within task manager platform (AI Engineer)
+Develop OCR module for document parsing (AI Engineer)
+Design and implement real-time updates for task dashboard (Frontend Developer)
+Develop AI-generated recommendations for project managers (AI Engineer)
+Test platform for stability and performance (Quality Assurance Engineer)
+Manage team coordination and timeline for successful project launch (Project Manager)
+
+Timeline:
+Week 1: Define project requirements and architecture, Set up development infrastructure
+Week 2: Create database schema and models, Implement user registration and login flows
+Week 3: Develop OCR module for document parsing, Design and implement real-time updates for task dashboard
+Week 4: Develop AI-generated recommendations for project managers, Test platform for stability and performance
+
+Backlog:
+Epic 1: AI Integration
+  Sub-Epic 1.1: Implement the AI Engine
+    User Story 1.1.1: API Endpoints for AI Model Communication
+      Tasks: Define and implement Django API endpoints for communication with AI Engine, Test API endpoints for correctness, robustness, and performance
+    User Story 1.1.2: Integrate AI Engine with Django App
+      Tasks: Inject AI Engine instance in Django app settings, Implement AI Engine dependency in Django app and test
+
+Epic 2: Frontend Integration
+  Sub-Epic 2.1: Dashboard Development
+    User Story 2.1.1: Create Task Assignment & Monitoring UI
+      Tasks: Design and implement UI components for task listing and assignment, Implement API calls to retrieve task data for UI display
+    User Story 2.1.2: Add AI Assistant UI Component
+      Tasks: Design and implement UI component for displaying AI assistant recommendations, Implement API calls to retrieve AI assistant recommendations for display
+
+Epic 3: Task Analysis
+  Sub-Epic 3.1: Define Task Analysis Algorithms
+    User Story 3.1.1: Create Task Dependency Chart Algorithm
+      Tasks: Define algorithm for generating task dependency charts, Test algorithm for correctness, robustness, and performance
+    User Story 3.1.2: Generate Recovery Plan Algorithm
+      Tasks: Define algorithm for generating recovery plans based on task dependency charts, Test algorithm for correctness, robustness, and performance
+
+Epic 4: OCR Support
+  Sub-Epic 4.1: Donut Model Integration
+    User Story 4.1.1: Implement Donut Model Integration in Django Backend
+      Tasks: Install Donut model package in Django backend, Implement API endpoint for OCR processing
+    User Story 4.1.2: Integrate OCR Results into UI
+      Tasks: Update UI components with parsed document data from OCR, Test integration for correctness, robustness, and performance
+===

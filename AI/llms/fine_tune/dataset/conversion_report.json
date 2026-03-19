@@ -1,0 +1,66 @@
+{
+  "sources": [
+    {
+      "source": "C:\\Users\\Aaron\\GitHub Repos\\My-Crew-Manager\\AI\\llms\\fine_tune\\dataset\\goal_ai_output.txt",
+      "accepted_entries": 1,
+      "rejected_entries": 0
+    },
+    {
+      "source": "C:\\Users\\Aaron\\GitHub Repos\\My-Crew-Manager\\AI\\llms\\fine_tune\\dataset\\combined_dataset_model1_and_2.txt",
+      "accepted_entries": 25,
+      "rejected_entries": 0
+    }
+  ],
+  "duplicates_removed": {
+    "truth": 0,
+    "supplemental": 0,
+    "total": 0
+  },
+  "final_entries": 26,
+  "status_ignored": true,
+  "model1_contract": {
+    "prompt": "Proposal / Input",
+    "response": "Title + Summary + Roles + Features + Goals + Timeline (plain text)",
+    "excluded_sections": [
+      "Status",
+      "Proposal / Input",
+      "Backlog"
+    ]
+  },
+  "model2_contract": {
+    "prompt": "Model 1 response text",
+    "response": "Backlog (Goal -> User Story -> exactly 2 Tasks)",
+    "excluded_sections": [
+      "Status"
+    ]
+  },
+  "rejected": [],
+  "titles": [
+    "MyCrewManager",
+    "EventEase Smart Event Planner",
+    "PetCare AI Health Monitor",
+    "BuildWise Construction Manager",
+    "ShopBuddy AI Shopping Assistant",
+    "SafeSchool Campus Security",
+    "FarmLink Cooperative Platform",
+    "TutorAI Language Learning App",
+    "GreenHome Energy Saver",
+    "CityComm Smart Communication Hub",
+    "HealthSync Patient Data Exchange",
+    "EduLearn E-Learning Platform",
+    "MedAssist Remote Healthcare",
+    "TravelMate AI Trip Planner",
+    "FinTrack Personal Finance Manager",
+    "FoodiePal Recipe Assistant",
+    "WorkFlowPro Team Collaboration Tool",
+    "AgroSense Smart Farming System",
+    "SkillUp Career Development Platform",
+    "SafeRide Transportation Safety System",
+    "EcoTrack Environmental Monitoring",
+    "FitTrack Wellness App",
+    "EduMentor Student Guidance System",
+    "HomeGuard Smart Security",
+    "MarketLink Small Business Hub",
+    "GreenCity Urban Planning Tool"
+  ]
+}

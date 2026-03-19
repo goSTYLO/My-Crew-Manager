@@ -141,13 +141,14 @@ def prepare_tokenized_dataset(
 def prepare_model1_dataset(
     model_name: str = "qwen",
     max_length: int = 512,
+    dataset_filename: str = "model1_description_to_part1.jsonl",
     output_dir: str | None = None,
 ) -> Dataset:
     """
-    Load model1_description_to_part1.jsonl, tokenize (description -> Part 1 JSON).
+    Load model1 JSONL, tokenize (description -> Part 1 response text).
     For Model 1 training: description in, Part 1 JSON out.
     """
-    path = DATASET_DIR / "model1_description_to_part1.jsonl"
+    path = DATASET_DIR / dataset_filename
     examples = load_jsonl_file(path)
     if not examples:
         raise FileNotFoundError(
