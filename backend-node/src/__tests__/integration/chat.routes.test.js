@@ -37,6 +37,24 @@ describe('Chat routes (integration)', () => {
     });
   });
 
+  describe('GET /api/chat/rooms/unread-count(/)', () => {
+    test('supports unread-count with trailing slash', async () => {
+      const res = await request(app)
+        .get('/api/chat/rooms/unread-count/')
+        .set('Authorization', `Token ${authToken}`);
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveProperty('unread_count');
+    });
+
+    test('supports unread-count without trailing slash', async () => {
+      const res = await request(app)
+        .get('/api/chat/rooms/unread-count')
+        .set('Authorization', `Token ${authToken}`);
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveProperty('unread_count');
+    });
+  });
+
   describe('POST /api/chat/rooms/', () => {
     test('creates room and returns 201', async () => {
       const res = await request(app)

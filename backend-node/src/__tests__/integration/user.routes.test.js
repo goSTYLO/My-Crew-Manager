@@ -1,4 +1,5 @@
 import request from 'supertest';
+import jwt from 'jsonwebtoken';
 
 import app from '../../app.js';
 import { connectTestDB, disconnectTestDB, truncateTestData } from '../db-helper.js';
@@ -41,7 +42,7 @@ describe('User routes (integration)', () => {
   });
 
   describe('POST /api/user/login/', () => {
-    test('returns token for valid credentials', async () => {
+    test('returns token and access for valid credentials', async () => {
       await request(app)
         .post('/api/user/signup/')
         .send({ email: 'login@example.com', name: 'Login', password: 'secret' });
@@ -50,6 +51,8 @@ describe('User routes (integration)', () => {
         .send({ email: 'login@example.com', password: 'secret' });
       expect(res.status).toBe(200);
       expect(res.body).toHaveProperty('token');
+      expect(res.body).toHaveProperty('access');
+      expect(res.body.access).toBe(res.body.token);
       expect(res.body.email).toBe('login@example.com');
     });
 
@@ -61,6 +64,9 @@ describe('User routes (integration)', () => {
         .post('/api/user/login/')
         .send({ email: 'x@x.com', password: 'wrong' });
       expect(res.status).toBe(401);
+      expect(res.body).toHaveProperty('error');
+      expect(res.body).toHaveProperty('detail');
+      expect(res.body).toHaveProperty('message');
     });
   });
 
@@ -68,6 +74,19 @@ describe('User routes (integration)', () => {
     test('returns 401 without auth', async () => {
       const res = await request(app).get('/api/user/me/');
       expect(res.status).toBe(401);
+      expect(res.body).toHaveProperty('error');
+      expect(res.body).toHaveProperty('detail');
+      expect(res.body).toHaveProperty('message');
+    });
+
+    test('returns normalized auth error for malformed header', async () => {
+      const res = await request(app)
+        .get('/api/user/me/')
+        .set('Authorization', 'InvalidFormat');
+      expect(res.status).toBe(401);
+      expect(res.body).toHaveProperty('error');
+      expect(res.body).toHaveProperty('detail');
+      expect(res.body).toHaveProperty('message');
     });
 
     test('returns user with valid token', async () => {
@@ -81,12 +100,33 @@ describe('User routes (integration)', () => {
       expect(res.status).toBe(200);
       expect(res.body.email).toBe('me@example.com');
     });
+
+    test('returns user with valid bearer token', async () => {
+      const signup = await request(app)
+        .post('/api/user/signup/')
+        .send({ email: 'bearer@example.com', name: 'Bearer User', password: 'pw' });
+
+      const signed = jwt.sign(
+        { userId: Number(signup.body.id) },
+        process.env.JWT_SECRET || process.env.SECRET_KEY || 'test-secret-key'
+      );
+
+      const res = await request(app)
+        .get('/api/user/me/')
+        .set('Authorization', `Bearer ${signed}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.email).toBe('bearer@example.com');
+    });
   });
 
   describe('POST /api/user/refresh-token/', () => {
     test('returns 401 without cookie', async () => {
       const res = await request(app).post('/api/user/refresh-token/');
       expect(res.status).toBe(401);
+      expect(res.body).toHaveProperty('error');
+      expect(res.body).toHaveProperty('detail');
+      expect(res.body).toHaveProperty('message');
     });
 
     test('returns token with valid refresh cookie', async () => {
@@ -101,6 +141,8 @@ describe('User routes (integration)', () => {
         .set('Cookie', cookies || []);
       expect(res.status).toBe(200);
       expect(res.body).toHaveProperty('token');
+      expect(res.body).toHaveProperty('access');
+      expect(res.body.access).toBe(res.body.token);
     });
   });
 
@@ -110,6 +152,18 @@ describe('User routes (integration)', () => {
         .post('/api/user/email/request/')
         .send({ email: 'verify@example.com' });
       expect(res.status).toBe(204);
+    });
+  });
+
+  describe('Error envelope contract', () => {
+    test('email verify invalid request returns error/detail/message', async () => {
+      const res = await request(app)
+        .post('/api/user/email/verify/')
+        .send({ email: 'missing@example.com', code: '123456' });
+      expect(res.status).toBe(400);
+      expect(res.body).toHaveProperty('error');
+      expect(res.body).toHaveProperty('detail');
+      expect(res.body).toHaveProperty('message');
     });
   });
 

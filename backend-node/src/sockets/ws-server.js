@@ -20,6 +20,17 @@ function parseTokenFromUrl(url) {
   return query?.token || query?.auth_token;
 }
 
+function parseTokenFromAuthHeader(authHeader) {
+  if (!authHeader || typeof authHeader !== 'string') return null;
+  const parts = authHeader.trim().split(/\s+/);
+  if (parts.length !== 2) return null;
+  const [schemeRaw, value] = parts;
+  const scheme = schemeRaw.toLowerCase();
+  if (!value) return null;
+  if (scheme === 'token' || scheme === 'bearer') return value;
+  return null;
+}
+
 export function setupWebSocketServer(server) {
   const wss = new WebSocketServer({ noServer: true });
 
@@ -30,7 +41,7 @@ export function setupWebSocketServer(server) {
       return;
     }
 
-    const tokenKey = parseTokenFromUrl(url);
+    const tokenKey = parseTokenFromUrl(url) || parseTokenFromAuthHeader(request.headers?.authorization);
     const user = await getUserFromToken(tokenKey);
     if (!user) {
       socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');

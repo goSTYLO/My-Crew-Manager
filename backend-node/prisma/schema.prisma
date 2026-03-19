@@ -14,7 +14,7 @@ model ai_api_epic {
   ai             Boolean
   project_id     Int
   is_complete    Boolean
-  ai_api_project ai_api_project   @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "ai_api_epic_project_id_a5a59277_fk_ai_api_project_id")
+  ai_api_project ai_api_project   @relation(fields: [project_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "ai_api_epic_project_id_a5a59277_fk_ai_api_project_id")
   ai_api_subepic ai_api_subepic[]
 
   @@index([project_id], map: "ai_api_epic_project_id_a5a59277")
@@ -35,9 +35,9 @@ model ai_api_notification {
   actor_id                                    Int?
   content_type_id                             Int?
   recipient_id                                Int
-  user_ai_api_notification_actor_idTouser     user?                @relation("ai_api_notification_actor_idTouser", fields: [actor_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction, map: "ai_api_notification_actor_id_02e9252a_fk_user_user_id")
-  django_content_type                         django_content_type? @relation(fields: [content_type_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "ai_api_notification_content_type_id_7a31c973_fk_django_co")
-  user_ai_api_notification_recipient_idTouser user                 @relation("ai_api_notification_recipient_idTouser", fields: [recipient_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction, map: "ai_api_notification_recipient_id_dabcaa2d_fk_user_user_id")
+  user_ai_api_notification_actor_idTouser     user?                @relation("ai_api_notification_actor_idTouser", fields: [actor_id], references: [user_id], onDelete: SetNull, onUpdate: NoAction, map: "ai_api_notification_actor_id_02e9252a_fk_user_user_id")
+  django_content_type                         django_content_type? @relation(fields: [content_type_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "ai_api_notification_content_type_id_7a31c973_fk_django_co")
+  user_ai_api_notification_recipient_idTouser user                 @relation("ai_api_notification_recipient_idTouser", fields: [recipient_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction, map: "ai_api_notification_recipient_id_dabcaa2d_fk_user_user_id")
 
   @@index([notification_type], map: "ai_api_noti_notific_f8a275_idx")
   @@index([recipient_id, is_read], map: "ai_api_noti_recipie_299b0f_idx")
@@ -78,7 +78,7 @@ model ai_api_projectfeature {
   id             BigInt         @id @default(autoincrement())
   title          String         @db.VarChar(512)
   project_id     Int
-  ai_api_project ai_api_project @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "ai_api_projectfeature_project_id_ce7046c2_fk_ai_api_project_id")
+  ai_api_project ai_api_project @relation(fields: [project_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "ai_api_projectfeature_project_id_ce7046c2_fk_ai_api_project_id")
 
   @@index([project_id], map: "ai_api_projectfeature_project_id_ce7046c2")
 }
@@ -89,7 +89,7 @@ model ai_api_projectgoal {
   title          String         @db.VarChar(512)
   role           String?        @db.VarChar(255)
   project_id     Int
-  ai_api_project ai_api_project @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "ai_api_projectgoal_project_id_502c88f7_fk_ai_api_project_id")
+  ai_api_project ai_api_project @relation(fields: [project_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "ai_api_projectgoal_project_id_502c88f7_fk_ai_api_project_id")
 
   @@index([project_id], map: "ai_api_projectgoal_project_id_502c88f7")
 }
@@ -105,9 +105,9 @@ model ai_api_projectinvitation {
   invitee_id                                        Int
   project_id                                        Int
   role                                              String         @db.VarChar(255)
-  ai_api_project                                    ai_api_project @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "ai_api_projectinvita_project_id_40614acd_fk_ai_api_pr")
-  user_ai_api_projectinvitation_invited_by_idTouser user           @relation("ai_api_projectinvitation_invited_by_idTouser", fields: [invited_by_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction, map: "ai_api_projectinvitation_invited_by_id_619f6fa0_fk_user_user_id")
-  user_ai_api_projectinvitation_invitee_idTouser    user           @relation("ai_api_projectinvitation_invitee_idTouser", fields: [invitee_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction, map: "ai_api_projectinvitation_invitee_id_e633efd4_fk_user_user_id")
+  ai_api_project                                    ai_api_project @relation(fields: [project_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "ai_api_projectinvita_project_id_40614acd_fk_ai_api_pr")
+  user_ai_api_projectinvitation_invited_by_idTouser user           @relation("ai_api_projectinvitation_invited_by_idTouser", fields: [invited_by_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction, map: "ai_api_projectinvitation_invited_by_id_619f6fa0_fk_user_user_id")
+  user_ai_api_projectinvitation_invitee_idTouser    user           @relation("ai_api_projectinvitation_invitee_idTouser", fields: [invitee_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction, map: "ai_api_projectinvitation_invitee_id_e633efd4_fk_user_user_id")
 
   @@unique([project_id, invitee_id], map: "ai_api_projectinvitation_project_id_invitee_id_97390a1f_uniq")
   @@index([invitee_id, status], map: "ai_api_proj_invitee_ebe3f0_idx")
@@ -126,7 +126,7 @@ model ai_api_projectmember {
   user_id           BigInt
   user_email        String              @db.VarChar(254)
   user_name         String              @db.VarChar(255)
-  ai_api_project    ai_api_project      @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "ai_api_projectmember_project_id_086d6fd5_fk_ai_api_project_id")
+  ai_api_project    ai_api_project      @relation(fields: [project_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "ai_api_projectmember_project_id_086d6fd5_fk_ai_api_project_id")
   ai_api_repository ai_api_repository[]
   ai_api_storytask  ai_api_storytask[]
 
@@ -140,7 +140,7 @@ model ai_api_projectrole {
   id             BigInt         @id @default(autoincrement())
   role           String         @db.VarChar(255)
   project_id     Int
-  ai_api_project ai_api_project @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "ai_api_projectrole_project_id_66c4b909_fk_ai_api_project_id")
+  ai_api_project ai_api_project @relation(fields: [project_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "ai_api_projectrole_project_id_66c4b909_fk_ai_api_project_id")
 
   @@index([project_id], map: "ai_api_projectrole_project_id_66c4b909")
 }
@@ -153,7 +153,7 @@ model ai_api_proposal {
   uploaded_at    DateTime       @db.Timestamptz(6)
   project_id     Int
   uploaded_by_id BigInt?
-  ai_api_project ai_api_project @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "ai_api_proposal_project_id_13855955_fk_ai_api_project_id")
+  ai_api_project ai_api_project @relation(fields: [project_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "ai_api_proposal_project_id_13855955_fk_ai_api_project_id")
 
   @@index([project_id], map: "ai_api_proposal_project_id_13855955")
   @@index([uploaded_by_id], map: "ai_api_proposal_uploaded_by_id_f50f2561")
@@ -169,8 +169,8 @@ model ai_api_repository {
   assigned_to_id       BigInt?
   project_id           Int
   updated_at           DateTime              @db.Timestamptz(6)
-  ai_api_projectmember ai_api_projectmember? @relation(fields: [assigned_to_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "ai_api_repository_assigned_to_id_ea8c7b41_fk_ai_api_pr")
-  ai_api_project       ai_api_project        @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "ai_api_repository_project_id_786699f6_fk_ai_api_project_id")
+  ai_api_projectmember ai_api_projectmember? @relation(fields: [assigned_to_id], references: [id], onDelete: SetNull, onUpdate: NoAction, map: "ai_api_repository_assigned_to_id_ea8c7b41_fk_ai_api_pr")
+  ai_api_project       ai_api_project        @relation(fields: [project_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "ai_api_repository_project_id_786699f6_fk_ai_api_project_id")
 
   @@index([project_id], map: "ai_api_repo_project_339f11_idx")
   @@index([assigned_to_id], map: "ai_api_repository_assigned_to_id_ea8c7b41")
@@ -190,8 +190,8 @@ model ai_api_storytask {
   due_date             DateTime?             @db.Date
   created_at           DateTime?             @db.Timestamptz(6)
   updated_at           DateTime?             @db.Timestamptz(6)
-  ai_api_projectmember ai_api_projectmember? @relation(fields: [assignee_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "ai_api_storytask_assignee_id_90c2a377_fk_ai_api_pr")
-  ai_api_userstory     ai_api_userstory      @relation(fields: [user_story_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "ai_api_storytask_user_story_id_7d170e4b_fk_ai_api_userstory_id")
+  ai_api_projectmember ai_api_projectmember? @relation(fields: [assignee_id], references: [id], onDelete: SetNull, onUpdate: NoAction, map: "ai_api_storytask_assignee_id_90c2a377_fk_ai_api_pr")
+  ai_api_userstory     ai_api_userstory      @relation(fields: [user_story_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "ai_api_storytask_user_story_id_7d170e4b_fk_ai_api_userstory_id")
 
   @@index([assignee_id], map: "ai_api_storytask_assignee_id_90c2a377")
   @@index([user_story_id], map: "ai_api_storytask_user_story_id_7d170e4b")
@@ -204,7 +204,7 @@ model ai_api_subepic {
   ai               Boolean
   epic_id          BigInt
   is_complete      Boolean
-  ai_api_epic      ai_api_epic        @relation(fields: [epic_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "ai_api_subepic_epic_id_7c55c4ed_fk_ai_api_epic_id")
+  ai_api_epic      ai_api_epic        @relation(fields: [epic_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "ai_api_subepic_epic_id_7c55c4ed_fk_ai_api_epic_id")
   ai_api_userstory ai_api_userstory[]
 
   @@index([epic_id], map: "ai_api_subepic_epic_id_7c55c4ed")
@@ -215,7 +215,7 @@ model ai_api_timelineitem {
   id                  BigInt              @id @default(autoincrement())
   title               String              @db.VarChar(512)
   week_id             BigInt
-  ai_api_timelineweek ai_api_timelineweek @relation(fields: [week_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "ai_api_timelineitem_week_id_f6946004_fk_ai_api_timelineweek_id")
+  ai_api_timelineweek ai_api_timelineweek @relation(fields: [week_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "ai_api_timelineitem_week_id_f6946004_fk_ai_api_timelineweek_id")
 
   @@index([week_id], map: "ai_api_timelineitem_week_id_f6946004")
 }
@@ -227,7 +227,7 @@ model ai_api_timelineweek {
   week_number         Int
   project_id          Int
   ai_api_timelineitem ai_api_timelineitem[]
-  ai_api_project      ai_api_project        @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "ai_api_timelineweek_project_id_e42a726c_fk_ai_api_project_id")
+  ai_api_project      ai_api_project        @relation(fields: [project_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "ai_api_timelineweek_project_id_e42a726c_fk_ai_api_project_id")
 
   @@index([project_id], map: "ai_api_timelineweek_project_id_e42a726c")
 }
@@ -240,7 +240,7 @@ model ai_api_userstory {
   sub_epic_id      BigInt
   is_complete      Boolean
   ai_api_storytask ai_api_storytask[]
-  ai_api_subepic   ai_api_subepic     @relation(fields: [sub_epic_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "ai_api_userstory_sub_epic_id_51041fd2_fk_ai_api_subepic_id")
+  ai_api_subepic   ai_api_subepic     @relation(fields: [sub_epic_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "ai_api_userstory_sub_epic_id_51041fd2_fk_ai_api_subepic_id")
 
   @@index([sub_epic_id], map: "ai_api_userstory_sub_epic_id_51041fd2")
 }
@@ -311,9 +311,9 @@ model chat_message {
   room_id            Int
   message_type       String         @db.VarChar(20)
   reply_to_id        Int?
-  chat_message       chat_message?  @relation("chat_messageTochat_message", fields: [reply_to_id], references: [message_id], onDelete: NoAction, onUpdate: NoAction, map: "chat_message_reply_to_id_afede338_fk_chat_message_message_id")
+  chat_message       chat_message?  @relation("chat_messageTochat_message", fields: [reply_to_id], references: [message_id], onDelete: Cascade, onUpdate: NoAction, map: "chat_message_reply_to_id_afede338_fk_chat_message_message_id")
   other_chat_message chat_message[] @relation("chat_messageTochat_message")
-  chat_room          chat_room      @relation(fields: [room_id], references: [room_id], onDelete: NoAction, onUpdate: NoAction, map: "chat_message_room_id_5e7d8d78_fk_chat_room_room_id")
+  chat_room          chat_room      @relation(fields: [room_id], references: [room_id], onDelete: Cascade, onUpdate: NoAction, map: "chat_message_room_id_5e7d8d78_fk_chat_room_room_id")
 
   @@index([reply_to_id], map: "chat_message_reply_to_id_afede338")
   @@index([room_id], map: "chat_message_room_id_5e7d8d78")
@@ -339,7 +339,7 @@ model chat_room_membership {
   joined_at     DateTime  @db.Timestamptz(6)
   room_id       Int
   user_id       BigInt
-  chat_room     chat_room @relation(fields: [room_id], references: [room_id], onDelete: NoAction, onUpdate: NoAction, map: "chat_room_membership_room_id_e82ef636_fk_chat_room_room_id")
+  chat_room     chat_room @relation(fields: [room_id], references: [room_id], onDelete: Cascade, onUpdate: NoAction, map: "chat_room_membership_room_id_e82ef636_fk_chat_room_room_id")
 
   @@unique([room_id, user_id], map: "chat_room_membership_room_id_user_id_f0aa69a7_uniq")
   @@index([room_id], map: "chat_room_membership_room_id_e82ef636")
@@ -580,7 +580,7 @@ model users_refreshtoken {
   ip_address  String?  @db.Inet
   user_agent  String?
   user_id     Int
-  user        user     @relation(fields: [user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction, map: "users_refreshtoken_user_id_2df68a14_fk_user_user_id")
+  user        user     @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction, map: "users_refreshtoken_user_id_2df68a14_fk_user_user_id")
 
   @@index([expires_at], map: "users_refre_expires_cdd00d_idx")
   @@index([token], map: "users_refre_token_f0eac2_idx")
@@ -596,7 +596,7 @@ model users_twofactortemptoken {
   created_at DateTime @db.Timestamptz(6)
   expires_at DateTime @db.Timestamptz(6)
   user_id    Int
-  user       user     @relation(fields: [user_id], references: [user_id], onDelete: NoAction, onUpdate: NoAction, map: "users_twofactortemptoken_user_id_099cded0_fk_user_user_id")
+  user       user     @relation(fields: [user_id], references: [user_id], onDelete: Cascade, onUpdate: NoAction, map: "users_twofactortemptoken_user_id_099cded0_fk_user_user_id")
 
   @@index([expires_at], map: "users_twofa_expires_7f20fc_idx")
   @@index([token], map: "users_twofa_token_50a414_idx")

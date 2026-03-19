@@ -14,6 +14,23 @@ const VERIFICATION_TTL_MIN = parseInt(process.env.VERIFICATION_CODE_TTL_MIN || '
 const VERIFICATION_MAX_ATTEMPTS = parseInt(process.env.VERIFICATION_MAX_ATTEMPTS || '5', 10);
 const RESEND_COOLDOWN_SEC = parseInt(process.env.VERIFICATION_RESEND_COOLDOWN_SEC || '60', 10);
 
+function buildErrorPayload(message, extra = {}) {
+  return {
+    error: message,
+    detail: message,
+    message,
+    ...extra,
+  };
+}
+
+function sendError(res, statusCode, message, extra = {}) {
+  return res.status(statusCode).json(buildErrorPayload(message, extra));
+}
+
+function sendValidationError(res, err) {
+  return sendError(res, 400, 'Validation error', { fields: err.flatten().fieldErrors });
+}
+
 function setRefreshCookie(res, token, rememberMe) {
   const maxAge = rememberMe ? 30 * 24 * 60 * 60 : undefined;
   res.cookie(REFRESH_COOKIE, token, {
@@ -36,6 +53,7 @@ async function createRefreshToken(userId, rememberMe, req) {
     data: {
       user_id: userId,
       token: value,
+      created_at: new Date(),
       expires_at: expiresAt,
       remember_me: rememberMe,
       ip_address: req?.ip || req?.connection?.remoteAddress,
@@ -72,6 +90,18 @@ function userToResponse(user) {
     role: user.role,
     profile_picture: user.profile_picture ? `/media/${user.profile_picture}` : null,
   };
+}
+
+async function syncProjectMemberIdentity(userId, userName, userEmail) {
+  const data = {};
+  if (typeof userName === 'string') data.user_name = userName;
+  if (typeof userEmail === 'string') data.user_email = userEmail;
+  if (Object.keys(data).length === 0) return;
+
+  await prisma.ai_api_projectmember.updateMany({
+    where: { user_id: BigInt(userId) },
+    data,
+  });
 }
 
 async function sendVerificationEmail(email, code, subject, message) {
@@ -113,7 +143,7 @@ export async function signup(req, res, next) {
     const { email, name, password, role } = signupSchema.parse(req.body);
     const lower = email.toLowerCase();
     const existing = await prisma.user.findUnique({ where: { email: lower } });
-    if (existing) return res.status(400).json({ email: ['User with this email already exists.'] });
+    if (existing) return sendError(res, 400, 'User with this email already exists.', { email: ['User with this email already exists.'] });
     const hashed = await bcrypt.hash(password, 10);
     const user = await prisma.user.create({
       data: {
@@ -124,12 +154,14 @@ export async function signup(req, res, next) {
         is_active: true,
         is_staff: false,
         is_superuser: false,
+        two_factor_enabled: false,
+        created_at: new Date(),
       },
     });
     const tokenKey = await getOrCreateToken(user.user_id);
     return res.status(201).json({ id: String(user.user_id), email: user.email, name: user.name, role: user.role, token: tokenKey });
   } catch (err) {
-    if (err instanceof z.ZodError) return res.status(400).json(err.flatten().fieldErrors);
+    if (err instanceof z.ZodError) return sendValidationError(res, err);
     next(err);
   }
 }
@@ -139,7 +171,7 @@ export async function login(req, res, next) {
     const { email, password, remember_me } = loginSchema.parse(req.body);
     const user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
     if (!user || !user.is_active || !(await bcrypt.compare(password, user.password))) {
-      return res.status(401).json({ message: 'Invalid email or password' });
+      return sendError(res, 401, 'Invalid email or password');
     }
     if (user.two_factor_enabled && process.env.DISABLE_2FA !== 'true') {
       await prisma.users_twofactortemptoken.deleteMany({ where: { user_id: user.user_id } });
@@ -156,9 +188,16 @@ export async function login(req, res, next) {
       const refreshToken = await createRefreshToken(user.user_id, true, req);
       setRefreshCookie(res, refreshToken, true);
     }
-    return res.json({ id: String(user.user_id), email: user.email, name: user.name, role: user.role, token: tokenKey });
+    return res.json({
+      id: String(user.user_id),
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      token: tokenKey,
+      access: tokenKey,
+    });
   } catch (err) {
-    if (err instanceof z.ZodError) return res.status(400).json(err.flatten().fieldErrors);
+    if (err instanceof z.ZodError) return sendValidationError(res, err);
     next(err);
   }
 }
@@ -178,18 +217,19 @@ export async function logout(req, res, next) {
 export async function refreshToken(req, res, next) {
   try {
     const value = req.cookies?.[REFRESH_COOKIE];
-    if (!value) return res.status(401).json({ error: 'No refresh token found' });
+    if (!value) return sendError(res, 401, 'No refresh token found');
     const rt = await prisma.users_refreshtoken.findFirst({
       where: { token: value, expires_at: { gt: new Date() } },
       include: { user: true },
     });
     if (!rt) {
       res.clearCookie(REFRESH_COOKIE, { path: '/' });
-      return res.status(401).json({ error: 'Refresh token expired or invalid' });
+      return sendError(res, 401, 'Refresh token expired or invalid');
     }
     const tokenKey = await getOrCreateToken(rt.user_id);
     return res.json({
       token: tokenKey,
+      access: tokenKey,
       id: String(rt.user.user_id),
       email: rt.user.email,
       name: rt.user.name,
@@ -221,7 +261,7 @@ export async function updateMe(req, res, next) {
     if (email) {
       const lower = email.toLowerCase();
       const taken = await prisma.user.findFirst({ where: { email: lower, NOT: { user_id: userId } } });
-      if (taken) return res.status(400).json({ error: 'Email already in use by another account' });
+      if (taken) return sendError(res, 400, 'Email already in use by another account');
       update.email = lower;
     }
     if (password && password.length > 0) {
@@ -232,6 +272,11 @@ export async function updateMe(req, res, next) {
       where: { user_id: userId },
       data: update,
     });
+
+    if (update.name !== undefined || update.email !== undefined) {
+      await syncProjectMemberIdentity(userId, user.name, user.email);
+    }
+
     return res.json(userToResponse(user));
   } catch (err) {
     next(err);
@@ -261,9 +306,9 @@ export async function listUsers(req, res, next) {
 export async function resetPassword(req, res, next) {
   try {
     const { email, password } = req.body;
-    if (!email || !password) return res.status(400).json({ error: 'Email and password are required' });
+    if (!email || !password) return sendError(res, 400, 'Email and password are required');
     const user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
-    if (!user) return res.status(404).json({ error: 'No account found with this email address' });
+    if (!user) return sendError(res, 404, 'No account found with this email address');
     const hashed = await bcrypt.hash(password, 10);
     await prisma.user.update({ where: { user_id: user.user_id }, data: { password: hashed } });
     return res.json({ message: 'Password has been reset successfully' });
@@ -277,11 +322,11 @@ export async function deleteAccount(req, res, next) {
     const { email, password } = accountDeleteSchema.parse(req.body);
     const userId = req.user.user_id ?? req.user._id;
     if (email.toLowerCase() !== req.user.email.toLowerCase()) {
-      return res.status(400).json({ error: 'Email does not match your account' });
+      return sendError(res, 400, 'Email does not match your account');
     }
     const user = await prisma.user.findUnique({ where: { user_id: userId } });
     if (!user || !(await bcrypt.compare(password, user.password))) {
-      return res.status(401).json({ error: 'Incorrect password. Please try again.' });
+      return sendError(res, 401, 'Incorrect password. Please try again.');
     }
     await prisma.authtoken_token.deleteMany({ where: { user_id: BigInt(userId) } });
     await prisma.users_refreshtoken.deleteMany({ where: { user_id: userId } });
@@ -298,7 +343,7 @@ export async function deleteAccount(req, res, next) {
     res.clearCookie(REFRESH_COOKIE, { path: '/' });
     return res.json({ deleted: true, soft_deleted: false, user_id: String(userId), message: 'Account deleted successfully' });
   } catch (err) {
-    if (err instanceof z.ZodError) return res.status(400).json(err.flatten().fieldErrors);
+    if (err instanceof z.ZodError) return sendValidationError(res, err);
     next(err);
   }
 }
@@ -333,7 +378,7 @@ export async function emailRequest(req, res, next) {
     await sendVerificationEmail(lower, code, 'Verify your email for My Crew Manager', `Your verification code is ${code}. It expires in ${VERIFICATION_TTL_MIN} minutes.`);
     return res.status(204).send();
   } catch (err) {
-    if (err instanceof z.ZodError) return res.status(400).json(err.flatten().fieldErrors);
+    if (err instanceof z.ZodError) return sendValidationError(res, err);
     next(err);
   }
 }
@@ -346,19 +391,19 @@ export async function emailVerify(req, res, next) {
       where: { email: lower, status: 'PENDING' },
       orderBy: { created_at: 'desc' },
     });
-    if (!rec) return res.status(400).json({ detail: 'invalid or expired' });
+    if (!rec) return sendError(res, 400, 'invalid or expired');
     if (rec.expires_at <= new Date()) {
       await prisma.users_emailverification.update({ where: { id: rec.id }, data: { status: 'EXPIRED' } });
-      return res.status(400).json({ detail: 'invalid or expired' });
+      return sendError(res, 400, 'invalid or expired');
     }
     if (rec.attempts >= VERIFICATION_MAX_ATTEMPTS) {
       await prisma.users_emailverification.update({ where: { id: rec.id }, data: { status: 'LOCKED' } });
-      return res.status(429).json({ detail: 'too many attempts' });
+      return sendError(res, 429, 'too many attempts');
     }
     const hash = crypto.createHash('sha256').update(code).digest('hex');
     if (hash !== rec.code_hash) {
       await prisma.users_emailverification.update({ where: { id: rec.id }, data: { attempts: rec.attempts + 1 } });
-      return res.status(400).json({ detail: 'invalid or expired' });
+      return sendError(res, 400, 'invalid or expired');
     }
     await prisma.users_emailverification.update({ where: { id: rec.id }, data: { status: 'VERIFIED' } });
     const user = await prisma.user.findUnique({ where: { email: lower } });
@@ -367,7 +412,7 @@ export async function emailVerify(req, res, next) {
     }
     return res.json({ verified: true });
   } catch (err) {
-    if (err instanceof z.ZodError) return res.status(400).json(err.flatten().fieldErrors);
+    if (err instanceof z.ZodError) return sendValidationError(res, err);
     next(err);
   }
 }
@@ -377,11 +422,11 @@ export async function changeEmailPasswordVerify(req, res, next) {
     const { password } = changeEmailPasswordSchema.parse(req.body);
     const user = await prisma.user.findUnique({ where: { user_id: req.user.user_id ?? req.user._id } });
     if (!user || !(await bcrypt.compare(password, user.password))) {
-      return res.status(401).json({ error: 'Incorrect password. Please try again.' });
+      return sendError(res, 401, 'Incorrect password. Please try again.');
     }
     return res.json({ verified: true });
   } catch (err) {
-    if (err instanceof z.ZodError) return res.status(400).json(err.flatten().fieldErrors);
+    if (err instanceof z.ZodError) return sendValidationError(res, err);
     next(err);
   }
 }
@@ -391,16 +436,16 @@ export async function changeEmailRequest(req, res, next) {
     const { new_email } = changeEmailRequestSchema.parse(req.body);
     const lower = new_email.toLowerCase();
     const userId = req.user.user_id ?? req.user._id;
-    if (lower === req.user.email.toLowerCase()) return res.status(400).json({ error: 'New email must be different from your current email' });
+    if (lower === req.user.email.toLowerCase()) return sendError(res, 400, 'New email must be different from your current email');
     const taken = await prisma.user.findFirst({ where: { email: lower, NOT: { user_id: userId } } });
-    if (taken) return res.status(400).json({ error: 'This email address is already registered to another account' });
+    if (taken) return sendError(res, 400, 'This email address is already registered to another account');
     const last = await prisma.users_emailverification.findFirst({
       where: { email: lower, status: 'PENDING' },
       orderBy: { created_at: 'desc' },
     });
     const now = new Date();
     if (last && (now - last.created_at) / 1000 < RESEND_COOLDOWN_SEC) {
-      return res.status(429).json({ error: `Please wait ${RESEND_COOLDOWN_SEC} seconds before requesting a new code` });
+      return sendError(res, 429, `Please wait ${RESEND_COOLDOWN_SEC} seconds before requesting a new code`);
     }
     const code = String(Math.floor(100000 + Math.random() * 900000));
     const codeHash = crypto.createHash('sha256').update(code).digest('hex');
@@ -422,7 +467,7 @@ export async function changeEmailRequest(req, res, next) {
     await sendVerificationEmail(lower, code, 'Verify your new email for My Crew Manager', `Your verification code is ${code}. It expires in ${VERIFICATION_TTL_MIN} minutes.`);
     return res.json({ message: 'Verification code sent to your new email address' });
   } catch (err) {
-    if (err instanceof z.ZodError) return res.status(400).json(err.flatten().fieldErrors);
+    if (err instanceof z.ZodError) return sendValidationError(res, err);
     next(err);
   }
 }
@@ -436,30 +481,33 @@ export async function changeEmailVerify(req, res, next) {
       where: { email: lower, status: 'PENDING' },
       orderBy: { created_at: 'desc' },
     });
-    if (!rec) return res.status(400).json({ error: 'No verification code found for this email. Please request a new code.' });
+    if (!rec) return sendError(res, 400, 'No verification code found for this email. Please request a new code.');
     if (rec.expires_at <= new Date()) {
       await prisma.users_emailverification.update({ where: { id: rec.id }, data: { status: 'EXPIRED' } });
-      return res.status(400).json({ error: 'Verification code has expired. Please request a new code.' });
+      return sendError(res, 400, 'Verification code has expired. Please request a new code.');
     }
     if (rec.attempts >= VERIFICATION_MAX_ATTEMPTS) {
       await prisma.users_emailverification.update({ where: { id: rec.id }, data: { status: 'LOCKED' } });
-      return res.status(429).json({ error: 'Too many attempts. Please request a new code.' });
+      return sendError(res, 429, 'Too many attempts. Please request a new code.');
     }
     const hash = crypto.createHash('sha256').update(code).digest('hex');
     if (hash !== rec.code_hash) {
       await prisma.users_emailverification.update({ where: { id: rec.id }, data: { attempts: rec.attempts + 1 } });
-      return res.status(400).json({ error: 'Invalid verification code. Please try again.' });
+      return sendError(res, 400, 'Invalid verification code. Please try again.');
     }
     const taken = await prisma.user.findFirst({ where: { email: lower, NOT: { user_id: userId } } });
-    if (taken) return res.status(400).json({ error: 'This email address is already registered to another account' });
+    if (taken) return sendError(res, 400, 'This email address is already registered to another account');
     await prisma.users_emailverification.update({ where: { id: rec.id }, data: { status: 'VERIFIED' } });
-    await prisma.user.update({
+    const updatedUser = await prisma.user.update({
       where: { user_id: userId },
       data: { email: lower, email_verified_at: new Date() },
     });
+
+    await syncProjectMemberIdentity(userId, updatedUser.name, updatedUser.email);
+
     return res.json({ message: 'Email address updated successfully', new_email: lower });
   } catch (err) {
-    if (err instanceof z.ZodError) return res.status(400).json(err.flatten().fieldErrors);
+    if (err instanceof z.ZodError) return sendValidationError(res, err);
     next(err);
   }
 }
@@ -467,7 +515,7 @@ export async function changeEmailVerify(req, res, next) {
 export async function get2FAStatus(req, res, next) {
   try {
     if (process.env.DISABLE_2FA === 'true') {
-      return res.status(503).json({ error: '2FA is disabled' });
+      return sendError(res, 503, '2FA is disabled');
     }
     const user = req.user;
     const data = { enabled: user.twoFactorEnabled || false };
@@ -488,11 +536,11 @@ export async function get2FAStatus(req, res, next) {
 export async function enable2FA(req, res, next) {
   try {
     if (process.env.DISABLE_2FA === 'true') {
-      return res.status(503).json({ error: '2FA is disabled' });
+      return sendError(res, 503, '2FA is disabled');
     }
     const userId = req.user.user_id ?? req.user._id;
     const user = await prisma.user.findUnique({ where: { user_id: userId } });
-    if (!user || user.two_factor_enabled) return res.status(400).json({ error: '2FA is already enabled' });
+    if (!user || user.two_factor_enabled) return sendError(res, 400, '2FA is already enabled');
     const secret = speakeasy.generateSecret({ name: `MyCrewManager:${user.email}` });
     const otpauth = speakeasy.otpauthURL({ secret: secret.base32, label: user.email, issuer: 'MyCrewManager' });
     const qr = await QRCode.toDataURL(otpauth);
@@ -509,18 +557,18 @@ export async function enable2FA(req, res, next) {
 export async function verify2FASetup(req, res, next) {
   try {
     if (process.env.DISABLE_2FA === 'true') {
-      return res.status(503).json({ error: '2FA is disabled' });
+      return sendError(res, 503, '2FA is disabled');
     }
     const { code } = twoFactorVerifySchema.parse(req.body);
     const userId = req.user.user_id ?? req.user._id;
     const user = await prisma.user.findUnique({ where: { user_id: userId } });
-    if (!user || !user.two_factor_secret) return res.status(400).json({ error: 'No 2FA setup in progress. Please enable 2FA first.' });
+    if (!user || !user.two_factor_secret) return sendError(res, 400, 'No 2FA setup in progress. Please enable 2FA first.');
     const valid = speakeasy.totp.verify({ secret: user.two_factor_secret, encoding: 'base32', token: code, window: 1 });
-    if (!valid) return res.status(400).json({ error: 'Invalid verification code' });
+    if (!valid) return sendError(res, 400, 'Invalid verification code');
     await prisma.user.update({ where: { user_id: userId }, data: { two_factor_enabled: true } });
     return res.json({ message: '2FA has been enabled successfully', enabled: true });
   } catch (err) {
-    if (err instanceof z.ZodError) return res.status(400).json(err.flatten().fieldErrors);
+    if (err instanceof z.ZodError) return sendValidationError(res, err);
     next(err);
   }
 }
@@ -528,20 +576,20 @@ export async function verify2FASetup(req, res, next) {
 export async function disable2FA(req, res, next) {
   try {
     if (process.env.DISABLE_2FA === 'true') {
-      return res.status(503).json({ error: '2FA is disabled' });
+      return sendError(res, 503, '2FA is disabled');
     }
     const { password } = twoFactorDisableSchema.parse(req.body);
     const userId = req.user.user_id ?? req.user._id;
     const user = await prisma.user.findUnique({ where: { user_id: userId } });
-    if (!user || !user.two_factor_enabled) return res.status(400).json({ error: '2FA is not enabled' });
-    if (!(await bcrypt.compare(password, user.password))) return res.status(401).json({ error: 'Incorrect password' });
+    if (!user || !user.two_factor_enabled) return sendError(res, 400, '2FA is not enabled');
+    if (!(await bcrypt.compare(password, user.password))) return sendError(res, 401, 'Incorrect password');
     await prisma.user.update({
       where: { user_id: userId },
       data: { two_factor_enabled: false, two_factor_secret: null },
     });
     return res.json({ message: '2FA has been disabled successfully', enabled: false });
   } catch (err) {
-    if (err instanceof z.ZodError) return res.status(400).json(err.flatten().fieldErrors);
+    if (err instanceof z.ZodError) return sendValidationError(res, err);
     next(err);
   }
 }
@@ -549,7 +597,7 @@ export async function disable2FA(req, res, next) {
 export async function verify2FALogin(req, res, next) {
   try {
     if (process.env.DISABLE_2FA === 'true') {
-      return res.status(503).json({ error: '2FA is disabled' });
+      return sendError(res, 503, '2FA is disabled');
     }
     const { temp_token, code, remember_me } = twoFactorLoginSchema.parse(req.body);
     const now = new Date();
@@ -557,23 +605,30 @@ export async function verify2FALogin(req, res, next) {
       where: { token: temp_token, expires_at: { gt: now } },
       include: { user: true },
     });
-    if (!temp) return res.status(400).json({ error: 'Invalid or expired temporary token' });
+    if (!temp) return sendError(res, 400, 'Invalid or expired temporary token');
     const user = temp.user;
     if (!user.two_factor_enabled || !user.two_factor_secret) {
       await prisma.users_twofactortemptoken.delete({ where: { id: temp.id } });
-      return res.status(400).json({ error: '2FA is not enabled for this account' });
+      return sendError(res, 400, '2FA is not enabled for this account');
     }
     const valid = speakeasy.totp.verify({ secret: user.two_factor_secret, encoding: 'base32', token: code, window: 1 });
-    if (!valid) return res.status(400).json({ error: 'Invalid verification code' });
+    if (!valid) return sendError(res, 400, 'Invalid verification code');
     await prisma.users_twofactortemptoken.delete({ where: { id: temp.id } });
     const tokenKey = await getOrCreateToken(user.user_id);
     if (remember_me) {
       const refreshToken = await createRefreshToken(user.user_id, true, req);
       setRefreshCookie(res, refreshToken, true);
     }
-    return res.json({ id: String(user.user_id), email: user.email, name: user.name, role: user.role, token: tokenKey });
+    return res.json({
+      id: String(user.user_id),
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      token: tokenKey,
+      access: tokenKey,
+    });
   } catch (err) {
-    if (err instanceof z.ZodError) return res.status(400).json(err.flatten().fieldErrors);
+    if (err instanceof z.ZodError) return sendValidationError(res, err);
     next(err);
   }
 }

@@ -7,7 +7,9 @@ const router = Router();
 router.use(authMiddleware);
 
 router.get('/rooms/unread-count', ctrl.getRoomsUnreadCount);
+router.get('/rooms/unread-count/', ctrl.getRoomsUnreadCount);
 router.post('/rooms/direct', ctrl.getDirectRoom);
+router.post('/rooms/direct/', ctrl.getDirectRoom);
 
 router.get('/rooms/', ctrl.listRooms);
 router.post('/rooms/', ctrl.createRoom);

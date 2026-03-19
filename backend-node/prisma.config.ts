@@ -12,7 +12,7 @@ dotenv.config({ path: path.join(__dirname, ".env") });
 
 if (!process.env.DATABASE_URL && process.env.DB_NAME) {
   const user = process.env.DB_USER || "postgres";
-  const pass = process.env.DB_PASSWORD || "";
+  const pass = process.env.DB_PASSWORD || "root";
   const host = process.env.DB_HOST || "localhost";
   const port = process.env.DB_PORT || "5432";
   const db = process.env.DB_NAME;

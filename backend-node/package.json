@@ -29,8 +29,7 @@
     "multer": "^1.4.5-lts.1",
     "nodemailer": "^6.9.7",
     "pdf-parse": "^2.4.5",
-    "pg": "^8.11.3",
-    "prisma": "^7.5.0",
+    "pg": "^8.20.0",
     "qrcode": "^1.5.3",
     "speakeasy": "^2.0.0",
     "ws": "^8.14.2",
@@ -38,6 +37,7 @@
   },
   "devDependencies": {
     "jest": "^29.7.0",
+    "prisma": "^7.5.0",
     "supertest": "^6.3.4"
   }
 }

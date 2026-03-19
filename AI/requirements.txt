@@ -11,13 +11,14 @@ langchain>=0.3.0
 langchain-huggingface>=0.1.0
 langchain-community>=0.3.0
 
-# PyTorch with CUDA 12.8 (RTX 4050, driver 581+). Install before other deps:
-#   pip uninstall torch -y
-#   pip install torch torchvision --index-url https://download.pytorch.org/whl/cu128
-# CPU-only fallback: pip install torch --index-url https://download.pytorch.org/whl/cpu
-torch>=2.0.0
-# Must match torch version (0.25 for torch 2.10) to avoid "operator torchvision::nms does not exist"
-torchvision>=0.25.0,<0.26
+# PyTorch for RTX 3060 on Windows (driver CUDA runtime 13.x):
+# Use cu124 wheels (driver is backward compatible). Install before other deps:
+#   pip uninstall torch torchvision torchaudio -y
+#   pip install torch==2.5.1 torchvision==0.20.1 --index-url https://download.pytorch.org/whl/cu124
+# CPU-only fallback: pip install torch==2.5.1 torchvision==0.20.1 --index-url https://download.pytorch.org/whl/cpu
+torch==2.5.1
+# Keep torchvision matched with torch to avoid missing ops (e.g., torchvision::nms)
+torchvision==0.20.1
 
 # LLM dependencies
 openai>=1.0.0
