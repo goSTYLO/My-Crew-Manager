@@ -4,7 +4,7 @@ import {Menu,Bell,MessageSquare,ChevronDown,ChevronUp,User,LogOut,Sun, Moon} fro
 import { useNavigate } from "react-router-dom";
 import logo from "../assets/logo2.png";
 import { useTheme } from "./themeContext";
-import { API_BASE_URL } from "../config/api";
+import { API_BASE_URL, resolveProfilePictureUrl } from "../config/api";
 import { useNotificationPolling } from "../hooks/useNotificationPolling";
 import { useToast } from "./ToastContext";
 import { useChatNotificationCount } from "../hooks/useChatNotificationCount";
@@ -362,11 +362,7 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ onMenuClick }) => {
           // ✅ Fix the profile picture path
           const fixedData = {
             ...data,
-            profile_picture: data.profile_picture
-              ? data.profile_picture.startsWith("http")
-                ? data.profile_picture
-                : `${API_BASE_URL}${data.profile_picture}`
-              : null,
+            profile_picture: resolveProfilePictureUrl(data.profile_picture),
           };
   
           setUserData(fixedData);

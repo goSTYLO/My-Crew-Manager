@@ -1,12 +1,17 @@
 import { Router } from 'express';
 import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
 import { authMiddleware } from '../middleware/auth.middleware.js';
 import * as ctrl from '../controllers/user.controller.js';
 import { validateBody } from '../middleware/validation.middleware.js';
 import { authSchemas } from '../validation/schemas.js';
+import { env } from '../config/environment.js';
 
 const router = Router();
-const upload = multer({ dest: 'uploads/' });
+const uploadsDir = path.resolve(process.cwd(), env.fileUpload.uploadPath || './uploads');
+fs.mkdirSync(uploadsDir, { recursive: true });
+const upload = multer({ dest: uploadsDir });
 
 // Public
 router.post('/signup/', validateBody(authSchemas.signup), ctrl.signup);

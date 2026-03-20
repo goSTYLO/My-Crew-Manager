@@ -2,6 +2,8 @@ import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import rateLimit from 'express-rate-limit';
+import path from 'path';
+import fs from 'fs';
 
 import helmet from 'helmet';
 
@@ -15,6 +17,8 @@ import { requestIdMiddleware } from './middleware/request-id.middleware.js';
 import { inputSanitizationMiddleware } from './middleware/security.middleware.js';
 
 const app = express();
+const uploadsDir = path.resolve(process.cwd(), env.fileUpload.uploadPath || './uploads');
+fs.mkdirSync(uploadsDir, { recursive: true });
 
 const allowedOrigins = env.cors.frontendUrl.split(',').map(o => o.trim());
 const isDev = env.server.isDevelopment;
@@ -37,26 +41,26 @@ app.use(cors({
 }));
 
 // Rate limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: env.server.isDevelopment ? 1000 : 100, // More lenient in development
-  message: 'Too many requests from this IP, please try again later.',
+const apiLimiter = rateLimit({
+  windowMs: env.server.isDevelopment ? 1 * 60 * 1000 : env.security.rateLimitWindowMs,
+  max: env.server.isDevelopment ? 1500 : env.security.rateLimitMaxRequests,
+  message: 'Too many requests, please slow down.',
   standardHeaders: true,
   legacyHeaders: false,
+  // Chat + notifications are polled frequently and should not starve other APIs.
+  skip: (req) => {
+    if (req.method !== 'GET') return false;
+    const p = req.path || '';
+    return (
+      p.startsWith('/ai/notifications') ||
+      p.startsWith('/chat/rooms') ||
+      p.startsWith('/api/ai/notifications') ||
+      p.startsWith('/api/chat/rooms')
+    );
+  },
 });
 
-// Apply rate limiting only to API routes in production
-if (env.server.isProduction) {
-  app.use('/api', limiter);
-} else {
-  // More lenient rate limiting for development
-  app.use('/api', rateLimit({
-    windowMs: 1 * 60 * 1000, // 1 minute
-    max: 500, // 500 requests per minute in development
-    message: 'Too many requests, please slow down.',
-  }));
-}
-
+app.use('/api', apiLimiter);
 
 // Middleware
 app.use(helmet({
@@ -76,12 +80,12 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false
 }));
 
-app.use(limiter);
 app.use(requestIdMiddleware);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(inputSanitizationMiddleware);
+app.use('/media', express.static(uploadsDir));
 
 // Health check
 app.get('/health', (req, res) => {

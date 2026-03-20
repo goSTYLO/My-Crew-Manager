@@ -97,7 +97,7 @@ class _ModifyMemberBottomSheetState extends State<ModifyMemberBottomSheet> {
 
           // Dropdown for role
           DropdownButtonFormField<String>(
-            initialValue: _selectedRole,
+            value: _selectedRole,
             items: roles
                 .map((role) => DropdownMenuItem(value: role, child: Text(role)))
                 .toList(),

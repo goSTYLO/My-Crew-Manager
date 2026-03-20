@@ -37,6 +37,7 @@ export const useNotificationPolling = ({
   const isActiveRef = useRef(true);
   const lastActivityRef = useRef<Date>(new Date());
   const isVisibleRef = useRef(true);
+  const throttleUntilRef = useRef<number>(0);
 
   // Get auth token via TokenManager
   const getAuthToken = useCallback(() => {
@@ -58,8 +59,13 @@ export const useNotificationPolling = ({
 
   // Get current polling interval
   const getCurrentInterval = useCallback(() => {
-    // Simplified for debugging - always use 5 seconds
-    return 5000; // 5 seconds for debugging
+    const now = Date.now();
+    const remainingThrottle = throttleUntilRef.current - now;
+    const baseInterval = 5000;
+    if (remainingThrottle > 0) {
+      return Math.max(baseInterval, remainingThrottle);
+    }
+    return baseInterval;
   }, []);
 
   // Fetch notifications
@@ -79,6 +85,12 @@ export const useNotificationPolling = ({
       });
 
       if (!response.ok) {
+        if (response.status === 429) {
+          const retryAfter = Number(response.headers.get('Retry-After') || 0);
+          const retryMs = Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : 30000;
+          throttleUntilRef.current = Date.now() + retryMs;
+          throw new Error(`HTTP 429: Too Many Requests. Retrying in ${Math.round(retryMs / 1000)}s`);
+        }
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
@@ -92,6 +104,7 @@ export const useNotificationPolling = ({
 
       // Update last fetch time
       lastFetchRef.current = new Date();
+      throttleUntilRef.current = 0;
       setError(null);
     } catch (err: any) {
       setError(err.message || 'Failed to fetch notifications');
@@ -103,6 +116,10 @@ export const useNotificationPolling = ({
   const poll = useCallback(() => {
     // Disable polling if WebSocket is connected (avoid duplicates)
     if (!enabled || !isVisibleRef.current || websocketConnected) {
+      return;
+    }
+
+    if (Date.now() < throttleUntilRef.current) {
       return;
     }
 
@@ -121,15 +138,20 @@ export const useNotificationPolling = ({
     // Initial fetch
     poll();
 
-    // Set up interval
-    const currentInterval = getCurrentInterval();
-    intervalRef.current = setInterval(poll, currentInterval);
+    const schedule = () => {
+      const currentInterval = getCurrentInterval();
+      intervalRef.current = window.setTimeout(() => {
+        poll();
+        schedule();
+      }, currentInterval);
+    };
+    schedule();
   }, [poll, getCurrentInterval]);
 
   // Stop polling
   const stopPolling = useCallback(() => {
     if (intervalRef.current) {
-      clearInterval(intervalRef.current);
+      clearTimeout(intervalRef.current);
       intervalRef.current = null;
     }
     // console.log('🔔 Stopped notification polling');

@@ -6,6 +6,8 @@ function getUserId(req) {
   return req.user?.user_id ?? req.user?._id;
 }
 
+const MAX_CHAT_MESSAGE_ID = 2147483647;
+
 function roomToResponse(room, membersCount = 0) {
   return {
     room_id: String(room.room_id),
@@ -516,6 +518,9 @@ export async function deleteMessage(req, res, next) {
     const messageId = parseInt(req.params.pk, 10);
     const roomId = parseInt(roomPk, 10);
     if (isNaN(roomId)) return res.status(404).json({ detail: 'Room not found' });
+    if (!Number.isInteger(messageId) || messageId <= 0 || messageId > MAX_CHAT_MESSAGE_ID) {
+      return res.status(400).json({ detail: 'Invalid message id' });
+    }
 
     const room = await prisma.chat_room.findUnique({
       where: { room_id: roomId },

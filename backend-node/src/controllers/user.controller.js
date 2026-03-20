@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import speakeasy from 'speakeasy';
 import QRCode from 'qrcode';
 import nodemailer from 'nodemailer';
+import path from 'path';
 
 import { prisma } from '../lib/prisma.js';
 import { z } from 'zod';
@@ -93,14 +94,38 @@ async function getOrCreateToken(userId) {
 function userToResponse(user) {
   if (!user) return null;
   const uid = user.user_id ?? user._id;
+  const normalizedProfilePicture = normalizeProfilePicturePath(user.profile_picture);
   return {
     id: String(uid),
     user_id: String(uid),
     name: user.name,
     email: user.email,
     role: user.role,
-    profile_picture: user.profile_picture ? `/media/${user.profile_picture}` : null,
+    profile_picture: normalizedProfilePicture ? `/media/${normalizedProfilePicture}` : null,
   };
+}
+
+function normalizeProfilePicturePath(value) {
+  if (!value || typeof value !== 'string') return null;
+
+  const clean = value.replace(/\\/g, '/').replace(/^\/+/, '');
+  if (!clean) return null;
+
+  if (clean.startsWith('http://') || clean.startsWith('https://')) {
+    return clean;
+  }
+
+  const withoutMediaPrefix = clean.replace(/^media\//i, '');
+  const withoutUploadsPrefix = withoutMediaPrefix.replace(/^uploads\//i, '');
+  return withoutUploadsPrefix;
+}
+
+function buildProfilePictureUrl(req, rawPath) {
+  const normalized = normalizeProfilePicturePath(rawPath);
+  if (!normalized) return null;
+  if (normalized.startsWith('http://') || normalized.startsWith('https://')) return normalized;
+  const baseUrl = `${req.protocol}://${req.get('host')}`;
+  return `${baseUrl}/media/${normalized}`;
 }
 
 async function syncProjectMemberIdentity(userId, userName, userEmail) {
@@ -284,9 +309,8 @@ export async function refreshToken(req, res, next) {
 
 export async function me(req, res, next) {
   try {
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
     const data = userToResponse(req.user);
-    if (req.user.profilePicture) data.profile_picture = `${baseUrl}/media/${req.user.profilePicture}`;
+    data.profile_picture = buildProfilePictureUrl(req, req.user.profilePicture || req.user.profile_picture);
     return res.json(data);
   } catch (err) {
     next(err);
@@ -309,7 +333,9 @@ export async function updateMe(req, res, next) {
     if (password && password.length > 0) {
       update.password = await bcrypt.hash(password, 10);
     }
-    if (req.file) update.profile_picture = req.file.path || req.file.filename;
+    if (req.file) {
+      update.profile_picture = normalizeProfilePicturePath(req.file.filename || req.file.path || path.basename(req.file.originalname || ''));
+    }
     const user = await prisma.user.update({
       where: { user_id: userId },
       data: update,
@@ -318,8 +344,9 @@ export async function updateMe(req, res, next) {
     if (update.name !== undefined || update.email !== undefined) {
       await syncProjectMemberIdentity(userId, user.name, user.email);
     }
-
-    return res.json(userToResponse(user));
+    const response = userToResponse(user);
+    response.profile_picture = buildProfilePictureUrl(req, user.profile_picture);
+    return res.json(response);
   } catch (err) {
     next(err);
   }
@@ -333,10 +360,9 @@ export async function listUsers(req, res, next) {
       where,
       select: { user_id: true, name: true, email: true, role: true, profile_picture: true },
     });
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
     const data = users.map((u) => {
       const d = { user_id: String(u.user_id), name: u.name, email: u.email, role: u.role };
-      d.profile_picture = u.profile_picture ? `${baseUrl}/media/${u.profile_picture}` : null;
+      d.profile_picture = buildProfilePictureUrl(req, u.profile_picture);
       return d;
     });
     return res.json(data);

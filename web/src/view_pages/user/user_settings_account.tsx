@@ -4,7 +4,7 @@ import TopNavbar from "../../components/topbarLayout_user";
 import SettingsNavigation from "../../components/sidebarNavLayout_user";
 import { useTheme } from "../../components/themeContext";
 import { useNavigate } from "react-router-dom";
-import { API_BASE_URL } from "../../config/api";
+import { API_BASE_URL, resolveProfilePictureUrl } from "../../config/api";
 import { Camera, Phone, Mail, User, TrendingUp, Lock, Edit2, X, CheckCircle2, AlertCircle } from "lucide-react";
 import { EmailChangeService } from "../../services/EmailChangeService";
 
@@ -92,11 +92,7 @@ const AccountSettings = () => {
                     const data = await response.json();
                     const fixedData = {
                         ...data,
-                        profile_picture: data.profile_picture
-                            ? data.profile_picture.startsWith("http")
-                                ? data.profile_picture
-                                : `${API_BASE_URL}${data.profile_picture}`
-                            : null,
+                        profile_picture: resolveProfilePictureUrl(data.profile_picture),
                     };
 
                     setUserData(fixedData);
@@ -178,11 +174,7 @@ const AccountSettings = () => {
 
             if (response.ok) {
                 const updatedData = await response.json();
-                const updatedProfilePictureURL = updatedData.profile_picture
-                    ? updatedData.profile_picture.startsWith("http")
-                        ? updatedData.profile_picture
-                        : `${API_BASE_URL}${updatedData.profile_picture}`
-                    : null;
+                const updatedProfilePictureURL = resolveProfilePictureUrl(updatedData.profile_picture);
 
                 setUserData({ ...updatedData, profile_picture: updatedProfilePictureURL });
                 if (updatedProfilePictureURL) {

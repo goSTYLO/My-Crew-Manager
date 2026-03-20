@@ -739,7 +739,7 @@ class _Dropdown extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DropdownButtonFormField<String>(
-      initialValue: value,
+      value: value,
       items: items
           .map(
             (e) => DropdownMenuItem(

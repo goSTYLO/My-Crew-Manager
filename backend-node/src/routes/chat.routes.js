@@ -33,5 +33,6 @@ router.post('/rooms/:id/nickname/', validateParams(chatSchemas.roomIdParam), val
 router.get('/rooms/:room_pk/messages/', validateParams(chatSchemas.roomPkParam), validateQuery(chatSchemas.listMessagesQuery), ctrl.listMessages);
 router.post('/rooms/:room_pk/messages/', validateParams(chatSchemas.roomPkParam), validateBody(chatSchemas.createMessage), ctrl.createMessage);
 router.delete('/rooms/:room_pk/messages/:pk', validateParams(chatSchemas.roomPkParam.merge(chatSchemas.messagePkParam)), ctrl.deleteMessage);
+router.delete('/rooms/:room_pk/messages/:pk/', validateParams(chatSchemas.roomPkParam.merge(chatSchemas.messagePkParam)), ctrl.deleteMessage);
 
 export default router;

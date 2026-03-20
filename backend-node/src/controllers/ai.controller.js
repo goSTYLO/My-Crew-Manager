@@ -23,7 +23,7 @@ function broadcastToProject(projectId, eventType, action, data, actor) {
         type: eventType,
         action,
         project_id: projectId,
-        data,
+        data: toJsonSafe(data),
         actor: { id: actor ? String(actor.user_id ?? actor._id) : undefined, name: actor?.name },
       });
     });
@@ -35,6 +35,27 @@ async function ensureProjectMember(projectId, userId) {
     where: { project_id: Number(projectId), user_id: BigInt(userId) },
   });
   return member;
+}
+
+function getProjectIdFromQuery(query) {
+  const raw = query?.project_id ?? query?.project;
+  if (raw === undefined || raw === null || raw === '') return null;
+  const projectId = Number(raw);
+  return Number.isFinite(projectId) ? projectId : null;
+}
+
+function toJsonSafe(value) {
+  if (typeof value === 'bigint') return Number(value);
+  if (value instanceof Date) return value.toISOString();
+  if (Array.isArray(value)) return value.map((v) => toJsonSafe(v));
+  if (value && typeof value === 'object') {
+    const out = {};
+    for (const [k, v] of Object.entries(value)) {
+      out[k] = toJsonSafe(v);
+    }
+    return out;
+  }
+  return value;
 }
 
 function projectToResponse(p, createdBy, statusUpdatedBy) {
@@ -50,6 +71,24 @@ function projectToResponse(p, createdBy, statusUpdatedBy) {
     created_at: p.created_at,
     updated_at: p.updated_at,
   };
+}
+
+async function createNotification({ recipientId, actorId = null, notificationType, title, message, objectId = null, actionUrl = null }) {
+  await prisma.ai_api_notification.create({
+    data: {
+      recipient_id: Number(recipientId),
+      actor_id: actorId != null ? Number(actorId) : null,
+      notification_type: notificationType,
+      title,
+      message,
+      object_id: objectId,
+      action_url: actionUrl,
+      is_read: false,
+      created_at: new Date(),
+      read_at: null,
+      content_type_id: null,
+    },
+  });
 }
 
 export async function listProjects(req, res, next) {
@@ -143,7 +182,7 @@ export async function getCurrentProposal(req, res, next) {
     });
 
     if (!proposal || !proposal.parsed_text) {
-      return res.status(404).json({ detail: 'No proposal found' });
+      return res.json(null);
     }
 
     return res.json({
@@ -187,6 +226,10 @@ export async function updateProject(req, res, next) {
   } catch (err) {
     next(err);
   }
+}
+
+export async function updateProjectStatus(req, res, next) {
+  return updateProject(req, res, next);
 }
 
 export async function deleteProject(req, res, next) {
@@ -415,8 +458,20 @@ async function getProjectBacklogData(projectId) {
             id: String(t.id),
             title: t.title,
             status: t.status,
-            assignee: t.assignee_id ? String(t.ai_api_projectmember?.user_id ?? t.assignee_id) : null,
+            assignee: t.assignee_id ? Number(t.assignee_id) : null,
+            assignee_details: t.ai_api_projectmember
+              ? {
+                  id: Number(t.ai_api_projectmember.id),
+                  user_id: Number(t.ai_api_projectmember.user_id),
+                  user_name: t.ai_api_projectmember.user_name,
+                  user_email: t.ai_api_projectmember.user_email,
+                  role: t.ai_api_projectmember.role,
+                }
+              : null,
             ai: t.ai,
+            commit_title: t.commit_title,
+            commit_branch: t.commit_branch,
+            due_date: t.due_date ? new Date(t.due_date).toISOString().slice(0, 10) : null,
           })),
         });
       }
@@ -536,8 +591,8 @@ export async function getProjectBacklog(req, res, next) {
     if (!project) return res.status(404).json({ detail: 'Not found' });
     const member = await ensureProjectMember(projectId, getUserId(req));
     if (!member) return res.status(403).json({ detail: 'Not a member' });
-    const backlog = await getProjectBacklogData(projectId);
-    return res.json(backlog);
+    const epics = await getProjectBacklogData(projectId);
+    return res.json({ epics });
   } catch (err) {
     next(err);
   }
@@ -546,7 +601,7 @@ export async function getProjectBacklog(req, res, next) {
 // Project features, roles, goals, timeline
 export async function listProjectFeatures(req, res, next) {
   try {
-    const projectId = req.query.project_id ? Number(req.query.project_id) : req.query.project ? Number(req.query.project) : null;
+    const projectId = getProjectIdFromQuery(req.query);
     if (!projectId) return res.status(400).json({ detail: 'project_id required' });
     const member = await ensureProjectMember(projectId, getUserId(req));
     if (!member) return res.status(403).json({ detail: 'Not a member' });
@@ -579,9 +634,44 @@ export async function createProjectFeature(req, res, next) {
   }
 }
 
+export async function updateProjectFeature(req, res, next) {
+  try {
+    const featureId = BigInt(req.params.id);
+    const feature = await prisma.ai_api_projectfeature.findUnique({ where: { id: featureId } });
+    if (!feature) return res.status(404).json({ detail: 'Not found' });
+    const member = await ensureProjectMember(feature.project_id, getUserId(req));
+    if (!member) return res.status(403).json({ detail: 'Not a member' });
+
+    const updated = await prisma.ai_api_projectfeature.update({
+      where: { id: featureId },
+      data: { title: req.body.title ?? feature.title },
+    });
+    const out = { ...updated, id: Number(updated.id) };
+    broadcastToProject(feature.project_id, 'project_feature_update', 'updated', out, req.user);
+    return res.json(out);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function deleteProjectFeature(req, res, next) {
+  try {
+    const featureId = BigInt(req.params.id);
+    const feature = await prisma.ai_api_projectfeature.findUnique({ where: { id: featureId } });
+    if (!feature) return res.status(404).json({ detail: 'Not found' });
+    const member = await ensureProjectMember(feature.project_id, getUserId(req));
+    if (!member) return res.status(403).json({ detail: 'Not a member' });
+    await prisma.ai_api_projectfeature.delete({ where: { id: featureId } });
+    broadcastToProject(feature.project_id, 'project_feature_update', 'deleted', { id: String(featureId) }, req.user);
+    return res.json({ status: 'deleted', id: String(featureId) });
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function listProjectRoles(req, res, next) {
   try {
-    const projectId = req.query.project_id ? Number(req.query.project_id) : req.query.project ? Number(req.query.project) : null;
+    const projectId = getProjectIdFromQuery(req.query);
     if (!projectId) return res.status(400).json({ detail: 'project_id required' });
     const member = await ensureProjectMember(projectId, getUserId(req));
     if (!member) return res.status(403).json({ detail: 'Not a member' });
@@ -614,9 +704,44 @@ export async function createProjectRole(req, res, next) {
   }
 }
 
+export async function updateProjectRole(req, res, next) {
+  try {
+    const roleId = BigInt(req.params.id);
+    const role = await prisma.ai_api_projectrole.findUnique({ where: { id: roleId } });
+    if (!role) return res.status(404).json({ detail: 'Not found' });
+    const member = await ensureProjectMember(role.project_id, getUserId(req));
+    if (!member) return res.status(403).json({ detail: 'Not a member' });
+
+    const updated = await prisma.ai_api_projectrole.update({
+      where: { id: roleId },
+      data: { role: req.body.role ?? role.role },
+    });
+    const out = { ...updated, id: Number(updated.id) };
+    broadcastToProject(role.project_id, 'project_role_update', 'updated', out, req.user);
+    return res.json(out);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function deleteProjectRole(req, res, next) {
+  try {
+    const roleId = BigInt(req.params.id);
+    const role = await prisma.ai_api_projectrole.findUnique({ where: { id: roleId } });
+    if (!role) return res.status(404).json({ detail: 'Not found' });
+    const member = await ensureProjectMember(role.project_id, getUserId(req));
+    if (!member) return res.status(403).json({ detail: 'Not a member' });
+    await prisma.ai_api_projectrole.delete({ where: { id: roleId } });
+    broadcastToProject(role.project_id, 'project_role_update', 'deleted', { id: String(roleId) }, req.user);
+    return res.json({ status: 'deleted', id: String(roleId) });
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function listProjectGoals(req, res, next) {
   try {
-    const projectId = req.query.project_id ? Number(req.query.project_id) : req.query.project ? Number(req.query.project) : null;
+    const projectId = getProjectIdFromQuery(req.query);
     if (!projectId) return res.status(400).json({ detail: 'project_id required' });
     const member = await ensureProjectMember(projectId, getUserId(req));
     if (!member) return res.status(403).json({ detail: 'Not a member' });
@@ -650,17 +775,61 @@ export async function createProjectGoal(req, res, next) {
   }
 }
 
+export async function updateProjectGoal(req, res, next) {
+  try {
+    const goalId = BigInt(req.params.id);
+    const goal = await prisma.ai_api_projectgoal.findUnique({ where: { id: goalId } });
+    if (!goal) return res.status(404).json({ detail: 'Not found' });
+    const member = await ensureProjectMember(goal.project_id, getUserId(req));
+    if (!member) return res.status(403).json({ detail: 'Not a member' });
+
+    const updated = await prisma.ai_api_projectgoal.update({
+      where: { id: goalId },
+      data: {
+        title: req.body.title ?? goal.title,
+        role: req.body.role !== undefined ? req.body.role : goal.role,
+      },
+    });
+    const out = { ...updated, id: Number(updated.id) };
+    broadcastToProject(goal.project_id, 'project_goal_update', 'updated', out, req.user);
+    return res.json(out);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function deleteProjectGoal(req, res, next) {
+  try {
+    const goalId = BigInt(req.params.id);
+    const goal = await prisma.ai_api_projectgoal.findUnique({ where: { id: goalId } });
+    if (!goal) return res.status(404).json({ detail: 'Not found' });
+    const member = await ensureProjectMember(goal.project_id, getUserId(req));
+    if (!member) return res.status(403).json({ detail: 'Not a member' });
+    await prisma.ai_api_projectgoal.delete({ where: { id: goalId } });
+    broadcastToProject(goal.project_id, 'project_goal_update', 'deleted', { id: String(goalId) }, req.user);
+    return res.json({ status: 'deleted', id: String(goalId) });
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function listTimelineWeeks(req, res, next) {
   try {
-    const projectId = req.query.project_id ? Number(req.query.project_id) : req.query.project ? Number(req.query.project) : null;
+    const projectId = getProjectIdFromQuery(req.query);
     if (!projectId) return res.status(400).json({ detail: 'project_id required' });
     const member = await ensureProjectMember(projectId, getUserId(req));
     if (!member) return res.status(403).json({ detail: 'Not a member' });
     const items = await prisma.ai_api_timelineweek.findMany({
       where: { project_id: projectId },
+      include: { ai_api_timelineitem: true },
       orderBy: { week_number: 'asc' },
     });
-    return res.json(items.map((i) => ({ ...i, id: Number(i.id) })));
+    return res.json(items.map((i) => ({
+      id: Number(i.id),
+      week_number: i.week_number,
+      project_id: i.project_id,
+      timeline_items: i.ai_api_timelineitem.map((t) => ({ id: Number(t.id), title: t.title, week_id: Number(t.week_id) })),
+    })));
   } catch (err) {
     next(err);
   }
@@ -678,6 +847,43 @@ export async function createTimelineWeek(req, res, next) {
       },
     });
     const out = { ...item, id: Number(item.id) };
+    broadcastToProject(projectId, 'timeline_update', 'created', out, req.user);
+    return res.status(201).json(out);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function createProjectTimeline(req, res, next) {
+  try {
+    const projectId = Number(req.body.project);
+    const member = await ensureProjectMember(projectId, getUserId(req));
+    if (!member) return res.status(403).json({ detail: 'Not a member' });
+
+    const week = await prisma.ai_api_timelineweek.create({
+      data: {
+        project_id: projectId,
+        week_number: req.body.week_number ?? 1,
+      },
+    });
+
+    const goals = Array.isArray(req.body.goals) ? req.body.goals : [];
+    if (goals.length > 0) {
+      await prisma.ai_api_timelineitem.createMany({
+        data: goals
+          .map((g) => (typeof g === 'string' ? g : g?.title))
+          .filter(Boolean)
+          .map((title) => ({ week_id: week.id, title })),
+      });
+    }
+
+    const timelineItems = await prisma.ai_api_timelineitem.findMany({ where: { week_id: week.id }, orderBy: { id: 'asc' } });
+    const out = {
+      id: Number(week.id),
+      week_number: week.week_number,
+      project_id: week.project_id,
+      timeline_items: timelineItems.map((t) => ({ id: Number(t.id), title: t.title, week_id: Number(t.week_id) })),
+    };
     broadcastToProject(projectId, 'timeline_update', 'created', out, req.user);
     return res.status(201).json(out);
   } catch (err) {
@@ -718,6 +924,62 @@ export async function createTimelineItem(req, res, next) {
     const out = { ...item, id: Number(item.id) };
     broadcastToProject(week.project_id, 'timeline_update', 'created', out, req.user);
     return res.status(201).json(out);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function updateTimelineItem(req, res, next) {
+  try {
+    const itemId = BigInt(req.params.id);
+    const item = await prisma.ai_api_timelineitem.findUnique({ where: { id: itemId } });
+    if (!item) return res.status(404).json({ detail: 'Not found' });
+    const week = await prisma.ai_api_timelineweek.findUnique({ where: { id: item.week_id } });
+    if (!week) return res.status(404).json({ detail: 'Not found' });
+    const member = await ensureProjectMember(week.project_id, getUserId(req));
+    if (!member) return res.status(403).json({ detail: 'Not a member' });
+
+    const updated = await prisma.ai_api_timelineitem.update({
+      where: { id: itemId },
+      data: { title: req.body.title ?? item.title },
+    });
+    const out = { ...updated, id: Number(updated.id), week_id: Number(updated.week_id) };
+    broadcastToProject(week.project_id, 'timeline_update', 'updated', out, req.user);
+    return res.json(out);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function deleteTimelineItem(req, res, next) {
+  try {
+    const itemId = BigInt(req.params.id);
+    const item = await prisma.ai_api_timelineitem.findUnique({ where: { id: itemId } });
+    if (!item) return res.status(404).json({ detail: 'Not found' });
+    const week = await prisma.ai_api_timelineweek.findUnique({ where: { id: item.week_id } });
+    if (!week) return res.status(404).json({ detail: 'Not found' });
+    const member = await ensureProjectMember(week.project_id, getUserId(req));
+    if (!member) return res.status(403).json({ detail: 'Not a member' });
+
+    await prisma.ai_api_timelineitem.delete({ where: { id: itemId } });
+    broadcastToProject(week.project_id, 'timeline_update', 'deleted', { id: String(itemId) }, req.user);
+    return res.json({ status: 'deleted', id: String(itemId) });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function deleteTimelineWeek(req, res, next) {
+  try {
+    const weekId = BigInt(req.params.id);
+    const week = await prisma.ai_api_timelineweek.findUnique({ where: { id: weekId } });
+    if (!week) return res.status(404).json({ detail: 'Not found' });
+    const member = await ensureProjectMember(week.project_id, getUserId(req));
+    if (!member) return res.status(403).json({ detail: 'Not a member' });
+
+    await prisma.ai_api_timelineweek.delete({ where: { id: weekId } });
+    broadcastToProject(week.project_id, 'timeline_update', 'deleted', { id: String(weekId) }, req.user);
+    return res.json({ status: 'deleted', id: String(weekId) });
   } catch (err) {
     next(err);
   }
@@ -812,7 +1074,8 @@ export async function deleteEpic(req, res, next) {
     const member = await ensureProjectMember(epic.project_id, getUserId(req));
     if (!member) return res.status(403).json({ detail: 'Not a member' });
     await prisma.ai_api_epic.delete({ where: { id: epicId } });
-    return res.status(204).send();
+    broadcastToProject(epic.project_id, 'epic_update', 'deleted', { id: String(epicId) }, req.user);
+    return res.json({ status: 'deleted', id: String(epicId) });
   } catch (err) {
     next(err);
   }
@@ -826,7 +1089,7 @@ export async function listSubEpics(req, res, next) {
     const member = await ensureProjectMember(epic.project_id, getUserId(req));
     if (!member) return res.status(403).json({ detail: 'Not a member' });
     const items = await prisma.ai_api_subepic.findMany({ where: { epic_id: epicId } });
-    return res.json(items.map((i) => ({ ...i, id: Number(i.id) })));
+    return res.json(items.map((i) => toJsonSafe({ ...i, id: Number(i.id) })));
   } catch (err) {
     next(err);
   }
@@ -847,9 +1110,52 @@ export async function createSubEpic(req, res, next) {
         is_complete: false,
       },
     });
-    const out = { ...item, id: Number(item.id) };
+    const out = toJsonSafe({ ...item, id: Number(item.id) });
     broadcastToProject(epic.project_id, 'sub_epic_update', 'created', out, req.user);
     return res.status(201).json(out);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function updateSubEpic(req, res, next) {
+  try {
+    const subEpicId = BigInt(req.params.id);
+    const subEpic = await prisma.ai_api_subepic.findUnique({
+      where: { id: subEpicId },
+      include: { ai_api_epic: true },
+    });
+    if (!subEpic) return res.status(404).json({ detail: 'Not found' });
+    const member = await ensureProjectMember(subEpic.ai_api_epic.project_id, getUserId(req));
+    if (!member) return res.status(403).json({ detail: 'Not a member' });
+
+    const data = {};
+    if (req.body.title !== undefined) data.title = req.body.title;
+    if (req.body.is_complete !== undefined) data.is_complete = req.body.is_complete;
+
+    const updated = await prisma.ai_api_subepic.update({ where: { id: subEpicId }, data });
+    const out = toJsonSafe({ ...updated, id: Number(updated.id) });
+    broadcastToProject(subEpic.ai_api_epic.project_id, 'sub_epic_update', 'updated', out, req.user);
+    return res.json(out);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function deleteSubEpic(req, res, next) {
+  try {
+    const subEpicId = BigInt(req.params.id);
+    const subEpic = await prisma.ai_api_subepic.findUnique({
+      where: { id: subEpicId },
+      include: { ai_api_epic: true },
+    });
+    if (!subEpic) return res.status(404).json({ detail: 'Not found' });
+    const member = await ensureProjectMember(subEpic.ai_api_epic.project_id, getUserId(req));
+    if (!member) return res.status(403).json({ detail: 'Not a member' });
+
+    await prisma.ai_api_subepic.delete({ where: { id: subEpicId } });
+    broadcastToProject(subEpic.ai_api_epic.project_id, 'sub_epic_update', 'deleted', { id: String(subEpicId) }, req.user);
+    return res.json({ status: 'deleted', id: String(subEpicId) });
   } catch (err) {
     next(err);
   }
@@ -866,7 +1172,7 @@ export async function listUserStories(req, res, next) {
     const member = await ensureProjectMember(subEpic.ai_api_epic.project_id, getUserId(req));
     if (!member) return res.status(403).json({ detail: 'Not a member' });
     const items = await prisma.ai_api_userstory.findMany({ where: { sub_epic_id: subEpicId } });
-    return res.json(items.map((i) => ({ ...i, id: Number(i.id) })));
+    return res.json(items.map((i) => toJsonSafe({ ...i, id: Number(i.id) })));
   } catch (err) {
     next(err);
   }
@@ -890,9 +1196,52 @@ export async function createUserStory(req, res, next) {
         is_complete: false,
       },
     });
-    const out = { ...item, id: Number(item.id) };
+    const out = toJsonSafe({ ...item, id: Number(item.id) });
     broadcastToProject(subEpic.ai_api_epic.project_id, 'user_story_update', 'created', out, req.user);
     return res.status(201).json(out);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function updateUserStory(req, res, next) {
+  try {
+    const storyId = BigInt(req.params.id);
+    const story = await prisma.ai_api_userstory.findUnique({
+      where: { id: storyId },
+      include: { ai_api_subepic: { include: { ai_api_epic: true } } },
+    });
+    if (!story) return res.status(404).json({ detail: 'Not found' });
+    const member = await ensureProjectMember(story.ai_api_subepic.ai_api_epic.project_id, getUserId(req));
+    if (!member) return res.status(403).json({ detail: 'Not a member' });
+
+    const data = {};
+    if (req.body.title !== undefined) data.title = req.body.title;
+    if (req.body.is_complete !== undefined) data.is_complete = req.body.is_complete;
+
+    const updated = await prisma.ai_api_userstory.update({ where: { id: storyId }, data });
+    const out = toJsonSafe({ ...updated, id: Number(updated.id) });
+    broadcastToProject(story.ai_api_subepic.ai_api_epic.project_id, 'user_story_update', 'updated', out, req.user);
+    return res.json(out);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function deleteUserStory(req, res, next) {
+  try {
+    const storyId = BigInt(req.params.id);
+    const story = await prisma.ai_api_userstory.findUnique({
+      where: { id: storyId },
+      include: { ai_api_subepic: { include: { ai_api_epic: true } } },
+    });
+    if (!story) return res.status(404).json({ detail: 'Not found' });
+    const member = await ensureProjectMember(story.ai_api_subepic.ai_api_epic.project_id, getUserId(req));
+    if (!member) return res.status(403).json({ detail: 'Not a member' });
+
+    await prisma.ai_api_userstory.delete({ where: { id: storyId } });
+    broadcastToProject(story.ai_api_subepic.ai_api_epic.project_id, 'user_story_update', 'deleted', { id: String(storyId) }, req.user);
+    return res.json({ status: 'deleted', id: String(storyId) });
   } catch (err) {
     next(err);
   }
@@ -912,10 +1261,19 @@ export async function listStoryTasks(req, res, next) {
       where: { user_story_id: userStoryId },
       include: { ai_api_projectmember: true },
     });
-    return res.json(items.map((t) => ({
+    return res.json(items.map((t) => toJsonSafe({
       ...t,
       id: Number(t.id),
-      assignee: t.assignee_id ? Number(t.ai_api_projectmember?.user_id ?? t.assignee_id) : null,
+      assignee: t.assignee_id ? Number(t.assignee_id) : null,
+      assignee_details: t.ai_api_projectmember
+        ? {
+            id: Number(t.ai_api_projectmember.id),
+            user_id: Number(t.ai_api_projectmember.user_id),
+            user_name: t.ai_api_projectmember.user_name,
+            user_email: t.ai_api_projectmember.user_email,
+            role: t.ai_api_projectmember.role,
+          }
+        : null,
     })));
   } catch (err) {
     next(err);
@@ -961,8 +1319,22 @@ export async function createStoryTask(req, res, next) {
         commit_branch: req.body.commit_branch ?? null,
         due_date: req.body.due_date ? new Date(req.body.due_date) : null,
       },
+      include: { ai_api_projectmember: true },
     });
-    const out = { ...item, id: Number(item.id), assignee: assigneeId ? Number((await prisma.ai_api_projectmember.findUnique({ where: { id: assigneeId } }))?.user_id) : null };
+    const out = toJsonSafe({
+      ...item,
+      id: Number(item.id),
+      assignee: assigneeId ? Number(assigneeId) : null,
+      assignee_details: item.ai_api_projectmember
+        ? {
+            id: Number(item.ai_api_projectmember.id),
+            user_id: Number(item.ai_api_projectmember.user_id),
+            user_name: item.ai_api_projectmember.user_name,
+            user_email: item.ai_api_projectmember.user_email,
+            role: item.ai_api_projectmember.role,
+          }
+        : null,
+    });
     broadcastToProject(projectId, 'task_update', 'created', out, req.user);
     return res.status(201).json(out);
   } catch (err) {
@@ -1022,13 +1394,51 @@ export async function updateStoryTask(req, res, next) {
     if (req.body.commit_branch !== undefined) data.commit_branch = req.body.commit_branch;
     if (req.body.due_date !== undefined) data.due_date = req.body.due_date ? new Date(req.body.due_date) : null;
 
-    const updated = await prisma.ai_api_storytask.update({ where: { id: taskId }, data });
+    const updated = await prisma.ai_api_storytask.update({
+      where: { id: taskId },
+      data,
+      include: { ai_api_projectmember: true },
+    });
     if (req.body.status === 'done') {
       await cascadeStoryTaskComplete(task.user_story_id);
     }
-    const out = { ...updated, id: Number(updated.id) };
+    const out = toJsonSafe({
+      ...updated,
+      id: Number(updated.id),
+      assignee: updated.assignee_id ? Number(updated.assignee_id) : null,
+      assignee_details: updated.ai_api_projectmember
+        ? {
+            id: Number(updated.ai_api_projectmember.id),
+            user_id: Number(updated.ai_api_projectmember.user_id),
+            user_name: updated.ai_api_projectmember.user_name,
+            user_email: updated.ai_api_projectmember.user_email,
+            role: updated.ai_api_projectmember.role,
+          }
+        : null,
+    });
     broadcastToProject(projectId, 'task_update', 'updated', out, req.user);
     return res.json(out);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function deleteStoryTask(req, res, next) {
+  try {
+    const taskId = BigInt(req.params.id);
+    const task = await prisma.ai_api_storytask.findUnique({
+      where: { id: taskId },
+      include: { ai_api_userstory: { include: { ai_api_subepic: { include: { ai_api_epic: true } } } } },
+    });
+    if (!task) return res.status(404).json({ detail: 'Not found' });
+    const projectId = task.ai_api_userstory?.ai_api_subepic?.ai_api_epic?.project_id;
+    if (!projectId) return res.status(404).json({ detail: 'Not found' });
+    const member = await ensureProjectMember(projectId, getUserId(req));
+    if (!member) return res.status(403).json({ detail: 'Not a member' });
+
+    await prisma.ai_api_storytask.delete({ where: { id: taskId } });
+    broadcastToProject(projectId, 'task_update', 'deleted', { id: String(taskId) }, req.user);
+    return res.json({ status: 'deleted', id: String(taskId) });
   } catch (err) {
     next(err);
   }
@@ -1064,9 +1474,61 @@ export async function deleteProjectMember(req, res, next) {
     const actor = await ensureProjectMember(projectId, getUserId(req));
     if (!actor || actor.role !== 'Owner') return res.status(403).json({ detail: 'Only owner can remove members' });
     if (member.role === 'Owner') return res.status(403).json({ detail: 'Cannot remove owner' });
+
+    const actorUser = await prisma.user.findUnique({
+      where: { user_id: getUserId(req) },
+      select: { name: true },
+    });
+    const project = await prisma.ai_api_project.findUnique({
+      where: { id: projectId },
+      select: { title: true },
+    });
+
     await prisma.ai_api_projectmember.delete({ where: { id: memberId } });
+
+    await createNotification({
+      recipientId: Number(member.user_id),
+      actorId: getUserId(req),
+      notificationType: 'member_removed',
+      title: 'Removed from project',
+      message: `You were removed from project \"${project?.title || 'Untitled'}\" by ${actorUser?.name || 'the owner'}.`,
+      objectId: projectId,
+      actionUrl: null,
+    });
+
     broadcastToProject(projectId, 'member_update', 'removed', { id: String(memberId) }, req.user);
-    return res.status(204).send();
+    return res.json({ status: 'deleted', id: String(memberId) });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function updateProjectMember(req, res, next) {
+  try {
+    const memberId = BigInt(req.params.id);
+    const targetMember = await prisma.ai_api_projectmember.findUnique({ where: { id: memberId } });
+    if (!targetMember) return res.status(404).json({ detail: 'Not found' });
+
+    const actor = await ensureProjectMember(targetMember.project_id, getUserId(req));
+    if (!actor || actor.role !== 'Owner') return res.status(403).json({ detail: 'Only owner can update members' });
+    if (targetMember.role === 'Owner' && req.body.role && req.body.role !== 'Owner') {
+      return res.status(403).json({ detail: 'Cannot demote owner' });
+    }
+
+    const data = {};
+    if (req.body.role !== undefined) data.role = req.body.role;
+    if (req.body.user_name !== undefined) data.user_name = req.body.user_name;
+    if (req.body.user_email !== undefined) data.user_email = req.body.user_email;
+
+    const updated = await prisma.ai_api_projectmember.update({ where: { id: memberId }, data });
+    const out = {
+      ...updated,
+      id: Number(updated.id),
+      user_id: Number(updated.user_id),
+      user: { user_id: Number(updated.user_id), name: updated.user_name, email: updated.user_email },
+    };
+    broadcastToProject(targetMember.project_id, 'member_update', 'updated', out, req.user);
+    return res.json(out);
   } catch (err) {
     next(err);
   }
@@ -1086,7 +1548,7 @@ export async function listStoryTasksUserAssigned(req, res, next) {
       include: { ai_api_userstory: true },
       orderBy: { updated_at: 'desc' },
     });
-    return res.json(tasks.map((t) => ({ ...t, id: Number(t.id) })));
+    return res.json(tasks.map((t) => toJsonSafe({ ...t, id: Number(t.id) })));
   } catch (err) {
     next(err);
   }
@@ -1109,7 +1571,7 @@ export async function listStoryTasksRecentCompleted(req, res, next) {
       orderBy: { updated_at: 'desc' },
       take: 20,
     });
-    return res.json(tasks.map((t) => ({ ...t, id: Number(t.id) })));
+    return res.json(tasks.map((t) => toJsonSafe({ ...t, id: Number(t.id) })));
   } catch (err) {
     next(err);
   }
@@ -1143,7 +1605,7 @@ export async function bulkAssignStoryTasks(req, res, next) {
       include: { ai_api_projectmember: true },
     });
     if (projectId) broadcastToProject(projectId, 'task_update', 'bulk_assign', updated, req.user);
-    return res.json(updated.map((t) => ({ ...t, id: Number(t.id) })));
+    return res.json(updated.map((t) => toJsonSafe({ ...t, id: Number(t.id) })));
   } catch (err) {
     next(err);
   }
@@ -1180,15 +1642,34 @@ export async function listMyInvitations(req, res, next) {
     const userId = getUserId(req);
     const invs = await prisma.ai_api_projectinvitation.findMany({
       where: { invitee_id: userId },
-      include: { ai_api_project: true, user_ai_api_projectinvitation_invited_by_idTouser: { select: { name: true, email: true } } },
+      include: {
+        ai_api_project: true,
+        user_ai_api_projectinvitation_invited_by_idTouser: { select: { name: true, email: true } },
+        user_ai_api_projectinvitation_invitee_idTouser: { select: { name: true, email: true } },
+      },
       orderBy: { created_at: 'desc' },
     });
-    return res.json(invs.map((i) => ({
-      ...i,
-      id: Number(i.id),
-      project: i.ai_api_project,
-      invitedBy: i.user_ai_api_projectinvitation_invited_by_idTouser,
-    })));
+
+    const invitations = invs.map((i) =>
+      toJsonSafe({
+        id: Number(i.id),
+        project: Number(i.project_id),
+        project_title: i.ai_api_project?.title || null,
+        invitee: Number(i.invitee_id),
+        invitee_name: i.user_ai_api_projectinvitation_invitee_idTouser?.name || null,
+        invitee_email: i.user_ai_api_projectinvitation_invitee_idTouser?.email || null,
+        invited_by: Number(i.invited_by_id),
+        invited_by_name: i.user_ai_api_projectinvitation_invited_by_idTouser?.name || null,
+        invited_by_email: i.user_ai_api_projectinvitation_invited_by_idTouser?.email || null,
+        status: i.status,
+        role: i.role,
+        message: i.message,
+        created_at: i.created_at,
+        updated_at: i.updated_at,
+      })
+    );
+
+    return res.json({ invitations });
   } catch (err) {
     next(err);
   }
@@ -1199,7 +1680,7 @@ export async function declineInvitation(req, res, next) {
     const invId = BigInt(req.params.id);
     const inv = await prisma.ai_api_projectinvitation.findUnique({ where: { id: invId } });
     if (!inv) return res.status(404).json({ detail: 'Not found' });
-    if (inv.invitee_id !== getUserId(req)) return res.status(403).json({ detail: 'Not your invitation' });
+    if (inv.invitee_id !== Number(getUserId(req))) return res.status(403).json({ detail: 'Not your invitation' });
     if (inv.status !== 'pending') return res.status(400).json({ detail: 'Invitation no longer valid' });
     const updated = await prisma.ai_api_projectinvitation.update({
       where: { id: invId },
@@ -1213,7 +1694,8 @@ export async function declineInvitation(req, res, next) {
 
 export async function listProjectMembers(req, res, next) {
   try {
-    const projectId = Number(req.query.project);
+    const projectId = getProjectIdFromQuery(req.query);
+    if (!projectId) return res.status(400).json({ detail: 'project_id required' });
     const member = await ensureProjectMember(projectId, getUserId(req));
     if (!member) return res.status(403).json({ detail: 'Not a member' });
     const members = await prisma.ai_api_projectmember.findMany({
@@ -1222,6 +1704,7 @@ export async function listProjectMembers(req, res, next) {
     return res.json(members.map((m) => ({
       ...m,
       id: Number(m.id),
+      user_id: Number(m.user_id),
       user: { user_id: Number(m.user_id), name: m.user_name, email: m.user_email },
     })));
   } catch (err) {
@@ -1262,7 +1745,12 @@ export async function createProjectMember(req, res, next) {
         joined_at: new Date(),
       },
     });
-    const out = { ...member, id: Number(member.id) };
+    const out = {
+      ...member,
+      id: Number(member.id),
+      user_id: Number(member.user_id),
+      user: { user_id: Number(member.user_id), name: member.user_name, email: member.user_email },
+    };
     broadcastToProject(projectId, 'member_update', 'created', out, req.user);
     return res.status(201).json(out);
   } catch (err) {
@@ -1270,9 +1758,122 @@ export async function createProjectMember(req, res, next) {
   }
 }
 
+export async function listRepositories(req, res, next) {
+  try {
+    const projectId = getProjectIdFromQuery(req.query);
+    if (!projectId) return res.status(400).json({ detail: 'project_id required' });
+    const member = await ensureProjectMember(projectId, getUserId(req));
+    if (!member) return res.status(403).json({ detail: 'Not a member' });
+
+    const repos = await prisma.ai_api_repository.findMany({
+      where: { project_id: projectId },
+      include: { ai_api_projectmember: true },
+      orderBy: { id: 'asc' },
+    });
+
+    return res.json(
+      repos.map((r) =>
+        toJsonSafe({
+          ...r,
+          id: Number(r.id),
+          project_id: r.project_id,
+          assigned_to: r.ai_api_projectmember?.user_id ? Number(r.ai_api_projectmember.user_id) : null,
+        })
+      )
+    );
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function createRepository(req, res, next) {
+  try {
+    const projectId = Number(req.body.project);
+    if (!projectId) return res.status(400).json({ detail: 'project required' });
+    const member = await ensureProjectMember(projectId, getUserId(req));
+    if (!member) return res.status(403).json({ detail: 'Not a member' });
+
+    const assignedToMemberId = await resolveAssigneeId(projectId, req.body.assigned_to);
+
+    const repo = await prisma.ai_api_repository.create({
+      data: {
+        project_id: projectId,
+        name: req.body.name || 'Repository',
+        url: req.body.url || '',
+        branch: req.body.branch || 'main',
+        assigned_to_id: assignedToMemberId,
+        created_at: new Date(),
+        updated_at: new Date(),
+      },
+      include: { ai_api_projectmember: true },
+    });
+
+    const out = toJsonSafe({
+      ...repo,
+      id: Number(repo.id),
+      assigned_to: repo.ai_api_projectmember?.user_id ? Number(repo.ai_api_projectmember.user_id) : null,
+    });
+    broadcastToProject(projectId, 'repository_update', 'created', out, req.user);
+    return res.status(201).json(out);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function updateRepository(req, res, next) {
+  try {
+    const repoId = BigInt(req.params.id);
+    const repo = await prisma.ai_api_repository.findUnique({ where: { id: repoId } });
+    if (!repo) return res.status(404).json({ detail: 'Not found' });
+    const member = await ensureProjectMember(repo.project_id, getUserId(req));
+    if (!member) return res.status(403).json({ detail: 'Not a member' });
+
+    const data = {};
+    if (req.body.name !== undefined) data.name = req.body.name;
+    if (req.body.url !== undefined) data.url = req.body.url;
+    if (req.body.branch !== undefined) data.branch = req.body.branch;
+    if (req.body.assigned_to !== undefined) {
+      data.assigned_to_id = await resolveAssigneeId(repo.project_id, req.body.assigned_to);
+    }
+    data.updated_at = new Date();
+
+    const updated = await prisma.ai_api_repository.update({
+      where: { id: repoId },
+      data,
+      include: { ai_api_projectmember: true },
+    });
+
+    const out = toJsonSafe({
+      ...updated,
+      id: Number(updated.id),
+      assigned_to: updated.ai_api_projectmember?.user_id ? Number(updated.ai_api_projectmember.user_id) : null,
+    });
+    broadcastToProject(repo.project_id, 'repository_update', 'updated', out, req.user);
+    return res.json(out);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function deleteRepository(req, res, next) {
+  try {
+    const repoId = BigInt(req.params.id);
+    const repo = await prisma.ai_api_repository.findUnique({ where: { id: repoId } });
+    if (!repo) return res.status(404).json({ detail: 'Not found' });
+    const member = await ensureProjectMember(repo.project_id, getUserId(req));
+    if (!member) return res.status(403).json({ detail: 'Not a member' });
+
+    await prisma.ai_api_repository.delete({ where: { id: repoId } });
+    broadcastToProject(repo.project_id, 'repository_update', 'deleted', { id: String(repoId) }, req.user);
+    return res.json({ status: 'deleted', id: String(repoId) });
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function listInvitations(req, res, next) {
   try {
-    const projectId = req.query.project ? Number(req.query.project) : null;
+    const projectId = getProjectIdFromQuery(req.query);
     const inviteeId = req.query.invitee ? Number(req.query.invitee) : null;
     const where = {};
     if (projectId) where.project_id = projectId;
@@ -1281,11 +1882,15 @@ export async function listInvitations(req, res, next) {
       where,
       include: { ai_api_project: true, user_ai_api_projectinvitation_invitee_idTouser: true, user_ai_api_projectinvitation_invited_by_idTouser: true },
     });
-    return res.json(invs.map((i) => ({
+    return res.json(invs.map((i) => toJsonSafe({
       ...i,
       id: Number(i.id),
       project: i.ai_api_project,
-      invitee: i.user_ai_api_projectinvitation_invitee_idTouser,
+      invitee: Number(i.invitee_id),
+      invitee_name: i.user_ai_api_projectinvitation_invitee_idTouser?.name || null,
+      invitee_email: i.user_ai_api_projectinvitation_invitee_idTouser?.email || null,
+      invited_by_name: i.user_ai_api_projectinvitation_invited_by_idTouser?.name || null,
+      invited_by_email: i.user_ai_api_projectinvitation_invited_by_idTouser?.email || null,
       invitedBy: i.user_ai_api_projectinvitation_invited_by_idTouser,
     })));
   } catch (err) {
@@ -1316,6 +1921,34 @@ export async function createInvitation(req, res, next) {
     });
     if (existing) return res.status(400).json({ detail: 'User is already a member' });
 
+    const existingInvitation = await prisma.ai_api_projectinvitation.findUnique({
+      where: {
+        project_id_invitee_id: {
+          project_id: projectId,
+          invitee_id: invitee.user_id,
+        },
+      },
+    });
+
+    if (existingInvitation) {
+      if (existingInvitation.status === 'pending') {
+        return res.status(400).json({ detail: 'Invitation is already pending' });
+      }
+
+      const updatedInvitation = await prisma.ai_api_projectinvitation.update({
+        where: { id: existingInvitation.id },
+        data: {
+          invited_by_id: getUserId(req),
+          status: 'pending',
+          role: req.body.role || existingInvitation.role || 'Member',
+          message: req.body.message ?? existingInvitation.message ?? '',
+          updated_at: new Date(),
+        },
+      });
+
+      return res.status(201).json({ ...updatedInvitation, id: Number(updatedInvitation.id) });
+    }
+
     const inv = await prisma.ai_api_projectinvitation.create({
       data: {
         project_id: projectId,
@@ -1337,12 +1970,9 @@ export async function createInvitation(req, res, next) {
 export async function acceptInvitation(req, res, next) {
   try {
     const invId = BigInt(req.params.id);
-    const inv = await prisma.ai_api_projectinvitation.findUnique({
-      where: { id: invId },
-      include: { ai_api_project: true },
-    });
+    const inv = await prisma.ai_api_projectinvitation.findUnique({ where: { id: invId } });
     if (!inv) return res.status(404).json({ detail: 'Not found' });
-    if (inv.invitee_id !== getUserId(req)) return res.status(403).json({ detail: 'Not your invitation' });
+    if (inv.invitee_id !== Number(getUserId(req))) return res.status(403).json({ detail: 'Not your invitation' });
     if (inv.status !== 'pending') return res.status(400).json({ detail: 'Invitation no longer valid' });
 
     await prisma.ai_api_projectinvitation.update({
@@ -1355,6 +1985,7 @@ export async function acceptInvitation(req, res, next) {
     });
     if (!existingMember) {
       const user = await prisma.user.findUnique({ where: { user_id: inv.invitee_id } });
+      if (!user) return res.status(404).json({ detail: 'Invitee not found' });
       await prisma.ai_api_projectmember.create({
         data: {
           project_id: inv.project_id,
@@ -1367,7 +1998,7 @@ export async function acceptInvitation(req, res, next) {
       });
     }
     broadcastToProject(inv.project_id, 'member_update', 'created', { user: inv.invitee_id }, req.user);
-    return res.json({ ...inv, id: Number(inv.id) });
+    return res.json(toJsonSafe({ ...inv, id: Number(inv.id), status: 'accepted', updated_at: new Date() }));
   } catch (err) {
     next(err);
   }
@@ -1375,8 +2006,17 @@ export async function acceptInvitation(req, res, next) {
 
 export async function listNotifications(req, res, next) {
   try {
+    const sinceRaw = req.query?.since;
+    const sinceDate = sinceRaw ? new Date(String(sinceRaw)) : null;
+    const hasValidSince = sinceDate instanceof Date && !Number.isNaN(sinceDate.getTime());
+
+    const where = { recipient_id: getUserId(req) };
+    if (hasValidSince) {
+      where.created_at = { gt: sinceDate };
+    }
+
     const items = await prisma.ai_api_notification.findMany({
-      where: { recipient_id: getUserId(req) },
+      where,
       include: { user_ai_api_notification_actor_idTouser: { select: { name: true } } },
       orderBy: { created_at: 'desc' },
       take: 50,
