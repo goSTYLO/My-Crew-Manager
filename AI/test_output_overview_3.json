@@ -1,34 +1,39 @@
 {
   "title": "EventEase Event Management Platform",
-  "summary": "Build an event management platform that suggests venues, vendors, and schedules events.",
+  "summary": "EventEase is a wedding and conference planning platform that uses AI to suggest venues and vendors, schedule events, and manage guest lists. It aims to reduce planning overhead for teams.",
   "features": [
-    "Venue Suggestion",
-    "Vendor Search",
-    "Event Scheduler",
-    "Notifications"
+    "Venue Search",
+    "Vendor Booking",
+    "Guest List Management",
+    "Notification System",
+    "Scheduling Tools"
   ],
   "roles": [
     "Product Manager",
     "Frontend Developer",
     "Backend Developer",
     "Designer",
-    "AI Engineer"
+    "Database Administrator"
   ],
   "goals": [
     {
-      "title": "Implement venue suggestion feature",
+      "title": "Build venue search feature",
       "role": null
     },
     {
-      "title": "Develop vendor search functionality",
+      "title": "Implement vendor booking system",
       "role": null
     },
     {
-      "title": "Create event scheduler",
+      "title": "Develop guest list management module",
       "role": null
     },
     {
-      "title": "Integrate notification system",
+      "title": "Create notification system",
+      "role": null
+    },
+    {
+      "title": "Design scheduling tools",
       "role": null
     }
   ],
