@@ -1,4 +1,8 @@
 from django.apps import AppConfig
+from urllib import request as urllib_request
+from urllib import error as urllib_error
+import json
+import os
 
 
 class AiApiConfig(AppConfig):
@@ -10,10 +14,19 @@ class AiApiConfig(AppConfig):
         Initialize auto-cleanup when Django starts up.
         """
         try:
-            from llms.llm_cache import start_auto_cleanup
-            start_auto_cleanup()
+            base_url = os.getenv('AI_SERVICE_URL', 'http://127.0.0.1:8002').rstrip('/')
+            req = urllib_request.Request(
+                f"{base_url}/system/start-auto-cleanup",
+                data=json.dumps({}).encode('utf-8'),
+                headers={'Content-Type': 'application/json'},
+                method='POST',
+            )
+            with urllib_request.urlopen(req, timeout=5):
+                pass
+        except urllib_error.URLError as e:
+            print(f"Warning: Could not reach AI service during startup: {e}")
         except Exception as e:
-            # Don't fail Django startup if LLM cache fails
-            print(f"Warning: Could not start LLM auto-cleanup: {e}")
+            # Don't fail Django startup if AI service is unavailable
+            print(f"Warning: Could not start AI auto-cleanup: {e}")
 
 

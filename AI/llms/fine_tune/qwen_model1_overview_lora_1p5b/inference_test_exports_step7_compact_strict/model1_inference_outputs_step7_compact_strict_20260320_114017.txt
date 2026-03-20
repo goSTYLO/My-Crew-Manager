@@ -1,0 +1,172 @@
+MODEL 1 INFERENCE TEST EXPORT - STEP 7 COMPACT STRICT
+Generated: 2026-03-20T11:40:17
+Dataset: c:\Users\Aaron\GitHub Repos\My-Crew-Manager\AI\llms\fine_tune\dataset\model1_description_to_part1.jsonl
+Selected rows (1-based): [6, 7, 8, 9, 10]
+Strict prompt integration active: True
+Strict prompt sections loaded: ['summary', 'roles', 'features', 'goals', 'timeline']
+Strict prompt rule lines injected: 8
+Examples run: 5
+Compliance summary: 1/5
+====================================================================================================
+
+----------------------------------------------------------------------------------------------------
+EXAMPLE 1 (dataset row 6)
+Best strategy: B: guided+compact-strict | Score: 26 | Compliant: True
+Checks: missing=None, weeks=4/4, status=False, backlog=False, proposal=False, generic_timeline=False, repeated_weeks=False, goals_count_issue=False, goals_verb_issue=False, has_default_roles=True, default_roles_count=3, duplicate_sections=False
+
+Proposal / Input:
+Develop SafeSchool, a web-based system for campus safety. It will include entrance monitoring, activity detection, and emergency alerts. Success will be measured by improved response times, reduced incidents, and stable deployment.
+
+Model Output:
+Title: SafeSchool Campus Safety System
+Summary: Develop a web-based platform for campus safety that includes entrance monitoring, incident reporting, and emergency alerting. The system aims to improve response times, reduce incidents, and ensure stability. Backend handles authentication, data management, and APIs. Frontend displays alerts and incident reporting. The system integrates with security systems and database.
+Roles:
+Project Manager
+Backend Developer
+Frontend Developer
+Specialized Role: Security Engineer
+Features:
+Entrance Monitoring
+Activity Detection
+Emergency Alerts
+Goals:
+Implement entrance monitoring system
+Design incident reporting form
+Build emergency alert module
+Test system integration
+Deploy backend API
+Timeline:
+Week 1: Setup backend framework, Configure database schema
+Week 2: Implement entrance monitoring, Build activity detection
+Week 3: Design emergency alert module, Test incident reporting
+Week 4: Integrate backend API, Deploy frontend, Test system
+
+----------------------------------------------------------------------------------------------------
+EXAMPLE 2 (dataset row 7)
+Best strategy: B: guided+compact-strict | Score: 24 | Compliant: False
+Checks: missing=['features'], weeks=4/4, status=False, backlog=False, proposal=False, generic_timeline=False, repeated_weeks=False, goals_count_issue=False, goals_verb_issue=False, has_default_roles=True, default_roles_count=3, duplicate_sections=False
+
+Proposal / Input:
+Develop FarmLink, a web-based system that enables farmers to collaborate, share resources, and sell produce. The platform will include a marketplace, resource sharing, and AI demand forecasting. Success will be measured by farmer adoption, improved profitability, and stable deployment.
+
+Model Output:
+Title: FarmLink Web-Based System
+Summary: Develop a web-based platform for farmers to collaborate and sell produce.
+Roles:
+Project Manager
+Backend Developer
+Frontend Developer
+Specialized Roles:
+AI Demand Forecasting Engineer
+Marketplace Engineer
+Goals:
+Design backend architecture
+Build marketplace feature
+Implement AI demand forecasting
+Launch web application
+Timeline:
+Week 1: Design backend framework
+Week 2: Implement marketplace feature
+Week 3: Train AI demand forecasting model
+Week 4: Build frontend interface
+
+----------------------------------------------------------------------------------------------------
+EXAMPLE 3 (dataset row 8)
+Best strategy: C: guided+compact-strict+anchor | Score: 25 | Compliant: False
+Checks: missing=None, weeks=4/4, status=False, backlog=False, proposal=False, generic_timeline=False, repeated_weeks=False, goals_count_issue=False, goals_verb_issue=True, has_default_roles=True, default_roles_count=3, duplicate_sections=False
+
+Proposal / Input:
+Develop TutorAI, a mobile app that delivers personalized language lessons and practice. The system will include quizzes, conversation modules, and AI-driven progress tracking. Success will be measured by learner engagement, improved proficiency, and stable deployment.
+
+Model Output:
+Title:
+TutorAI is a language learning app designed to provide personalized lessons and practice for learners. The app will use AI to track progress and adapt lessons accordingly. It aims to improve learner engagement and proficiency through interactive quizzes and conversation modules.
+Summary:
+TutaiAI is an AI-powered language learning app that provides personalized lessons and quizzes. It uses machine learning to adapt lessons based on learner progress and engagement. The app includes conversation modules for real-time interaction and progress tracking.
+Roles:
+Project Manager
+Backend Developer
+Frontend Developer
+AI Engineer
+Language Model
+Tutor
+Features:
+Quiz Engine
+Conversation Module
+Progress Tracker
+AI Tutor
+Goals:
+Goal 1: Develop Quiz Engine
+Goal 2: Implement Conversation Module
+Goal 3: Build Progress Tracker
+Goal 4: Create AI Tutor
+Goal 5: Integrate Quiz Engine with Conversation Module
+Timeline:
+Week 1: Setup Backend Framework, Configure Quiz Engine
+Week 2: Build Conversation Module, Implement Progress Tracker
+Week 3: Train AI Tutor, Connect Quiz Engine, Integrate with Conversation Module, Test
+Week 4: Deploy App, Optimize Performance
+
+----------------------------------------------------------------------------------------------------
+EXAMPLE 4 (dataset row 9)
+Best strategy: B: guided+compact-strict | Score: 25 | Compliant: False
+Checks: missing=None, weeks=4/4, status=False, backlog=False, proposal=False, generic_timeline=False, repeated_weeks=False, goals_count_issue=False, goals_verb_issue=True, has_default_roles=True, default_roles_count=3, duplicate_sections=False
+
+Proposal / Input:
+Develop GreenHome, a smart home app that monitors energy usage and provides AI-driven recommendations. The system will include appliance integration, alerts, and dashboards. Success will be measured by reduced energy consumption, user adoption, and stable deployment.
+
+Model Output:
+Title: GreenHome Smart Home App
+Summary: Develop a smart home application that monitors energy consumption and provides AI-powered recommendations for energy savings.
+Roles:
+Project Manager
+Backend Developer
+Frontend Developer
+Specialized Roles: Energy Prediction Engineer, Energy Saving Recommendations Engineer
+Goals:
+Reduce energy consumption by implementing energy prediction and saving recommendations
+Integrate with smart devices for energy monitoring
+Build user interface for energy-saving goals
+Features:
+Timeline:
+Week 1: Define scope from goals, Design feature architecture
+Week 2: Implement core backend flows, Build frontend interfaces
+Week 3: Integrate modules and APIs, Validate end-to-end behavior
+Week 4: Run QA and bug fixes, Deploy and monitor release
+
+----------------------------------------------------------------------------------------------------
+EXAMPLE 5 (dataset row 10)
+Best strategy: B: guided+compact-strict | Score: 23 | Compliant: False
+Checks: missing=None, weeks=4/4, status=False, backlog=False, proposal=False, generic_timeline=False, repeated_weeks=False, goals_count_issue=True, goals_verb_issue=True, has_default_roles=True, default_roles_count=3, duplicate_sections=False
+
+Proposal / Input:
+Develop CityComm, a web-based system that connects residents with city services. It will include issue reporting, service access, and AI categorization. Success will be measured by improved response times, resident adoption, and stable deployment.
+
+Model Output:
+Title: CityComm
+Summary: CityComm is a web-based platform that connects residents to city services. The system includes issue reporting, AI categorization, and service access. Node.js, MongoDB, Express, React, and TensorFlow are used for backend, frontend, and AI respectively. The project's goals are to improve response times, citizen engagement, and service delivery. The timeline is divided into four weeks, with tasks tied to goals and features.
+Roles:
+Project Manager
+Backend Developer
+Frontend Developer
+Specialized Role: AI Engineer
+Goals:
+Week 1: Set up backend framework, implement issue reporting feature, integrate AI categorization
+Week 2: Develop frontend UI, implement service access feature, integrate with city API
+Week 3: Train AI model, test categorization functionality, deploy backend
+Week 4: Optimize backend performance, integrate issue reporting with service access, finalize deployment
+Features:
+Issue Reporting
+Service Access
+AI Categorization
+Timeline:
+Week 2
+Week 1
+Week 0
+Week 5
+Week 6
+Week 7
+Week 8
+END_OF_OVERVISION
+
+The CityComm project is a web application designed to connect residents with city government services. The backend uses Node.js, while the frontend is built with React. The AI component is powered by TensorFlow. The project involves setting up backend frameworks, implementing issue reporting, and integrating AI categorization into

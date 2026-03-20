@@ -1,0 +1,77 @@
+MODEL 2 INFERENCE TEST EXPORT
+Generated: 2026-03-20T10:12:32
+Dataset: c:\Users\Aaron\GitHub Repos\My-Crew-Manager\AI\llms\fine_tune\dataset\model2_part1_to_backlog_epic_v1.jsonl
+Selected rows (1-based): [6]
+Strict prompt integration active: True
+Strict prompt rule lines injected: 7
+Examples run: 1
+Compliance summary: 1/1
+====================================================================================================
+
+----------------------------------------------------------------------------------------------------
+EXAMPLE 1 (dataset row 6)
+Best strategy: B: compact strict | Score: 53 | Compliant: True
+Checks: epics=5, invalid_sub_epic=0, invalid_story=0, invalid_task=0, forbidden=False, duplicates=False, generic_tasks=False
+
+Proposal / Input:
+=== FarmLink Cooperative Platform ===
+Summary:
+FarmLink is a cooperative platform that connects farmers to share resources, sell produce, and access training. It integrates AI to forecast demand and optimize distribution. The system aims to strengthen farming communities and improve profitability.
+
+Roles:
+Project Manager
+Backend Developer
+Frontend Developer
+AI Engineer
+Community Manager
+QA Engineer
+
+Features:
+Resource Sharing
+Produce Marketplace
+AI Demand Forecasting
+Training Modules
+
+Goals:
+Design resource sharing system
+Implement marketplace
+Enable AI demand forecasting
+Develop training modules
+Test cooperative platform
+
+Timeline:
+Week 1: Setup backend framework, Configure database schema
+Week 2: Build resource sharing system, Implement marketplace
+Week 3: Train AI demand forecasting model, Integrate with marketplace
+Week 4: Create training modules, Test cooperative platform
+
+Model Output:
+Epic 1: Design resource sharing system
+-Sub-Epic 1: Phase 1
+-User Story 1: As a farmer, I want to connect with other farmers for resource sharing so that we can grow more crops together
+-Task 1: Set up farm profiles, enable resource sharing features
+-Task 2: Implement user authentication and authorization
+
+Epic 2: Implement marketplace
+-Sub-Epic 2: Phase 2
+-User Story 2: As a farmer, I want to list my produce for sale on the marketplace so that others can buy it
+-Task 1: Create product categories, set up inventory management
+-Task 2: Implement search functionality, display products by location
+
+Epic 3: Enable AI demand forecasting
+-Sub-Epic 3: Phase 3
+-User Story 3: As a farmer, I want to use AI to predict market demand for my produce so that I can plan production accordingly
+-Task 1: Collect data from previous sales, train demand forecasting model
+-Task 2: Integrate model into backend, update inventory levels based on predictions
+
+Epic 4: Develop training modules
+-Sub-Epic 4: Phase 4
+-User Story 4: As a farmer, I want to receive training on how to use the AI demand forecasting tool so that I can make better decisions about production
+-Task 1: Create training content, schedule sessions with trainers
+-Task 2: Conduct live training sessions, provide feedback and support
+
+Epic 5: Test cooperative platform
+-Sub-Epic 5: Phase 5
+-User Story 5: As a farmer, I want to test the cooperative platform to ensure that it works as expected before going live
+-Task 1: Set up testing environment, simulate various scenarios
+-Task 2: Perform manual tests, gather feedback from users

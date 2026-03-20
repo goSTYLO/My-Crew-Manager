@@ -1,42 +1,32 @@
-import yaml
+import re
 
 def parse_backlog(raw: str) -> list:
-    """
-    Parses a hierarchical backlog YAML string into structured Python objects.
+    """Parse plain-text backlog hierarchy into list-of-dicts structure."""
+    text = (raw or "").replace("\u2013", "-").replace("\u2014", "-").replace("\u2022", "-")
+    lines = [ln.rstrip() for ln in text.splitlines() if ln.strip()]
 
-    Returns:
-        List of epics, each with sub-epics and user stories.
-    """
-    try:
-        parsed = yaml.safe_load(raw.strip())
-        if not isinstance(parsed, dict) or "backlog" not in parsed:
-            return []
+    epics = []
+    current_epic = None
+    current_sub = None
 
-        backlog = parsed["backlog"]
-        structured = []
+    for line in lines:
+        stripped = line.strip()
 
-        for epic in backlog:
-            epic_title = epic.get("epic", "").strip()
-            sub_epics_raw = epic.get("sub_epics", [])
-            sub_epics = []
+        epic_m = re.match(r"^[-*+\s]*Epic\s*\d+\s*:\s*(.+)$", stripped, flags=re.IGNORECASE)
+        if epic_m:
+            current_epic = {"epic": epic_m.group(1).strip(), "sub_epics": []}
+            epics.append(current_epic)
+            current_sub = None
+            continue
 
-            for sub in sub_epics_raw:
-                sub_title = sub.get("title", "").strip()
-                stories_raw = sub.get("user_stories", [])
-                stories = [s.strip() for s in stories_raw if isinstance(s, str) and s.strip().startswith("As a ")]
+        sub_m = re.match(r"^[-*+\s]*Sub\s*-?\s*Epic\s*\d*\s*:\s*(.+)$", stripped, flags=re.IGNORECASE)
+        if sub_m and current_epic is not None:
+            current_sub = {"title": sub_m.group(1).strip(), "user_stories": []}
+            current_epic["sub_epics"].append(current_sub)
+            continue
 
-                sub_epics.append({
-                    "title": sub_title,
-                    "user_stories": stories
-                })
+        story_m = re.match(r"^[-*+\s]*User\s*Story\s*\d*\s*:\s*(.+)$", stripped, flags=re.IGNORECASE)
+        if story_m and current_sub is not None:
+            current_sub["user_stories"].append(story_m.group(1).strip())
 
-            structured.append({
-                "epic": epic_title,
-                "sub_epics": sub_epics
-            })
-
-        return structured
-
-    except Exception as e:
-        print(f"⚠️ Backlog parsing failed: {e}")
-        return []
+    return epics
