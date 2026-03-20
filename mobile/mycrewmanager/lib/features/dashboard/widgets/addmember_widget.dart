@@ -77,7 +77,7 @@ class _AddMemberBottomSheetState extends State<AddMemberBottomSheet> {
 
             // Role Dropdown
             DropdownButtonFormField<String>(
-              initialValue: selectedRole,
+              value: selectedRole,
               items: roles.map((role) {
                 return DropdownMenuItem(
                   value: role,
