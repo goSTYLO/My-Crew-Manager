@@ -344,7 +344,7 @@ const ChatApp = () => {
         switch (data.type) {
           case 'chat_message':
             // Handle new message
-            const newMessage: Message = {
+            { const newMessage: Message = {
               id: data.message.message_id,
               sender: data.user_id === currentUserId ? 'me' : 'them',
               text: data.message.content,
@@ -406,7 +406,7 @@ const ChatApp = () => {
             ));
             
             console.log('🔔 New message received - WebSocket will send unread_count_updated automatically');
-            break;
+            break; }
             
           case 'message_deleted':
             if (data.message_id) {
@@ -1488,6 +1488,17 @@ const ChatApp = () => {
   // Delete message
   const handleDeleteMessage = async (messageId: number) => {
     if (!selectedChat) return;
+
+    // Optimistic messages use temporary timestamp IDs and do not exist on server yet.
+    if (messageId > 1000000000000) {
+      setMessages(prev => ({
+        ...prev,
+        [selectedChat]: (prev[selectedChat] || []).filter(msg => msg.message_id !== messageId)
+      }));
+      setShowDeleteConfirm(false);
+      setMessageToDelete(null);
+      return;
+    }
     
     try {
       const token = getAuthToken();

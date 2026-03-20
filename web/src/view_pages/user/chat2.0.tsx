@@ -1586,6 +1586,17 @@ const ChatApp = () => {
   // Delete message
   const handleDeleteMessage = async (messageId: number) => {
     if (!selectedChat) return;
+
+    // Optimistic messages use temporary timestamp IDs and do not exist on server yet.
+    if (messageId > 1000000000000) {
+      setMessages(prev => ({
+        ...prev,
+        [selectedChat]: (prev[selectedChat] || []).filter(msg => msg.message_id !== messageId)
+      }));
+      setShowDeleteConfirm(false);
+      setMessageToDelete(null);
+      return;
+    }
     
     try {
       const token = getAuthToken();

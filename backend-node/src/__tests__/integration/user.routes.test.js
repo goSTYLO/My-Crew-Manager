@@ -1,5 +1,7 @@
 import request from 'supertest';
 import jwt from 'jsonwebtoken';
+import path from 'path';
+import fs from 'fs/promises';
 
 import app from '../../app.js';
 import { connectTestDB, disconnectTestDB, truncateTestData } from '../db-helper.js';
@@ -117,6 +119,34 @@ describe('User routes (integration)', () => {
 
       expect(res.status).toBe(200);
       expect(res.body.email).toBe('bearer@example.com');
+    });
+
+    test('profile picture upload returns accessible media URL', async () => {
+      const signup = await request(app)
+        .post('/api/user/signup/')
+        .send({ email: `photo-${Date.now()}@example.com`, name: 'Photo User', password: 'pw' });
+
+      const updateRes = await request(app)
+        .patch('/api/user/me/')
+        .set('Authorization', `Token ${signup.body.token}`)
+        .field('name', 'Photo User')
+        .attach('profile_picture', Buffer.from('fake-image-content'), 'profile-test.png');
+
+      expect(updateRes.status).toBe(200);
+      expect(updateRes.body.profile_picture).toBeTruthy();
+      expect(updateRes.body.profile_picture).toContain('/media/');
+      expect(updateRes.body.profile_picture).not.toContain('\\\\');
+
+      const urlPath = new URL(updateRes.body.profile_picture).pathname;
+      const mediaRes = await request(app).get(urlPath);
+      expect(mediaRes.status).toBe(200);
+      expect(mediaRes.headers['content-type']).toBeTruthy();
+
+      const maybeFile = updateRes.body.profile_picture.split('/media/')[1];
+      if (maybeFile) {
+        const filePath = path.resolve(process.cwd(), 'uploads', maybeFile);
+        await fs.unlink(filePath).catch(() => {});
+      }
     });
   });
 

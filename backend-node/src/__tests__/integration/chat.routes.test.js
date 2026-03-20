@@ -84,7 +84,72 @@ describe('Chat routes (integration)', () => {
     });
   });
 
+  describe('DELETE /api/chat/rooms/:room_pk/messages/:pk(/)', () => {
+    test('supports delete with trailing slash', async () => {
+      const createRoom = await request(app)
+        .post('/api/chat/rooms/')
+        .set('Authorization', `Token ${authToken}`)
+        .send({ name: 'Delete Room' });
+      const roomId = createRoom.body.room_id || createRoom.body.id;
+
+      const createMessage = await request(app)
+        .post(`/api/chat/rooms/${roomId}/messages/`)
+        .set('Authorization', `Token ${authToken}`)
+        .send({ content: 'to delete' });
+
+      const messageId = createMessage.body.message_id;
+      const res = await request(app)
+        .delete(`/api/chat/rooms/${roomId}/messages/${messageId}/`)
+        .set('Authorization', `Token ${authToken}`);
+
+      expect(res.status).toBe(204);
+    });
+
+    test('returns 400 for invalid oversized message id', async () => {
+      const createRoom = await request(app)
+        .post('/api/chat/rooms/')
+        .set('Authorization', `Token ${authToken}`)
+        .send({ name: 'Delete Guard Room' });
+      const roomId = createRoom.body.room_id || createRoom.body.id;
+
+      const res = await request(app)
+        .delete(`/api/chat/rooms/${roomId}/messages/1774001715505/`)
+        .set('Authorization', `Token ${authToken}`);
+
+      expect(res.status).toBe(400);
+      expect(res.body.detail).toBe('Invalid message id');
+    });
+  });
+
   describe('Room management compatibility endpoints', () => {
+    test('POST /api/chat/rooms/:id/invite/ adds user to group room', async () => {
+      const createRoom = await request(app)
+        .post('/api/chat/rooms/')
+        .set('Authorization', `Token ${authToken}`)
+        .send({ name: 'Invite Flow Room', is_private: false });
+      const roomId = createRoom.body.room_id || createRoom.body.id;
+
+      const inviteeEmail = `invitee-${Date.now()}@example.com`;
+      const inviteeSignup = await request(app)
+        .post('/api/user/signup/')
+        .send({ email: inviteeEmail, name: 'Invitee User', password: 'pw' });
+      const inviteeToken = inviteeSignup.body.token;
+
+      const inviteRes = await request(app)
+        .post(`/api/chat/rooms/${roomId}/invite/`)
+        .set('Authorization', `Token ${authToken}`)
+        .send({ email: inviteeEmail });
+
+      expect(inviteRes.status).toBe(200);
+
+      const invitedUserRoomAccess = await request(app)
+        .get(`/api/chat/rooms/${roomId}/`)
+        .set('Authorization', `Token ${inviteeToken}`);
+
+      expect(invitedUserRoomAccess.status).toBe(200);
+      expect(String(invitedUserRoomAccess.body.room_id || invitedUserRoomAccess.body.id)).toBe(String(roomId));
+    });
+
     test('PATCH /api/chat/rooms/:id/ updates room name', async () => {
       const createRoom = await request(app)
         .post('/api/chat/rooms/')

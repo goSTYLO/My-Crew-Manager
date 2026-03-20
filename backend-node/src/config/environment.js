@@ -63,7 +63,7 @@ class Environment {
         'x-ai/grok-4-fast:free'
       ),
       SITE_URL: this.getString('SITE_URL', 'http://localhost:3000'),
-      SITE_NAME: this.getString('SITE_NAME', 'ClarifAI'),
+      SITE_NAME: this.getString('SITE_NAME', 'MyCrewManager'),
 
       // Email (optional)
       EMAIL_HOST: this.getOptionalString('EMAIL_HOST'),

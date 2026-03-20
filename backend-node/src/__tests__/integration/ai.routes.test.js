@@ -76,4 +76,46 @@ describe('AI routes (integration)', () => {
       if (res.status === 200) expect(res.body).toHaveProperty('features');
     });
   });
+
+  describe('POST /api/ai/invitations/:id/accept/', () => {
+    test('accepts pending invitation and creates project member', async () => {
+      const inviteeSignup = await request(app)
+        .post('/api/user/signup/')
+        .send({ email: `invitee-${Date.now()}@example.com`, name: 'Invitee User', password: 'pw' });
+      const inviteeToken = inviteeSignup.body.token;
+      const inviteeId = Number(inviteeSignup.body.id);
+
+      const createProject = await request(app)
+        .post('/api/ai/projects/')
+        .set('Authorization', `Token ${authToken}`)
+        .send({ title: 'Invitation Project', summary: 'Invitation test' });
+      expect(createProject.status).toBe(201);
+
+      const createInvitation = await request(app)
+        .post('/api/ai/invitations/')
+        .set('Authorization', `Token ${authToken}`)
+        .send({
+          project: createProject.body.id,
+          invitee: inviteeId,
+          role: 'Member',
+        });
+      expect(createInvitation.status).toBe(201);
+
+      const acceptRes = await request(app)
+        .post(`/api/ai/invitations/${createInvitation.body.id}/accept/`)
+        .set('Authorization', `Token ${inviteeToken}`)
+        .send({});
+
+      expect(acceptRes.status).toBe(200);
+      expect(acceptRes.body.status).toBe('accepted');
+
+      const member = await prisma.ai_api_projectmember.findFirst({
+        where: {
+          project_id: Number(createProject.body.id),
+          user_id: BigInt(inviteeId),
+        },
+      });
+      expect(member).not.toBeNull();
+    });
+  });
 });
