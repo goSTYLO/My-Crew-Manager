@@ -7,6 +7,8 @@ import nodemailer from 'nodemailer';
 
 import { prisma } from '../lib/prisma.js';
 import { z } from 'zod';
+import { logger } from '../config/logger.js';
+import { UnauthorizedError } from '../middleware/errors.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || process.env.SECRET_KEY;
 const REFRESH_COOKIE = 'refresh_token';
@@ -29,6 +31,15 @@ function sendError(res, statusCode, message, extra = {}) {
 
 function sendValidationError(res, err) {
   return sendError(res, 400, 'Validation error', { fields: err.flatten().fieldErrors });
+}
+
+function authLogMeta(req, extra = {}) {
+  return {
+    request_id: req.requestId || req.headers['x-request-id'] || null,
+    ip: req.ip,
+    path: req.originalUrl,
+    ...extra,
+  };
 }
 
 function setRefreshCookie(res, token, rememberMe) {
@@ -143,7 +154,10 @@ export async function signup(req, res, next) {
     const { email, name, password, role } = signupSchema.parse(req.body);
     const lower = email.toLowerCase();
     const existing = await prisma.user.findUnique({ where: { email: lower } });
-    if (existing) return sendError(res, 400, 'User with this email already exists.', { email: ['User with this email already exists.'] });
+    if (existing) {
+      logger.warn('Signup failed - duplicate email', authLogMeta(req, { email: lower }));
+      return sendError(res, 400, 'User with this email already exists.', { email: ['User with this email already exists.'] });
+    }
     const hashed = await bcrypt.hash(password, 10);
     const user = await prisma.user.create({
       data: {
@@ -159,6 +173,11 @@ export async function signup(req, res, next) {
       },
     });
     const tokenKey = await getOrCreateToken(user.user_id);
+    logger.info('Signup succeeded', authLogMeta(req, {
+      user_id: user.user_id,
+      email: user.email,
+      role: user.role,
+    }));
     return res.status(201).json({ id: String(user.user_id), email: user.email, name: user.name, role: user.role, token: tokenKey });
   } catch (err) {
     if (err instanceof z.ZodError) return sendValidationError(res, err);
@@ -169,9 +188,14 @@ export async function signup(req, res, next) {
 export async function login(req, res, next) {
   try {
     const { email, password, remember_me } = loginSchema.parse(req.body);
-    const user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
+    const emailLower = email.toLowerCase();
+    const user = await prisma.user.findUnique({ where: { email: emailLower } });
     if (!user || !user.is_active || !(await bcrypt.compare(password, user.password))) {
-      return sendError(res, 401, 'Invalid email or password');
+      logger.warn('Login failed - invalid credentials', authLogMeta(req, {
+        email: emailLower,
+        reason: !user ? 'user_not_found' : !user.is_active ? 'inactive_user' : 'password_mismatch',
+      }));
+      return next(new UnauthorizedError('Invalid email or password'));
     }
     if (user.two_factor_enabled && process.env.DISABLE_2FA !== 'true') {
       await prisma.users_twofactortemptoken.deleteMany({ where: { user_id: user.user_id } });
@@ -181,6 +205,10 @@ export async function login(req, res, next) {
       await prisma.users_twofactortemptoken.create({
         data: { user_id: user.user_id, token: tempToken, expires_at: expiresAt },
       });
+      logger.info('Login requires 2FA', authLogMeta(req, {
+        user_id: user.user_id,
+        email: user.email,
+      }));
       return res.json({ requires_2fa: true, temp_token: tempToken, message: 'Please enter your 2FA code' });
     }
     const tokenKey = await getOrCreateToken(user.user_id);
@@ -188,6 +216,12 @@ export async function login(req, res, next) {
       const refreshToken = await createRefreshToken(user.user_id, true, req);
       setRefreshCookie(res, refreshToken, true);
     }
+    logger.info('Login succeeded', authLogMeta(req, {
+      user_id: user.user_id,
+      email: user.email,
+      role: user.role,
+      remember_me: !!remember_me,
+    }));
     return res.json({
       id: String(user.user_id),
       email: user.email,
@@ -217,16 +251,24 @@ export async function logout(req, res, next) {
 export async function refreshToken(req, res, next) {
   try {
     const value = req.cookies?.[REFRESH_COOKIE];
-    if (!value) return sendError(res, 401, 'No refresh token found');
+    if (!value) {
+      logger.warn('Refresh token failed - missing cookie', authLogMeta(req));
+      return next(new UnauthorizedError('No refresh token found'));
+    }
     const rt = await prisma.users_refreshtoken.findFirst({
       where: { token: value, expires_at: { gt: new Date() } },
       include: { user: true },
     });
     if (!rt) {
       res.clearCookie(REFRESH_COOKIE, { path: '/' });
-      return sendError(res, 401, 'Refresh token expired or invalid');
+      logger.warn('Refresh token failed - expired or invalid', authLogMeta(req));
+      return next(new UnauthorizedError('Refresh token expired or invalid'));
     }
     const tokenKey = await getOrCreateToken(rt.user_id);
+    logger.info('Refresh token succeeded', authLogMeta(req, {
+      user_id: rt.user.user_id,
+      email: rt.user.email,
+    }));
     return res.json({
       token: tokenKey,
       access: tokenKey,

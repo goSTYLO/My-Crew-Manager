@@ -18,6 +18,19 @@ export function leaveRoom(roomName, ws) {
   }
 }
 
+export function leaveRoomByUser(roomName, userId) {
+  const set = rooms.get(roomName);
+  if (!set) return;
+
+  set.forEach((ws) => {
+    if (String(ws?.userId) === String(userId)) {
+      set.delete(ws);
+    }
+  });
+
+  if (set.size === 0) rooms.delete(roomName);
+}
+
 export function broadcast(roomName, payload) {
   const set = rooms.get(roomName);
   if (!set) return;

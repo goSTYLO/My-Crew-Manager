@@ -2,13 +2,15 @@ import { Router } from 'express';
 import multer from 'multer';
 import { authMiddleware } from '../middleware/auth.middleware.js';
 import * as ctrl from '../controllers/user.controller.js';
+import { validateBody } from '../middleware/validation.middleware.js';
+import { authSchemas } from '../validation/schemas.js';
 
 const router = Router();
 const upload = multer({ dest: 'uploads/' });
 
 // Public
-router.post('/signup/', ctrl.signup);
-router.post('/login/', ctrl.login);
+router.post('/signup/', validateBody(authSchemas.signup), ctrl.signup);
+router.post('/login/', validateBody(authSchemas.login), ctrl.login);
 router.post('/refresh-token/', ctrl.refreshToken);
 router.post('/reset-password/', ctrl.resetPassword);
 router.post('/email/request/', ctrl.emailRequest);

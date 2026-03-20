@@ -1,27 +1,43 @@
-import http from 'http';
+import { createServer } from 'http';
 
 import app from './app.js';
 import { connectDB } from './config/db.js';
-import { validateEnv } from './config/env.js';
 import { setupRealtimeServer } from './realtime/index.js';
 
-const PORT = process.env.PORT || 8001;
+import { logger } from './config/logger.js';
+import { env } from './config/environment.js';
 
-async function start() {
-  validateEnv();
-  await connectDB();
+// Load environment variables
+logger.info('Loading environment configuration...');
+logger.debug('Environment config loaded:', env.getConfig(false));
 
-  const server = http.createServer(app);
+const PORT = env.server.port;
 
-  // Setup WebSocket realtime server
-  setupRealtimeServer(server);
+async function startServer() {
+  try {
+    await connectDB();
 
-  server.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-  });
+    const server = createServer(app);
+
+    // Setup WebSocket realtime server
+    setupRealtimeServer(server);
+
+    server.listen(PORT, () => {
+      logger.info(`🚀 Server running on port ${PORT}`);
+      logger.info(`📊 Environment: ${env.server.nodeEnv}`);
+      logger.info(`🔗 Frontend URL: ${env.cors.frontendUrl}`);
+
+      if (env.server.isDevelopment) {
+        logger.debug('Development mode - additional debugging enabled');
+      }
+    });
+  } catch (error) {
+    logger.error('Failed to start server:', error);
+    process.exit(1);
+  }
 }
 
-start().catch((err) => {
-  console.error('Failed to start server:', err);
-  process.exit(1);
-});
+// Only start server if not in test mode
+if (process.env.NODE_ENV !== 'test') {
+  startServer();
+}

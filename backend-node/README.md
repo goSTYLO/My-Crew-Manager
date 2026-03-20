@@ -2,18 +2,82 @@
 
 Node.js/Express backend for My Crew Manager. Uses **PostgreSQL** with **Prisma** ORM and the `ws` package for WebSockets.
 
+## Latest Commit Summary (Logger + Security + Middleware + Config)
+
+This backend commit introduced a full hardening pass focused on request tracing, centralized errors, structured logging, and input protection while keeping API compatibility with the existing frontend.
+
+### 1) Structured logging and request tracing
+
+- Added request correlation via `x-request-id` middleware.
+- Upgraded Winston logger to structured metadata logging with environment-aware output:
+   - development: colorized console logs with metadata
+   - production: JSON logs
+- Added file log transports:
+   - `logs/error.log` (error only)
+   - `logs/combined.log` (all levels)
+- Added structured auth logs for signup/login/refresh and auth failures.
+
+### 2) Centralized error handling (non-breaking API envelope)
+
+- Added reusable app error classes (`AppError`, `ValidationAppError`, `UnauthorizedError`, `ForbiddenError`, `NotFoundError`).
+- Refactored auth middleware and auth controller paths to use `next(error)` for centralized handling.
+- Error middleware now preserves frontend-compatible response fields:
+   - `error`
+   - `detail`
+   - `message`
+   - optional `details`
+   - optional `request_id`
+
+### 3) Security hardening middleware
+
+- Added global input sanitization middleware for `body`, `query`, and `params`.
+- Sanitization strips HTML/script payloads from string inputs.
+- Added suspicious payload detection and warning logs for common XSS/SQL injection patterns.
+- Sensitive fields in logs are redacted (for example password/token fields).
+
+### 4) Route validation middleware (Zod)
+
+- Added generic validation middleware for `body`, `params`, and `query`.
+- Added shared Zod schemas for auth/chat/AI critical endpoints.
+- Applied validation to critical routes first (auth, chat core routes, AI project core routes) to reduce risk without breaking existing clients.
+
+### 5) Middleware stack and runtime configuration updates
+
+- App pipeline now includes:
+   - CORS allowlist and localhost support in development
+   - Helmet security headers
+   - Rate limiting
+   - request-id middleware
+   - JSON/urlencoded parsers + cookies
+   - input sanitization
+   - route handlers
+   - centralized error middleware as the final handler
+
+### 6) Compatibility-focused API improvements included in this cycle
+
+- Added/kept chat compatibility aliases and routes used by the frontend:
+   - `PATCH /api/chat/rooms/:id`
+   - `PUT /api/chat/rooms/:id`
+   - `POST /api/chat/rooms/:id/leave/`
+   - `POST /api/chat/rooms/:id/mark_read/`
+   - `POST /api/chat/rooms/:id/nickname/`
+- Added validation on chat room/message params and message list query.
+
 ## Setup
 
 1. Install dependencies: `npm install`
 2. **Database:** Use PostgreSQL. Configure connection via env:
-   - `DATABASE_URL` - Full connection string: `postgresql://user:pass@host:5432/mycrewmanager_db`
-   - Or use `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT` (backend-node builds `DATABASE_URL` from these)
+    - `POSTGRES_URI` - Full connection string: `postgresql://user:pass@host:5432/mycrewmanager_db`
 3. **Env** (from project root `.env`):
-   - `SECRET_KEY` - Application secret
-   - `JWT_SECRET` - JWT signing secret (can match SECRET_KEY)
-   - `AI_SERVICE_URL` - URL of the FastAPI AI microservice (default: `http://localhost:8002`)
-   - `DISABLE_2FA` - Set to `true` to fully disable 2FA (default: `false`)
-   - `RATE_LIMIT_MAX` - Requests per 15 min. Dev default 500; production 100.
+    - `JWT_SECRET` - JWT signing secret (must be at least 32 chars)
+    - `PORT` - API port (default: `5000`)
+    - `NODE_ENV` - `development`, `test`, or `production`
+    - `FRONTEND_URL` - Allowed CORS origin(s), comma-separated
+    - `LOG_LEVEL` - Logger level (default config supports environment-aware logging)
+    - `RATE_LIMIT_WINDOW_MS` - Rate limit window size
+    - `RATE_LIMIT_MAX_REQUESTS` - Max requests per window
+    - `DISABLE_2FA` - Set to `true` to fully disable 2FA (default: `false`)
+    - `AI_SERVICE_URL` - URL of the FastAPI AI microservice (default: `http://localhost:8002`)
 
 4. Generate Prisma client: `npm run db:generate` (or `npx prisma generate`)
 5. For existing DB: schema is maintained via `prisma/schema.prisma`. Use `npx prisma db pull` to introspect and regenerate if the DB structure changes.
@@ -28,7 +92,22 @@ The FastAPI AI service at `AI/` exposes `POST /generate-overview` and `POST /gen
 
 ## Testing
 
-Run `npm test` for Jest unit and integration tests. Uses PostgreSQL (same DB or `DB_NAME_test` when `NODE_ENV=test`). Ensure a test database exists. Set `DISABLE_2FA=true` in test env to simplify auth flows.
+Run `npm test` for Jest unit and integration tests. Uses PostgreSQL with test-aware environment settings. Ensure a test database exists and points to a safe test `POSTGRES_URI`. Set `DISABLE_2FA=true` in test env to simplify auth flows.
+
+## Middleware and Security Notes
+
+- Request IDs:
+   - Incoming `x-request-id` is preserved.
+   - If missing, server generates a UUID.
+   - Response always includes `x-request-id`.
+- Error handling:
+   - All operational errors should flow through `next(error)` to keep consistent response envelopes and logging.
+- Validation:
+   - Route-level Zod validation is used on critical endpoints and can be extended incrementally.
+- Sanitization:
+   - Input sanitization runs before route handlers and removes HTML from user-provided strings.
+- Logging:
+   - Security events and auth failures are logged with contextual metadata.
 
 ## API
 
@@ -57,7 +136,7 @@ Run `npm test` for Jest unit and integration tests. Uses PostgreSQL (same DB or 
 If you see `Authentication failed against the database server`:
 
 1. **Verify PostgreSQL is running** – `psql -U postgres -h localhost -c "SELECT 1"`
-2. **Check credentials** – Root `.env` uses `DB_USER=postgres`, `DB_PASSWORD=1401`. Ensure your PostgreSQL `postgres` user has this password (or update `.env`).
+2. **Check connection string** – Ensure `POSTGRES_URI` points to the correct host, port, database, username, and password.
 3. **Test connection** – `psql -U postgres -h localhost -d mycrewmanager_db` (enter password when prompted)
 4. **Restore from dump** – If the DB is empty, restore: `pg_restore -d mycrewmanager_db -U postgres MycrewManager_db_2.sql`
 5. **Extract sample data** – Without a live DB, use `pg_restore --data-only -f restore_projects.sql -t ai_api_project ... MycrewManager_db_2.sql`, then `node scripts/parse-dump-to-md.js` to regenerate `sample-outputs.md`

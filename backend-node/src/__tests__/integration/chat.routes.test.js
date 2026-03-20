@@ -83,4 +83,77 @@ describe('Chat routes (integration)', () => {
       expect(res.body.content).toBe('Hello world');
     });
   });
+
+  describe('Room management compatibility endpoints', () => {
+    test('PATCH /api/chat/rooms/:id/ updates room name', async () => {
+      const createRoom = await request(app)
+        .post('/api/chat/rooms/')
+        .set('Authorization', `Token ${authToken}`)
+        .send({ name: 'Original Name', is_private: false });
+      const roomId = createRoom.body.room_id || createRoom.body.id;
+
+      const res = await request(app)
+        .patch(`/api/chat/rooms/${roomId}/`)
+        .set('Authorization', `Token ${authToken}`)
+        .send({ name: 'Updated Name' });
+
+      expect(res.status).toBe(200);
+      expect(res.body.name).toBe('Updated Name');
+    });
+
+    test('POST /api/chat/rooms/:id/mark_read/ returns total_unread_count', async () => {
+      const createRoom = await request(app)
+        .post('/api/chat/rooms/')
+        .set('Authorization', `Token ${authToken}`)
+        .send({ name: 'Read Marker', is_private: false });
+      const roomId = createRoom.body.room_id || createRoom.body.id;
+
+      const res = await request(app)
+        .post(`/api/chat/rooms/${roomId}/mark_read/`)
+        .set('Authorization', `Token ${authToken}`)
+        .send({});
+
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveProperty('total_unread_count');
+      expect(typeof res.body.total_unread_count).toBe('number');
+    });
+
+    test('POST /api/chat/rooms/:id/nickname/ returns compatibility success', async () => {
+      const createRoom = await request(app)
+        .post('/api/chat/rooms/')
+        .set('Authorization', `Token ${authToken}`)
+        .send({ name: 'Nickname Room', is_private: false });
+      const roomId = createRoom.body.room_id || createRoom.body.id;
+
+      const res = await request(app)
+        .post(`/api/chat/rooms/${roomId}/nickname/`)
+        .set('Authorization', `Token ${authToken}`)
+        .send({ nickname: 'Ace' });
+
+      expect(res.status).toBe(200);
+      expect(res.body.detail).toBe('Nickname updated successfully');
+    });
+
+    test('POST /api/chat/rooms/:id/leave/ removes user membership', async () => {
+      const createRoom = await request(app)
+        .post('/api/chat/rooms/')
+        .set('Authorization', `Token ${authToken}`)
+        .send({ name: 'Leave Room', is_private: false });
+      const roomId = createRoom.body.room_id || createRoom.body.id;
+
+      const leave = await request(app)
+        .post(`/api/chat/rooms/${roomId}/leave/`)
+        .set('Authorization', `Token ${authToken}`)
+        .send({});
+
+      expect(leave.status).toBe(200);
+      expect(leave.body.detail).toBe('Left room successfully');
+
+      const roomAccessAfterLeave = await request(app)
+        .get(`/api/chat/rooms/${roomId}`)
+        .set('Authorization', `Token ${authToken}`);
+
+      expect([403, 404]).toContain(roomAccessAfterLeave.status);
+    });
+  });
 });
