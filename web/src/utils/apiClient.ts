@@ -46,23 +46,18 @@ export async function apiClient(
 
   // Handle 401 Unauthorized - token might be expired
   if (response.status === 401 && retryOn401 && !skipAuth) {
-    console.log('🔄 401 Unauthorized, attempting token refresh...');
     const refreshSucceeded = await TokenManager.handleApiError(401);
-    
+
     if (refreshSucceeded) {
-      // Get new token and retry request
       token = await TokenManager.getValidToken();
       if (token) {
         headers.set('Authorization', `Token ${token}`);
-        console.log('🔄 Retrying request with refreshed token...');
         response = await fetch(url, {
           ...fetchOptions,
           headers,
         });
       }
     } else {
-      // Refresh failed, user needs to re-authenticate
-      console.error('❌ Token refresh failed, user needs to re-authenticate');
       // Dispatch event for components to handle logout
       window.dispatchEvent(new CustomEvent('auth:token-expired'));
     }

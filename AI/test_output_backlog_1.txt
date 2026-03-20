@@ -1,25 +1,25 @@
-Epic 1: Develop issue reporting feature
+Epic 1: Develop a venue suggestion engine
 -Sub-Epic 1: Planning
--User Story 1: As a Citizen, I want to report an issue so that my problem can be fixed.
--Task 1: Create an account
--Task 2: Search for an issue
-Epic 2: Implement service access
--Sub-Epic 1: Planning
--User Story 1: As a Citizen, I want to access city services so that I can get help when needed.
--Task 1: Sign up for services
--Task 2: Find available services
-Epic 3: Train AI for categorisation
--Sub-Epic 1: Planning
--User Story 1: As a Citizen, I want to receive categorized information about city services so that I know what to expect.
--Task 1: Register for services
--Task 2: Get categorized information
-Epic 4: Design citizen feedback form
--Sub-Epic 1: Planning
--User Story 1: As a Citizen, I want to provide feedback on city services so that I can make improvements.
--Task 1: Submit feedback
--Task 2: Review feedback
-Epic 5: Launch pilot phase
--Sub-Epic 1: Planning
--User Story 1: As a Citizen, I want to participate in a pilot phase of the CityComm platform so that I can test new features and give suggestions.
--Task 1: Join pilot program
--Task 2: Test new features
+-User Story 1: As a Product Manager, I want to create a venue suggestion engine so that users can easily find suitable venues for their events.
+-Task 1: Create a database of available venues
+-Task 2: Develop algorithms to suggest venues based on location, capacity, and other factors
+Epic 2: Implement vendor matching algorithm
+-Sub-Epic 1: Build
+-User Story 1: As a Venue Specialist, I want to be able to match vendors with our clients so that they receive the best possible service.
+-Task 1: Develop a matching algorithm using data from previous client interactions
+-Task 2: Ensure compatibility between vendors and clients through communication and feedback
+Epic 3: Create task management system
+-Sub-Epic 1: Task Management
+-User Story 1: As a Event Planner, I want to manage tasks related to my events so that I can stay organized and efficient.
+-Task 1: Create a task management system to track all aspects of an event
+-Task 2: Automate reminders and notifications to ensure timely completion of tasks
+Epic 4: Integrate real-time notifications
+-Sub-Epic 1: Real-Time Notifications
+-User Story 1: As a User, I want to receive real-time updates about my events so that I can stay informed and responsive.
+-Task 1: Implement real-time notification functionality to alert users of upcoming events
+-Task 2: Ensure notifications are accurate and relevant to users' interests and schedules
+Epic 5: Design scheduling tools
+-Sub-Epic 1: Scheduling Tools
+-User Story 1: As a Venue Specialist, I want to schedule events efficiently so that we can maximize our resources.
+-Task 1: Develop scheduling tools to optimize event timelines and logistics
+-Task 2: Ensure smooth transitions between different stages of an event

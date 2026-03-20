@@ -11,9 +11,17 @@
     "db:studio": "prisma studio",
     "seed": "node scripts/seed.js",
     "seed:reset": "node scripts/seed.js --reset",
-    "test": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js",
-    "test:watch": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --watch",
-    "test:coverage": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --coverage"
+    "seed:master": "node scripts/seed-master.js",
+    "seed:master:reset": "node scripts/seed-master.js --reset",
+    "test:unit": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --runInBand src/__tests__/unit",
+    "test:integration": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --runInBand src/__tests__/integration",
+    "test": "npm run test:unit && npm run test:integration",
+    "test:db-health": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --config jest.db-health.config.js --runInBand",
+    "test:all": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --runInBand",
+    "test:parallel": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js",
+    "test:watch": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --watch --runInBand",
+    "test:coverage": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --coverage --runInBand",
+    "smoke:ai-integration": "node scripts/smoke-ai-backend-integration.mjs"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.5.0",
@@ -42,6 +50,7 @@
   },
   "devDependencies": {
     "jest": "^29.7.0",
+    "pdf-lib": "^1.17.1",
     "prisma": "^7.5.0",
     "supertest": "^6.3.4"
   }

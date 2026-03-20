@@ -5,6 +5,7 @@ import Sidebar from "../../components/sidebarLayout";
 import { useTheme } from "../../components/themeContext";
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { API_BASE_URL } from "../../config/api";
+import { TokenManager } from "../../services/TokenManager";
 import LoadingSpinner from '../../components/LoadingSpinner';
 import RegenerationSuccessModal from '../../components/RegenerationSuccessModal';
 import { useToast } from '../../components/ToastContext';
@@ -113,11 +114,46 @@ export default function ProjectDetailsUI() {
   const AI_API_BASE_URL = `${API_BASE_URL}/ai`;
 
 
-  const getAuthHeaders = () => {
-    const token = sessionStorage.getItem('token');
+  const getAuthHeaders = (): Record<string, string> => {
+    const token = TokenManager.getToken();
+    const h: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (token) h['Authorization'] = `Token ${token}`;
+    return h;
+  };
+
+  const mapApiBacklogToState = (data: { epics?: any[] } | any[] | null | undefined) => {
+    const epicList = Array.isArray(data) ? data : (data?.epics || []);
     return {
-      'Authorization': `Token ${token}`,
-      'Content-Type': 'application/json',
+      epics: epicList.map((epic: any) => ({
+        id: epic.id,
+        title: epic.title,
+        description: epic.description,
+        ai: epic.ai,
+        is_complete: epic.is_complete || false,
+        subEpics: (epic.sub_epics || []).map((subEpic: any) => ({
+          id: subEpic.id,
+          title: subEpic.title,
+          ai: subEpic.ai,
+          is_complete: subEpic.is_complete || false,
+          userStories: (subEpic.user_stories || []).map((story: any) => ({
+            id: story.id,
+            title: story.title,
+            ai: story.ai,
+            is_complete: story.is_complete || false,
+            tasks: (story.tasks || []).map((task: any) => ({
+              id: task.id,
+              title: task.title,
+              status: task.status,
+              ai: task.ai,
+              assignee: task.assignee,
+              assignee_details: task.assignee_details,
+              commit_title: task.commit_title,
+              commit_branch: task.commit_branch,
+              due_date: task.due_date || null
+            }))
+          }))
+        }))
+      }))
     };
   };
 
@@ -206,11 +242,12 @@ export default function ProjectDetailsUI() {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      await response.json();
-      
-
+      const body = await response.json();
+      const fromPut = mapApiBacklogToState(body);
+      if (fromPut.epics.length > 0) {
+        setBacklog(fromPut);
+      }
       await fetchBacklog();
-      
 
       setRegenerationType('backlog');
       setShowRegenerationModal(true);
@@ -327,40 +364,7 @@ export default function ProjectDetailsUI() {
 
       const data = await response.json();
 
-      const transformedBacklog = {
-        epics: (data.epics || []).map((epic: any) => ({
-          id: epic.id,
-          title: epic.title,
-          description: epic.description,
-          ai: epic.ai,
-          is_complete: epic.is_complete || false,
-          subEpics: (epic.sub_epics || []).map((subEpic: any) => ({
-            id: subEpic.id,
-            title: subEpic.title,
-            ai: subEpic.ai,
-            is_complete: subEpic.is_complete || false,
-            userStories: (subEpic.user_stories || []).map((story: any) => ({
-              id: story.id,
-              title: story.title,
-              ai: story.ai,
-              is_complete: story.is_complete || false,
-              tasks: (story.tasks || []).map((task: any) => ({
-                id: task.id,
-                title: task.title,
-                status: task.status,
-                ai: task.ai,
-                assignee: task.assignee,
-                assignee_details: task.assignee_details,
-                commit_title: task.commit_title,
-                commit_branch: task.commit_branch,
-                due_date: task.due_date || null
-              }))
-            }))
-          }))
-        }))
-      };
-
-      setBacklog(transformedBacklog);
+      setBacklog(mapApiBacklogToState(data));
       return {};
     } catch (error) {
       setBacklog({ epics: [] });
@@ -413,16 +417,20 @@ export default function ProjectDetailsUI() {
       });
 
       if (!response.ok) {
-        if (response.status === 404 || response.status === 403) return [];
+        if (response.status === 404 || response.status === 403) {
+          setPendingInvitations([]);
+          return [];
+        }
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       const data = await response.json();
-      
-
-      const pendingInvitations = data.filter((invitation: any) => invitation.status === 'pending');
+      const list = Array.isArray(data) ? data : data.invitations ?? [];
+      const pendingInvitations = list.filter((invitation: any) => invitation.status === 'pending');
+      setPendingInvitations(pendingInvitations);
       return pendingInvitations;
     } catch {
+      setPendingInvitations([]);
       return [];
     }
   };
@@ -438,9 +446,7 @@ export default function ProjectDetailsUI() {
 
       if (response.ok) {
         showSuccess('Invitation Cancelled', 'The invitation has been cancelled successfully.');
-
-        const updatedInvitations = await fetchPendingInvitations();
-        setPendingInvitations(updatedInvitations);
+        await fetchPendingInvitations();
       } else {
         const errorData = await response.json();
         showError('Cancellation Failed', `Failed to cancel invitation: ${errorData.message || 'Unknown error'}`);
@@ -588,8 +594,7 @@ export default function ProjectDetailsUI() {
             fetchRepositories(),
             fetchCurrentProposal()
           ]);
-          const invitations = await fetchPendingInvitations();
-          setPendingInvitations(invitations);
+          await fetchPendingInvitations();
 
           const getResult = (s: PromiseSettledResult<any>) => (s.status === 'fulfilled' ? s.value : {});
           const projectResult = getResult(settled[0]);
@@ -651,15 +656,16 @@ export default function ProjectDetailsUI() {
         showRealtimeUpdate('Task Updated', message, data.actor);
       },
       onMemberUpdate: (data) => {
-        
-        const message = data.action === 'joined' 
-          ? `${data.actor.name} joined the project`
-          : `${data.actor.name} left the project`;
-        
+        const actorName = data.actor?.name ?? 'Someone';
+        const message =
+          data.action === 'removed' || data.action === 'left'
+            ? `${actorName} left the project`
+            : `${actorName} joined the project`;
+
         showRealtimeUpdate('Team Updated', message, data.actor);
 
         fetchMembers();
-        fetchPendingInvitations();
+        void fetchPendingInvitations();
       },
       onRepositoryUpdate: (data) => {
         showRealtimeUpdate('Repository Updated', `Repository ${data.action}`, data.actor);
@@ -891,8 +897,7 @@ export default function ProjectDetailsUI() {
         setShowInviteModal(false);
 
         fetchMembers();
-        const updatedInvitations = await fetchPendingInvitations();
-        setPendingInvitations(updatedInvitations);
+        await fetchPendingInvitations();
       } else {
         const errorData = await response.json();
         console.error('Failed to send invitation:', errorData);

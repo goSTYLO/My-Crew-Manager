@@ -17,6 +17,8 @@ Used by [project_overview.py](project_overview.py) with `--json-out`.
 
 `saveOverviewToDb` also accepts timeline week `goals` entries as **plain strings** (see controller); the parser emits `{ title }` objects, which the controller maps with `g.title`.
 
+**List sections (`_parse_list_block`):** If the model puts multiple features, roles, or goals on one line (comma-separated) or in brackets like `[A, B, C]`, the parser splits them so each string becomes its own Prisma row (`ai_api_projectfeature`, `ai_api_projectrole`, `ai_api_projectgoal`).
+
 **Edge case:** Overview text must use a line matching `Title:` (see `_extract_sections`). A lowercase-only `title:` line may not populate `title`.
 
 ## Backlog JSON (`parse_backlog_text`)
@@ -35,18 +37,15 @@ Used by [project_backlog.py](project_backlog.py) with `--json-out`.
 
 **Conclusion:** CLI + `generated_parsers` outputs are **ready to persist** using the same shapes `saveOverviewToDb` / `saveBacklogToDb` expect.
 
+## Node `part1_json` → overview dict
+
+[`part1_json_string_to_overview_dict`](generated_parsers.py) converts the JSON string built in `ai.controller.js` (`summary`, `roles`, `features`, `goals` with `{ epic, role }`, `timeline` with `week1`…`weekN`) into the same overview-shaped dict used by `generate_backlog_from_part1`, so Model 2 always receives the training-style Part 1 prompt.
+
 ## FastAPI microservice ([main.py](main.py))
 
-The HTTP service uses **different inference code** than the notebook/CLI path:
-
-- **POST `/generate-overview`** → [routers/overview.py](routers/overview.py) → `llms.project_llm.run_pipeline_from_text` + `model_to_dict`.
-- **POST `/generate-backlog`** → [routers/backlog.py](routers/backlog.py) → `llms.backlog_llm.run_backlog_pipeline`.
-
-`model_to_dict` ([project_llm.py](llms/project_llm.py)) returns `goals` as `{title, role}` and `timeline[].goals` as **strings** per week — still compatible with `saveOverviewToDb` and with `buildPart1Timeline` in `ai.controller.js`.
+Routers [`routers/overview.py`](routers/overview.py) and [`routers/backlog.py`](routers/backlog.py) call **`notebook_step_inference`** (Model 1 / Model 2 LoRA) and **`generated_parsers`** to produce JSON responses aligned with the Node controller. The older **`llms/`** package (`project_llm`, `backlog_llm`) is no longer used by these HTTP endpoints (still in the repo for reference or scripts).
 
 Pydantic response models ([schemas/overview.py](schemas/overview.py), [schemas/backlog.py](schemas/backlog.py)) match what `callAIService` passes through to `saveOverviewToDb` / `saveBacklogToDb`.
-
-**Implication:** Backend **can** receive and store responses from the current FastAPI service. For **parity** with your tuned `notebook_step_inference` + `generated_parsers` tests, the routers would need to call that pipeline (or share one implementation) — quality may differ until then.
 
 ## Backend request/response flow
 

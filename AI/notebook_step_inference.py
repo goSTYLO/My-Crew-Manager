@@ -16,6 +16,7 @@ from backlog_minimal_strict_prompt import (
     minimal_strict_retry_suffix,
     minimal_strict_second_retry_suffix,
 )
+from generated_parsers import normalize_overview_glued_headers
 
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
@@ -72,6 +73,20 @@ def unload_overview_model() -> None:
     old_m, old_t = _overview_model, _overview_tokenizer
     _overview_model = None
     _overview_tokenizer = None
+    del old_m, old_t
+    gc.collect()
+    if torch.cuda.is_available():
+        torch.cuda.synchronize()
+        torch.cuda.empty_cache()
+    gc.collect()
+
+
+def unload_backlog_model() -> None:
+    """Unload backlog model only. Frees VRAM after backlog generation."""
+    global _backlog_model, _backlog_tokenizer
+    old_m, old_t = _backlog_model, _backlog_tokenizer
+    _backlog_model = None
+    _backlog_tokenizer = None
     del old_m, old_t
     gc.collect()
     if torch.cuda.is_available():
@@ -339,11 +354,20 @@ def _extract_role_items(roles_block: str) -> list[str]:
 
 
 def _role_category_hits(roles_list: list[str]) -> dict[str, bool]:
+    """Detect whether Roles cover PM / backend / frontend buckets (for default backfill)."""
     low = [r.lower() for r in roles_list]
+
+    def has_project(r: str) -> bool:
+        if "project" in r or "product manager" in r or "program manager" in r:
+            return True
+        return bool(re.search(r"\bpm\b", r))
+
     return {
-        "project": any("project" in r for r in low),
+        "project": any(has_project(r) for r in low),
         "backend": any("backend" in r for r in low),
-        "frontend": any("frontend" in r or "front end" in r for r in low),
+        "frontend": any(
+            "frontend" in r or "front end" in r or "front-end" in r for r in low
+        ),
     }
 
 
@@ -368,6 +392,15 @@ def _extract_sections_overview(text: str) -> dict[str, str]:
 
 
 def _backfill_roles(response: str) -> str:
+    """
+    Model 1 fallback: if Roles lack obvious PM / backend / frontend coverage (keyword
+    detection on each role line), append the missing defaults:
+    Project Manager, Backend Developer, Frontend Developer.
+    Skipped when all three buckets already match (including Product Manager / PM for "project").
+    Set OVERVIEW_DISABLE_ROLE_BACKFILL=1 to disable.
+    """
+    if os.getenv("OVERVIEW_DISABLE_ROLE_BACKFILL", "").strip().lower() in {"1", "true", "yes", "on"}:
+        return response
     sections = _extract_sections_overview(response)
     roles_block = sections.get("roles", "")
     role_items = _extract_role_items(roles_block)
@@ -378,13 +411,17 @@ def _backfill_roles(response: str) -> str:
     missing = [d for cat, d in defaults if not hits[cat]]
     if not missing:
         return response
-    pat = r"(^Roles\s*:\s*)(.*?)(?=^[A-Z][a-zA-Z]+\s*:|\Z)"
+    # Use [\s\S]*? not .*? — without DOTALL, . does not match newlines, so re.sub
+    # never matched typical multiline "- Role" lists and backfill silently never ran.
+    pat = r"(^Roles\s*:\s*)([\s\S]*?)(?=^(?:Title|Summary|Roles|Features|Goals|Timeline)\s*:|\Z)"
+
     def add(m):
         h, c = m.group(1), m.group(2)
         for role in missing:
             if not re.search(rf"(?i){re.escape(role)}", c):
                 c = c.rstrip() + f"\n- {role}"
         return h + c
+
     return re.sub(pat, add, response, flags=re.MULTILINE | re.IGNORECASE)
 
 
@@ -428,6 +465,7 @@ def _sanitize_response_overview(response: str, proposal: str) -> str:
         text = re.sub(r"(?ims)^\s*Timeline\s*:\s*[\s\S]*$", "\n".join(_default_timeline_block()), text, count=1)
     text, _ = _dedupe_and_truncate_sections(text)
     text = text.strip()
+    text = normalize_overview_glued_headers(text)
     text = _backfill_roles(text)
     return text
 
@@ -483,43 +521,47 @@ def _fails_quality_gate(score: dict) -> bool:
 
 
 def generate_overview_proposal(proposal_text: str) -> str:
-    """Generate project overview (Model 1) from raw proposal. Strategy B; C fallback if enabled."""
-    model, tokenizer = _load_overview_model()
-    bad_ids = [tokenizer(x, add_special_tokens=False).input_ids for x in _BAD_PHRASES]
-    bad_ids = [x for x in bad_ids if x]
+    """Generate project overview (Model 1) from raw proposal. Strategy B; C fallback if enabled.
+    Unloads overview model when done to free VRAM."""
+    try:
+        model, tokenizer = _load_overview_model()
+        bad_ids = [tokenizer(x, add_special_tokens=False).input_ids for x in _BAD_PHRASES]
+        bad_ids = [x for x in bad_ids if x]
 
-    def _generate(prompt: str, max_tokens: int = TOKENS_OVERVIEW_B) -> str:
-        inputs = tokenizer(prompt, return_tensors="pt")
-        if torch.cuda.is_available():
-            inputs = {k: v.cuda() for k, v in inputs.items()}
-        with torch.inference_mode():
-            out = model.generate(
-                **inputs,
-                max_new_tokens=max_tokens,
-                pad_token_id=tokenizer.eos_token_id,
-                eos_token_id=tokenizer.eos_token_id,
-                do_sample=False,
-                repetition_penalty=1.05,
-                no_repeat_ngram_size=4,
-                bad_words_ids=bad_ids,
-            )
-        return tokenizer.decode(out[0][inputs["input_ids"].shape[1]:], skip_special_tokens=True).strip()
+        def _generate(prompt: str, max_tokens: int = TOKENS_OVERVIEW_B) -> str:
+            inputs = tokenizer(prompt, return_tensors="pt")
+            if torch.cuda.is_available():
+                inputs = {k: v.cuda() for k, v in inputs.items()}
+            with torch.inference_mode():
+                out = model.generate(
+                    **inputs,
+                    max_new_tokens=max_tokens,
+                    pad_token_id=tokenizer.eos_token_id,
+                    eos_token_id=tokenizer.eos_token_id,
+                    do_sample=False,
+                    repetition_penalty=1.05,
+                    no_repeat_ngram_size=4,
+                    bad_words_ids=bad_ids,
+                )
+            return tokenizer.decode(out[0][inputs["input_ids"].shape[1]:], skip_special_tokens=True).strip()
 
-    guided = _get_guided_prefix_overview()
-    prompt_b = guided + proposal_text
-    raw_b = _generate(prompt_b, TOKENS_OVERVIEW_B)
-    clean_b = _sanitize_response_overview(raw_b, proposal_text)
-    b_score = _compliance_score_overview(clean_b)
+        guided = _get_guided_prefix_overview()
+        prompt_b = guided + proposal_text
+        raw_b = _generate(prompt_b, TOKENS_OVERVIEW_B)
+        clean_b = _sanitize_response_overview(raw_b, proposal_text)
+        b_score = _compliance_score_overview(clean_b)
 
-    should_run_c = ENABLE_CONDITIONAL_C_FALLBACK and _fails_quality_gate(b_score)
-    if should_run_c:
-        prompt_c = guided + proposal_text + "\n\n==="
-        raw_c = _generate(prompt_c, TOKENS_OVERVIEW_C)
-        clean_c = _sanitize_response_overview("===" + raw_c, proposal_text)
-        c_score = _compliance_score_overview(clean_c)
-        if c_score["score"] > b_score["score"]:
-            return clean_c
-    return clean_b
+        should_run_c = ENABLE_CONDITIONAL_C_FALLBACK and _fails_quality_gate(b_score)
+        if should_run_c:
+            prompt_c = guided + proposal_text + "\n\n==="
+            raw_c = _generate(prompt_c, TOKENS_OVERVIEW_C)
+            clean_c = _sanitize_response_overview("===" + raw_c, proposal_text)
+            c_score = _compliance_score_overview(clean_c)
+            if c_score["score"] > b_score["score"]:
+                return clean_c
+        return clean_b
+    finally:
+        unload_overview_model()
 
 
 # --- Backlog (Step 6) ---
@@ -1158,4 +1200,7 @@ def generate_backlog_from_part1(part1: str | dict) -> str:
         clean_b = _sanitize_backlog_response(raw_b)
         clean_b = _repair_backlog_flat_shape(clean_b, goal_titles)
 
-    return clean_b
+    try:
+        return clean_b
+    finally:
+        unload_backlog_model()

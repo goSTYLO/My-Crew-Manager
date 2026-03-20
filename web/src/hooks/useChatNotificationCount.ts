@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { API_BASE_URL } from '../config/api';
+import { TokenManager } from '../services/TokenManager';
 
 export const useChatNotificationCount = () => {
   const [unreadCount, setUnreadCount] = useState<number>(0);
@@ -27,7 +28,7 @@ export const useChatNotificationCount = () => {
   // Fetch initial count (memoized with useCallback)
   const fetchUnreadCount = useCallback(async () => {
     try {
-      const token = sessionStorage.getItem('token');
+      const token = TokenManager.getToken();
       if (!token) return;
 
       const response = await fetch(`${API_BASE_URL}/chat/rooms/unread-count/`, {
@@ -73,7 +74,7 @@ export const useChatNotificationCount = () => {
     wsRef.current.onclose = (event) => {
       if (event.code !== 1000 && event.code !== 1001) {
         setTimeout(() => {
-          const token = sessionStorage.getItem('token');
+          const token = TokenManager.getToken();
           if (token && (!wsRef.current || wsRef.current.readyState === WebSocket.CLOSED)) {
             fetchUnreadCount();
           }

@@ -526,9 +526,9 @@ export async function generateBacklog(req, res, next) {
     if (result.error) return res.status(result.status).json(result.data);
 
     await saveBacklogToDb(projectId, result.data);
-    const backlog = await getProjectBacklogData(projectId);
-    broadcastToProject(projectId, 'backlog_regenerated', 'regenerated', backlog, req.user);
-    return res.json(backlog);
+    const epics = await getProjectBacklogData(projectId);
+    broadcastToProject(projectId, 'backlog_regenerated', 'regenerated', epics, req.user);
+    return res.json({ epics });
   } catch (err) {
     next(err);
   }

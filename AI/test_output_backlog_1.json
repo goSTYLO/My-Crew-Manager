@@ -1,7 +1,7 @@
 {
   "epics": [
     {
-      "title": "Develop issue reporting feature",
+      "title": "Develop a venue suggestion engine",
       "description": null,
       "ai": true,
       "sub_epics": [
@@ -10,16 +10,26 @@
           "ai": true,
           "user_stories": [
             {
-              "title": "As a Citizen, I want to report an issue so that my problem can be fixed.",
+              "title": "As a Product Manager, I want to create a venue suggestion engine so that users can easily find suitable venues for their events.",
               "ai": true,
               "tasks": [
                 {
-                  "title": "Create an account",
+                  "title": "Create a database of available venues",
                   "status": "pending",
                   "ai": true
                 },
                 {
-                  "title": "Search for an issue",
+                  "title": "Develop algorithms to suggest venues based on location",
+                  "status": "pending",
+                  "ai": true
+                },
+                {
+                  "title": "capacity",
+                  "status": "pending",
+                  "ai": true
+                },
+                {
+                  "title": "and other factors",
                   "status": "pending",
                   "ai": true
                 }
@@ -30,25 +40,25 @@
       ]
     },
     {
-      "title": "Implement service access",
+      "title": "Implement vendor matching algorithm",
       "description": null,
       "ai": true,
       "sub_epics": [
         {
-          "title": "Planning",
+          "title": "Build",
           "ai": true,
           "user_stories": [
             {
-              "title": "As a Citizen, I want to access city services so that I can get help when needed.",
+              "title": "As a Venue Specialist, I want to be able to match vendors with our clients so that they receive the best possible service.",
               "ai": true,
               "tasks": [
                 {
-                  "title": "Sign up for services",
+                  "title": "Develop a matching algorithm using data from previous client interactions",
                   "status": "pending",
                   "ai": true
                 },
                 {
-                  "title": "Find available services",
+                  "title": "Ensure compatibility between vendors and clients through communication and feedback",
                   "status": "pending",
                   "ai": true
                 }
@@ -59,25 +69,25 @@
       ]
     },
     {
-      "title": "Train AI for categorisation",
+      "title": "Create task management system",
       "description": null,
       "ai": true,
       "sub_epics": [
         {
-          "title": "Planning",
+          "title": "Task Management",
           "ai": true,
           "user_stories": [
             {
-              "title": "As a Citizen, I want to receive categorized information about city services so that I know what to expect.",
+              "title": "As a Event Planner, I want to manage tasks related to my events so that I can stay organized and efficient.",
               "ai": true,
               "tasks": [
                 {
-                  "title": "Register for services",
+                  "title": "Create a task management system to track all aspects of an event",
                   "status": "pending",
                   "ai": true
                 },
                 {
-                  "title": "Get categorized information",
+                  "title": "Automate reminders and notifications to ensure timely completion of tasks",
                   "status": "pending",
                   "ai": true
                 }
@@ -88,25 +98,25 @@
       ]
     },
     {
-      "title": "Design citizen feedback form",
+      "title": "Integrate real-time notifications",
       "description": null,
       "ai": true,
       "sub_epics": [
         {
-          "title": "Planning",
+          "title": "Real-Time Notifications",
           "ai": true,
           "user_stories": [
             {
-              "title": "As a Citizen, I want to provide feedback on city services so that I can make improvements.",
+              "title": "As a User, I want to receive real-time updates about my events so that I can stay informed and responsive.",
               "ai": true,
               "tasks": [
                 {
-                  "title": "Submit feedback",
+                  "title": "Implement real-time notification functionality to alert users of upcoming events",
                   "status": "pending",
                   "ai": true
                 },
                 {
-                  "title": "Review feedback",
+                  "title": "Ensure notifications are accurate and relevant to users' interests and schedules",
                   "status": "pending",
                   "ai": true
                 }
@@ -117,25 +127,25 @@
       ]
     },
     {
-      "title": "Launch pilot phase",
+      "title": "Design scheduling tools",
       "description": null,
       "ai": true,
       "sub_epics": [
         {
-          "title": "Planning",
+          "title": "Scheduling Tools",
           "ai": true,
           "user_stories": [
             {
-              "title": "As a Citizen, I want to participate in a pilot phase of the CityComm platform so that I can test new features and give suggestions.",
+              "title": "As a Venue Specialist, I want to schedule events efficiently so that we can maximize our resources.",
               "ai": true,
               "tasks": [
                 {
-                  "title": "Join pilot program",
+                  "title": "Develop scheduling tools to optimize event timelines and logistics",
                   "status": "pending",
                   "ai": true
                 },
                 {
-                  "title": "Test new features",
+                  "title": "Ensure smooth transitions between different stages of an event",
                   "status": "pending",
                   "ai": true
                 }

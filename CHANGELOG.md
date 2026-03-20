@@ -4,6 +4,11 @@
 
 ### Changed
 
+- **Web** - Remember Me / refresh: `RememberMeHandler` no longer calls `refresh-token` when a session token already exists (fixes stale React state forcing refresh on every load; avoids wiping sessions when no HTTP-only refresh cookie). `LoginController.checkRememberMeSession` short-circuits if `TokenManager.hasToken()`. `TokenManager.performRefresh` does not `clearAll()` when the server reports missing refresh token but an access token is still present.
+- **Web** - Project backlog: `PUT .../generate-backlog/` response is normalized the same as `GET .../backlog/` (supports `{ epics }` or a raw array); UI applies PUT payload before refetch. **backend-node** `generateBacklog` now returns `{ epics }` to match the GET shape.
+- **Web** - **Project details** (`monitor_created.tsx`): `fetchPendingInvitations` now updates `pendingInvitations` state (it previously only returned an array). Realtime `member_update` therefore clears the pending-invite list when a dev accepts without a full page refresh. Response shape supports either a raw array or `{ invitations }`.
+- **Web** - Create Project wizard (`generateProject.tsx`): AI ingest response from **backend-node** is flat (`summary`, `roles`, `features`, …), not nested under `llm` (Django). Step 4 now reads both shapes and normalizes timeline goal objects to strings. `fetchBacklog` tolerates missing `epics` and nested arrays from the API.
+- **Web** - Reduced dev console noise in auth/WebSocket paths (`LoginController`, `TokenManager`, `WebSocketContext`, `apiClient`); `getAuthHeaders` on project details uses `TokenManager`; chat unread hook reads token via `TokenManager`.
 - **AI** - `TrainModel2_Backlog.ipynb` Step 6: replaced `TRAINING_EXACT_PROMPT_ONLY` / `SHORT_BACKLOG_CUE` with **`PROMPT_MODE`** (`minimal_strict` default, `training_exact`, `legacy`); added compact `_minimal_strict_guide()` after Part 1 for fewer markdown/timeline hallucinations.
 - **AI** - Model 2 microservice / `notebook_step_inference.generate_backlog_from_part1`: default **`BACKLOG_PROMPT_MODE=minimal_strict`** (shared [`backlog_minimal_strict_prompt.py`](AI/backlog_minimal_strict_prompt.py)) to match Step 6; `legacy` retains old guided `Input/Backlog` path.
 - **AI** - Backlog generation token budgets match Step 6 for non-legacy (**420** / retry **500**); `_sanitize_backlog_response` strips prompt-echo lines and stops at “The following are some examples…”-style meta.
@@ -14,8 +19,13 @@
 - **AI** - **`_extract_goal_epic_titles`**: no longer stops at the first blank line inside **Goals** (fixes single-epic token budget when bullets are separated by empty lines); backlog meta strip cuts at **Note:** / completion boilerplate; adaptive **`max_new_tokens`** / **`repetition_penalty`** tuned for 6+ goals.
 - **AI** - **`BACKLOG_MAX_GOALS_FED`** (default **5**): truncate Part 1 **Goals** to the first N items before Model 2 (aligns with training; set **0** for no cap).
 - **AI** - Backlog recovery: **retry pass** uses lower **`_backlog_retry_repetition_penalty`**; optional **second retry** (`BACKLOG_ENABLE_SECOND_RETRY`, default off); **`_repair_backlog_flat_shape`** now **dedupes** a second `Epic 1:` run, **snaps** `Epic N:` titles to **Goals**, normalizes **Sub-Epic/User Story** indices to 1, strips guide-echo parentheticals.
+- **backend-node** - [`api.full-coverage.test.js`](backend-node/src/__tests__/integration/api.full-coverage.test.js): proposal upload includes **`project_id`**; asserts **201** with `proposal_id` / preview fields or **500** with PDF parse error (no loose 400/415 bucket).
 
 ### Added
+
+- **backend-node** - **`npm run test:db-health`**: separate Jest config (`jest.db-health.config.js`) and [`setup-db-health.js`](backend-node/src/__tests__/setup-db-health.js) that requires **`DATABASE_URL` or `POSTGRES_URI`** (no default). [`database.health.test.js`](backend-node/src/__tests__/integration/database.health.test.js) runs `$connect`, `SELECT 1`, and `count()` on each Prisma delegate. Root [`jest.config.js`](backend-node/jest.config.js) ignores this file so `npm test` stays focused on unit + app integration suites.
+- **backend-node** - [`websocket.realtime.test.js`](backend-node/src/__tests__/integration/websocket.realtime.test.js): HTTP server + [`setupRealtimeServer`](backend-node/src/realtime/index.js) verifies `/ws/project-updates/` accepts a Django-style `Token` query string and returns a **`connected`** payload; missing token expects **401** on upgrade.
+- **backend-node** - README: document `DATABASE_URL` / `POSTGRES_URI`, integration suite list, and `test:db-health`.
 
 - **AI LLM Optimization (Phase 1–3)**:
   - `MODEL_ID` and `PEFT_ADAPTER_PATH` env vars for configurable model and LoRA adapter

@@ -1,50 +1,55 @@
 {
-  "title": "CityComm",
-  "summary": "CityComm is a city service platform that connects citizens with city services through an online portal. It uses TypeScript for the backend and React frontend. The platform integrates with Google maps and AI for service categorization. It aims to reduce citizen frustration and improve service delivery.",
-  "features": [
-    "Issue Reporting",
-    "Service Access",
-    "Categorization",
-    "Citizen Feedback",
-    "Pilot Phase",
-    "Full Scale Implementation",
-    "Survey Evaluation",
-    "Citizen Advocacy"
-  ],
+  "title": "EventEasePro",
+  "summary": "EventEase Pro is an AI-powered event planning tool designed to simplify venue selection, vendor coordination, and task management. It offers advanced scheduling features and real-time notifications to enhance organizational efficiency.",
+  "features": [],
   "roles": [
-    "Backend Developer",
-    "Frontend Developer",
+    "Product Manager",
     "AI Engineer",
-    "Map Engineer",
-    "Citizen Advocate"
+    "UX Designer",
+    "Event Planner",
+    "Venue Specialist",
+    "Backend Developer",
+    "Frontend DeveloperFeatures:",
+    "Venue Suggestion Engine",
+    "Vendor Matching Algorithm",
+    "Task Management System",
+    "Real-Time Notifications",
+    "Scheduling Tools",
+    "Goals:",
+    "Develop a venue suggestion engine",
+    "Implement vendor matching algorithm",
+    "Create task management system",
+    "Integrate real-time notifications",
+    "Design scheduling tools",
+    "Timeline:",
+    "Week 1: Define scope from goals",
+    "Design feature architecture",
+    "Week 2: Implement core backend flows",
+    "Build frontend interfaces",
+    "Week 3: Integrate modules and APIs",
+    "Validate end-to-end behavior",
+    "Week 4: Run QA and bug fixes",
+    "Deploy and monitor release"
   ],
   "goals": [
     {
-      "title": "Develop issue reporting feature",
+      "title": "Develop a venue suggestion engine",
       "role": null
     },
     {
-      "title": "Implement service access",
+      "title": "Implement vendor matching algorithm",
       "role": null
     },
     {
-      "title": "Train AI for categorisation",
+      "title": "Create task management system",
       "role": null
     },
     {
-      "title": "Design citizen feedback form",
+      "title": "Integrate real-time notifications",
       "role": null
     },
     {
-      "title": "Launch pilot phase",
-      "role": null
-    },
-    {
-      "title": "Complete full-scale implementation",
-      "role": null
-    },
-    {
-      "title": "Evaluate citizen advocacy",
+      "title": "Design scheduling tools",
       "role": null
     }
   ],
