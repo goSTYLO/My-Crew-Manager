@@ -70,7 +70,17 @@ class ChatRemoteDataSource {
   Future<List<int>> listMembers(int roomId) async {
     final response = await dio.get('chat/rooms/$roomId/members/');
     final List<dynamic> data = response.data as List<dynamic>;
-    return data.map((e) => (e as Map<String, dynamic>)['user_id'] as int).toList();
+    return data.map((e) {
+      final userId = (e as Map<String, dynamic>)['user_id'];
+      if (userId is int) return userId;
+      if (userId is String) return int.tryParse(userId) ?? 0;
+      if (userId is num) return userId.toInt();
+      return 0;
+    }).where((id) => id > 0).toList();
+  }
+
+  Future<void> markRoomRead(int roomId) async {
+    await dio.post('chat/rooms/$roomId/mark_read/');
   }
 }
 

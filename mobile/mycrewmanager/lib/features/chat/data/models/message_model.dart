@@ -27,14 +27,21 @@ class MessageModel {
     this.isPending = false,
   });
 
+  static int _asInt(dynamic value, {int fallback = 0}) {
+    if (value is int) return value;
+    if (value is String) return int.tryParse(value) ?? fallback;
+    if (value is num) return value.toInt();
+    return fallback;
+  }
+
   factory MessageModel.fromJson(Map<String, dynamic> json) => MessageModel(
-        messageId: json['message_id'] as int,
-        roomId: json['room_id'] as int,
-        senderId: json['sender_id'] as int,
+        messageId: _asInt(json['message_id']),
+        roomId: _asInt(json['room_id']),
+        senderId: _asInt(json['sender_id']),
         senderUsername: json['sender_username'] as String? ?? '',
         content: json['content'] as String? ?? '',
         messageType: json['message_type'] as String? ?? 'text',
-        replyToId: json['reply_to_id'] as int?,
+        replyToId: json['reply_to_id'] == null ? null : _asInt(json['reply_to_id']),
         createdAt: json['created_at'] as String,
         editedAt: json['edited_at'] as String?,
         isDeleted: json['is_deleted'] as bool? ?? false,

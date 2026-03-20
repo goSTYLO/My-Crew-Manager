@@ -27,18 +27,30 @@ class InvitationLoaded extends InvitationState {
 
 class InvitationActionSuccess extends InvitationState {
   final String message;
+  final int? invitationId;
 
-  const InvitationActionSuccess(this.message);
+  const InvitationActionSuccess(this.message, {this.invitationId});
 
   @override
-  List<Object?> get props => [message];
+  List<Object?> get props => [message, invitationId];
 }
 
 class InvitationError extends InvitationState {
   final String message;
+  final int? invitationId;
 
-  const InvitationError(this.message);
+  const InvitationError(this.message, {this.invitationId});
 
   @override
-  List<Object?> get props => [message];
+  List<Object?> get props => [message, invitationId];
+}
+
+class InvitationActionInProgress extends InvitationState {
+  final int invitationId;
+  final bool isAccept;
+
+  const InvitationActionInProgress({required this.invitationId, required this.isAccept});
+
+  @override
+  List<Object?> get props => [invitationId, isAccept];
 }

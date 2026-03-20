@@ -9,6 +9,7 @@ import 'package:mycrewmanager/features/authentication/presentation/widgets/photo
 import 'package:mycrewmanager/features/authentication/presentation/widgets/custom_checkbox.dart';
 import 'package:mycrewmanager/features/authentication/presentation/pages/login_page.dart';
 import 'package:mycrewmanager/features/authentication/presentation/pages/signup_role_selection_page.dart';
+import 'package:mycrewmanager/features/authentication/presentation/pages/email_verification_page.dart';
 
 class SignUpPage extends StatefulWidget {
   static route({String? selectedRole}) => MaterialPageRoute(
@@ -111,7 +112,7 @@ class _SignUpPageState extends State<SignUpPage> {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: Colors.red.withOpacity(0.1),
+                  color: Colors.red.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: const Icon(
@@ -226,8 +227,11 @@ class _SignUpPageState extends State<SignUpPage> {
             }
           } else if (state is AuthSuccess) {
             if (ModalRoute.of(context)?.isCurrent ?? false) {
-              showSnackBar(context, "Account created successfully!", Colors.green);
-              Navigator.pushReplacement(context, LoginPage.route());
+              showSnackBar(context, "Account created. Verify your email to continue.", Colors.green);
+              Navigator.pushReplacement(
+                context,
+                EmailVerificationPage.route(email: _emailController.text.trim()),
+              );
             }
           }
         },

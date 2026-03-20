@@ -17,14 +17,21 @@ class RoomModel {
     this.unreadCount = 0,
   });
 
+  static int _asInt(dynamic value, {int fallback = 0}) {
+    if (value is int) return value;
+    if (value is String) return int.tryParse(value) ?? fallback;
+    if (value is num) return value.toInt();
+    return fallback;
+  }
+
   factory RoomModel.fromJson(Map<String, dynamic> json) => RoomModel(
-        roomId: json['room_id'] as int,
+        roomId: _asInt(json['room_id']),
         name: json['name'] as String?,
         isPrivate: json['is_private'] as bool? ?? false,
-        createdById: json['created_by_id'] as int,
+        createdById: _asInt(json['created_by_id']),
         createdAt: json['created_at'] as String,
-        membersCount: json['members_count'] as int? ?? 0,
-        unreadCount: json['unread_count'] as int? ?? 0,
+        membersCount: _asInt(json['members_count']),
+        unreadCount: _asInt(json['unread_count']),
       );
 
   RoomModel copyWith({

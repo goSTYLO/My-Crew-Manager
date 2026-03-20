@@ -1,4 +1,5 @@
 {
-    "java.configuration.updateBuildConfiguration": "interactive",
-    "avdmanager.sdkPath": "c:\\Users\\Aaron\\GitHub Repos\\My-Crew-Manager\\users"
+    "java.configuration.updateBuildConfiguration": "automatic",
+    "avdmanager.sdkPath": "c:\\Users\\Aaron\\GitHub Repos\\My-Crew-Manager\\users",
+    "java.search.scope": "all"
 }

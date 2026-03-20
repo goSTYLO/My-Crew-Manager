@@ -23,6 +23,8 @@ class _TaskOverviewPageState extends State<TaskOverviewPage> {
   late ProjectTask currentTask;
   final UpdateTaskStatus _updateTaskStatus = serviceLocator<UpdateTaskStatus>();
   bool isLoading = true;
+  bool _isUpdatingStatus = false;
+  String? _statusUpdateError;
 
   @override
   void initState() {
@@ -75,9 +77,16 @@ class _TaskOverviewPageState extends State<TaskOverviewPage> {
   }
 
   Future<void> _markTaskAsComplete() async {
+    if (_isUpdatingStatus) return;
+
     // Show dialog to get commit title
     final commitTitle = await _showCommitTitleDialog();
     if (commitTitle == null) return; // User cancelled
+
+    setState(() {
+      _isUpdatingStatus = true;
+      _statusUpdateError = null;
+    });
 
     final result = await _updateTaskStatus(UpdateTaskStatusParams(
       taskId: currentTask.id,
@@ -85,8 +94,13 @@ class _TaskOverviewPageState extends State<TaskOverviewPage> {
       commitTitle: commitTitle,
     ));
 
+    if (!mounted) return;
+
     result.fold(
       (failure) {
+        setState(() {
+          _statusUpdateError = failure.message;
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to update task: ${failure.message}')),
         );
@@ -101,6 +115,10 @@ class _TaskOverviewPageState extends State<TaskOverviewPage> {
         );
       },
     );
+
+    setState(() {
+      _isUpdatingStatus = false;
+    });
   }
 
   Future<String?> _showCommitTitleDialog() async {
@@ -357,6 +375,18 @@ class _TaskOverviewPageState extends State<TaskOverviewPage> {
                               const SizedBox(height: 24),
                               // Mark as Completed Button (only show for pending tasks assigned to current user)
                               if (currentTask.status.toLowerCase() == 'pending' && isAssignee) ...[
+                                if (_statusUpdateError != null) ...[
+                                  Padding(
+                                    padding: const EdgeInsets.only(bottom: 8),
+                                    child: Text(
+                                      _statusUpdateError!,
+                                      style: const TextStyle(
+                                        color: Colors.red,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                                 SizedBox(
                                   width: double.infinity,
                                   child: ElevatedButton(
@@ -368,14 +398,23 @@ class _TaskOverviewPageState extends State<TaskOverviewPage> {
                                         borderRadius: BorderRadius.circular(10),
                                       ),
                                     ),
-                                    onPressed: _markTaskAsComplete,
-                                    child: const Text(
-                                      "Mark as Complete",
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 16,
-                                      ),
-                                    ),
+                                    onPressed: _isUpdatingStatus ? null : _markTaskAsComplete,
+                                    child: _isUpdatingStatus
+                                        ? const SizedBox(
+                                            width: 20,
+                                            height: 20,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              color: Colors.white,
+                                            ),
+                                          )
+                                        : const Text(
+                                            "Mark as Complete",
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.w600,
+                                              fontSize: 16,
+                                            ),
+                                          ),
                                   ),
                                 ),
                               ] else if (currentTask.status.toLowerCase() == 'done') ...[

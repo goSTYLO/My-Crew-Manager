@@ -30,6 +30,26 @@ class InvitationRepositoryImpl implements InvitationRepository {
   }
 
   @override
+  Future<Either<Failure, List<Invitation>>> getSentInvitations(int currentUserId) async {
+    try {
+      if (!await connectionChecker.isConnected) {
+        return left(Failure(constants.Constants.noConnectionErrorMessage));
+      }
+
+      final response = await remoteDataSource.getSentInvitations();
+      final invitations = response
+          .whereType<Map<String, dynamic>>()
+          .map(InvitationModel.fromJson)
+          .where((invitation) => invitation.invitedById == currentUserId)
+          .toList();
+
+      return right(invitations);
+    } on DioException {
+      return left(Failure('Failed to load sent invitations. Try Again!'));
+    }
+  }
+
+  @override
   Future<Either<Failure, void>> acceptInvitation(int invitationId) async {
     try {
       if (!await connectionChecker.isConnected) {

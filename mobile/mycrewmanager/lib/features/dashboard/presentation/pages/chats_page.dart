@@ -39,6 +39,8 @@ class _ChatsPageState extends State<ChatsPage> {
   // Stream is listened immediately; no need to store
   bool _loading = true;
   bool _sending = false;
+  String? _error;
+  bool _wsConnected = false;
   StreamSubscription<dynamic>? _wsSubscription;
 
   @override
@@ -66,7 +68,9 @@ class _ChatsPageState extends State<ChatsPage> {
     final roomId = widget.roomId;
     try {
       final msgs = await _repo.listMessages(roomId, offset: offset, limit: limit);
+      if (!mounted) return;
       setState(() {
+        _error = null;
         if (offset == 0) {
           // First load - replace all messages
           _messages
@@ -85,6 +89,9 @@ class _ChatsPageState extends State<ChatsPage> {
           _scrollToBottom(animated: false);
         });
       }
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _error = 'Failed to load messages');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -93,6 +100,11 @@ class _ChatsPageState extends State<ChatsPage> {
   Future<void> _connectWs() async {
     try {
       final stream = await _ws.connectToRoom(widget.roomId);
+      if (!mounted) return;
+      setState(() {
+        _wsConnected = true;
+        _error = null;
+      });
       
       _wsSubscription = stream.listen(
         (event) {
@@ -147,12 +159,27 @@ class _ChatsPageState extends State<ChatsPage> {
           } else {
           }
         },
-        onError: (error) {
+        onError: (_) {
+          if (!mounted) return;
+          setState(() {
+            _wsConnected = false;
+            _error = 'Realtime connection lost';
+          });
         },
         onDone: () {
+          if (!mounted) return;
+          setState(() {
+            _wsConnected = false;
+            _error = 'Realtime connection closed';
+          });
         },
       );
     } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _wsConnected = false;
+        _error = 'Failed to connect realtime updates';
+      });
     }
   }
 
@@ -240,6 +267,33 @@ class _ChatsPageState extends State<ChatsPage> {
                 ),
               ),
               const SizedBox(height: 8),
+              if (_error != null)
+                Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF4E5),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.info_outline, color: Color(0xFFB45309), size: 16),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _error!,
+                          style: const TextStyle(color: Color(0xFF92400E), fontSize: 12),
+                        ),
+                      ),
+                      if (!_wsConnected)
+                        TextButton(
+                          onPressed: _connectWs,
+                          child: const Text('Retry'),
+                        ),
+                    ],
+                  ),
+                ),
               // Chat messages
               Expanded(
                 child: _loading
@@ -249,7 +303,9 @@ class _ChatsPageState extends State<ChatsPage> {
                         separatorBuilder: (_, __) => const SizedBox(height: 8),
                         itemBuilder: (_, __) => const ChatMessageSkeleton(),
                       )
-                    : ListView.builder(
+                    : RefreshIndicator(
+                        onRefresh: () => _loadMessages(offset: 0, limit: 100),
+                        child: ListView.builder(
                   controller: _scrollController,
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   itemCount: _messages.length,
@@ -373,6 +429,7 @@ class _ChatsPageState extends State<ChatsPage> {
                     );
                   },
                 ),
+                      ),
               ),
               // Input bar
               Padding(
@@ -447,7 +504,7 @@ class _ChatsPageState extends State<ChatsPage> {
     final optimisticMessage = MessageModel.optimistic(
       tempId: tempId,
       roomId: widget.roomId,
-      senderId: int.parse(currentUserId ?? '0'),
+      senderId: int.tryParse(currentUserId ?? '') ?? 0,
       senderUsername: currentUserName ?? 'You',
       content: text,
     );
@@ -464,25 +521,20 @@ class _ChatsPageState extends State<ChatsPage> {
     _controller.clear();
     
     try {
-      // Send to server (no await for UI responsiveness)
-      _repo.sendMessage(widget.roomId, text).then((sentMessage) {
-        // Server returned the message, but we'll let WebSocket handle the replacement
-        // to ensure all clients get the same confirmed message
-      }).catchError((e) {
-        // If sending fails, mark the optimistic message as failed
-        if (mounted) {
-          setState(() {
-            final index = _messages.indexWhere((m) => m.tempId == tempId);
-            if (index != -1) {
-              // Could add a 'failed' state to the model, or remove it
-              _messages.removeAt(index);
-            }
-          });
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Failed to send message: ${e.toString()}'))
-          );
-        }
-      });
+      await _repo.sendMessage(widget.roomId, text);
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          final index = _messages.indexWhere((m) => m.tempId == tempId);
+          if (index != -1) {
+            _messages.removeAt(index);
+          }
+          _error = 'Failed to send message';
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to send message: ${e.toString()}')),
+        );
+      }
     } finally {
       if (mounted) setState(() => _sending = false);
     }

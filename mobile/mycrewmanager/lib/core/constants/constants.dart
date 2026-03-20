@@ -15,7 +15,7 @@ class Constants {
   // For Physical Device: use "http://YOUR_IP:8001/api/"
   // To find your Windows IP: ipconfig | findstr /i "IPv4"
   // See mobile/docs/ALTERNATIVE_CONNECTION_METHOD.md for details
-  static const baseUrl = "http://10.0.2.2:8001/api/";
+  static const baseUrl = "http://192.168.1.4:8001/api/";
 
   static const noConnectionErrorMessage = 'No internet connection';
 }

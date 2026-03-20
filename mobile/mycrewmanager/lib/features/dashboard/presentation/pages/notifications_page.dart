@@ -11,6 +11,7 @@ import 'package:mycrewmanager/features/invitation/presentation/bloc/invitation_s
 import 'package:mycrewmanager/features/chat/data/services/chat_ws_service.dart';
 import 'package:mycrewmanager/features/dashboard/presentation/pages/chats_page.dart';
 import 'package:mycrewmanager/features/authentication/presentation/bloc/auth_bloc.dart';
+import 'package:mycrewmanager/features/invitation/presentation/pages/sent_invitations_page.dart';
 
 class NotificationsPage extends StatefulWidget {
   const NotificationsPage({super.key});
@@ -25,6 +26,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
   final _ws = GetIt.I<ChatWsService>();
   final List<Map<String, dynamic>> _messageNotifications = [];
   bool _wsConnected = false;
+  int? _processingInvitationId;
 
   @override
   void initState() {
@@ -108,6 +110,14 @@ class _NotificationsPageState extends State<NotificationsPage> {
 
   void _clearAll() {
     context.read<NotificationBloc>().add(const MarkAllAsRead());
+    setState(() {
+      _messageNotifications.clear();
+    });
+  }
+
+  Future<void> _refreshAll() async {
+    context.read<NotificationBloc>().add(const LoadNotifications());
+    context.read<InvitationBloc>().add(const LoadInvitations());
   }
 
 
@@ -218,6 +228,13 @@ class _NotificationsPageState extends State<NotificationsPage> {
         ),
         centerTitle: true,
         actions: [
+          IconButton(
+            tooltip: 'Sent Invitations',
+            icon: const Icon(Icons.send_rounded, color: Colors.black87),
+            onPressed: () {
+              Navigator.push(context, SentInvitationsPage.route());
+            },
+          ),
           BlocBuilder<NotificationBloc, NotificationState>(
             builder: (context, state) {
               bool hasNotifications = false;
@@ -262,7 +279,14 @@ class _NotificationsPageState extends State<NotificationsPage> {
           ),
           BlocListener<InvitationBloc, InvitationState>(
             listener: (context, state) {
-              if (state is InvitationActionSuccess) {
+              if (state is InvitationActionInProgress) {
+                setState(() {
+                  _processingInvitationId = state.invitationId;
+                });
+              } else if (state is InvitationActionSuccess) {
+                setState(() {
+                  _processingInvitationId = null;
+                });
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text(state.message),
@@ -272,6 +296,9 @@ class _NotificationsPageState extends State<NotificationsPage> {
                 // Reload notifications after invitation action
                 context.read<NotificationBloc>().add(const LoadNotifications());
               } else if (state is InvitationError) {
+                setState(() {
+                  _processingInvitationId = null;
+                });
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text(state.message),
@@ -390,9 +417,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
               }
 
               return RefreshIndicator(
-                onRefresh: () async {
-                  context.read<NotificationBloc>().add(const LoadNotifications());
-                },
+                onRefresh: _refreshAll,
                 child: ListView.separated(
                   padding: const EdgeInsets.all(16),
                   itemCount: allNotifications.length,
@@ -427,14 +452,14 @@ class _NotificationsPageState extends State<NotificationsPage> {
 
     return Container(
       decoration: BoxDecoration(
-        color: isRead ? Colors.white : Colors.blue.withOpacity(0.05),
+        color: isRead ? Colors.white : Colors.blue.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(14),
         border: isRead 
             ? null 
-            : Border.all(color: Colors.blue.withOpacity(0.2), width: 1),
+            : Border.all(color: Colors.blue.withValues(alpha: 0.2), width: 1),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.07),
+            color: Colors.black.withValues(alpha: 0.07),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -442,7 +467,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
       ),
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: color.withOpacity(0.15),
+          backgroundColor: color.withValues(alpha: 0.15),
           child: Icon(icon, color: color, size: 28),
         ),
         title: Text(
@@ -541,9 +566,13 @@ class _NotificationsPageState extends State<NotificationsPage> {
   }
 
   Widget _buildInvitationActions(Map<String, dynamic> notification) {
+    final rawId = notification['objectId'];
+    final invitationId = rawId is int ? rawId : int.tryParse(rawId?.toString() ?? '');
+    final isProcessing = invitationId != null && _processingInvitationId == invitationId;
+
     return BlocBuilder<InvitationBloc, InvitationState>(
       builder: (context, invitationState) {
-        if (invitationState is InvitationLoading) {
+        if (invitationState is InvitationLoading || isProcessing) {
           return const SizedBox(
             width: 24,
             height: 24,
@@ -555,13 +584,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
           mainAxisSize: MainAxisSize.min,
           children: [
             TextButton(
-              onPressed: () {
-                // Use objectId which contains the invitation ID
-                final invitationId = notification['objectId'] as int?;
-                if (invitationId != null) {
-                  _handleInvitationAction(invitationId, true);
-                }
-              },
+              onPressed: invitationId == null ? null : () => _handleInvitationAction(invitationId, true),
               style: TextButton.styleFrom(
                 backgroundColor: Colors.green,
                 foregroundColor: Colors.white,
@@ -576,13 +599,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
             ),
             const SizedBox(width: 8),
             TextButton(
-              onPressed: () {
-                // Use objectId which contains the invitation ID
-                final invitationId = notification['objectId'] as int?;
-                if (invitationId != null) {
-                  _handleInvitationAction(invitationId, false);
-                }
-              },
+              onPressed: invitationId == null ? null : () => _handleInvitationAction(invitationId, false),
               style: TextButton.styleFrom(
                 backgroundColor: Colors.red,
                 foregroundColor: Colors.white,

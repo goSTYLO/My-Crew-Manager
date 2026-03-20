@@ -29,11 +29,20 @@ class ProjectsPage extends StatefulWidget {
 }
 
 class _ProjectsPageState extends State<ProjectsPage> {
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+
   @override
   void initState() {
     super.initState();
     // Load user's projects when the page initializes
     context.read<ProjectBloc>().add(ProjectGetMyProjects());
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   void _showDeleteConfirmation(BuildContext context, Project project) {
@@ -136,18 +145,24 @@ class _ProjectsPageState extends State<ProjectsPage> {
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(16),
                               border: Border.all(
-                                color: const Color(0xFF6C63FF).withOpacity(0.2),
+                                color: const Color(0xFF6C63FF).withValues(alpha: 0.2),
                                 width: 1.5,
                               ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: const Color(0xFF6C63FF).withOpacity(0.1),
+                                  color: const Color(0xFF6C63FF).withValues(alpha: 0.1),
                                   blurRadius: 15,
                                   offset: const Offset(0, 4),
                                 ),
                               ],
                             ),
                             child: TextField(
+                              controller: _searchController,
+                              onChanged: (value) {
+                                setState(() {
+                                  _searchQuery = value.trim().toLowerCase();
+                                });
+                              },
                               decoration: const InputDecoration(
                                 prefixIcon: Icon(
                                   Icons.search_rounded,
@@ -180,12 +195,12 @@ class _ProjectsPageState extends State<ProjectsPage> {
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(
-                              color: const Color(0xFF6C63FF).withOpacity(0.2),
+                              color: const Color(0xFF6C63FF).withValues(alpha: 0.2),
                               width: 1.5,
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: const Color(0xFF6C63FF).withOpacity(0.1),
+                                color: const Color(0xFF6C63FF).withValues(alpha: 0.1),
                                 blurRadius: 15,
                                 offset: const Offset(0, 4),
                               ),
@@ -226,13 +241,13 @@ class _ProjectsPageState extends State<ProjectsPage> {
                     } else if (state is ProjectCreated) {
                       showSnackBar(context, "Project created successfully!", Colors.green);
                       // Refresh the project list
-                      context.read<ProjectBloc>().add(ProjectGetProjects());
+                      context.read<ProjectBloc>().add(ProjectGetMyProjects());
                     } else if (state is ProjectUpdated) {
                       showSnackBar(context, "Project updated successfully!", Colors.green);
-                      context.read<ProjectBloc>().add(ProjectGetProjects()); // Refresh
+                      context.read<ProjectBloc>().add(ProjectGetMyProjects()); // Refresh
                     } else if (state is ProjectDeleted) {
                       showSnackBar(context, "Project deleted successfully!", Colors.green);
-                      context.read<ProjectBloc>().add(ProjectGetProjects()); // Refresh
+                      context.read<ProjectBloc>().add(ProjectGetMyProjects()); // Refresh
                     }
                   },
                   builder: (context, state) {
@@ -245,6 +260,14 @@ class _ProjectsPageState extends State<ProjectsPage> {
                       );
                     } else if (state is ProjectSuccess) {
                       final projects = state.projects;
+                      final filteredProjects = _searchQuery.isEmpty
+                          ? projects
+                          : projects.where((project) {
+                              final title = project.title.toLowerCase();
+                              final summary = project.summary.toLowerCase();
+                              return title.contains(_searchQuery) || summary.contains(_searchQuery);
+                            }).toList();
+
                       if (projects.isEmpty) {
                         return const Center(
                           child: Column(
@@ -276,42 +299,70 @@ class _ProjectsPageState extends State<ProjectsPage> {
                           ),
                         );
                       }
-                      return ListView.separated(
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-                        itemCount: projects.length,
-                        separatorBuilder: (context, index) => const SizedBox(height: 24),
-                        itemBuilder: (context, index) {
-                          final project = projects[index];
-                          return _ProjectCard(
-                            project: project,
-                            onMore: () {
-                              showModalBottomSheet(
-                                context: context,
-                                shape: const RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+
+                      if (filteredProjects.isEmpty) {
+                        return RefreshIndicator(
+                          onRefresh: () async {
+                            context.read<ProjectBloc>().add(ProjectGetMyProjects());
+                          },
+                          child: ListView(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            children: const [
+                              SizedBox(height: 120),
+                              Icon(Icons.search_off_rounded, size: 64, color: Color(0xFF7B7F9E)),
+                              SizedBox(height: 16),
+                              Center(
+                                child: Text(
+                                  'No projects match your search',
+                                  style: TextStyle(fontSize: 16, color: Color(0xFF7B7F9E), fontWeight: FontWeight.w600),
                                 ),
-                                builder: (_) => ModifyProjectBottomSheet(
-                                  onEdit: () {
-                                    Navigator.pop(context);
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) => EditProjectPage(project: project),
-                                      ),
-                                    );
-                                  },
-                                  onDelete: () {
-                                    Navigator.pop(context);
-                                    _showDeleteConfirmation(context, project);
-                                  },
-                                ),
-                              );
-                            },
-                            onTap: () {
-                              Navigator.of(context).push(ProjectOverviewPage.route(project));
-                            },
-                          );
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+
+                      return RefreshIndicator(
+                        onRefresh: () async {
+                          context.read<ProjectBloc>().add(ProjectGetMyProjects());
                         },
+                        child: ListView.separated(
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                          itemCount: filteredProjects.length,
+                          separatorBuilder: (context, index) => const SizedBox(height: 24),
+                          itemBuilder: (context, index) {
+                            final project = filteredProjects[index];
+                            return _ProjectCard(
+                              project: project,
+                              onMore: () {
+                                showModalBottomSheet(
+                                  context: context,
+                                  shape: const RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                                  ),
+                                  builder: (_) => ModifyProjectBottomSheet(
+                                    onEdit: () {
+                                      Navigator.pop(context);
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => EditProjectPage(project: project),
+                                        ),
+                                      );
+                                    },
+                                    onDelete: () {
+                                      Navigator.pop(context);
+                                      _showDeleteConfirmation(context, project);
+                                    },
+                                  ),
+                                );
+                              },
+                              onTap: () {
+                                Navigator.of(context).push(ProjectOverviewPage.route(project));
+                              },
+                            );
+                          },
+                        ),
                       );
                     } else if (state is ProjectFailure) {
                       return Center(
@@ -333,7 +384,7 @@ class _ProjectsPageState extends State<ProjectsPage> {
                             const SizedBox(height: 16),
                             ElevatedButton(
                               onPressed: () {
-                                context.read<ProjectBloc>().add(ProjectGetProjects());
+                                context.read<ProjectBloc>().add(ProjectGetMyProjects());
                               },
                               child: const Text('Retry'),
                             ),
@@ -400,17 +451,17 @@ class _ProjectCard extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: const Color(0xFF6C63FF).withOpacity(0.08),
+          color: const Color(0xFF6C63FF).withValues(alpha: 0.08),
           width: 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 15,
             offset: const Offset(0, 4),
           ),
           BoxShadow(
-            color: const Color(0xFF6C63FF).withOpacity(0.05),
+            color: const Color(0xFF6C63FF).withValues(alpha: 0.05),
             blurRadius: 20,
             offset: const Offset(0, 2),
           ),
@@ -432,7 +483,7 @@ class _ProjectCard extends StatelessWidget {
                       width: 48,
                       height: 48,
                       decoration: BoxDecoration(
-                        color: const Color(0xFF6C63FF).withOpacity(0.1),
+                        color: const Color(0xFF6C63FF).withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Icon(

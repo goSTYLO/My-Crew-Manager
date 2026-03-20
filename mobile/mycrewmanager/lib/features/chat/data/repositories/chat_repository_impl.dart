@@ -17,6 +17,7 @@ class ChatRepositoryImpl {
   Future<RoomModel> direct(String email) => remote.direct(email: email);
   Future<void> invite(int roomId, String email) => remote.invite(roomId: roomId, email: email);
   Future<List<int>> listMembers(int roomId) => remote.listMembers(roomId);
+  Future<void> markRoomRead(int roomId) => remote.markRoomRead(roomId);
 }
 
 

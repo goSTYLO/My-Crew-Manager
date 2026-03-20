@@ -37,6 +37,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
   String _error = '';
   String _search = '';
   bool _wsConnected = false;
+  String? _wsError;
   Map<int, int> _unreadCounts = {}; // roomId -> unread count
 
   @override
@@ -54,7 +55,12 @@ class _MessagesScreenState extends State<MessagesScreen> {
     try {
       final rooms = await _repo.listRooms();
       if (!mounted) return;
-      setState(() => _rooms = rooms);
+      setState(() {
+        _rooms = rooms;
+        _unreadCounts = {
+          for (final room in rooms) room.roomId: room.unreadCount,
+        };
+      });
     } catch (_) {
       if (!mounted) return;
       setState(() => _error = 'Failed to load rooms');
@@ -69,7 +75,11 @@ class _MessagesScreenState extends State<MessagesScreen> {
     if (_wsConnected) return;
     try {
       final stream = await _ws.connectToNotifications();
-      _wsConnected = true;
+      if (!mounted) return;
+      setState(() {
+        _wsConnected = true;
+        _wsError = null;
+      });
       stream.listen((event) {
         if (event is Map<String, dynamic>) {
           final type = event['type'] as String?;
@@ -77,10 +87,30 @@ class _MessagesScreenState extends State<MessagesScreen> {
             _loadRooms();
           } else if (type == 'new_message') {
             _handleNewMessage(event);
+          } else if (type == 'unread_count_updated') {
+            _loadRooms();
           }
         }
+      }, onDone: () {
+        if (!mounted) return;
+        setState(() {
+          _wsConnected = false;
+          _wsError = 'Disconnected from realtime updates';
+        });
+      }, onError: (_) {
+        if (!mounted) return;
+        setState(() {
+          _wsConnected = false;
+          _wsError = 'Realtime updates unavailable';
+        });
       });
-    } catch (_) {}
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _wsConnected = false;
+        _wsError = 'Failed to connect realtime updates';
+      });
+    }
   }
 
   void _handleNewMessage(Map<String, dynamic> event) {
@@ -268,6 +298,12 @@ class _MessagesScreenState extends State<MessagesScreen> {
                 _rooms[roomIndex] = _rooms[roomIndex].copyWith(unreadCount: 0);
               }
             });
+            _repo.markRoomRead(room.roomId).catchError((_) {
+              if (!mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Could not sync read status')),
+              );
+            });
           }
           
           Navigator.of(context).push(
@@ -426,17 +462,42 @@ class _MessagesScreenState extends State<MessagesScreen> {
                                       ],
                                     ),
                                   )
-                                : ListView.separated(
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 16),
-                                    itemCount: filtered.length,
-                                    separatorBuilder: (_, __) =>
-                                        const SizedBox(height: 12),
-                                    itemBuilder: (context, i) =>
-                                        _buildChatItem(filtered[i]),
+                                : RefreshIndicator(
+                                    onRefresh: _loadRooms,
+                                    child: ListView.separated(
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 16),
+                                      itemCount: filtered.length,
+                                      separatorBuilder: (_, __) =>
+                                          const SizedBox(height: 12),
+                                      itemBuilder: (context, i) =>
+                                          _buildChatItem(filtered[i]),
+                                    ),
                                   ),
                   ),
                 ),
+                if (_wsError != null)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+                    color: const Color(0xFFFFF4E5),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.wifi_off_rounded, color: Color(0xFFB45309), size: 18),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            _wsError!,
+                            style: const TextStyle(color: Color(0xFF92400E), fontSize: 12),
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: _connectNotifications,
+                          child: const Text('Retry'),
+                        ),
+                      ],
+                    ),
+                  ),
               ],
             ),
           ),

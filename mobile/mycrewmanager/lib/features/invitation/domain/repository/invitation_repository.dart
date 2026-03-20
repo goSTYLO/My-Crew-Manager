@@ -4,6 +4,7 @@ import 'package:mycrewmanager/features/invitation/domain/entities/invitation.dar
 
 abstract interface class InvitationRepository {
   Future<Either<Failure, List<Invitation>>> getMyInvitations();
+  Future<Either<Failure, List<Invitation>>> getSentInvitations(int currentUserId);
   Future<Either<Failure, void>> acceptInvitation(int invitationId);
   Future<Either<Failure, void>> declineInvitation(int invitationId);
 }

@@ -15,6 +15,12 @@ class InvitationRemoteDataSourceImpl implements InvitationRemoteDataSourceInterf
   }
 
   @override
+  Future<List<dynamic>> getSentInvitations() async {
+    final response = await _dio.get('ai/invitations/');
+    return response.data as List<dynamic>;
+  }
+
+  @override
   Future<void> acceptInvitation(int invitationId) async {
     // Increase timeout for invitation acceptance as it involves complex database operations
     final originalReceiveTimeout = _dio.options.receiveTimeout;

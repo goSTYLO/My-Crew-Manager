@@ -31,15 +31,16 @@ class InvitationBloc extends Bloc<InvitationEvent, InvitationState> {
   }
 
   void _onAcceptInvitation(AcceptInvitation event, Emitter<InvitationState> emit) async {
+    emit(InvitationActionInProgress(invitationId: event.invitationId, isAccept: true));
 
     final result = await _invitationRepository.acceptInvitation(event.invitationId);
 
     result.fold(
       (failure) {
-        emit(InvitationError(failure.message));
+        emit(InvitationError(failure.message, invitationId: event.invitationId));
       },
       (_) {
-        emit(const InvitationActionSuccess("Invitation accepted successfully!"));
+        emit(InvitationActionSuccess("Invitation accepted successfully!", invitationId: event.invitationId));
         // Reload invitations to update the UI
         add(const LoadInvitations());
       },
@@ -47,15 +48,16 @@ class InvitationBloc extends Bloc<InvitationEvent, InvitationState> {
   }
 
   void _onDeclineInvitation(DeclineInvitation event, Emitter<InvitationState> emit) async {
+    emit(InvitationActionInProgress(invitationId: event.invitationId, isAccept: false));
 
     final result = await _invitationRepository.declineInvitation(event.invitationId);
 
     result.fold(
       (failure) {
-        emit(InvitationError(failure.message));
+        emit(InvitationError(failure.message, invitationId: event.invitationId));
       },
       (_) {
-        emit(const InvitationActionSuccess("Invitation declined successfully!"));
+        emit(InvitationActionSuccess("Invitation declined successfully!", invitationId: event.invitationId));
         // Reload invitations to update the UI
         add(const LoadInvitations());
       },

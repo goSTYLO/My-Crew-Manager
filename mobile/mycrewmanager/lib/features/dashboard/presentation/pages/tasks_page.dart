@@ -12,6 +12,7 @@ import 'package:mycrewmanager/features/dashboard/widgets/addtask_widget.dart';
 import 'package:mycrewmanager/features/project/domain/entities/project.dart';
 import 'package:mycrewmanager/features/project/domain/entities/task.dart';
 import 'package:mycrewmanager/features/project/domain/usecases/get_project_tasks.dart';
+import 'package:mycrewmanager/features/project/domain/usecases/update_task_status.dart';
 import 'package:mycrewmanager/features/dashboard/widgets/skeleton_loader.dart';
 import 'package:mycrewmanager/features/notification/presentation/bloc/notification_bloc.dart';
 import 'package:mycrewmanager/features/notification/presentation/bloc/notification_event.dart';
@@ -40,13 +41,16 @@ class _TasksPageState extends State<TasksPage> with SingleTickerProviderStateMix
   String? error;
   String searchQuery = '';
   bool isSearching = false;
+  final Map<int, bool> _updatingTaskStatus = {};
+  final Map<int, String> _taskActionErrors = {};
 
   final GetProjectTasks _getProjectTasks = serviceLocator<GetProjectTasks>();
+  final UpdateTaskStatus _updateTaskStatus = serviceLocator<UpdateTaskStatus>();
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this); // Changed from 4 to 3 tabs
+    _tabController = TabController(length: 4, vsync: this);
     _loadTasks();
     // Load unread count when the page opens
     context.read<NotificationBloc>().add(const LoadUnreadCount());
@@ -75,112 +79,85 @@ class _TasksPageState extends State<TasksPage> with SingleTickerProviderStateMix
         setState(() {
           isLoading = false;
           error = failure.message;
+          tasks = [];
         });
       },
       (tasksList) {
-        for (var task in tasksList) {
-        }
-        
-        // If no tasks are loaded, use mock data for testing
-        if (tasksList.isEmpty) {
-          // Convert mock data to ProjectTask objects
-          final mockProjectTasks = mockTasks.asMap().entries.map((entry) {
-            final index = entry.key;
-            final mockTask = entry.value;
-            // Assign different emails to different tasks for testing
-            final assigneeEmails = ['test@example.com', 'user@example.com', 'admin@example.com'];
-            final assigneeEmail = assigneeEmails[index % assigneeEmails.length];
-            
-            return ProjectTask(
-              id: mockTask.hashCode, // Use hash as ID for mock data
-              title: mockTask['title'] as String,
-              status: (mockTask['status'] as String).toLowerCase() == 'to do' ? 'pending' : (mockTask['status'] as String).toLowerCase(),
-              userStoryId: 1,
-              isAi: false,
-              assigneeId: index + 1,
-              assigneeName: assigneeEmail,
-            );
-          }).toList();
-          
-          setState(() {
-            isLoading = false;
-            tasks = mockProjectTasks;
-          });
-        } else {
-          setState(() {
-            isLoading = false;
-            tasks = tasksList;
-          });
-        }
+        setState(() {
+          isLoading = false;
+          error = null;
+          tasks = tasksList;
+        });
       },
     );
   }
 
-  // Mock data for when no project is selected or as fallback
-  final List<Map<String, dynamic>> mockTasks = [
-    {
-      "title": "API Integration for Project A",
-      "subtitle": "Sprint 1 • Backend",
-      "status": "To Do",
-      "icon": Icons.trending_up,
-      "iconColor": Colors.red,
-      "members": [
-        "https://randomuser.me/api/portraits/men/32.jpg",
-        "https://randomuser.me/api/portraits/women/44.jpg",
-        "https://randomuser.me/api/portraits/men/65.jpg",
-        "https://randomuser.me/api/portraits/women/68.jpg",
-      ],
-      "progress": 0.0,
-    },
-    {
-      "title": "Code Review for Project A",
-      "subtitle": "Sprint 1 • Backend",
-      "status": "Done",
-      "icon": Icons.trending_up,
-      "iconColor": Colors.red,
-      "members": [
-        "https://randomuser.me/api/portraits/men/32.jpg",
-        "https://randomuser.me/api/portraits/women/44.jpg",
-      ],
-      "progress": 1.0,
-    },
-    {
-      "title": "UI Design for Project A",
-      "subtitle": "Sprint 1 • Design",
-      "status": "In Progress",
-      "icon": Icons.trending_up,
-      "iconColor": Colors.red,
-      "members": [
-        "https://randomuser.me/api/portraits/men/32.jpg",
-        "https://randomuser.me/api/portraits/women/44.jpg",
-      ],
-      "progress": 0.6,
-    },
-    {
-      "title": "Backend Initialization",
-      "subtitle": "Sprint 1 • Backend",
-      "status": "Done",
-      "icon": Icons.drag_indicator,
-      "iconColor": Colors.amber,
-      "members": [
-        "https://randomuser.me/api/portraits/men/32.jpg",
-        "https://randomuser.me/api/portraits/women/44.jpg",
-        "https://randomuser.me/api/portraits/men/65.jpg",
-      ],
-      "progress": 1.0,
-    },
-    {
-      "title": "Redesign Application Logo",
-      "subtitle": "Sprint 2 • Design",
-      "status": "To Do",
-      "icon": Icons.trending_up,
-      "iconColor": Colors.red,
-      "members": [
-        "https://randomuser.me/api/portraits/men/32.jpg",
-      ],
-      "progress": 0.0,
-    },
-  ];
+  String _normalizeStatus(String status) {
+    final normalized = status.trim().toLowerCase();
+    if (normalized == 'to do' || normalized == 'todo' || normalized == 'pending') {
+      return 'pending';
+    }
+    if (normalized == 'in progress' || normalized == 'in_progress') {
+      return 'in_progress';
+    }
+    if (normalized == 'done' || normalized == 'completed') {
+      return 'done';
+    }
+    return normalized;
+  }
+
+  String _statusDisplay(String status) {
+    switch (_normalizeStatus(status)) {
+      case 'pending':
+        return 'To Do';
+      case 'in_progress':
+        return 'In Progress';
+      case 'done':
+        return 'Done';
+      default:
+        return status;
+    }
+  }
+
+  Future<void> _transitionTaskStatus(ProjectTask task, String nextStatus, {String? commitTitle}) async {
+    if (_updatingTaskStatus[task.id] == true) return;
+    setState(() {
+      _updatingTaskStatus[task.id] = true;
+      _taskActionErrors.remove(task.id);
+    });
+
+    final result = await _updateTaskStatus(
+      UpdateTaskStatusParams(
+        taskId: task.id,
+        status: nextStatus,
+        commitTitle: commitTitle,
+      ),
+    );
+
+    if (!mounted) return;
+
+    result.fold(
+      (failure) {
+        setState(() {
+          _updatingTaskStatus[task.id] = false;
+          _taskActionErrors[task.id] = failure.message;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to update task: ${failure.message}')),
+        );
+      },
+      (updatedTask) {
+        setState(() {
+          _updatingTaskStatus[task.id] = false;
+          _taskActionErrors.remove(task.id);
+          final index = tasks.indexWhere((t) => t.id == task.id);
+          if (index != -1) {
+            tasks[index] = updatedTask;
+          }
+        });
+      },
+    );
+  }
 
 
   @override
@@ -189,7 +166,7 @@ class _TasksPageState extends State<TasksPage> with SingleTickerProviderStateMix
     super.dispose();
   }
 
-  List<ProjectTask> getFilteredTasks(String status, String? currentUserEmail, String? currentUserName) {
+  List<ProjectTask> getFilteredTasks(String status, String? currentUserEmail, String? currentUserName, String? currentUserId) {
     List<ProjectTask> filteredTasks = tasks;
     
     // Apply search filter first
@@ -201,15 +178,16 @@ class _TasksPageState extends State<TasksPage> with SingleTickerProviderStateMix
     }
     
     // Then apply status filter
-    if (status == "All") return filteredTasks;
+    if (status == 'All') return filteredTasks;
     
     // For "To Do" tab, show only pending tasks assigned to the current user
-    if (status == "To Do") {
+    if (status == 'To Do') {
       
       final toDoTasks = filteredTasks.where((t) {
+        final taskStatus = _normalizeStatus(t.status);
         
         // Check if task is pending
-        if (t.status != "pending") {
+        if (taskStatus != 'pending') {
           return false;
         }
         
@@ -231,19 +209,29 @@ class _TasksPageState extends State<TasksPage> with SingleTickerProviderStateMix
         // 1. Exact email match
         // 2. Exact name match
         // 3. Name contains user's first name (fallback)
-        final isAssignedToUser = assigneeName != null && 
+        final matchesAssigneeText = assigneeName != null && 
             (assigneeName == currentUserEmail || 
              assigneeName == currentUserName ||
              (currentUserName != null && assigneeName.contains(currentUserName.split(' ').first)));
+
+        final matchesAssigneeId = currentUserId != null && t.assigneeId != null
+            && t.assigneeId.toString() == currentUserId;
         
-        
-        return isAssignedToUser;
+        return matchesAssigneeText || matchesAssigneeId;
       }).toList();
       
       return toDoTasks;
     }
+
+    if (status == 'In Progress') {
+      return filteredTasks.where((t) => _normalizeStatus(t.status) == 'in_progress').toList();
+    }
+
+    if (status == 'Done') {
+      return filteredTasks.where((t) => _normalizeStatus(t.status) == 'done').toList();
+    }
     
-    return filteredTasks.where((t) => t.status.toLowerCase() == status.toLowerCase()).toList();
+    return filteredTasks;
   }
 
 
@@ -393,7 +381,7 @@ class _TasksPageState extends State<TasksPage> with SingleTickerProviderStateMix
 
   @override
   Widget build(BuildContext context) {
-    final tabLabels = ["All", "To Do", "Done"]; // Removed "In Progress" tab
+    final tabLabels = ['All', 'To Do', 'In Progress', 'Done'];
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
         if (state is AuthLoggedOut) {
@@ -408,13 +396,11 @@ class _TasksPageState extends State<TasksPage> with SingleTickerProviderStateMix
       builder: (context, authState) {
         String? currentUserEmail;
         String? currentUserName;
+        String? currentUserId;
         if (authState is AuthSuccess) {
           currentUserEmail = authState.user.email;
           currentUserName = authState.user.name;
-        } else {
-          // Use a test email for demonstration purposes
-          currentUserEmail = 'test@example.com';
-          currentUserName = 'Test User';
+          currentUserId = authState.user.id;
         }
         
         return Scaffold(
@@ -566,43 +552,80 @@ class _TasksPageState extends State<TasksPage> with SingleTickerProviderStateMix
                 : TabBarView(
                     controller: _tabController,
                     children: tabLabels.map((tab) {
-                      final filtered = getFilteredTasks(tab, currentUserEmail, currentUserName);
+                      final filtered = getFilteredTasks(tab, currentUserEmail, currentUserName, currentUserId);
                       return filtered.isEmpty
                           ? RefreshIndicator(
                               onRefresh: _loadTasks,
-                              child: const Center(
-                                child: Text(
-                                  'No tasks found',
-                                  style: TextStyle(color: Colors.grey),
-                                ),
+                              child: ListView(
+                                physics: const AlwaysScrollableScrollPhysics(),
+                                children: const [
+                                  SizedBox(height: 180),
+                                  Center(
+                                    child: Text(
+                                      'No tasks found',
+                                      style: TextStyle(color: Colors.grey),
+                                    ),
+                                  ),
+                                ],
                               ),
                             )
-                          : RefreshIndicator(
-                              onRefresh: _loadTasks,
-                              child: ListView.builder(
-                                padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
-                                itemCount: filtered.length,
-                                itemBuilder: (context, i) {
-                                  final t = filtered[i];
-                                  final assigneeLabel = t.assigneeName ?? 'Unassigned';
-                                  return _TaskCard(
-                                    title: t.title,
-                                    subtitle: assigneeLabel,
-                                    status: t.status,
-                                    icon: Icons.task_alt,
-                                    iconColor: t.status.toLowerCase() == 'done' ? Colors.green : Colors.blue,
-                                    members: [],
-                                    progress: t.status.toLowerCase() == 'done' ? 1.0 : 0.0,
-                                    onTap: () async {
-                                      await Navigator.of(context).push(TaskOverviewPage.route(t));
-                                      // Refresh tasks list when returning from task overview
-                                      if (mounted) {
-                                        _loadTasks();
-                                      }
-                                    },
-                                  );
-                                },
-                              ),
+                          : ListView.builder(
+                              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+                              itemCount: filtered.length,
+                              itemBuilder: (context, i) {
+                                final t = filtered[i];
+                                final assigneeLabel = t.assigneeName ?? 'Unassigned';
+                                final normalizedStatus = _normalizeStatus(t.status);
+                                final isUpdating = _updatingTaskStatus[t.id] ?? false;
+                                final actionError = _taskActionErrors[t.id];
+
+                                String? quickActionLabel;
+                                VoidCallback? onQuickAction;
+                                String? secondaryActionLabel;
+                                VoidCallback? onSecondaryAction;
+                                if (normalizedStatus == 'pending') {
+                                  quickActionLabel = 'Start';
+                                  onQuickAction = () => _transitionTaskStatus(t, 'in_progress');
+                                } else if (normalizedStatus == 'in_progress') {
+                                  quickActionLabel = 'Complete';
+                                  onQuickAction = () => _transitionTaskStatus(
+                                        t,
+                                        'done',
+                                        commitTitle: 'Completed from mobile tasks page',
+                                      );
+                                  secondaryActionLabel = 'Move to To Do';
+                                  onSecondaryAction = () => _transitionTaskStatus(t, 'pending');
+                                } else if (normalizedStatus == 'done') {
+                                  quickActionLabel = 'Reopen';
+                                  onQuickAction = () => _transitionTaskStatus(t, 'in_progress');
+                                }
+
+                                return _TaskCard(
+                                  title: t.title,
+                                  subtitle: assigneeLabel,
+                                  status: _statusDisplay(t.status),
+                                  icon: Icons.task_alt,
+                                  iconColor: normalizedStatus == 'done' ? Colors.green : Colors.blue,
+                                  members: const [],
+                                  progress: normalizedStatus == 'done'
+                                      ? 1.0
+                                      : normalizedStatus == 'in_progress'
+                                          ? 0.5
+                                          : 0.0,
+                                  isActionLoading: isUpdating,
+                                  actionError: actionError,
+                                  quickActionLabel: quickActionLabel,
+                                  onQuickAction: onQuickAction,
+                                  secondaryActionLabel: secondaryActionLabel,
+                                  onSecondaryAction: onSecondaryAction,
+                                  onTap: () async {
+                                    await Navigator.of(context).push(TaskOverviewPage.route(t));
+                                    if (mounted) {
+                                      _loadTasks();
+                                    }
+                                  },
+                                );
+                              },
                             );
                     }).toList(),
                   ),
@@ -682,6 +705,12 @@ class _TaskCard extends StatelessWidget {
   final List<String> members;
   final double progress;
   final VoidCallback? onTap;
+  final bool isActionLoading;
+  final String? actionError;
+  final String? quickActionLabel;
+  final VoidCallback? onQuickAction;
+  final String? secondaryActionLabel;
+  final VoidCallback? onSecondaryAction;
 
   const _TaskCard({
     required this.title,
@@ -692,6 +721,12 @@ class _TaskCard extends StatelessWidget {
     required this.members,
     required this.progress,
     this.onTap,
+    this.isActionLoading = false,
+    this.actionError,
+    this.quickActionLabel,
+    this.onQuickAction,
+    this.secondaryActionLabel,
+    this.onSecondaryAction,
   });
 
   Color getStatusColor() {
@@ -739,7 +774,7 @@ class _TaskCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                   decoration: BoxDecoration(
-                    color: getStatusColor().withOpacity(0.15),
+                    color: getStatusColor().withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
@@ -815,6 +850,43 @@ class _TaskCard extends StatelessWidget {
                     status.toLowerCase() == "done" ? Colors.green : status.toLowerCase() == "in progress" ? Colors.amber : Colors.black26,
                   ),
                 ),
+            if (actionError != null) ...[
+              const SizedBox(height: 10),
+              Text(
+                actionError!,
+                style: const TextStyle(
+                  color: Colors.red,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+            if (quickActionLabel != null && onQuickAction != null) ...[
+              const SizedBox(height: 10),
+              Align(
+                alignment: Alignment.centerRight,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    if (secondaryActionLabel != null && onSecondaryAction != null)
+                      TextButton(
+                        onPressed: isActionLoading ? null : onSecondaryAction,
+                        child: Text(secondaryActionLabel!),
+                      ),
+                    ElevatedButton(
+                      onPressed: isActionLoading ? null : onQuickAction,
+                      child: isActionLoading
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : Text(quickActionLabel!),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
       ),

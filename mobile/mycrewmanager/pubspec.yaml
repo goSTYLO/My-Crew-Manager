@@ -11,7 +11,7 @@ dependencies:
     sdk: flutter # CRITICAL: Required for every Flutter project - DO NOT REMOVE
   
   # CRITICAL: Core UI and responsive design - DO NOT REMOVE OR MODIFY
-  sizer: ^2.0.15              # Required for responsive design system
+  sizer: ^3.1.3              # Required for responsive design system
   flutter_svg: ^2.0.9        # Required for SVG icon support
   google_fonts: ^6.1.0       # Required for typography (replaces local fonts)
   shared_preferences: ^2.2.2 # Required for local data storage
@@ -20,15 +20,15 @@ dependencies:
   
   # Feature dependencies - safe to modify
   cached_network_image: ^3.3.1
-  connectivity_plus: ^6.1.4
+  connectivity_plus: ^7.0.0
   dio: ^5.4.0
   http: ^1.2.2
-  fluttertoast: ^8.2.4
-  fl_chart: ^0.65.0
-  camera: ^0.10.5+5
+  fluttertoast: ^9.0.0
+  fl_chart: ^1.1.0
+  camera: ^0.11.2+1
   image_picker: ^1.0.4
-  permission_handler: ^11.1.0
-  file_picker: ^8.1.2
+  permission_handler: ^12.0.1
+  file_picker: ^10.3.10
 
   flutter_riverpod: ^2.6.1
   fpdart: ^1.1.1
@@ -36,16 +36,16 @@ dependencies:
   intl: ^0.20.2
   internet_connection_checker_plus: ^2.7.2
   logger: ^2.6.1
-  flutter_secure_storage: ^9.2.4
+  flutter_secure_storage: ^10.0.0
   retrofit: ^4.7.2
   json_annotation: ^4.9.0
-  get_it: ^8.2.0
+  get_it: ^9.2.1
   equatable: ^2.0.5
 
 dev_dependencies:
   flutter_test:    # CRITICAL: Required for Flutter project testing - DO NOT REMOVE
     sdk: flutter   # CRITICAL: Required for Flutter project testing - DO NOT REMOVE
-  flutter_lints: ^5.0.0 # CRITICAL: Required for code quality - DO NOT REMOVE
+  flutter_lints: ^6.0.0 # CRITICAL: Required for code quality - DO NOT REMOVE
   retrofit_generator: ^10.0.5
   build_runner: ^2.8.0
   json_serializable: ^6.11.1
