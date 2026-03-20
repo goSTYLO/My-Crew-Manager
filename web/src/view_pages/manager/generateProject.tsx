@@ -2144,7 +2144,7 @@ const App: React.FC = () => {
               </div>
 
               <div>
-                <label className={`block text-sm font-medium mb-2 ${theme === "dark" ? "text-gray-200" : "text-gray-700"}`}>Upload Proposal (PDF)</label>
+                <label className={`block text-sm font-medium mb-2 ${theme === "dark" ? "text-gray-200" : "text-gray-700"}`}>Upload Project Idea (PDF)</label>
                 <div
                   onDragOver={handleDragOver}
                   onDragLeave={handleDragLeave}
