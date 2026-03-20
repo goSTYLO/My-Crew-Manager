@@ -2,6 +2,8 @@ import { Router } from 'express';
 import multer from 'multer';
 import { authMiddleware } from '../middleware/auth.middleware.js';
 import * as ctrl from '../controllers/ai.controller.js';
+import { validateBody, validateParams, validateQuery } from '../middleware/validation.middleware.js';
+import { aiSchemas } from '../validation/schemas.js';
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -10,19 +12,19 @@ router.use(authMiddleware);
 
 router.post('/proposals/', upload.single('file'), ctrl.uploadProposal);
 
-router.get('/projects/', ctrl.listProjects);
-router.get('/projects/my-projects/', ctrl.listProjects);
-router.post('/projects/', ctrl.createProject);
-router.get('/projects/:id', ctrl.getProject);
-router.get('/projects/:id/statistics/', ctrl.getProjectStatistics);
-router.get('/projects/:id/current-proposal/', ctrl.getCurrentProposal);
-router.get('/projects/:id/backlog/', ctrl.getProjectBacklog);
-router.put('/projects/:id', ctrl.updateProject);
-router.patch('/projects/:id', ctrl.updateProject);
-router.delete('/projects/:id', ctrl.deleteProject);
-router.put('/projects/:id/ingest-proposal/:proposal_id', ctrl.ingestProposal);
-router.put('/projects/:id/generate-overview/', ctrl.generateOverview);
-router.put('/projects/:id/generate-backlog', ctrl.generateBacklog);
+router.get('/projects/', validateQuery(aiSchemas.listProjectsQuery), ctrl.listProjects);
+router.get('/projects/my-projects/', validateQuery(aiSchemas.listProjectsQuery), ctrl.listProjects);
+router.post('/projects/', validateBody(aiSchemas.createProject), ctrl.createProject);
+router.get('/projects/:id', validateParams(aiSchemas.projectIdParam), ctrl.getProject);
+router.get('/projects/:id/statistics/', validateParams(aiSchemas.projectIdParam), ctrl.getProjectStatistics);
+router.get('/projects/:id/current-proposal/', validateParams(aiSchemas.projectIdParam), ctrl.getCurrentProposal);
+router.get('/projects/:id/backlog/', validateParams(aiSchemas.projectIdParam), ctrl.getProjectBacklog);
+router.put('/projects/:id', validateParams(aiSchemas.projectIdParam), validateBody(aiSchemas.updateProject), ctrl.updateProject);
+router.patch('/projects/:id', validateParams(aiSchemas.projectIdParam), validateBody(aiSchemas.updateProject), ctrl.updateProject);
+router.delete('/projects/:id', validateParams(aiSchemas.projectIdParam), ctrl.deleteProject);
+router.put('/projects/:id/ingest-proposal/:proposal_id', validateParams(aiSchemas.projectIdParam.extend({ proposal_id: aiSchemas.projectIdParam.shape.id })), ctrl.ingestProposal);
+router.put('/projects/:id/generate-overview/', validateParams(aiSchemas.projectIdParam), ctrl.generateOverview);
+router.put('/projects/:id/generate-backlog', validateParams(aiSchemas.projectIdParam), ctrl.generateBacklog);
 
 router.get('/project-features/', ctrl.listProjectFeatures);
 router.post('/project-features/', ctrl.createProjectFeature);

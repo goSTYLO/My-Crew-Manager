@@ -1,15 +1,9 @@
 import jwt from 'jsonwebtoken';
 import { prisma } from '../lib/prisma.js';
+import { logger } from '../config/logger.js';
+import { UnauthorizedError } from './errors.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || process.env.SECRET_KEY;
-
-function authError(res, message) {
-  return res.status(401).json({
-    error: message,
-    detail: message,
-    message,
-  });
-}
 
 function parseAuthToken(authHeader) {
   if (!authHeader || typeof authHeader !== 'string') return null;
@@ -54,55 +48,108 @@ function userToReqUser(dbUser) {
  * Resolve user from Authorization header: "Token <key>" or "Bearer <jwt>"
  */
 export async function authMiddleware(req, res, next) {
-  const parsed = parseAuthToken(req.headers.authorization);
-  if (!parsed) {
-    return authError(res, 'Authentication credentials were not provided.');
-  }
-
-  const { scheme, value } = parsed;
-
-  if (scheme === 'Invalid') {
-    return authError(res, 'Invalid authorization header.');
-  }
-
-  if (scheme === 'Token') {
-    const tokenRow = await prisma.authtoken_token.findUnique({
-      where: { key: value },
-    });
-    if (!tokenRow) {
-      return authError(res, 'Invalid token.');
+  try {
+    const parsed = parseAuthToken(req.headers.authorization);
+    if (!parsed) {
+      logger.warn('Auth token missing', {
+        request_id: req.requestId || null,
+        ip: req.ip,
+        path: req.originalUrl,
+      });
+      return next(new UnauthorizedError('Authentication credentials were not provided.'));
     }
-    const user = await prisma.user.findUnique({
-      where: { user_id: Number(tokenRow.user_id) },
-    });
-    if (!user || !user.is_active) {
-      return authError(res, 'Invalid token.');
-    }
-    req.user = userToReqUser(user);
-    return next();
-  }
 
-  if (scheme === 'Bearer') {
-    try {
-      const decoded = jwt.verify(value, JWT_SECRET);
-      const userId = typeof decoded.userId === 'string' ? parseInt(decoded.userId, 10) : decoded.userId;
-      if (isNaN(userId)) {
-        return authError(res, 'Invalid token.');
+    const { scheme, value } = parsed;
+
+    if (scheme === 'Invalid') {
+      logger.warn('Auth header invalid format', {
+        request_id: req.requestId || null,
+        ip: req.ip,
+        path: req.originalUrl,
+      });
+      return next(new UnauthorizedError('Invalid authorization header.'));
+    }
+
+    if (scheme === 'Token') {
+      const tokenRow = await prisma.authtoken_token.findUnique({
+        where: { key: value },
+      });
+      if (!tokenRow) {
+        logger.warn('Token validation failed', {
+          request_id: req.requestId || null,
+          ip: req.ip,
+          path: req.originalUrl,
+          auth_scheme: 'Token',
+          reason: 'token_not_found',
+        });
+        return next(new UnauthorizedError('Invalid token.'));
       }
       const user = await prisma.user.findUnique({
-        where: { user_id: userId },
+        where: { user_id: Number(tokenRow.user_id) },
       });
       if (!user || !user.is_active) {
-        return authError(res, 'Invalid token.');
+        logger.warn('Token validation failed', {
+          request_id: req.requestId || null,
+          ip: req.ip,
+          path: req.originalUrl,
+          auth_scheme: 'Token',
+          user_id: user?.user_id || null,
+          email: user?.email || null,
+          reason: 'inactive_or_missing_user',
+        });
+        return next(new UnauthorizedError('Invalid token.'));
       }
       req.user = userToReqUser(user);
       return next();
-    } catch (err) {
-      return authError(res, 'Invalid or expired token.');
     }
-  }
 
-  return authError(res, 'Invalid authorization scheme.');
+    if (scheme === 'Bearer') {
+      try {
+        const decoded = jwt.verify(value, JWT_SECRET);
+        const userId = typeof decoded.userId === 'string' ? parseInt(decoded.userId, 10) : decoded.userId;
+        if (isNaN(userId)) {
+          logger.warn('Bearer validation failed', {
+            request_id: req.requestId || null,
+            ip: req.ip,
+            path: req.originalUrl,
+            auth_scheme: 'Bearer',
+            reason: 'invalid_user_id_claim',
+          });
+          return next(new UnauthorizedError('Invalid token.'));
+        }
+        const user = await prisma.user.findUnique({
+          where: { user_id: userId },
+        });
+        if (!user || !user.is_active) {
+          logger.warn('Bearer validation failed', {
+            request_id: req.requestId || null,
+            ip: req.ip,
+            path: req.originalUrl,
+            auth_scheme: 'Bearer',
+            user_id: user?.user_id || null,
+            email: user?.email || null,
+            reason: 'inactive_or_missing_user',
+          });
+          return next(new UnauthorizedError('Invalid token.'));
+        }
+        req.user = userToReqUser(user);
+        return next();
+      } catch (err) {
+        logger.warn('Bearer validation failed', {
+          request_id: req.requestId || null,
+          ip: req.ip,
+          path: req.originalUrl,
+          auth_scheme: 'Bearer',
+          reason: err?.name === 'TokenExpiredError' ? 'expired' : 'invalid',
+        });
+        return next(new UnauthorizedError('Invalid or expired token.'));
+      }
+    }
+
+    return next(new UnauthorizedError('Invalid authorization scheme.'));
+  } catch (err) {
+    return next(err);
+  }
 }
 
 /**

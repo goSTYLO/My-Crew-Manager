@@ -1,8 +1,16 @@
 /**
- * PostgreSQL seed script - populates DB with PM, Developer, 5 projects, backlog, proposals, rooms, notifications
- * Run: node scripts/seed.js [--reset]
- * Requires: DATABASE_URL or DB_* vars in env (from .env)
- * Seed accounts: pm@example.com / dev@example.com, password: password123
+ * Chat-centric PostgreSQL seed script for MyCrewManager.
+ *
+ * Run:
+ *   npm run seed
+ *   npm run seed:reset
+ *
+ * Assumptions from prisma schema:
+ * - Users are in `user` with PK `user_id` (Int).
+ * - Projects are in `ai_api_project` with PK `id` (Int).
+ * - Project membership is in `ai_api_projectmember` using `project_id` + `user_id`.
+ * - Chat rooms/messages use `chat_room`, `chat_room_membership`, `chat_message`.
+ * - `chat_message` currently does not include a dedicated `client_message_id` column.
  */
 import bcrypt from 'bcrypt';
 import dotenv from 'dotenv';
@@ -24,445 +32,351 @@ if (!process.env.DATABASE_URL && process.env.DB_NAME) {
 }
 
 const RESET = process.argv.includes('--reset');
+const TEST_PASSWORD = 'CrewPass!2026';
 
-const SEED_EMAILS = ['pm@example.com', 'dev@example.com'];
-const PASSWORD_HASH = bcrypt.hashSync('password123', 10);
+const USER_BLUEPRINTS = [
+  { name: 'Maya Santos', email: 'pm.maya@mycrewmanager.test', role: 'Project Manager' },
+  { name: 'Carlos Lim', email: 'pm.carlos@mycrewmanager.test', role: 'Project Manager' },
+  { name: 'Nina Reyes', email: 'pm.nina@mycrewmanager.test', role: 'Project Manager' },
+  { name: 'Alden Cruz', email: 'dev.alden@mycrewmanager.test', role: 'Developer' },
+  { name: 'Bea Gonzales', email: 'dev.bea@mycrewmanager.test', role: 'Developer' },
+  { name: 'Dino Flores', email: 'dev.dino@mycrewmanager.test', role: 'Developer' },
+  { name: 'Ivy Chan', email: 'dev.ivy@mycrewmanager.test', role: 'Developer' },
+  { name: 'Leo Dizon', email: 'dev.leo@mycrewmanager.test', role: 'Developer' },
+  { name: 'Rina Torres', email: 'dev.rina@mycrewmanager.test', role: 'Developer' },
+  { name: 'Sam Bautista', email: 'dev.sam@mycrewmanager.test', role: 'Developer' },
+];
 
-const PROJECTS_DATA = [
+const PROJECT_BLUEPRINTS = [
   {
-    title: 'E-commerce Platform',
-    summary: 'Full-featured online store with product catalog, shopping cart, and secure checkout.',
-    status: 'complete',
-    features: ['Product catalog with search', 'Shopping cart', 'Checkout flow', 'Order history', 'Admin dashboard'],
-    roles: ['Product Owner', 'Backend Developer', 'Frontend Developer', 'QA'],
-    goals: [
-      { title: 'Launch MVP by Q2', role: 'Product Owner' },
-      { title: 'Implement payment gateway', role: 'Backend Developer' },
-      { title: 'Build responsive product pages', role: 'Frontend Developer' },
-      { title: 'Achieve 95% test coverage', role: 'QA' },
-    ],
-    timeline: [
-      { week: 1, items: ['Define product schema', 'Set up CI/CD', 'Create base components'] },
-      { week: 2, items: ['Integrate Stripe', 'Build cart UI', 'Add search'] },
-      { week: 3, items: ['Order flow', 'Email notifications', 'Admin panel'] },
-      { week: 4, items: ['Bug fixes', 'Performance tuning', 'Launch prep'] },
-    ],
-    repositories: [
-      { name: 'store-api', url: 'https://github.com/org/store-api', branch: 'main' },
-      { name: 'store-web', url: 'https://github.com/org/store-web', branch: 'main' },
-    ],
-    epics: [
-      { title: 'Product Management', description: 'CRUD for products', subEpics: [
-        { title: 'Product List & Search', stories: [
-          { title: 'Display product grid', tasks: ['Create ProductCard component', 'Add pagination', 'Integrate API'] },
-          { title: 'Search and filters', tasks: ['Build search bar', 'Add category filter', 'Sort options'] },
-        ]},
-        { title: 'Product Detail', stories: [
-          { title: 'Product page layout', tasks: ['Image gallery', 'Add to cart button', 'Related products'] },
-        ]},
-      ]},
-      { title: 'Cart & Checkout', description: 'Shopping flow', subEpics: [
-        { title: 'Cart', stories: [
-          { title: 'Cart persistence', tasks: ['Local storage cart', 'Sync on login', 'Update quantities'] },
-        ]},
-        { title: 'Checkout', stories: [
-          { title: 'Checkout form', tasks: ['Address form', 'Payment form', 'Order confirmation'] },
-        ]},
-      ]},
-    ],
-    proposalText: 'Build a modern e-commerce platform with product catalog, search, cart, and Stripe checkout. Target: launch MVP in 4 weeks. Tech: Node.js backend, React frontend.',
-  },
-  {
-    title: 'Task Management SaaS',
-    summary: 'Collaborative task and project management tool with boards, tags, and due dates.',
+    title: '[Seed] Atlas Mobile Banking',
+    summary: 'Mobile-first banking app revamp with KYC onboarding and transaction alerts.',
     status: 'in_progress',
-    features: ['Kanban boards', 'Tags and labels', 'Due dates', 'Team collaboration', 'Activity feed'],
-    roles: ['Project Manager', 'Full-stack Developer', 'Designer'],
-    goals: [
-      { title: 'Ship beta in 6 weeks', role: 'Project Manager' },
-      { title: 'Real-time board updates', role: 'Full-stack Developer' },
-      { title: 'Consistent design system', role: 'Designer' },
+    memberEmails: [
+      'pm.maya@mycrewmanager.test',
+      'dev.alden@mycrewmanager.test',
+      'dev.bea@mycrewmanager.test',
+      'dev.leo@mycrewmanager.test',
     ],
-    timeline: [
-      { week: 1, items: ['DB schema design', 'Auth setup', 'Board model'] },
-      { week: 2, items: ['Board CRUD', 'Task CRUD', 'WebSocket setup'] },
-      { week: 3, items: ['Drag-drop', 'Tags', 'Due dates'] },
-    ],
-    repositories: [
-      { name: 'taskapp-api', url: 'https://github.com/org/taskapp-api', branch: 'main' },
-      { name: 'taskapp-web', url: 'https://github.com/org/taskapp-web', branch: 'dev' },
-    ],
-    epics: [
-      { title: 'Core Boards', description: 'Board management', subEpics: [
-        { title: 'Board CRUD', stories: [
-          { title: 'Create/edit boards', tasks: ['Board form', 'API endpoints', 'Board list'] },
-          { title: 'Board invitations', tasks: ['Invite flow', 'Permissions', 'Notifications'] },
-        ]},
-        { title: 'Tasks', stories: [
-          { title: 'Task management', tasks: ['Create task', 'Edit task', 'Delete task', 'Assign user'] },
-        ]},
-      ]},
-      { title: 'Real-time', description: 'Live updates', subEpics: [
-        { title: 'WebSocket sync', stories: [
-          { title: 'Live board updates', tasks: ['WS connection', 'Broadcast updates', 'Optimistic UI'] },
-        ]},
-      ]},
-    ],
-    proposalText: 'SaaS task management app with Kanban boards, real-time collaboration, tags, and due dates. Teams of up to 20. Tech: Node, React, Redis, PostgreSQL.',
+    groups: ['General Discussion', 'Backend Team'],
   },
   {
-    title: 'Mobile Fitness App',
-    summary: 'Track workouts, log progress, and connect with friends for accountability.',
-    status: 'in_progress',
-    features: ['Workout logging', 'Progress charts', 'Social feed', 'Goals', 'Rest timer'],
-    roles: ['Product Lead', 'Mobile Developer', 'Backend Developer'],
-    goals: [
-      { title: '10k downloads by launch', role: 'Product Lead' },
-      { title: '60fps animations', role: 'Mobile Developer' },
-      { title: 'Sub-second API response', role: 'Backend Developer' },
-    ],
-    timeline: [
-      { week: 1, items: ['App scaffolding', 'Auth', 'Workout model'] },
-      { week: 2, items: ['Log workout UI', 'Charts', 'Profile screen'] },
-      { week: 3, items: ['Social feed', 'Friends', 'Push notifications'] },
-    ],
-    repositories: [
-      { name: 'fitapp-mobile', url: 'https://github.com/org/fitapp-mobile', branch: 'main' },
-      { name: 'fitapp-api', url: 'https://github.com/org/fitapp-api', branch: 'main' },
-    ],
-    epics: [
-      { title: 'Workouts', description: 'Log and view workouts', subEpics: [
-        { title: 'Log workout', stories: [
-          { title: 'Workout form', tasks: ['Exercise picker', 'Sets/reps', 'Save workout'] },
-          { title: 'Workout history', tasks: ['History list', 'Workout detail', 'Edit/delete'] },
-        ]},
-        { title: 'Progress', stories: [
-          { title: 'Progress charts', tasks: ['Chart component', 'Weight over time', 'PR highlights'] },
-        ]},
-      ]},
-      { title: 'Social', description: 'Community features', subEpics: [
-        { title: 'Feed', stories: [
-          { title: 'Activity feed', tasks: ['Feed API', 'Feed UI', 'Like/comment'] },
-        ]},
-      ]},
-    ],
-    proposalText: 'Mobile fitness app (iOS/Android) for logging workouts, tracking progress, and social motivation. Native feel, offline support. React Native, Node API.',
-  },
-  {
-    title: 'Internal HR Portal',
-    summary: 'Leave requests, document storage, and approval workflows for HR teams.',
+    title: '[Seed] Orion Logistics Portal',
+    summary: 'Dispatch and shipment tracking portal with role-based dashboards.',
     status: 'setting_up',
-    features: ['Leave requests', 'Document vault', 'Approval workflows', 'Reports', 'Employee directory'],
-    roles: ['HR Manager', 'Developer', 'Admin'],
-    goals: [
-      { title: 'Replace legacy system', role: 'HR Manager' },
-      { title: 'Automate 80% of approvals', role: 'Developer' },
-      { title: 'Audit-ready reports', role: 'Admin' },
+    memberEmails: [
+      'pm.carlos@mycrewmanager.test',
+      'dev.dino@mycrewmanager.test',
+      'dev.ivy@mycrewmanager.test',
+      'dev.sam@mycrewmanager.test',
     ],
-    timeline: [
-      { week: 1, items: ['Requirements review', 'Schema design', 'Auth/roles'] },
-      { week: 2, items: ['Leave request module', 'Approval flow', 'Email triggers'] },
-      { week: 3, items: ['Document upload', 'Search', 'Reports'] },
-    ],
-    repositories: [
-      { name: 'hr-portal', url: 'https://github.com/org/hr-portal', branch: 'main' },
-    ],
-    epics: [
-      { title: 'Leave Management', description: 'Request and approve leave', subEpics: [
-        { title: 'Leave requests', stories: [
-          { title: 'Submit leave', tasks: ['Request form', 'Balance check', 'Submit API'] },
-          { title: 'Approval flow', tasks: ['Approver list', 'Approve/reject', 'Notifications'] },
-        ]},
-        { title: 'Document storage', stories: [
-          { title: 'Upload documents', tasks: ['Upload UI', 'Storage backend', 'Permissions'] },
-        ]},
-      ]},
-    ],
-    proposalText: 'Internal HR portal for leave requests, document storage, and approval workflows. Integrate with existing AD. Target: 200 employees. Node, React, S3.',
+    groups: ['Sprint Team', 'General Discussion'],
   },
   {
-    title: 'Analytics Dashboard',
-    summary: 'Data visualization and reporting dashboard for sales and marketing teams.',
+    title: '[Seed] Nimbus Analytics Studio',
+    summary: 'Self-service analytics suite with scheduled reports and drill-down charts.',
+    status: 'in_progress',
+    memberEmails: [
+      'pm.nina@mycrewmanager.test',
+      'dev.rina@mycrewmanager.test',
+      'dev.bea@mycrewmanager.test',
+      'dev.sam@mycrewmanager.test',
+    ],
+    groups: ['Sprint Team', 'Frontend Team'],
+  },
+  {
+    title: '[Seed] Helios HR Suite',
+    summary: 'Employee leave, approvals, and document workflow modernization.',
     status: 'on_hold',
-    features: ['Custom charts', 'Filters', 'Export to PDF', 'Scheduled reports', 'Dashboards'],
-    roles: ['Data Analyst', 'Frontend Developer', 'DevOps'],
-    goals: [
-      { title: 'Support 5 data sources', role: 'Data Analyst' },
-      { title: 'Sub-2s load times', role: 'Frontend Developer' },
-      { title: '99.9% uptime', role: 'DevOps' },
+    memberEmails: [
+      'pm.maya@mycrewmanager.test',
+      'pm.carlos@mycrewmanager.test',
+      'dev.ivy@mycrewmanager.test',
+      'dev.leo@mycrewmanager.test',
     ],
-    timeline: [
-      { week: 1, items: ['Data connector framework', 'Chart library', 'Filter builder'] },
-      { week: 2, items: ['Dashboard builder', 'Export', 'Caching layer'] },
+    groups: ['General Discussion', 'Backend Team'],
+  },
+  {
+    title: '[Seed] Vega Commerce Platform',
+    summary: 'Marketplace checkout optimization with promotions and order timeline views.',
+    status: 'complete',
+    memberEmails: [
+      'pm.nina@mycrewmanager.test',
+      'dev.alden@mycrewmanager.test',
+      'dev.dino@mycrewmanager.test',
+      'dev.rina@mycrewmanager.test',
     ],
-    repositories: [
-      { name: 'analytics-api', url: 'https://github.com/org/analytics-api', branch: 'main' },
-      { name: 'analytics-dashboard', url: 'https://github.com/org/analytics-dashboard', branch: 'main' },
-    ],
-    epics: [
-      { title: 'Charts & Filters', description: 'Visualization core', subEpics: [
-        { title: 'Charts', stories: [
-          { title: 'Chart components', tasks: ['Line chart', 'Bar chart', 'Pie chart', 'Config UI'] },
-          { title: 'Filters', tasks: ['Date range', 'Dimension filter', 'Apply filters'] },
-        ]},
-        { title: 'Export', stories: [
-          { title: 'PDF export', tasks: ['Export API', 'PDF generation', 'Download'] },
-        ]},
-      ]},
-    ],
-    proposalText: 'Analytics dashboard for sales and marketing. Connect to BigQuery, Snowflake, Postgres. Custom charts, filters, PDF export. React, D3, Node API.',
+    groups: ['Sprint Team', 'General Discussion'],
   },
 ];
 
-async function clearSeedData() {
-  console.log('Clearing seed data...');
-  await prisma.$transaction(async (tx) => {
-    await tx.ai_api_notification.deleteMany({});
-    await tx.chat_message.deleteMany({});
-    await tx.chat_room_membership.deleteMany({});
-    await tx.chat_room.deleteMany({});
-    await tx.ai_api_storytask.deleteMany({});
-    await tx.ai_api_userstory.deleteMany({});
-    await tx.ai_api_subepic.deleteMany({});
-    await tx.ai_api_epic.deleteMany({});
-    await tx.ai_api_timelineitem.deleteMany({});
-    await tx.ai_api_timelineweek.deleteMany({});
-    await tx.ai_api_projectgoal.deleteMany({});
-    await tx.ai_api_projectrole.deleteMany({});
-    await tx.ai_api_projectfeature.deleteMany({});
-    await tx.ai_api_repository.deleteMany({});
-    await tx.ai_api_projectmember.deleteMany({});
-    await tx.ai_api_proposal.deleteMany({});
-    await tx.ai_api_projectinvitation.deleteMany({});
-    await tx.ai_api_project.deleteMany({});
+const TOPICS = [
+  'sprint goal',
+  'bug triage',
+  'code review',
+  'deployment checklist',
+  'QA signoff',
+  'deadline alignment',
+  'task ownership',
+  'API contract',
+  'websocket event payload',
+  'release notes',
+];
 
-    const seedUsers = await tx.user.findMany({ where: { email: { in: SEED_EMAILS } } });
-    for (const u of seedUsers) {
-      await tx.authtoken_token.deleteMany({ where: { user_id: BigInt(u.user_id) } });
-      await tx.users_refreshtoken.deleteMany({ where: { user_id: u.user_id } });
-    }
-    await tx.user.deleteMany({ where: { email: { in: SEED_EMAILS } } });
-  });
-  console.log('Seed data cleared.');
+const PM_LINES = [
+  'Can we lock the sprint scope before standup?',
+  'Please update the task status before EOD so we can report progress.',
+  'We need the risk list ready before tomorrow\'s planning meeting.',
+  'Let\'s keep this deadline realistic and split work by owner.',
+  'I\'m tracking this in the board and will flag blockers in the recap.',
+];
+
+const DEV_LINES = [
+  'I pushed a fix and will post the PR link after smoke tests.',
+  'I can take the API endpoint and pair with QA after lunch.',
+  'The query is optimized now; p95 dropped significantly in local tests.',
+  'I found the root cause in validation and opened a follow-up task.',
+  'I\'ll ship this behind a flag so we can validate safely.',
+];
+
+const TEST_CREDENTIALS = {
+  pm: {
+    email: 'pm.maya@mycrewmanager.test',
+    password: TEST_PASSWORD,
+    role: 'Project Manager',
+  },
+  developer: {
+    email: 'dev.alden@mycrewmanager.test',
+    password: TEST_PASSWORD,
+    role: 'Developer',
+  },
+};
+
+function hoursAgo(hours) {
+  return new Date(Date.now() - hours * 60 * 60 * 1000);
 }
 
-async function seed() {
+function daysAgo(days) {
+  return new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+}
+
+function pickLine(role, index) {
+  if (role === 'Project Manager') return PM_LINES[index % PM_LINES.length];
+  return DEV_LINES[index % DEV_LINES.length];
+}
+
+async function clearSeedData({ hardResetUsers }) {
+  const seedProjectTitles = PROJECT_BLUEPRINTS.map((p) => p.title);
+  const seedUserEmails = USER_BLUEPRINTS.map((u) => u.email);
+
+  const existingProjects = await prisma.ai_api_project.findMany({
+    where: { title: { in: seedProjectTitles } },
+    select: { id: true },
+  });
+  const existingProjectIds = existingProjects.map((p) => p.id);
+
+  const existingRooms = await prisma.chat_room.findMany({
+    where: { name: { startsWith: '[Seed] ' } },
+    select: { room_id: true },
+  });
+  const existingRoomIds = existingRooms.map((r) => r.room_id);
+
+  await prisma.$transaction(async (tx) => {
+    if (existingRoomIds.length > 0) {
+      await tx.chat_message.deleteMany({ where: { room_id: { in: existingRoomIds } } });
+      await tx.chat_room_membership.deleteMany({ where: { room_id: { in: existingRoomIds } } });
+      await tx.chat_room.deleteMany({ where: { room_id: { in: existingRoomIds } } });
+    }
+
+    if (existingProjectIds.length > 0) {
+      await tx.ai_api_project.deleteMany({ where: { id: { in: existingProjectIds } } });
+    }
+
+    if (hardResetUsers) {
+      const users = await tx.user.findMany({
+        where: { email: { in: seedUserEmails } },
+        select: { user_id: true },
+      });
+      const userIds = users.map((u) => u.user_id);
+      if (userIds.length > 0) {
+        await tx.authtoken_token.deleteMany({ where: { user_id: { in: userIds.map((id) => BigInt(id)) } } });
+        await tx.users_refreshtoken.deleteMany({ where: { user_id: { in: userIds } } });
+      }
+      await tx.user.deleteMany({ where: { email: { in: seedUserEmails } } });
+    }
+  });
+}
+
+async function ensureUsers() {
+  const passwordHash = await bcrypt.hash(TEST_PASSWORD, 10);
+
+  await prisma.user.createMany({
+    data: USER_BLUEPRINTS.map((u, idx) => ({
+      email: u.email,
+      name: u.name,
+      password: passwordHash,
+      role: u.role,
+      is_active: true,
+      is_staff: false,
+      is_superuser: false,
+      two_factor_enabled: false,
+      created_at: daysAgo(45 - idx),
+      last_login: null,
+      profile_picture: null,
+      email_verified_at: null,
+      two_factor_secret: null,
+    })),
+    skipDuplicates: true,
+  });
+
+  const users = await prisma.user.findMany({
+    where: { email: { in: USER_BLUEPRINTS.map((u) => u.email) } },
+    select: { user_id: true, name: true, email: true, role: true },
+  });
+
+  const byEmail = new Map(users.map((u) => [u.email, u]));
+  for (const seedUser of USER_BLUEPRINTS) {
+    if (!byEmail.has(seedUser.email)) {
+      throw new Error(`Required seed user missing after creation: ${seedUser.email}`);
+    }
+  }
+
+  return byEmail;
+}
+
+function buildRoomMessages(projectTitle, roomName, members, messageCount) {
+  const roomSeed = `${projectTitle}|${roomName}`;
+  const now = Date.now();
+  const startOffsetHours = 72;
+  const intervalMinutes = 15;
+
+  const messages = [];
+  for (let i = 0; i < messageCount; i++) {
+    const sender = members[i % members.length];
+    const topic = TOPICS[(i + roomSeed.length) % TOPICS.length];
+    const weekLabel = `Sprint ${((i % 4) + 1)}`;
+    const baseLine = pickLine(sender.role, i);
+    const content = `${weekLabel}: ${baseLine} For ${topic}, I tagged task #${100 + i} in ${roomName}.`;
+
+    const createdAt = new Date(now - (startOffsetHours * 60 + i * intervalMinutes) * 60 * 1000);
+    messages.push({
+      content,
+      created_at: createdAt,
+      edited_at: null,
+      is_deleted: false,
+      sender_id: BigInt(sender.user_id),
+      message_type: 'text',
+      reply_to_id: null,
+    });
+  }
+
+  return messages;
+}
+
+async function seedProjectsChatAndMessages(usersByEmail) {
+  const seeded = [];
+
+  for (let i = 0; i < PROJECT_BLUEPRINTS.length; i++) {
+    const p = PROJECT_BLUEPRINTS[i];
+    const createdBy = usersByEmail.get(p.memberEmails[0]);
+    if (!createdBy) throw new Error(`Project creator not found for ${p.title}`);
+
+    const createdAt = daysAgo(30 - i * 3);
+
+    const project = await prisma.ai_api_project.create({
+      data: {
+        title: p.title,
+        summary: p.summary,
+        created_at: createdAt,
+        created_by_id: BigInt(createdBy.user_id),
+        status: p.status,
+        updated_at: createdAt,
+        status_updated_at: createdAt,
+        status_updated_by_id: createdBy.user_id,
+      },
+    });
+
+    const members = p.memberEmails.map((email) => {
+      const user = usersByEmail.get(email);
+      if (!user) throw new Error(`Project member missing: ${email}`);
+      return user;
+    });
+
+    await prisma.ai_api_projectmember.createMany({
+      data: members.map((m, idx) => ({
+        project_id: project.id,
+        user_id: BigInt(m.user_id),
+        user_email: m.email,
+        user_name: m.name,
+        role: idx === 0 ? 'Owner' : m.role === 'Project Manager' ? 'Project Lead' : 'Developer',
+        joined_at: new Date(createdAt.getTime() + (idx + 1) * 60 * 60 * 1000),
+      })),
+      skipDuplicates: true,
+    });
+
+    for (let g = 0; g < p.groups.length; g++) {
+      const groupName = p.groups[g];
+      const room = await prisma.chat_room.create({
+        data: {
+          name: `[Seed] ${p.title.replace('[Seed] ', '')} - ${groupName}`,
+          is_private: false,
+          created_at: new Date(createdAt.getTime() + (g + 1) * 2 * 60 * 60 * 1000),
+          created_by_id: BigInt(createdBy.user_id),
+        },
+      });
+
+      await prisma.chat_room_membership.createMany({
+        data: members.map((m, idx) => ({
+          room_id: room.room_id,
+          user_id: BigInt(m.user_id),
+          is_admin: idx === 0,
+          joined_at: new Date(createdAt.getTime() + (idx + 1) * 3 * 60 * 60 * 1000),
+        })),
+        skipDuplicates: true,
+      });
+
+      const messageCount = 12 + ((i + g) % 5); // 12..16 messages per room
+      const messages = buildRoomMessages(p.title, groupName, members, messageCount).map((m) => ({
+        ...m,
+        room_id: room.room_id,
+      }));
+
+      await prisma.chat_message.createMany({ data: messages });
+    }
+
+    seeded.push({ project, membersCount: members.length, roomsCount: p.groups.length });
+  }
+
+  return seeded;
+}
+
+async function main() {
   await prisma.$connect();
   console.log('Connected to PostgreSQL');
 
-  if (RESET) {
-    await clearSeedData();
-  }
+  console.log('Preparing seed dataset...');
+  await clearSeedData({ hardResetUsers: RESET });
 
-  let pm = await prisma.user.findUnique({ where: { email: 'pm@example.com' } });
-  let dev = await prisma.user.findUnique({ where: { email: 'dev@example.com' } });
+  const usersByEmail = await ensureUsers();
+  const seededProjects = await seedProjectsChatAndMessages(usersByEmail);
 
-  if (!pm) {
-    pm = await prisma.user.create({
-      data: {
-        email: 'pm@example.com',
-        name: 'Project Manager',
-        password: PASSWORD_HASH,
-        role: 'Project Manager',
-        is_active: true,
-        is_staff: false,
-        is_superuser: false,
-        created_at: new Date(),
-      },
-    });
-    console.log('Created user: pm@example.com');
-  } else {
-    console.log('User pm@example.com already exists');
-  }
-  if (!dev) {
-    dev = await prisma.user.create({
-      data: {
-        email: 'dev@example.com',
-        name: 'Developer',
-        password: PASSWORD_HASH,
-        role: 'Developer',
-        is_active: true,
-        is_staff: false,
-        is_superuser: false,
-        created_at: new Date(),
-      },
-    });
-    console.log('Created user: dev@example.com');
-  } else {
-    console.log('User dev@example.com already exists');
-  }
+  const totalRooms = seededProjects.reduce((sum, p) => sum + p.roomsCount, 0);
+  const totalProjects = seededProjects.length;
 
-  const pmId = pm.user_id;
-  const devId = dev.user_id;
-  const projectIds = [];
+  console.log('Seed complete.');
+  console.log(`Projects seeded: ${totalProjects}`);
+  console.log(`Chat rooms seeded: ${totalRooms}`);
+  console.log(`Users available: ${USER_BLUEPRINTS.length}`);
 
-  for (const data of PROJECTS_DATA) {
-    const project = await prisma.ai_api_project.create({
-      data: {
-        title: data.title,
-        summary: data.summary,
-        status: data.status,
-        created_at: new Date(),
-        created_by_id: BigInt(pmId),
-      },
-    });
-    projectIds.push(project.id);
+  console.log('\nLogin credentials for WebSocket chat testing:');
+  console.log(`PM account:        ${TEST_CREDENTIALS.pm.email} / ${TEST_CREDENTIALS.pm.password}`);
+  console.log(`Developer account: ${TEST_CREDENTIALS.developer.email} / ${TEST_CREDENTIALS.developer.password}`);
 
-    const pmMember = await prisma.ai_api_projectmember.create({
-      data: {
-        project_id: project.id,
-        user_id: BigInt(pmId),
-        user_name: pm.name,
-        user_email: pm.email,
-        role: 'Owner',
-        joined_at: new Date(),
-      },
-    });
-    const devMember = await prisma.ai_api_projectmember.create({
-      data: {
-        project_id: project.id,
-        user_id: BigInt(devId),
-        user_name: dev.name,
-        user_email: dev.email,
-        role: 'Member',
-        joined_at: new Date(),
-      },
-    });
-
-    for (const f of data.features) {
-      await prisma.ai_api_projectfeature.create({ data: { project_id: project.id, title: f } });
-    }
-    for (const r of data.roles) {
-      await prisma.ai_api_projectrole.create({ data: { project_id: project.id, role: r } });
-    }
-    for (const g of data.goals) {
-      await prisma.ai_api_projectgoal.create({
-        data: { project_id: project.id, title: g.title, role: g.role || null },
-      });
-    }
-    for (const tw of data.timeline) {
-      const weekNum = tw.weekNumber ?? tw.week ?? 1;
-      const week = await prisma.ai_api_timelineweek.create({
-        data: { project_id: project.id, week_number: weekNum },
-      });
-      for (const it of tw.items) {
-        await prisma.ai_api_timelineitem.create({ data: { week_id: week.id, title: it } });
-      }
-    }
-
-    for (const epicData of data.epics) {
-      const epic = await prisma.ai_api_epic.create({
-        data: {
-          project_id: project.id,
-          title: epicData.title,
-          description: epicData.description || null,
-          ai: true,
-          is_complete: false,
-        },
-      });
-      for (const seData of epicData.subEpics) {
-        const subEpic = await prisma.ai_api_subepic.create({
-          data: {
-            epic_id: epic.id,
-            title: seData.title,
-            ai: true,
-            is_complete: false,
-          },
-        });
-        for (const storyData of seData.stories) {
-          const story = await prisma.ai_api_userstory.create({
-            data: {
-              sub_epic_id: subEpic.id,
-              title: storyData.title,
-              ai: true,
-              is_complete: false,
-            },
-          });
-          const tasks = Array.isArray(storyData.tasks) ? storyData.tasks : [];
-          for (let i = 0; i < tasks.length; i++) {
-            const taskTitle = tasks[i];
-            if (!taskTitle) continue;
-            await prisma.ai_api_storytask.create({
-              data: {
-                user_story_id: story.id,
-                title: taskTitle,
-                status: i === 0 ? 'done' : 'pending',
-                ai: true,
-                assignee_id: i % 2 === 0 ? devMember.id : null,
-              },
-            });
-          }
-        }
-      }
-    }
-
-    await prisma.ai_api_proposal.create({
-      data: {
-        project_id: project.id,
-        file: 'proposal.pdf',
-        parsed_text: data.proposalText,
-        uploaded_at: new Date(),
-        uploaded_by_id: BigInt(pmId),
-      },
-    });
-
-    for (const repo of data.repositories || []) {
-      await prisma.ai_api_repository.create({
-        data: {
-          project_id: project.id,
-          name: repo.name,
-          url: repo.url,
-          branch: repo.branch,
-          created_at: new Date(),
-          updated_at: new Date(),
-        },
-      });
-    }
-
-    const room = await prisma.chat_room.create({
-      data: {
-        name: `Project: ${data.title}`,
-        is_private: false,
-        created_at: new Date(),
-        created_by_id: BigInt(pmId),
-      },
-    });
-    await prisma.chat_room_membership.createMany({
-      data: [
-        { room_id: room.room_id, user_id: BigInt(pmId), is_admin: true, joined_at: new Date() },
-        { room_id: room.room_id, user_id: BigInt(devId), is_admin: false, joined_at: new Date() },
-      ],
-    });
-    await prisma.chat_message.createMany({
-      data: [
-        { room_id: room.room_id, sender_id: BigInt(pmId), content: `Let's get ${data.title} moving. What do you think about the current plan?`, message_type: 'text', created_at: new Date(), is_deleted: false },
-        { room_id: room.room_id, sender_id: BigInt(devId), content: 'Looks good. I can start on the API endpoints this week.', message_type: 'text', created_at: new Date(), is_deleted: false },
-        { room_id: room.room_id, sender_id: BigInt(pmId), content: 'Great, thanks for jumping in!', message_type: 'text', created_at: new Date(), is_deleted: false },
-      ],
-    });
-
-    console.log(`Seeded project: ${data.title}`);
-  }
-
-  const now = new Date();
-  await prisma.ai_api_notification.createMany({
-    data: [
-      { recipient_id: pmId, notification_type: 'project_update', title: 'Task completed', message: 'Developer completed "Create ProductCard component" in E-commerce Platform', is_read: false, created_at: now, actor_id: devId },
-      { recipient_id: pmId, notification_type: 'project_status_changed', title: 'Status update', message: 'Task Management SaaS moved to In Progress', is_read: true, read_at: now, created_at: now, actor_id: devId },
-      { recipient_id: devId, notification_type: 'task_assigned', title: 'Task assigned', message: 'You were assigned to "Integrate Stripe" in E-commerce Platform', is_read: false, created_at: now, action_url: projectIds[0] ? `/projects/${projectIds[0]}/backlog` : null, actor_id: pmId },
-      { recipient_id: devId, notification_type: 'mention', title: 'You were mentioned', message: 'Project Manager mentioned you in Task Management SaaS room', is_read: false, created_at: now, actor_id: pmId },
-    ],
-  });
-
-  console.log('Seeded notifications');
-
-  console.log('\nSeed complete. Login with:');
-  console.log('  PM:     pm@example.com / password123');
-  console.log('  Dev:    dev@example.com / password123');
   await prisma.$disconnect();
 }
 
-seed().catch((err) => {
+main().catch(async (err) => {
   console.error('Seed failed:', err);
+  await prisma.$disconnect();
   process.exit(1);
 });

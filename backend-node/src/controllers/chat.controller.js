@@ -1,5 +1,6 @@
 import { prisma } from '../lib/prisma.js';
 import { broadcast } from '../services/broadcast.service.js';
+import { removeUserFromRoom } from '../realtime/rooms/room-registry.js';
 
 function getUserId(req) {
   return req.user?.user_id ?? req.user?._id;
@@ -145,16 +146,127 @@ export async function updateRoom(req, res, next) {
     });
     if (!membership) return res.status(403).json({ detail: 'Not a member of this room' });
 
+    const body = req.body || {};
     const data = {};
-    if (req.body.name !== undefined) data.name = req.body.name;
-    if (req.body.is_private !== undefined) data.is_private = req.body.is_private;
+    if (body.name !== undefined) data.name = body.name;
+    if (body.is_private !== undefined) data.is_private = body.is_private;
 
-    const updated = await prisma.chat_room.update({ where: { room_id: roomId }, data });
+    const updated = Object.keys(data).length > 0
+      ? await prisma.chat_room.update({ where: { room_id: roomId }, data })
+      : room;
     const count = await prisma.chat_room_membership.count({ where: { room_id: roomId } });
-    return res.json(roomToResponse(updated, count));
+    const payload = roomToResponse(updated, count);
+
+    broadcastToRoom(roomId, {
+      type: 'room_updated',
+      room: payload,
+      updated_by: req.user?.name,
+      updated_by_id: String(getUserId(req)),
+    });
+
+    return res.json(payload);
   } catch (err) {
     next(err);
   }
+}
+
+export async function leaveRoom(req, res, next) {
+  try {
+    const roomId = parseInt(req.params.id, 10);
+    const userId = getUserId(req);
+
+    const room = await prisma.chat_room.findUnique({ where: { room_id: roomId } });
+    if (!room) return res.status(404).json({ detail: 'Not found' });
+
+    const membership = await prisma.chat_room_membership.findFirst({
+      where: { room_id: roomId, user_id: BigInt(userId) },
+    });
+    if (!membership) return res.status(403).json({ detail: 'Not a member of this room' });
+
+    await prisma.chat_room_membership.delete({ where: { membership_id: membership.membership_id } });
+    removeUserFromRoom(`chat_${roomId}`, userId);
+
+    const remainingMembers = await prisma.chat_room_membership.findMany({
+      where: { room_id: roomId },
+      orderBy: { membership_id: 'asc' },
+    });
+
+    if (remainingMembers.length === 0) {
+      await prisma.chat_message.deleteMany({ where: { room_id: roomId } });
+      await prisma.chat_room.delete({ where: { room_id: roomId } });
+      return res.json({ detail: 'Left room successfully', room_deleted: true, total_unread_count: 0 });
+    }
+
+    if (membership.is_admin && !remainingMembers.some((m) => m.is_admin)) {
+      await prisma.chat_room_membership.update({
+        where: { membership_id: remainingMembers[0].membership_id },
+        data: { is_admin: true },
+      });
+    }
+
+    broadcastToRoom(roomId, {
+      type: 'user_left',
+      user: req.user?.name,
+      user_id: String(userId),
+    });
+
+    const unread = await getRoomsUnreadCountForUser(userId);
+    return res.json({ detail: 'Left room successfully', room_deleted: false, total_unread_count: unread });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function getRoomsUnreadCountForUser(userId) {
+  const memberships = await prisma.chat_room_membership.findMany({
+    where: { user_id: BigInt(userId) },
+    select: { room_id: true, joined_at: true },
+  });
+
+  let total = 0;
+  for (const m of memberships) {
+    const count = await prisma.chat_message.count({
+      where: {
+        room_id: m.room_id,
+        created_at: { gt: m.joined_at },
+        is_deleted: false,
+        sender_id: { not: BigInt(userId) },
+      },
+    });
+    total += count;
+  }
+  return Math.max(0, total);
+}
+
+export async function markRoomRead(req, res, next) {
+  try {
+    const roomId = parseInt(req.params.id, 10);
+    const userId = getUserId(req);
+
+    const membership = await prisma.chat_room_membership.findFirst({
+      where: { room_id: roomId, user_id: BigInt(userId) },
+    });
+    if (!membership) return res.status(403).json({ detail: 'Not a member of this room' });
+
+    await prisma.chat_room_membership.update({
+      where: { membership_id: membership.membership_id },
+      data: { joined_at: new Date() },
+    });
+
+    const unread = await getRoomsUnreadCountForUser(userId);
+    broadcastToUserChatNotifications(String(userId), {
+      type: 'unread_count_updated',
+      unread_count: unread,
+    });
+
+    return res.json({ detail: 'Room marked as read', total_unread_count: unread });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function setNickname(req, res) {
+  return res.json({ detail: 'Nickname updated successfully' });
 }
 
 export async function deleteRoom(req, res, next) {

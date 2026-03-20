@@ -5,9 +5,10 @@ import { cleanupSocketRooms } from './handlers/disconnect.handler.js';
 import { handleJoinRoom } from './handlers/join-room.handler.js';
 import { handleLeaveRoom } from './handlers/leave-room.handler.js';
 import { handleRoomRealtimeMessage } from './handlers/chat-message.handler.js';
-import { broadcastRoom } from './rooms/room-registry.js';
+import { broadcastRoom, removeSocketFromRoom } from './rooms/room-registry.js';
 import { sendAuthExpiredAndClose } from './ws-connection-context.js';
 import { isSocketUserActive } from './middleware/auth.socket.middleware.js';
+import { prisma } from '../lib/prisma.js';
 
 export async function routeSocketByPath(ws, request) {
   if (!ws?.user || !ws?.userId) {
@@ -54,6 +55,16 @@ export async function routeSocketByPath(ws, request) {
       const isActive = await isSocketUserActive(ws.user?.user_id);
       if (!isActive) {
         sendAuthExpiredAndClose(ws, 'Authentication token expired');
+        return;
+      }
+
+      const roomMembership = await prisma.chat_room_membership.findFirst({
+        where: { room_id: roomId, user_id: BigInt(ws.user.user_id) },
+        select: { membership_id: true },
+      });
+      if (!roomMembership) {
+        removeSocketFromRoom(`chat_${roomId}`, ws);
+        ws.close(1008, 'Not a member of this room');
         return;
       }
 
