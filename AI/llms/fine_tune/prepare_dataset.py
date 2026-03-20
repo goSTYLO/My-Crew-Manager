@@ -17,7 +17,7 @@ from transformers import AutoTokenizer
 MODELS = {
     "phi": "microsoft/phi-2",
     "tinyllama": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
-    "qwen": "Qwen/Qwen2-0.5B-Instruct",
+    "qwen": "Qwen/Qwen2-1.5B-Instruct",
 }
 
 # Dataset directory (relative to this file)
@@ -177,13 +177,14 @@ def prepare_model1_dataset(
 def prepare_model2_dataset(
     model_name: str = "qwen",
     max_length: int = 768,
+    dataset_filename: str = "model2_part1_to_backlog_epic_v1.jsonl",
     output_dir: str | None = None,
 ) -> Dataset:
     """
-    Load model2_part1_to_backlog.jsonl, tokenize (Part 1 JSON -> backlog text).
+    Load Model 2 JSONL, tokenize (Part 1 JSON -> backlog text).
     For Model 2 training: Part 1 JSON in, backlog text out.
     """
-    path = DATASET_DIR / "model2_part1_to_backlog.jsonl"
+    path = DATASET_DIR / dataset_filename
     examples = load_jsonl_file(path)
     if not examples:
         raise FileNotFoundError(

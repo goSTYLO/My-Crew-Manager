@@ -24,7 +24,7 @@ if _venv and "AppData" in sys.executable and ".venv" not in sys.executable:
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from routers import overview, backlog
+from routers import overview, backlog, system
 
 app = FastAPI(
     title="My Crew Manager AI Service",
@@ -42,6 +42,7 @@ app.add_middleware(
 
 app.include_router(overview.router, prefix="/generate-overview", tags=["overview"])
 app.include_router(backlog.router, prefix="/generate-backlog", tags=["backlog"])
+app.include_router(system.router, prefix="/system", tags=["system"])
 
 
 @app.get("/health")

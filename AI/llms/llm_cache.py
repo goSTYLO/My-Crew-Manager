@@ -18,10 +18,11 @@ except Exception:
 
 logger = logging.getLogger('llms')
 
-# Model ID from env; default Qwen2-0.5B for 6GB VRAM (Windows-friendly)
-_MODEL_ID_ENV = os.getenv("MODEL_ID", "Qwen/Qwen2-0.5B-Instruct")
+# Model ID from env; default Qwen2-1.5B for 6GB VRAM (Windows-friendly)
+_MODEL_ID_ENV = os.getenv("MODEL_ID", "Qwen/Qwen2-1.5B-Instruct")
 _PEFT_ADAPTER_PATH_ENV = os.getenv("PEFT_ADAPTER_PATH", "").strip() or None
 _PEFT_ADAPTER_PATH_BACKLOG_ENV = os.getenv("PEFT_ADAPTER_PATH_BACKLOG", "").strip() or None
+_STRICT_ADAPTER_LOADING = os.getenv("STRICT_ADAPTER_LOADING", "true").strip().lower() in {"1", "true", "yes", "on"}
 MODEL_ID = _MODEL_ID_ENV
 
 # Global variables for singleton pattern (Model 1 = overview)
@@ -139,14 +140,22 @@ def _create_llm_pipeline() -> HuggingFacePipeline:
         )
         logger.info("Model loaded to CPU")
 
+    if _STRICT_ADAPTER_LOADING and not resolved_peft_path:
+        raise RuntimeError("STRICT_ADAPTER_LOADING enabled but PEFT_ADAPTER_PATH is not configured")
+
     # Load LoRA adapter if PEFT_ADAPTER_PATH is set
-    if resolved_peft_path and PeftModel is not None:
+    if resolved_peft_path:
+        if PeftModel is None:
+            raise RuntimeError("PEFT is not installed but adapter loading is required")
         if Path(resolved_peft_path).exists():
             logger.info(f"Loading PEFT adapter from {resolved_peft_path}")
             model = PeftModel.from_pretrained(model, resolved_peft_path)
             logger.info("PEFT adapter loaded successfully")
         else:
-            logger.warning(f"PEFT adapter path does not exist: {resolved_peft_path}")
+            msg = f"PEFT adapter path does not exist: {resolved_peft_path}"
+            if _STRICT_ADAPTER_LOADING:
+                raise RuntimeError(msg)
+            logger.warning(msg)
         logger.info("Creating text generation pipeline...")
         pipe = pipeline(
             "text-generation",
@@ -202,11 +211,20 @@ def _create_backlog_llm_pipeline() -> HuggingFacePipeline:
             trust_remote_code=True,
         )
 
-    if peft_path and PeftModel is not None and Path(peft_path).exists():
-        logger.info(f"Loading backlog PEFT adapter from {peft_path}")
-        model = PeftModel.from_pretrained(model, peft_path)
-    elif peft_path:
-        logger.warning(f"Backlog adapter path does not exist: {peft_path}")
+    if _STRICT_ADAPTER_LOADING and not peft_path:
+        raise RuntimeError("STRICT_ADAPTER_LOADING enabled but PEFT_ADAPTER_PATH_BACKLOG is not configured")
+
+    if peft_path:
+        if PeftModel is None:
+            raise RuntimeError("PEFT is not installed but backlog adapter loading is required")
+        if Path(peft_path).exists():
+            logger.info(f"Loading backlog PEFT adapter from {peft_path}")
+            model = PeftModel.from_pretrained(model, peft_path)
+        else:
+            msg = f"Backlog adapter path does not exist: {peft_path}"
+            if _STRICT_ADAPTER_LOADING:
+                raise RuntimeError(msg)
+            logger.warning(msg)
 
     pipe = pipeline(
         "text-generation",
@@ -259,8 +277,8 @@ def get_cached_backlog_llm() -> HuggingFacePipeline:
     global _backlog_model_instance
     _update_activity_time()
 
-    # If no backlog adapter configured, use overview model (backward compat)
-    if not _PEFT_ADAPTER_PATH_BACKLOG_ENV:
+    # If no backlog adapter configured, use overview model only in non-strict mode.
+    if not _PEFT_ADAPTER_PATH_BACKLOG_ENV and not _STRICT_ADAPTER_LOADING:
         logger.debug("[LLM Cache] No PEFT_ADAPTER_PATH_BACKLOG, delegating to get_cached_llm()")
         return get_cached_llm()
 

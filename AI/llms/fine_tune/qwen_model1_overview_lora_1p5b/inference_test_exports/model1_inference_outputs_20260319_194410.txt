@@ -1,0 +1,60 @@
+MODEL 1 INFERENCE TEST EXPORT
+Generated: 2026-03-19T19:44:10
+Dataset: c:\Users\Aaron\GitHub Repos\My-Crew-Manager\AI\llms\fine_tune\dataset\model1_description_to_part1.jsonl
+Examples run: 1
+Compliance summary: 1/1
+====================================================================================================
+
+----------------------------------------------------------------------------------------------------
+EXAMPLE 1
+Best strategy: B: guided+few-shot | Score: 21 | Compliant: True
+Checks: missing=None, weeks=4/4, status=False, backlog=False, proposal=False, generic_timeline=False
+
+Proposal / Input:
+Develop the MyCrewManager platform, a web-based system that enables project managers to assign tasks, track progress, and receive AI-generated recommendations for team coordination and risk mitigation. The project will consist of a Django REST API backend, a React-based dashboard frontend, and AI integration using Hugging Face models, with the goal of creating a functional and scalable solution within 4 weeks. The team comprises a backend developer, frontend developer, AI engineer, and project manager. Success will be measured by the platform's ability to handle task assignments, AI recommendations, smooth team onboarding, and stable deployment. Challenges include limited VRAM, incomplete documentation, and potential OCR parsing issues.
+
+Model Output:
+Title: MyCrew Manager Project
+Summary:
+MyCrew Manager is a project management tool designed to streamline team coordination and improve risk mitigation. It integrates a Django REST backend with a React frontend, leveraging Hugging Face AI for task assignment and risk analysis. The project aims to create a scalable, user-friendly platform within 4-weeks.
+Roles:
+Backend Developer
+Frontend Developer
+AI Engineer
+Project Manager
+Features:
+Task Assignment
+Progress Tracking
+AI Recommendations
+Team Coordination
+Risk Mitigation
+Goals:
+Create backend API for task assignment
+Implement progress tracking for team members
+Integrate AI recommendation engine
+Design team coordination features
+Implement risk mitigation functionality
+Test platform functionality
+Timeline:
+Week 1: Setup backend framework, Implement task assignment API
+Week 2: Develop progress tracking module, Integrate AI model
+Week 3: Build team coordination features, Implement risk analysis
+Week 4: Test platform, Deploy solution
+Epics:
+Backend API
+Progress Tracking Module
+Team Coordiation Features
+Risk Analysis
+Tasks:
+Setup Django framework
+Implement task assignment API 
+Create progress tracking module
+Train AI recommendation model
+Design team collaboration features
+Build risk mitigation module
+Test backend API
+Implement progress tracker
+Enable team coordination
+Train risk analysis model
+Deploy platform
+Submit

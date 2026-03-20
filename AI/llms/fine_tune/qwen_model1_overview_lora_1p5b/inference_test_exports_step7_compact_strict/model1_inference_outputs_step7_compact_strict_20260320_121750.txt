@@ -1,0 +1,185 @@
+MODEL 1 INFERENCE TEST EXPORT - STEP 7 COMPACT STRICT
+Generated: 2026-03-20T12:17:50
+Dataset: c:\Users\Aaron\GitHub Repos\My-Crew-Manager\AI\llms\fine_tune\dataset\model1_description_to_part1.jsonl
+Selected rows (1-based): [6, 7, 8, 9, 10]
+Strict prompt integration active: True
+Strict prompt sections loaded: ['summary', 'roles', 'features', 'goals', 'timeline']
+Strict prompt rule lines injected: 8
+Examples run: 5
+Compliance summary: 1/5
+====================================================================================================
+
+----------------------------------------------------------------------------------------------------
+EXAMPLE 1 (dataset row 6)
+Best strategy: B: guided+compact-strict | Score: 23 | Compliant: False
+Checks: missing=None, weeks=4/4, status=False, backlog=False, proposal=False, generic_timeline=False, repeated_weeks=False, goals_count_issue=True, goals_verb_issue=True, has_default_roles=True, default_roles_count=3, duplicate_sections=False
+
+Proposal / Input:
+Develop SafeSchool, a web-based system for campus safety. It will include entrance monitoring, activity detection, and emergency alerts. Success will be measured by improved response times, reduced incidents, and stable deployment.
+
+Model Output:
+Title: SafeSchool Campus Safety System
+Summary: Develop a web-based campus safety system for monitoring entrances, detecting activities, and sending emergency alerts.
+Roles:
+- Developer 1: Backend Engineer
+- Project Manager
+- Developer 2: Frontend Engineer
+- Designer 1: UI/UX Designer
+- Designer2: Backend Engineer 
+Features:
+- Entrance Monitoring
+- Activity Detection
+- Emergency Alerts
+Goals:
+- Implement entrance monitoring
+- Activate activity detection
+- Configure emergency alerts
+Timeline:
+Week 1: Define scope from goals, Design feature architecture
+Week 2: Implement core backend flows, Build frontend interfaces
+Week 3: Integrate modules and APIs, Validate end-to-end behavior
+Week 4: Run QA and bug fixes, Deploy and monitor release
+
+----------------------------------------------------------------------------------------------------
+EXAMPLE 2 (dataset row 7)
+Best strategy: B: guided+compact-strict | Score: 24 | Compliant: False
+Checks: missing=None, weeks=4/4, status=False, backlog=False, proposal=False, generic_timeline=False, repeated_weeks=False, goals_count_issue=True, goals_verb_issue=False, has_default_roles=True, default_roles_count=3, duplicate_sections=False
+
+Proposal / Input:
+Develop FarmLink, a web-based system that enables farmers to collaborate, share resources, and sell produce. The platform will include a marketplace, resource sharing, and AI demand forecasting. Success will be measured by farmer adoption, improved profitability, and stable deployment.
+
+Model Output:
+Title: FarmLink
+Summary: Develop a web-based platform for farmers to collaborate and sell produce.
+Roles:
+- Product Manager
+- Project Manager
+- UX Designer
+- Backend Developer
+- Frontend Developer
+- AI Engineer
+Features:
+- Marketplace
+- Resource Sharing
+- AI Demand Forecasting
+- Farmer Collaboration
+Goals:
+- Build a farmer marketplace
+- Implement resource sharing features
+- Develop AI demand forecasting
+- Enable farmer collaboration
+Timeline:
+Week 1: Setup backend framework, Design marketplace UI
+Week 2: Implement farmer registration, Create marketplace listings
+Week 3: Add resource sharing functionality, Integrate AI demand forecasting API
+Week 4: Test collaboration features, Deploy platform
+
+----------------------------------------------------------------------------------------------------
+EXAMPLE 3 (dataset row 8)
+Best strategy: C: conditional-fallback-anchor | Score: 24 | Compliant: False
+Checks: missing=None, weeks=4/4, status=False, backlog=False, proposal=False, generic_timeline=False, repeated_weeks=False, goals_count_issue=True, goals_verb_issue=False, has_default_roles=True, default_roles_count=3, duplicate_sections=False
+
+Proposal / Input:
+Develop TutorAI, a mobile app that delivers personalized language lessons and practice. The system will include quizzes, conversation modules, and AI-driven progress tracking. Success will be measured by learner engagement, improved proficiency, and stable deployment.
+
+Model Output:
+Title:
+Summary:
+TutorAI is a language learning app designed to provide personalized lessons and practice for learners. The app includes quizzes, conversation exercises, and AI progress tracking. The goal is to improve learner engagement, proficiency, and deployment stability.
+Roles:
+* Developer
+- Project Manager
+- Backend Developer
+- Frontend Developer
+* Designer
+* QA Engineer
+Features:
+* Quizzes
+* Conversation Modules
+* Progress Tracking
+* Personalized Lessons
+* AI Feedback
+Goals:
+* Develop quizzes
+* Implement conversation modules
+* Create progress tracking
+* Design personalized lessons
+* Integrate AI feedback
+* Test app functionality
+* Deploy app
+Timeline:
+Week 1: Define scope from goals, Design feature architecture
+Week 2: Implement core backend flows, Build frontend interfaces
+Week 3: Integrate modules and APIs, Validate end-to-end behavior
+Week 4: Run QA and bug fixes, Deploy and monitor release
+
+----------------------------------------------------------------------------------------------------
+EXAMPLE 4 (dataset row 9)
+Best strategy: B: guided+compact-strict | Score: 24 | Compliant: False
+Checks: missing=None, weeks=4/4, status=False, backlog=False, proposal=False, generic_timeline=False, repeated_weeks=False, goals_count_issue=True, goals_verb_issue=False, has_default_roles=True, default_roles_count=3, duplicate_sections=False
+
+Proposal / Input:
+Develop GreenHome, a smart home app that monitors energy usage and provides AI-driven recommendations. The system will include appliance integration, alerts, and dashboards. Success will be measured by reduced energy consumption, user adoption, and stable deployment.
+
+Model Output:
+Title: GreenHome Smart Home Energy Management App
+Summary: Develop a smart home energy management app that integrates appliances, alerts, dashboards, and AI-driven recommendations to optimize energy usage and reduce consumption.
+Roles:
+- Project Manager
+- Backend Developer
+- Frontend Developer
+- Machine Learning Engineer
+- Quality Assurance Tester
+Features:
+- Energy Monitoring
+- Alerts
+- Energy Optimization
+- Energy Dashboard
+- User Interface
+- Language Support
+- Energy Saving Tips
+Goals:
+- Implement energy monitoring and alerts
+- Develop energy optimization algorithm
+- Build energy dashboard
+- Integrate
+Timeline:
+Week 1: Define scope from goals, Design feature architecture
+Week 2: Implement core backend flows, Build frontend interfaces
+Week 3: Integrate modules and APIs, Validate end-to-end behavior
+Week 4: Run QA and bug fixes, Deploy and monitor release
+
+----------------------------------------------------------------------------------------------------
+EXAMPLE 5 (dataset row 10)
+Best strategy: B: guided+compact-strict | Score: 26 | Compliant: True
+Checks: missing=None, weeks=4/4, status=False, backlog=False, proposal=False, generic_timeline=False, repeated_weeks=False, goals_count_issue=False, goals_verb_issue=False, has_default_roles=True, default_roles_count=3, duplicate_sections=False
+
+Proposal / Input:
+Develop CityComm, a web-based system that connects residents with city services. It will include issue reporting, service access, and AI categorization. Success will be measured by improved response times, resident adoption, and stable deployment.
+
+Model Output:
+Title: CityComm
+Summary: CityComm is a web-based platform that connects residents to city services. Its features include issue reporting and service access. The system uses TypeScript for backend and React for front-end development. It integrates with Google Maps and AI for categorization. The goal is to reduce citizen frustrations and improve service provision. CityComm plans to launch in the fourth quarter of 2019.
+Roles:
+- Backend Developer
+- Frontend Developer
+- AI Engineer
+- Geospatial Analyst
+- Project Manager
+Features:
+- Issue Reporting
+- Service Access
+- AI Categorization
+- Accessibility
+- User Experience
+Goals:
+- Develop backend and frontend systems
+- Implement issue reporting and AI categorisation
+- Configure service access and geospatial analysis
+- Test and deploy system
+- Improve citizen satisfaction
+Timeline:
+Week 1: Define scope from goals, Design feature architecture
+Week 2: Implement core backend flows, Build frontend interfaces
+Week 3: Integrate modules and APIs, Validate end-to-end behavior
+Week 4: Run QA and bug fixes, Deploy and monitor release

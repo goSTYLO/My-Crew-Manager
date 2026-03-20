@@ -1,0 +1,165 @@
+MODEL 1 INFERENCE TEST EXPORT - STEP 7 COMPACT STRICT
+Generated: 2026-03-20T10:59:29
+Dataset: c:\Users\Aaron\GitHub Repos\My-Crew-Manager\AI\llms\fine_tune\dataset\model1_description_to_part1.jsonl
+Selected rows (1-based): [6, 7, 8, 9, 10]
+Strict prompt integration active: True
+Strict prompt sections loaded: ['summary', 'roles', 'features', 'goals', 'timeline']
+Strict prompt rule lines injected: 18
+Examples run: 5
+Compliance summary: 2/5
+====================================================================================================
+
+----------------------------------------------------------------------------------------------------
+EXAMPLE 1 (dataset row 6)
+Best strategy: B: guided+compact-strict | Score: 19 | Compliant: False
+Checks: missing=['goals'], weeks=4/4, status=False, backlog=False, proposal=False, generic_timeline=False, duplicate_sections=False
+
+Proposal / Input:
+Develop SafeSchool, a web-based system for campus safety. It will include entrance monitoring, activity detection, and emergency alerts. Success will be measured by improved response times, reduced incidents, and stable deployment.
+
+Model Output:
+Title: SafeSchool
+Summary: SafeSchool is a web-based campus safety system that includes entrance monitoring, emergency alerts, and activity detection. It aims to improve incident handling and reduce false positives. The system is built using React, Node.js, and will be deployed using Docker containers. The project team consists of QA, frontend, backend, and DevOps developers.
+Roles:
+- Project Manager
+- Frontend Developer
+- Backend Developer
+- Quality Assurance Engineer
+- UI/UX设计师
+Features:
+- Entrance Monitoring
+- Activity Detection
+- Emergency Alerts
+- Incident Handling
+- Scalability
+- Security
+Timeline:
+Week 1: Plan and execute key deliverables, Plan and execute key deliverables
+Week 2: Plan and execute key deliverables, Plan and execute key deliverables
+Week 3: Plan and execute key deliverables, Plan and execute key deliverables
+Week 4: Plan and execute key deliverables, Plan and execute key deliverables
+
+----------------------------------------------------------------------------------------------------
+EXAMPLE 2 (dataset row 7)
+Best strategy: B: guided+compact-strict | Score: 19 | Compliant: False
+Checks: missing=['goals'], weeks=4/4, status=False, backlog=False, proposal=False, generic_timeline=False, duplicate_sections=False
+
+Proposal / Input:
+Develop FarmLink, a web-based system that enables farmers to collaborate, share resources, and sell produce. The platform will include a marketplace, resource sharing, and AI demand forecasting. Success will be measured by farmer adoption, improved profitability, and stable deployment.
+
+Model Output:
+Title: FarmLink
+Summary: Develop a web-based platform for farmers to collaborate and sell produce, with a marketplace, shared resources, and AI-demand forecasting. The project aims to improve profitability and farmer adoption, with a 6-month timeline and backend, frontend, and AI integration sprints.
+Roles:
+- Project Manager
+- Backend Engineer
+- Frontend Designer
+- Quality Assurance Engineer
+- UI/UX Design
+Features:
+- Marketplace
+- Resource Sharing
+- AI Demand Forecasting
+- Farmer Adoption
+Timeline:
+Week 1: Plan and execute key deliverables, Plan and execute key deliverables
+Week 2: Plan and execute key deliverables, Plan and execute key deliverables
+Week 3: Plan and execute key deliverables, Plan and execute key deliverables
+Week 4: Plan and execute key deliverables, Plan and execute key deliverables
+
+----------------------------------------------------------------------------------------------------
+EXAMPLE 3 (dataset row 8)
+Best strategy: B: guided+compact-strict | Score: 21 | Compliant: True
+Checks: missing=None, weeks=4/4, status=False, backlog=False, proposal=False, generic_timeline=False, duplicate_sections=False
+
+Proposal / Input:
+Develop TutorAI, a mobile app that delivers personalized language lessons and practice. The system will include quizzes, conversation modules, and AI-driven progress tracking. Success will be measured by learner engagement, improved proficiency, and stable deployment.
+
+Model Output:
+Title: TutorAI Language Learning Platform
+Summary: TutorAI is a mobile app designed to provide personalized language lessons, quizzes, and progress tracking for learners. The app will use AI to tailor lessons and monitor progress. The first two phases will focus on conversational and quizzes, while the third phase will integrate them and deploy the app.
+Roles:
+- Project Manager
+- Backend Engineer
+- Frontend Developer
+- Quality Assurance Engineer
+- UI/UX Design
+Features:
+- Conversational Module
+- Quiz Module
+- Progress Tracking
+- AI Progress Monitoring
+Goals:
+- Build conversational module
+- Implement quiz module
+- Develop progress tracking
+- Integrate modules
+- Test progress monitoring
+Timeline:
+Week 1: Plan and execute key deliverables, Plan and execute key deliverables
+Week 2: Plan and execute key deliverables, Plan and execute key deliverables
+Week 3: Plan and execute key deliverables, Plan and execute key deliverables
+Week 4: Plan and execute key deliverables, Plan and execute key deliverables
+
+----------------------------------------------------------------------------------------------------
+EXAMPLE 4 (dataset row 9)
+Best strategy: B: guided+compact-strict | Score: 13 | Compliant: False
+Checks: missing=['summary', 'roles', 'features', 'goals'], weeks=4/4, status=False, backlog=False, proposal=False, generic_timeline=False, duplicate_sections=False
+
+Proposal / Input:
+Develop GreenHome, a smart home app that monitors energy usage and provides AI-driven recommendations. The system will include appliance integration, alerts, and dashboards. Success will be measured by reduced energy consumption, user adoption, and stable deployment.
+
+Model Output:
+Title: Develop Greenhome A Smart Project
+The project is led by a team of four: a backend developer, a frontend developer, a quality assurance engineer, and a UI/UX designer. The app will integrate with smart appliances and sensors, provide energy-saving tips, and display real-time energy usage. The first task is to design the app's architecture and database schema. The second task is to implement appliance integration and sensors. The third task is to develop the energy-saving tip engine and dashboard. The fourth task is to test the app and deploy it. The fifth task is to monitor energy usage and provide alerts. The sixth task is to improve the app's AI-driven recommendations and user interface. The seventh task is to finalize the app and prepare for launch. The eighth task is to conduct post-launch evaluation and gather feedback. The project's success criteria are reduced energy consumption and high user adoption. The project has a budget of $50,000 and a deadline of six months. The team is composed of four members: a backend engineer, a frontend engineer, a QA engineer, and an UX designer. The backend engineer will write the backend code, the frontend engineer will build the frontend, the QA engineer will test the app, and the UX designer will create the user interface. All team members will work remotely using GitLab and GitHub. The backend will use Node.js and Express, while the frontend will use React. The QA engineer will use Selenium and Jest. The UX designer will use Figma. The backend code will be deployed on AWS Lambda. The frontend code will be hosted on Netlify. The QA code will be run on CircleCI. The backend API will expose endpoints for authentication, device management, and energy monitoring. The frontend will display energy usage and receive
+Summary:
+
+Roles:
+
+Features:
+
+Goals:
+Timeline:
+Week 1: Plan and execute key deliverables, Plan and execute key deliverables
+Week 2: Plan and execute key deliverables, Plan and execute key deliverables
+Week 3: Plan and execute key deliverables, Plan and execute key deliverables
+Week 4: Plan and execute key deliverables, Plan and execute key deliverables
+
+----------------------------------------------------------------------------------------------------
+EXAMPLE 5 (dataset row 10)
+Best strategy: B: guided+compact-strict | Score: 21 | Compliant: True
+Checks: missing=None, weeks=4/4, status=False, backlog=False, proposal=False, generic_timeline=False, duplicate_sections=False
+
+Proposal / Input:
+Develop CityComm, a web-based system that connects residents with city services. It will include issue reporting, service access, and AI categorization. Success will be measured by improved response times, resident adoption, and stable deployment.
+
+Model Output:
+Title: CityComm Web-Based System
+Summary: CityComm is a web-based platform that connects residents to city services. The system includes issue reporting, access to services, and AI-powered categorization. The project uses TypeScript, ReactJS, and NodeJS. The team is led by City Comm Team and supported by IT Department. Agile methodology is used for development. The project goal is to launch within 6 months.
+Roles:
+- Project Manager
+- Frontend Developer
+- Backend Developer
+- Quality Assurance Engineer
+- UI/UX Design
+Features:
+- Issue Reporting
+- Service Access
+- AI Categorization
+- Responsive Design
+- User Authentication
+- Notification System
+- Geolocation Integration
+Goals:
+- Develop issue reporting feature
+- Implement service access module
+- Build AI categorization system
+- Design responsive design layout
+- Create user authentication system
+- Integrate notification system
+- Implement geolocation integration
+Timeline:
+Week 1: Plan and execute key deliverables, Plan and execute key deliverables
+Week 2: Plan and execute key deliverables, Plan and execute key deliverables
+Week 3: Plan and execute key deliverables, Plan and execute key deliverables
+Week 4: Plan and execute key deliverables, Plan and execute key deliverables

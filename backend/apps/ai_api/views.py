@@ -1,11 +1,15 @@
 #view.py
 import logging
+import json
+from urllib import request as urllib_request
+from urllib import error as urllib_error
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser
 from rest_framework import status
 from django.shortcuts import get_object_or_404
+from django.conf import settings
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import PermissionDenied
 
@@ -47,16 +51,48 @@ from .serializers import (
     NotificationSerializer, RepositorySerializer,
 )
 
-# Real LLM pipelines
-from llms.project_llm import run_pipeline_from_text, model_to_dict
-from llms.backlog_llm import run_backlog_pipeline
-from llms.llm_cache import clear_cache_and_free_memory, get_memory_usage, start_auto_cleanup
-from apps.ai_api.tasks import task_manager, TaskCancelledException
 from core.services.broadcast_service import BroadcastService
 from core.services.notification_service import NotificationService
 
 import pdfplumber
-import threading
+
+
+def _ai_service_base_url() -> str:
+    return (getattr(settings, 'AI_SERVICE_URL', '') or 'http://127.0.0.1:8002').rstrip('/')
+
+
+def _ai_post(path: str, payload: dict, timeout: int = 60) -> dict:
+    url = f"{_ai_service_base_url()}{path}"
+    data = json.dumps(payload).encode('utf-8')
+    req = urllib_request.Request(
+        url,
+        data=data,
+        headers={'Content-Type': 'application/json'},
+        method='POST',
+    )
+    try:
+        with urllib_request.urlopen(req, timeout=timeout) as resp:
+            body = resp.read().decode('utf-8')
+            return json.loads(body) if body else {}
+    except urllib_error.HTTPError as e:
+        details = e.read().decode('utf-8') if hasattr(e, 'read') else str(e)
+        raise RuntimeError(f"AI service HTTP {e.code}: {details}")
+    except urllib_error.URLError as e:
+        raise RuntimeError(f"AI service unavailable: {e.reason}")
+
+
+def _ai_get(path: str, timeout: int = 30) -> dict:
+    url = f"{_ai_service_base_url()}{path}"
+    req = urllib_request.Request(url, method='GET')
+    try:
+        with urllib_request.urlopen(req, timeout=timeout) as resp:
+            body = resp.read().decode('utf-8')
+            return json.loads(body) if body else {}
+    except urllib_error.HTTPError as e:
+        details = e.read().decode('utf-8') if hasattr(e, 'read') else str(e)
+        raise RuntimeError(f"AI service HTTP {e.code}: {details}")
+    except urllib_error.URLError as e:
+        raise RuntimeError(f"AI service unavailable: {e.reason}")
 
 
 class ProjectViewSet(ModelViewSet):
@@ -84,9 +120,11 @@ class ProjectViewSet(ModelViewSet):
             return Response({"error": "Proposal has no parsed text"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            # Run real LLM pipeline
-            project_model = run_pipeline_from_text(proposal.parsed_text)
-            output = model_to_dict(project_model)
+            output = _ai_post(
+                "/generate-overview",
+                {"proposal_text": proposal.parsed_text},
+                timeout=120,
+            )
 
             # Optionally persist minimal fields on our local Project
             title_override = request.data.get("title")
@@ -152,49 +190,35 @@ class ProjectViewSet(ModelViewSet):
             return Response({"error": "No parsed proposal found for project"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            context = {
-                "project_title": project.title or "",
-            }
-            backlog_model = run_backlog_pipeline(proposal.parsed_text, context)
-
-            # Convert backlog model to dict
-            backlog_dict = {
-                "epics": [
-                    {
-                        "title": epic.title,
-                        "description": getattr(epic, "description", ""),
-                        "sub_epics": [
-                            {
-                                "title": sub.title,
-                                "user_stories": [
-                                    {
-                                        "title": us.title,
-                                        "tasks": [t.title for t in us.tasks],
-                                    }
-                                    for us in sub.user_stories
-                                ],
-                            }
-                            for sub in epic.sub_epics
-                        ],
-                    }
-                    for epic in backlog_model.epics
-                ]
-            }
+            overview_dict = _ai_post(
+                "/generate-overview",
+                {"proposal_text": proposal.parsed_text},
+                timeout=120,
+            )
+            backlog_dict = _ai_post(
+                "/generate-backlog",
+                {
+                    "part1_json": json.dumps(overview_dict),
+                    "proposal_text": proposal.parsed_text,
+                },
+                timeout=120,
+            )
 
             # Persist backlog structures
             Epic.objects.filter(project=project, ai=True).delete()
-            for epic in backlog_model.epics[:20]:
+            for epic in (backlog_dict.get("epics") or [])[:20]:
                 e = Epic.objects.create(
                     project=project,
-                    title=str(epic.title)[:512],
-                    description=getattr(epic, "description", "")
+                    title=str(epic.get("title", ""))[:512],
+                    description=str(epic.get("description", "") or "")
                 )
-                for sub in epic.sub_epics[:20]:
-                    se = SubEpic.objects.create(epic=e, title=str(sub.title)[:512])
-                    for us in sub.user_stories[:20]:
-                        u = UserStory.objects.create(sub_epic=se, title=str(us.title)[:512])
-                        for t in us.tasks[:50]:
-                            StoryTask.objects.create(user_story=u, title=str(t.title)[:512])
+                for sub in (epic.get("sub_epics") or [])[:20]:
+                    se = SubEpic.objects.create(epic=e, title=str(sub.get("title", ""))[:512])
+                    for us in (sub.get("user_stories") or [])[:20]:
+                        u = UserStory.objects.create(sub_epic=se, title=str(us.get("title", ""))[:512])
+                        for t in (us.get("tasks") or [])[:50]:
+                            title = t.get("title") if isinstance(t, dict) else t
+                            StoryTask.objects.create(user_story=u, title=str(title or "")[:512])
 
             # Broadcast backlog regeneration
             BroadcastService.broadcast_backlog_regenerated(project, self.request.user)
@@ -235,9 +259,12 @@ class ProjectViewSet(ModelViewSet):
         if not proposal or not proposal.parsed_text:
             return Response({"error": "No parsed proposal found for project"}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Generate project overview using LLM
-        project_model = run_pipeline_from_text(proposal.parsed_text)
-        output = model_to_dict(project_model)
+        # Generate project overview via AI service
+        output = _ai_post(
+            "/generate-overview",
+            {"proposal_text": proposal.parsed_text},
+            timeout=120,
+        )
 
         # Update project title and summary if they exist in the output
         if output.get('title'):
@@ -459,15 +486,15 @@ class ProjectViewSet(ModelViewSet):
         Useful for freeing VRAM when not using LLM features.
         """
         try:
-            memory_before = get_memory_usage()
-            clear_cache_and_free_memory()
-            memory_after = get_memory_usage()
+            result = _ai_post("/system/clear-cache", {}, timeout=60)
+            memory_before = result.get("memory_before", {})
+            memory_after = result.get("memory_after", {})
             
             return Response({
                 "message": "LLM cache cleared successfully",
                 "memory_before": memory_before,
                 "memory_after": memory_after,
-                "memory_freed_mb": memory_before['allocated_mb'] - memory_after['allocated_mb']
+                "memory_freed_mb": (memory_before.get('allocated_mb', 0) - memory_after.get('allocated_mb', 0))
             })
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -478,7 +505,7 @@ class ProjectViewSet(ModelViewSet):
         Get current GPU memory usage.
         """
         try:
-            memory_info = get_memory_usage()
+            memory_info = _ai_get("/system/memory-usage", timeout=30)
             return Response(memory_info)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -489,11 +516,8 @@ class ProjectViewSet(ModelViewSet):
         Start the auto-cleanup background thread.
         """
         try:
-            start_auto_cleanup()
-            return Response({
-                "message": "Auto-cleanup started successfully",
-                "cleanup_interval_seconds": 1800  # 30 minutes
-            })
+            data = _ai_post("/system/start-auto-cleanup", {}, timeout=30)
+            return Response(data)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
