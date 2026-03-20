@@ -8,9 +8,42 @@ import json
 import re
 from typing import Any
 
+# Section headers Model 1 is trained to emit on their own line. Generation sometimes
+# glues the prior token to the next header (e.g. "DeveloperFeatures:"), so ^Features\s*:
+# never matches and the Roles capture runs to EOF — features end up empty and junk lands in roles.
+_OVERVIEW_HEADER_LABELS = "Title|Summary|Roles|Features|Goals|Timeline"
+
+
+def normalize_overview_glued_headers(text: str) -> str:
+    """
+    Insert newlines before section headers when they are glued to the previous word
+    (no newline / only spaces) so `_extract_sections` boundaries resolve correctly.
+
+    Handles e.g. ``Frontend DeveloperFeatures:`` and ``Developer Features:``.
+    """
+    if not (text or "").strip():
+        return text or ""
+    t = text
+    # No whitespace between word and header: "DeveloperFeatures:"
+    t = re.sub(
+        rf"(?<=[A-Za-z0-9)])(?=(?:{_OVERVIEW_HEADER_LABELS})\s*:)",
+        "\n",
+        t,
+        flags=re.IGNORECASE,
+    )
+    # Space(s) between word and header on same line: "Developer Features:"
+    t = re.sub(
+        rf"(?<=[A-Za-z0-9)])\s+(?=(?:{_OVERVIEW_HEADER_LABELS})\s*:)",
+        "\n",
+        t,
+        flags=re.IGNORECASE,
+    )
+    return t
+
 
 def _extract_sections(text: str) -> dict[str, str]:
     """Extract overview sections by heading patterns."""
+    text = normalize_overview_glued_headers(text or "")
     patterns = {
         "title": r"^Title\s*:\s*(.+)$",
         "summary": r"^Summary\s*:\s*([\s\S]*?)(?=^Roles\s*:|\Z)",
@@ -31,11 +64,24 @@ def _extract_sections(text: str) -> dict[str, str]:
 
 
 def _parse_list_block(block: str) -> list[str]:
-    """Extract bullet/list items from a section block."""
-    items = []
+    """Extract bullet/list items from a section block.
+
+    Handles comma-separated lines and bracket-wrapped lists (Model 1 sometimes emits
+    one line for multiple features/roles/goals, e.g. ``[Venue, Vendor]`` or ``a, b, c``).
+    """
+    items: list[str] = []
     for line in (block or "").splitlines():
         t = re.sub(r"^[-*+\d.)\s]+", "", line.strip()).strip()
-        if t:
+        if t.startswith("[") and t.endswith("]"):
+            t = t[1:-1].strip()
+        if not t:
+            continue
+        if "," in t:
+            for part in t.split(","):
+                part = part.strip()
+                if part:
+                    items.append(part)
+        else:
             items.append(t)
     return items
 
@@ -158,17 +204,9 @@ def parse_training_part1_to_overview(text: str) -> dict[str, Any]:
     goals_block = slice_section("goals")
     timeline_block = slice_section("timeline")
 
-    def plain_lines(block: str) -> list[str]:
-        out: list[str] = []
-        for line in block.splitlines():
-            t = re.sub(r"^[-*+\d.)\s]+", "", line.strip()).strip()
-            if t:
-                out.append(t)
-        return out
-
-    roles = plain_lines(roles_block)
-    features = plain_lines(features_block)
-    goals = [{"title": g, "role": None} for g in plain_lines(goals_block)]
+    roles = _parse_list_block(roles_block)
+    features = _parse_list_block(features_block)
+    goals = [{"title": g, "role": None} for g in _parse_list_block(goals_block)]
 
     timeline: list[dict[str, Any]] = []
     for line in timeline_block.splitlines():
@@ -299,6 +337,96 @@ def overview_dict_to_part1_json(overview: dict[str, Any]) -> str:
     return json.dumps(part1, ensure_ascii=False)
 
 
+def _coerce_str_list(val: Any) -> list[str]:
+    """Normalize list fields from JSON (Node part1 uses string arrays)."""
+    if not val:
+        return []
+    if not isinstance(val, list):
+        return []
+    out: list[str] = []
+    for x in val:
+        if isinstance(x, str):
+            s = x.strip()
+            if s:
+                out.append(s)
+        elif x is not None:
+            s = str(x).strip()
+            if s:
+                out.append(s)
+    return out
+
+
+def part1_json_string_to_overview_dict(part1_json: str) -> dict[str, Any] | None:
+    """
+    Parse Node backend `part1_json` (see ai.controller.js generateBacklog) into an
+    overview-shaped dict for `generate_backlog_from_part1` / `overview_dict_to_model2_training_prompt`.
+
+    Expects JSON: summary, roles, features, goals[{ epic, role }], timeline{ weekN: [task str] }.
+    Returns None if not valid JSON or not that shape (caller may treat input as plain text).
+    """
+    try:
+        data = json.loads((part1_json or "").strip())
+    except (json.JSONDecodeError, TypeError, AttributeError):
+        return None
+    if not isinstance(data, dict):
+        return None
+    tl = data.get("timeline")
+    if not isinstance(tl, dict):
+        return None
+    # Heuristic: Node part1 always includes these; avoids coercing unrelated JSON.
+    if "goals" not in data or "summary" not in data:
+        return None
+
+    goals_out: list[dict[str, Any]] = []
+    for g in data.get("goals") or []:
+        if isinstance(g, dict):
+            title = (g.get("epic") or g.get("title") or "").strip()
+            role_raw = g.get("role")
+            role = None if role_raw is None or role_raw == "" else str(role_raw).strip() or None
+            goals_out.append({"title": title, "role": role})
+        else:
+            goals_out.append({"title": str(g).strip(), "role": None})
+
+    timeline_out: list[dict[str, Any]] = []
+    week_entries: list[tuple[int, list[Any]]] = []
+    for key, tasks in tl.items():
+        m = re.match(r"^week(\d+)$", str(key), re.I)
+        if not m:
+            continue
+        week_num = int(m.group(1))
+        if not isinstance(tasks, list):
+            tasks = []
+        week_entries.append((week_num, tasks))
+    week_entries.sort(key=lambda x: x[0])
+    if not week_entries:
+        for week_num in range(1, 5):
+            week_entries.append((week_num, []))
+    for week_num, tasks in week_entries:
+        goals_week: list[dict[str, str]] = []
+        for t in tasks:
+            if isinstance(t, str):
+                st = t.strip()
+                if st:
+                    goals_week.append({"title": st})
+            elif isinstance(t, dict):
+                tt = (t.get("title") or t.get("text") or "").strip()
+                if tt:
+                    goals_week.append({"title": tt})
+        timeline_out.append({"week_number": week_num, "goals": goals_week})
+
+    title = (data.get("title") or "").strip() or None
+    summary = (data.get("summary") or "").strip() or None
+
+    return {
+        "title": title,
+        "summary": summary,
+        "features": _coerce_str_list(data.get("features")),
+        "roles": _coerce_str_list(data.get("roles")),
+        "goals": goals_out,
+        "timeline": timeline_out,
+    }
+
+
 def _parse_backlog_hierarchy(text: str) -> list[dict]:
     """Parse flat backlog hierarchy (Epic, Sub-Epic, User Story, Task)."""
     epics = []
@@ -328,7 +456,15 @@ def _parse_backlog_hierarchy(text: str) -> list[dict]:
             continue
         task_m = re.match(r"^-?\s*Task\s*\d*\s*:\s*(.+)$", stripped, re.IGNORECASE)
         if task_m and current_story:
-            current_story["tasks"].append({"title": task_m.group(1).strip(), "status": "pending", "ai": True})
+            raw_title = task_m.group(1).strip()
+            if "," in raw_title:
+                task_titles = [p.strip() for p in raw_title.split(",") if p.strip()]
+            else:
+                task_titles = [raw_title]
+            for task_title in task_titles:
+                current_story["tasks"].append(
+                    {"title": task_title, "status": "pending", "ai": True}
+                )
     return epics
 
 

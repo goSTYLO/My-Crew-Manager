@@ -1,7 +1,10 @@
 """POST /generate-backlog - generates backlog epics from proposal text."""
 import logging
+
 from fastapi import APIRouter, HTTPException
 
+from generated_parsers import parse_backlog_text, part1_json_string_to_overview_dict
+from notebook_step_inference import generate_backlog_from_part1
 from schemas.backlog import BacklogRequest, BacklogResponse, EpicItem, SubEpicItem, UserStoryItem, TaskItem
 
 logger = logging.getLogger(__name__)
@@ -9,42 +12,42 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-def _epic_to_item(epic):
-    """Convert llms EpicModel to EpicItem schema."""
+def _epic_dict_to_item(ep: dict) -> EpicItem:
+    """Convert parse_backlog_text epic dict to EpicItem schema."""
     sub_epics = []
-    for se in getattr(epic, "sub_epics", []) or []:
+    for se in ep.get("sub_epics") or []:
         stories = []
-        for us in getattr(se, "user_stories", []) or []:
+        for us in se.get("user_stories") or []:
             tasks = [
                 TaskItem(
-                    title=t.title,
-                    description=getattr(t, "description", "") or "",
-                    status=getattr(t, "status", "pending") or "pending",
-                    ai=getattr(t, "ai", True),
+                    title=t.get("title", "") or "",
+                    description=(t.get("description") or "") if isinstance(t, dict) else "",
+                    status=(t.get("status", "pending") or "pending") if isinstance(t, dict) else "pending",
+                    ai=t.get("ai", True) if isinstance(t, dict) else True,
                 )
-                for t in getattr(us, "tasks", []) or []
+                for t in us.get("tasks") or []
             ]
             stories.append(
                 UserStoryItem(
-                    title=us.title,
-                    description=getattr(us, "description"),
+                    title=us.get("title", "") or "",
+                    description=us.get("description") if isinstance(us, dict) else None,
                     tasks=tasks,
-                    ai=getattr(us, "ai", True),
+                    ai=us.get("ai", True) if isinstance(us, dict) else True,
                 )
             )
         sub_epics.append(
             SubEpicItem(
-                title=se.title,
-                description=getattr(se, "description"),
+                title=se.get("title", "") or "",
+                description=se.get("description") if isinstance(se, dict) else None,
                 user_stories=stories,
-                ai=getattr(se, "ai", True),
+                ai=se.get("ai", True) if isinstance(se, dict) else True,
             )
         )
     return EpicItem(
-        title=epic.title,
-        description=getattr(epic, "description"),
+        title=ep.get("title", "") or "",
+        description=ep.get("description") if isinstance(ep, dict) else None,
         sub_epics=sub_epics,
-        ai=getattr(epic, "ai", True),
+        ai=ep.get("ai", True) if isinstance(ep, dict) else True,
     )
 
 
@@ -52,20 +55,20 @@ def _epic_to_item(epic):
 def generate_backlog(req: BacklogRequest):
     """Generate backlog epics. Prefer part1_json; fallback to proposal_text."""
     try:
-        from llms.backlog_llm import run_backlog_pipeline
-
         proposal_text = (req.proposal_text or "").strip() if req.proposal_text else None
         part1_json = (req.part1_json or "").strip() if req.part1_json else None
         if not part1_json and not proposal_text:
             return BacklogResponse()
 
-        context = {"proposal_text": proposal_text or ""}
-        backlog_model = run_backlog_pipeline(
-            proposal_text=proposal_text,
-            context=context,
-            part1_json=part1_json,
-        )
-        epics = [ _epic_to_item(e) for e in getattr(backlog_model, "epics", []) or [] ]
+        if part1_json:
+            overview_from_node = part1_json_string_to_overview_dict(part1_json)
+            part1_input = overview_from_node if overview_from_node is not None else part1_json
+        else:
+            part1_input = proposal_text or ""
+
+        raw_text = generate_backlog_from_part1(part1_input)
+        parsed = parse_backlog_text(raw_text)
+        epics = [_epic_dict_to_item(e) for e in parsed.get("epics") or []]
         return BacklogResponse(epics=epics)
     except OSError as e:
         if "cublas" in str(e).lower() or "winerror 193" in str(e).lower():

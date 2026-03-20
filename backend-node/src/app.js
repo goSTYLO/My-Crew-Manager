@@ -40,10 +40,11 @@ app.use(cors({
   credentials: true,
 }));
 
-// Rate limiting
+// Rate limiting (use permissive limits in development and Jest NODE_ENV=test)
+const relaxedLimits = env.server.isDevelopment || env.server.isTest;
 const apiLimiter = rateLimit({
-  windowMs: env.server.isDevelopment ? 1 * 60 * 1000 : env.security.rateLimitWindowMs,
-  max: env.server.isDevelopment ? 1500 : env.security.rateLimitMaxRequests,
+  windowMs: relaxedLimits ? 1 * 60 * 1000 : env.security.rateLimitWindowMs,
+  max: relaxedLimits ? 1500 : env.security.rateLimitMaxRequests,
   message: 'Too many requests, please slow down.',
   standardHeaders: true,
   legacyHeaders: false,

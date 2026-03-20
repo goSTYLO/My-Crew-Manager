@@ -101,7 +101,6 @@ const App: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [createdProjectId, setCreatedProjectId] = useState<string | null>(null);
   const [uploadedProposalId, setUploadedProposalId] = useState<string | null>(null);
-  const [authFormat, setAuthFormat] = useState<'Bearer' | 'Token'>('Token');
   
   // Skip tracking states
   const [analysisSkipped, setAnalysisSkipped] = useState(false);
@@ -230,47 +229,6 @@ const App: React.FC = () => {
     setConfirmModalData(null);
   };
 
-  // Test API connection on component mount
-  React.useEffect(() => {
-    const testConnection = async () => {
-      try {
-        const token = getAuthToken();
-        
-        const sessionTest = await fetch(`${API_BASE_URL}/ai/projects/`, {
-          credentials: 'include',
-        });
-        
-        if (sessionTest.ok) {
-          console.log('✅ Using session/cookie authentication');
-          setAuthFormat('Token');
-          return;
-        }
-        
-        if (!token) {
-          console.warn('⚠️ No authentication token found and session auth failed');
-          return;
-        }
-        
-        const tokenTest = await fetch(`${API_BASE_URL}/ai/projects/`, {
-          headers: { 'Authorization': `Token ${token}` },
-          credentials: 'include',
-        });
-        
-        if (tokenTest.ok) {
-          console.log('✅ Using Token authentication');
-          setAuthFormat('Token');
-          return;
-        }
-        
-        console.warn('⚠️ All authentication methods failed');
-      } catch (error) {
-        console.error('❌ API connection test failed:', error);
-      }
-    };
-    
-    testConnection();
-  }, []);
-
   // Handle file selection
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -335,7 +293,7 @@ const App: React.FC = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `${authFormat} ${token}`,
+          'Authorization': `Token ${token}`,
         },
         credentials: 'include',
         body: JSON.stringify(projectData),
@@ -386,7 +344,7 @@ const App: React.FC = () => {
       const response = await fetch(`${API_BASE_URL}/ai/proposals/`, {
         method: 'POST',
         headers: {
-          'Authorization': `${authFormat} ${token}`,
+          'Authorization': `Token ${token}`,
         },
         body: formData,
       });
@@ -466,7 +424,7 @@ const App: React.FC = () => {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `${authFormat} ${token}`,
+            'Authorization': `Token ${token}`,
           },
           body: JSON.stringify({
             title: projectTitle,
@@ -489,57 +447,67 @@ const App: React.FC = () => {
         throw new Error(`${errorMsg}${details ? '\n\n' + details : ''}`);
       }
 
-      console.log('Proposal analyzed:', data);
-      console.log('LLM output structure:', data.llm);
+      // Django wraps overview in `llm`; Node (buildOverviewResponse) returns the same fields at top level.
+      const overview =
+        data.llm != null && typeof data.llm === 'object' ? data.llm : data;
 
-      // Extract LLM output with fallback
-      const llmOutput = data.llm || {};
-      console.log('Processing LLM output:', llmOutput);
-      
-      // Set AI-generated summary (optional)
-      if (llmOutput.summary) {
-        setAiGeneratedSummary(llmOutput.summary);
+      const roleToString = (r: unknown) =>
+        typeof r === 'string' ? r : (r as { role?: string; name?: string })?.role || (r as { name?: string })?.name || '';
+      const featureToString = (f: unknown) =>
+        typeof f === 'string' ? f : (f as { title?: string })?.title || '';
+
+      if (overview.summary) {
+        setAiGeneratedSummary(String(overview.summary));
       }
 
-      // Set AI-generated roles/members
-      if (llmOutput.roles && Array.isArray(llmOutput.roles)) {
-        const aiMembers = llmOutput.roles.map((role: string) => ({
-          id: crypto.randomUUID(),
-          role: role,
-          ai: true,
-        }));
+      if (Array.isArray(overview.roles) && overview.roles.length > 0) {
+        const aiMembers = overview.roles
+          .map((role: unknown) => ({
+            id: crypto.randomUUID(),
+            role: roleToString(role),
+            ai: true,
+          }))
+          .filter((m) => m.role.length > 0);
         setMembers(aiMembers);
       }
 
-      // Set AI-generated features
-      if (llmOutput.features && Array.isArray(llmOutput.features)) {
-        const aiFeatures = llmOutput.features.map((feature: string) => ({
-          id: crypto.randomUUID(),
-          title: feature,
-          ai: true,
-        }));
+      if (Array.isArray(overview.features) && overview.features.length > 0) {
+        const aiFeatures = overview.features
+          .map((feature: unknown) => ({
+            id: crypto.randomUUID(),
+            title: featureToString(feature),
+            ai: true,
+          }))
+          .filter((f) => f.title.length > 0);
         setFeatures(aiFeatures);
       }
 
-      // Set AI-generated goals
-      if (llmOutput.goals && Array.isArray(llmOutput.goals)) {
-        const aiGoals = llmOutput.goals.map((goal: any) => ({
+      if (Array.isArray(overview.goals) && overview.goals.length > 0) {
+        const aiGoals = overview.goals.map((goal: unknown) => ({
           id: crypto.randomUUID(),
-          title: goal.title || goal,
-          role: goal.role || '',
+          title:
+            typeof goal === 'string'
+              ? goal
+              : String((goal as { title?: string })?.title ?? ''),
+          role: typeof goal === 'object' && goal != null ? String((goal as { role?: string }).role || '') : '',
           ai: true,
         }));
         setGoals(aiGoals);
       }
 
-      // Set AI-generated timeline
-      if (llmOutput.timeline && Array.isArray(llmOutput.timeline)) {
-        const aiTimeline = llmOutput.timeline.map((week: any) => ({
-          id: crypto.randomUUID(),
-          week_number: week.week_number || 0,
-          goals: Array.isArray(week.goals) ? week.goals : [],
-          ai: true,
-        }));
+      if (Array.isArray(overview.timeline) && overview.timeline.length > 0) {
+        const aiTimeline = overview.timeline.map((week: any) => {
+          const rawGoals = Array.isArray(week?.goals) ? week.goals : [];
+          const goalStrings = rawGoals.map((g: unknown) =>
+            typeof g === 'string' ? g : String((g as { title?: string })?.title ?? '')
+          );
+          return {
+            id: crypto.randomUUID(),
+            week_number: week.week_number || 0,
+            goals: goalStrings,
+            ai: true,
+          };
+        });
         setTimeline(aiTimeline);
       }
 
@@ -575,7 +543,7 @@ const App: React.FC = () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `${authFormat} ${token}`,
+            'Authorization': `Token ${token}`,
           },
           body: JSON.stringify({
             project: createdProjectId,
@@ -603,7 +571,7 @@ const App: React.FC = () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `${authFormat} ${token}`,
+            'Authorization': `Token ${token}`,
           },
           body: JSON.stringify({
             project: createdProjectId,
@@ -629,7 +597,7 @@ const App: React.FC = () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `${authFormat} ${token}`,
+            'Authorization': `Token ${token}`,
           },
           body: JSON.stringify({
             project: createdProjectId,
@@ -656,7 +624,7 @@ const App: React.FC = () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `${authFormat} ${token}`,
+            'Authorization': `Token ${token}`,
           },
           body: JSON.stringify({
             project: createdProjectId,
@@ -844,7 +812,7 @@ const App: React.FC = () => {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `${authFormat} ${token}`,
+            'Authorization': `Token ${token}`,
           },
         }
       );
@@ -884,58 +852,56 @@ const App: React.FC = () => {
       const response = await fetch(
         `${API_BASE_URL}/ai/projects/${createdProjectId}/backlog/`,
         {
-          headers: { 'Authorization': `${authFormat} ${token}` },
+          headers: { 'Authorization': `Token ${token}` },
           credentials: 'include',
         }
       );
 
       const data = await handleApiResponse(response, 'fetch backlog');
-      console.log('Backlog fetched:', data);
 
-      // Transform backend response to frontend state
-      setEpics(data.epics);
-      
-      // Flatten sub_epics with epic_id
-      const flattenedSubEpics = data.epics.flatMap((epic: any) => 
-        epic.sub_epics.map((subEpic: any) => ({
+      const rawEpics = Array.isArray(data?.epics)
+        ? data.epics
+        : Array.isArray(data)
+          ? data
+          : [];
+
+      setEpics(rawEpics);
+
+      const flattenedSubEpics = rawEpics.flatMap((epic: any) =>
+        (epic.sub_epics || []).map((subEpic: any) => ({
           ...subEpic,
-          epic_id: epic.id
+          epic_id: epic.id,
         }))
       );
       setSubEpics(flattenedSubEpics);
 
-      // Flatten user_stories with sub_epic_id
-      const flattenedUserStories = data.epics.flatMap((epic: any) => 
-        epic.sub_epics.flatMap((subEpic: any) => 
-          subEpic.user_stories.map((userStory: any) => ({
+      const flattenedUserStories = rawEpics.flatMap((epic: any) =>
+        (epic.sub_epics || []).flatMap((subEpic: any) =>
+          (subEpic.user_stories || []).map((userStory: any) => ({
             ...userStory,
-            sub_epic_id: subEpic.id
+            sub_epic_id: subEpic.id,
           }))
         )
       );
       setUserStories(flattenedUserStories);
 
-      // Flatten tasks with user_story_id
-      const flattenedTasks = data.epics.flatMap((epic: any) => 
-        epic.sub_epics.flatMap((subEpic: any) => 
-          subEpic.user_stories.flatMap((userStory: any) => 
-            userStory.tasks.map((task: any) => ({
+      const flattenedTasks = rawEpics.flatMap((epic: any) =>
+        (epic.sub_epics || []).flatMap((subEpic: any) =>
+          (subEpic.user_stories || []).flatMap((userStory: any) =>
+            (userStory.tasks || []).map((task: any) => ({
               ...task,
-              user_story_id: userStory.id
+              user_story_id: userStory.id,
             }))
           )
         )
       );
       setTasks(flattenedTasks);
-      
-      // Auto-expand all epics and sub-epics
-      const allEpicIds = new Set<string>(data.epics.map((epic: any) => String(epic.id)));
+
+      const allEpicIds = new Set<string>(rawEpics.map((epic: any) => String(epic.id)));
       setExpandedEpics(allEpicIds);
-      
+
       const allSubEpicIds = new Set<string>(
-        data.epics.flatMap((epic: any) => 
-          epic.sub_epics.map((subEpic: any) => String(subEpic.id))
-        )
+        rawEpics.flatMap((epic: any) => (epic.sub_epics || []).map((subEpic: any) => String(subEpic.id)))
       );
       setExpandedSubEpics(allSubEpicIds);
 
@@ -957,7 +923,7 @@ const App: React.FC = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `${authFormat} ${token}`,
+          'Authorization': `Token ${token}`,
         },
         body: JSON.stringify({
           project: createdProjectId,
@@ -984,7 +950,7 @@ const App: React.FC = () => {
         method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `${authFormat} ${token}`,
+            'Authorization': `Token ${token}`,
           },
         body: JSON.stringify(epicData),
       });
@@ -1004,7 +970,7 @@ const App: React.FC = () => {
     try {
       const response = await fetch(`${API_BASE_URL}/ai/epics/${epicId}/`, {
         method: 'DELETE',
-        headers: { 'Authorization': `${authFormat} ${token}` },
+        headers: { 'Authorization': `Token ${token}` },
       });
 
       await handleApiResponse(response, 'delete epic');
@@ -1025,7 +991,7 @@ const App: React.FC = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `${authFormat} ${token}`,
+          'Authorization': `Token ${token}`,
         },
         body: JSON.stringify({
           epic: subEpicData.epic_id,
@@ -1051,7 +1017,7 @@ const App: React.FC = () => {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `${authFormat} ${token}`,
+          'Authorization': `Token ${token}`,
         },
         body: JSON.stringify(subEpicData),
       });
@@ -1071,7 +1037,7 @@ const App: React.FC = () => {
     try {
       const response = await fetch(`${API_BASE_URL}/ai/sub-epics/${subEpicId}/`, {
         method: 'DELETE',
-        headers: { 'Authorization': `${authFormat} ${token}` },
+        headers: { 'Authorization': `Token ${token}` },
       });
 
       await handleApiResponse(response, 'delete sub-epic');
@@ -1092,7 +1058,7 @@ const App: React.FC = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `${authFormat} ${token}`,
+          'Authorization': `Token ${token}`,
         },
         body: JSON.stringify({
           sub_epic: userStoryData.sub_epic_id,
@@ -1118,7 +1084,7 @@ const App: React.FC = () => {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `${authFormat} ${token}`,
+          'Authorization': `Token ${token}`,
         },
         body: JSON.stringify(userStoryData),
       });
@@ -1138,7 +1104,7 @@ const App: React.FC = () => {
     try {
       const response = await fetch(`${API_BASE_URL}/ai/user-stories/${userStoryId}/`, {
         method: 'DELETE',
-        headers: { 'Authorization': `${authFormat} ${token}` },
+        headers: { 'Authorization': `Token ${token}` },
       });
 
       await handleApiResponse(response, 'delete user story');
@@ -1159,7 +1125,7 @@ const App: React.FC = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `${authFormat} ${token}`,
+          'Authorization': `Token ${token}`,
         },
         body: JSON.stringify({
           user_story: taskData.user_story_id,
@@ -1187,7 +1153,7 @@ const App: React.FC = () => {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `${authFormat} ${token}`,
+          'Authorization': `Token ${token}`,
         },
         body: JSON.stringify({
           ...taskData,
@@ -1210,7 +1176,7 @@ const App: React.FC = () => {
     try {
       const response = await fetch(`${API_BASE_URL}/ai/story-tasks/${taskId}/`, {
         method: 'DELETE',
-        headers: { 'Authorization': `${authFormat} ${token}` },
+        headers: { 'Authorization': `Token ${token}` },
       });
 
       await handleApiResponse(response, 'delete task');
@@ -1230,7 +1196,7 @@ const App: React.FC = () => {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `${authFormat} ${token}`,
+          'Authorization': `Token ${token}`,
         },
         body: JSON.stringify({ assignee: assigneeId }),
       });
@@ -1375,7 +1341,7 @@ const App: React.FC = () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `${authFormat} ${token}`,
+            'Authorization': `Token ${token}`,
           },
             body: JSON.stringify({
               project: parseInt(createdProjectId!),
@@ -1547,7 +1513,7 @@ const App: React.FC = () => {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `${authFormat} ${token}`,
+          'Authorization': `Token ${token}`,
         },
         body: JSON.stringify(updatedData),
       });
@@ -1591,7 +1557,7 @@ const App: React.FC = () => {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `${authFormat} ${token}`,
+          'Authorization': `Token ${token}`,
         },
         body: JSON.stringify({ title: newTitle }),
       });
@@ -1635,7 +1601,7 @@ const App: React.FC = () => {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `${authFormat} ${token}`,
+          'Authorization': `Token ${token}`,
         },
         body: JSON.stringify(updatedData),
       });
@@ -1735,7 +1701,7 @@ const App: React.FC = () => {
     try {
       const response = await fetch(`${API_BASE_URL}/ai/project-members/${memberId}/`, {
         method: 'DELETE',
-        headers: { 'Authorization': `${authFormat} ${token}` },
+        headers: { 'Authorization': `Token ${token}` },
       });
 
       await handleApiResponse(response, 'delete member');
@@ -1770,7 +1736,7 @@ const App: React.FC = () => {
     try {
       const response = await fetch(`${API_BASE_URL}/ai/project-features/${featureId}/`, {
         method: 'DELETE',
-        headers: { 'Authorization': `${authFormat} ${token}` },
+        headers: { 'Authorization': `Token ${token}` },
       });
 
       await handleApiResponse(response, 'delete feature');
@@ -1805,7 +1771,7 @@ const App: React.FC = () => {
     try {
       const response = await fetch(`${API_BASE_URL}/ai/project-goals/${goalId}/`, {
         method: 'DELETE',
-        headers: { 'Authorization': `${authFormat} ${token}` },
+        headers: { 'Authorization': `Token ${token}` },
       });
 
       await handleApiResponse(response, 'delete goal');

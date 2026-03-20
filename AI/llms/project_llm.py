@@ -1,6 +1,7 @@
 import os
 import re
 import logging
+from generated_parsers import normalize_overview_glued_headers
 from llms.models import (
     ProjectModel,
     TeamMemberModel,
@@ -202,6 +203,7 @@ def _normalize_headings(text: str) -> str:
 
 
 def _extract_sections(text: str) -> dict[str, str]:
+    text = normalize_overview_glued_headers(text or "")
     patterns = {
         "title": r"^Title\s*:\s*(.+)$",
         "summary": r"^Summary\s*:\s*([\s\S]*?)(?=^Roles\s*:|\Z)",
@@ -355,7 +357,8 @@ def _backfill_roles(response: str) -> str:
     missing_defaults = [default for category, default in category_defaults if not hits[category]]
 
     if missing_defaults:
-        roles_pattern = r"(^Roles\s*:\s*)(.*?)(?=^[A-Z][a-zA-Z]+\s*:|$)"
+        # [\s\S]*? spans newlines; .*? without DOTALL fails on typical bullet role lists.
+        roles_pattern = r"(^Roles\s*:\s*)([\s\S]*?)(?=^(?:Title|Summary|Roles|Features|Goals|Timeline)\s*:|\Z)"
 
         def add_missing(match):
             header = match.group(1)

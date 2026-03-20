@@ -1,28 +1,24 @@
-Title: CityComm
-Summary: CityComm is a city service platform that connects citizens with city services through an online portal. It uses TypeScript for the backend and React frontend. The platform integrates with Google maps and AI for service categorization. It aims to reduce citizen frustration and improve service delivery.
+Title: EventEasePro
+Summary: EventEase Pro is an AI-powered event planning tool designed to simplify venue selection, vendor coordination, and task management. It offers advanced scheduling features and real-time notifications to enhance organizational efficiency.
 Roles:
-- Backend Developer
-- Frontend Developer
+- Product Manager
 - AI Engineer
-- Map Engineer
-- Citizen Advocate
-Features:
-- Issue Reporting
-- Service Access
-- Categorization
-- Citizen Feedback
-- Pilot Phase
-- Full Scale Implementation
-- Survey Evaluation
-- Citizen Advocacy
+- UX Designer
+- Event Planner
+- Venue Specialist
+- Backend Developer
+- Frontend DeveloperFeatures:
+- Venue Suggestion Engine
+- Vendor Matching Algorithm
+- Task Management System
+- Real-Time Notifications
+- Scheduling Tools
 Goals:
-- Develop issue reporting feature
-- Implement service access
-- Train AI for categorisation
-- Design citizen feedback form
-- Launch pilot phase
-- Complete full-scale implementation
-- Evaluate citizen advocacy
+- Develop a venue suggestion engine
+- Implement vendor matching algorithm
+- Create task management system
+- Integrate real-time notifications
+- Design scheduling tools
 Timeline:
 Week 1: Define scope from goals, Design feature architecture
 Week 2: Implement core backend flows, Build frontend interfaces

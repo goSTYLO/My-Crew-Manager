@@ -66,8 +66,9 @@ This backend commit introduced a full hardening pass focused on request tracing,
 ## Setup
 
 1. Install dependencies: `npm install`
-2. **Database:** Use PostgreSQL. Configure connection via env:
-    - `POSTGRES_URI` - Full connection string: `postgresql://user:pass@host:5432/mycrewmanager_db`
+2. **Database:** Use PostgreSQL. Configure connection via env (either form works; Prisma uses `DATABASE_URL`):
+    - `DATABASE_URL` or `POSTGRES_URI` — full connection string, for example `postgresql://user:pass@host:5432/mycrewmanager_db`
+    - Alternatively, set `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` — tests and `seed-master.js` can synthesize `DATABASE_URL`
 3. **Env** (from project root `.env`):
     - `JWT_SECRET` - JWT signing secret (must be at least 32 chars)
     - `PORT` - API port (default: `5000`)
@@ -81,7 +82,9 @@ This backend commit introduced a full hardening pass focused on request tracing,
 
 4. Generate Prisma client: `npm run db:generate` (or `npx prisma generate`)
 5. For existing DB: schema is maintained via `prisma/schema.prisma`. Use `npx prisma db pull` to introspect and regenerate if the DB structure changes.
-6. Seed: `npm run seed` or `npm run seed:reset` to populate with PM/Dev accounts and sample data
+6. Seed:
+   - `npm run seed` / `npm run seed:reset` — general chat-centric demo data (multiple PMs/devs).
+   - **`npm run seed:master`** / **`npm run seed:master:reset`** — one PM, two developers, five `[MasterSeed]` projects loaded from repo-root `AI/test_output_backlog_1.json` … `_5.json` (no AI microservice). Each project gets one team chat room, seeded messages, and backlog tasks (about half marked `done` with staggered `updated_at` for dashboards).
 7. Run: `npm run dev` (or `npm start`)
 
 ## Python AI Microservice
@@ -90,9 +93,30 @@ The LLM pipeline (ingest-proposal, generate-backlog) runs in Python. The Node ba
 
 The FastAPI AI service at `AI/` exposes `POST /generate-overview` and `POST /generate-backlog`. Set `AI_SERVICE_URL=http://localhost:8002` and run `cd AI && uvicorn main:app --port 8002 --reload`.
 
+### Live AI integration smoke test
+
+**`npm run smoke:ai-integration`** runs [`scripts/smoke-ai-backend-integration.mjs`](scripts/smoke-ai-backend-integration.mjs): logs in as the PM seed account (see [`accounts.md`](accounts.md)), uploads a PDF built from a fixed proposal paragraph, calls `PUT .../generate-overview/` and `PUT .../generate-backlog`, then **validates persisted counts** — after overview: project summary plus `project-features`, `project-roles`, `project-goals`, `timeline-weeks` (and nested timeline items) vs the generate-overview JSON; after backlog: `GET .../backlog/` tree counts vs flat `epics`, `sub-epics`, `user-stories`, and `story-tasks` list endpoints.
+
+Requires: DB seeded (`npm run seed`), backend running (`npm run dev`), Python AI service on `AI_SERVICE_URL` (default `http://127.0.0.1:8002`), and **10+ minute** timeouts are normal for real LLM calls (`REQUEST_TIMEOUT_MS` env can adjust). Uses `Token` auth from login. If login returns `requires_2fa`, disable 2FA for that user or set `DISABLE_2FA=true` for dev.
+
+The script loads `backend-node/.env` and targets **`http://127.0.0.1:${PORT}`** by default (same `PORT` as the API, e.g. **8001**). Override with **`API_BASE`** if needed.
+
+Optional env: `API_BASE`, `PORT` (used when `API_BASE` unset), `PM_EMAIL`, `PM_PASSWORD`, `PROPOSAL_TEXT`, `AI_HEALTH_URL`, `SMOKE_PRINT_RAW` (set `0` to hide full pretty-printed overview/backlog JSON in the log).
+
 ## Testing
 
-Run `npm test` for Jest unit and integration tests. Uses PostgreSQL with test-aware environment settings. Ensure a test database exists and points to a safe test `POSTGRES_URI`. Set `DISABLE_2FA=true` in test env to simplify auth flows.
+- **`npm test`** — runs **`test:unit`** then **`test:integration`** (separate processes so Prisma mocks stay valid). Both use `--runInBand` so integration suites do not truncate the same PostgreSQL database concurrently. Integration suites include [`api.full-coverage.test.js`](src/__tests__/integration/api.full-coverage.test.js) and [`websocket.realtime.test.js`](src/__tests__/integration/websocket.realtime.test.js).
+- **`npm run test:db-health`** — lightweight Jest run (see `jest.db-health.config.js`) that **requires `DATABASE_URL` or `POSTGRES_URI`** (no implicit default URL). Loads `src/__tests__/setup-db-health.js`, then runs `$connect`, `SELECT 1`, and `count()` on each Prisma model delegate — useful for CI/schema connectivity without booting the full app suite. This file is **not** part of `npm test` (it is ignored in the root `jest.config.js` so it only runs via this script).
+- **`npm run test:all`** — single Jest run over the whole tree (faster, but unsafe if files share one DB with parallel workers).
+- **`npm run test:parallel`** — Jest default worker pool (not recommended for integration tests against one DB).
+
+Uses PostgreSQL with test env from `src/__tests__/setup.js` (defaults `DATABASE_URL` when unset for regular tests only). Set `DISABLE_2FA=true` in test env to simplify auth flows.
+
+With `NODE_ENV=test`, the HTTP rate limiter uses the same relaxed limits as development so large integration suites (e.g. `api.full-coverage.test.js`) are not cut off with HTTP 429.
+
+### API coverage
+
+[`src/__tests__/integration/api.full-coverage.test.js`](src/__tests__/integration/api.full-coverage.test.js) exercises nearly all `/api/user`, `/api/chat`, and `/api/ai` routes; `axios.post` is stubbed so `generate-overview` / `generate-backlog` do not require the Python service.
 
 ## Middleware and Security Notes
 

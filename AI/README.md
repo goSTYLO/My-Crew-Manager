@@ -26,8 +26,9 @@ The AI layer has two entry points: an **HTTP API** (used by backend-node) and **
 2. **Input**: Backend fetches the latest proposal `parsed_text` from Prisma.
 3. **AI call**: `POST /generate-overview` with `{ proposal_text }`.
 4. **Model**: Qwen2-1.5B + LoRA adapter `qwen_model1_overview_lora_1p5b` (Model 1).
-5. **Output**: JSON with `title`, `summary`, `features`, `roles`, `goals`, `timeline`.
-6. **Persistence**: Backend calls `saveOverviewToDb()` → Prisma (`ai_api_project`, `ai_api_projectfeature`, `ai_api_projectrole`, `ai_api_projectgoal`, `ai_api_timelineweek`, `ai_api_timelineitem`).
+5. **Output**: JSON with `title`, `summary`, `features`, `roles`, `goals`, `timeline`. Plain text is passed through `normalize_overview_glued_headers` in `generated_parsers.py` when the model omits a line break before the next header (e.g. `Frontend DeveloperFeatures:`), so section extraction does not swallow the rest of the document into `roles`.
+6. **Model 1 roles fallback**: If parsed `Roles` do not cover PM / backend / frontend (keywords: *project* / *product manager* / *program manager* / word *pm*, *backend*, *frontend*), missing defaults are appended: Project Manager, Backend Developer, Frontend Developer. Set `OVERVIEW_DISABLE_ROLE_BACKFILL=1` to disable. (Implementation uses a multiline-safe regex `[\s\S]*?` for the Roles block—plain `.*?` does not cross newlines, so bullet lists previously skipped backfill entirely.)
+7. **Persistence**: Backend calls `saveOverviewToDb()` → Prisma (`ai_api_project`, `ai_api_projectfeature`, `ai_api_projectrole`, `ai_api_projectgoal`, `ai_api_timelineweek`, `ai_api_timelineitem`).
 
 ### Backlog generation flow
 
@@ -42,10 +43,12 @@ The AI layer has two entry points: an **HTTP API** (used by backend-node) and **
 
 | Path | Entry | Models | Use case |
 |------|-------|--------|----------|
-| **HTTP API** | `main.py` → `/generate-overview`, `/generate-backlog` | `llms.project_llm`, `llms.backlog_llm` | Production; called by backend-node |
-| **CLI** | `project_overview.py`, `project_backlog.py` | `notebook_step_inference` (Model 1 & 2 LoRA) | Local runs, notebook-parity, debugging |
+| **HTTP API** | `main.py` → `/generate-overview`, `/generate-backlog` | `notebook_step_inference` + `generated_parsers` (same LoRA adapters as CLI) | Production; called by backend-node |
+| **CLI** | `project_overview.py`, `project_backlog.py` | Same `notebook_step_inference` stack | Local runs, notebook-parity, debugging |
 
-The CLI scripts use the notebook-parity inference (`notebook_step_inference.py`) and fine-tuned adapters. **`test_microservice.py`** (default batch) runs **all overviews** with Model 1 loaded once, then **all backlogs** with Model 2 loaded once—**two** full “Loading weights” sequences total for the whole run (not per proposal). A single proposal+backlog pair still uses the same unload-between-overview-and-backlog pattern. The HTTP API currently uses the older `llms/` pipeline; a future phase can switch it to the new inference module.
+The CLI and HTTP routers share the notebook-parity inference module (`notebook_step_inference.py`) and parsers. **`test_microservice.py`** (default batch) runs **all overviews** with Model 1 loaded once, then **all backlogs** with Model 2 loaded once—**two** full “Loading weights” sequences total for the whole run (not per proposal). A single proposal+backlog pair still uses the same unload-between-overview-and-backlog pattern.
+
+**Contract smoke (no GPU):** `python smoke_parser_contracts.py` — checks overview/backlog parser shapes and Node `part1_json` round-trip via `part1_json_string_to_overview_dict`.
 
 ### Data flow (mermaid)
 

@@ -20,7 +20,6 @@ import json
 import sys
 import traceback
 from pathlib import Path
-from typing import Any
 
 # Ensure AI/ is on path when run from repo root
 _script_dir = Path(__file__).resolve().parent
@@ -46,11 +45,8 @@ DEFAULT_JSONL = (
 
 # Edit this list for local smoke / regression runs (order = run order).
 TEST_PROPOSALS: list[str] = [
-    """CityComm is a web-based platform that connects residents to city services. Its features include issue reporting and service access. The system uses TypeScript for backend and React for front-end development. It integrates with Google Maps and AI for categorization. The goal is to reduce citizen frustrations and improve service provision.""",
-      """GreenHome is a smart home system that tracks energy usage and gives recommendations to cut consumption. It connects to appliances and sends real-time alerts. The product aims to lower bills and support sustainability.""",
-      """EventEase helps organizers plan weddings and conferences with AI-driven venue and vendor suggestions, scheduling tools, and notifications. It reduces planning overhead for busy teams.""",
-      """MedAssist is a telemedicine platform with secure video visits, AI-assisted symptom checking, scheduling, and shared patient records. It targets better access to care outside clinics.""",
-      """EduLearn delivers online courses with AI tutoring, quizzes, and progress tracking so students worldwide get personalized learning paths and clearer feedback on weak topics.""",
+    """EventEasePro is an intelligent event planning solution that simplifies the organization of weddings, conferences, and other large gatherings. It leverages AI-driven recommendations to suggest venues and vendors, helping organizers make informed decisions quickly. The platform also includes scheduling tools and automated notifications, ensuring that tasks and deadlines are managed effectively. By reducing planning overhead, EventEase allows busy teams to focus on delivering memorable experiences rather than being overwhelmed by logistics. Its purpose is to streamline event management and minimize stress for organizers and participants alike.
+"""
 ]
 
 

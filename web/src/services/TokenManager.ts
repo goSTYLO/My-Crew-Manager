@@ -99,21 +99,18 @@ export class TokenManager {
       // If we have email but it doesn't match active session, this is a different account
       // This is valid in multi-account mode - different accounts can be logged in simultaneously
       if (currentEmail && activeSession.email.toLowerCase() !== currentEmail.toLowerCase()) {
-        console.log('ℹ️ Different account in active session - valid in multi-account mode');
         return true; // Allow different accounts to coexist
       }
 
       // KEY CHECK: If session ID doesn't match, this tab was opened by URL copying (invalid)
       // Only the original tab (with matching session ID) should remain logged in
       if (activeSession.sessionId !== currentSessionId) {
-        console.warn('⚠️ Session ID mismatch - tab was opened from copied URL, logging out this tab only');
         return false;
       }
 
       // Session ID matches - this is the original tab, keep it logged in
       return true;
-    } catch (error) {
-      console.error('Error validating session:', error);
+    } catch {
       return false;
     }
   }
@@ -134,7 +131,6 @@ export class TokenManager {
         timestamp: Date.now(),
       };
       sessionStorage.setItem(this.ACTIVE_SESSION_KEY, JSON.stringify(updatedSession));
-      console.log('🔐 Active session timestamp updated for:', email);
       return;
     }
 
@@ -145,7 +141,6 @@ export class TokenManager {
     };
     sessionStorage.setItem(this.ACTIVE_SESSION_KEY, JSON.stringify(activeSession));
     this.broadcastSessionChange('session_started', activeSession);
-    console.log('🔐 Active session registered for:', email);
   }
 
   /**
@@ -159,7 +154,6 @@ export class TokenManager {
     }
     sessionStorage.removeItem(this.ACTIVE_SESSION_KEY);
     sessionStorage.removeItem(this.SESSION_ID_KEY);
-    console.log('🔐 Active session cleared');
   }
 
   /**
@@ -172,8 +166,7 @@ export class TokenManager {
         return null;
       }
       return JSON.parse(activeSessionStr);
-    } catch (error) {
-      console.error('Error getting active session:', error);
+    } catch {
       return null;
     }
   }
@@ -206,8 +199,6 @@ export class TokenManager {
     if (email) {
       this.registerActiveSession(email, forceRegister);
     }
-    
-    console.log('🔐 Token stored securely');
   }
 
   /**
@@ -236,7 +227,6 @@ export class TokenManager {
     sessionStorage.removeItem(this.USER_ROLE_KEY);
     sessionStorage.removeItem(this.USERNAME_KEY);
     sessionStorage.removeItem(this.EMAIL_KEY);
-    console.log('🔐 All authentication data cleared');
   }
 
   /**
@@ -247,7 +237,6 @@ export class TokenManager {
     const token = this.getToken();
     
     if (!token) {
-      console.log('⚠️ No token found, attempting to refresh...');
       return await this.refreshTokenIfNeeded();
     }
 
@@ -265,7 +254,6 @@ export class TokenManager {
     
     // Prevent too frequent refresh attempts
     if (this.refreshPromise && (now - this.lastRefreshAttempt) < this.REFRESH_COOLDOWN) {
-      console.log('⏳ Refresh already in progress, waiting...');
       return await this.refreshPromise;
     }
 
@@ -333,16 +321,16 @@ export class TokenManager {
             email: result.user.email,
           });
         }
-        
-        console.log('✅ Token refreshed successfully');
+
         return result.token;
       } else {
-        console.warn('⚠️ Token refresh failed:', result.message);
-        this.clearAll();
+        const msg = (result.message || '').toLowerCase();
+        if (!msg.includes('no refresh token') || !this.getToken()) {
+          this.clearAll();
+        }
         return null;
       }
-    } catch (error) {
-      console.error('❌ Token refresh error:', error);
+    } catch {
       this.clearAll();
       return null;
     }
@@ -402,8 +390,6 @@ export class TokenManager {
    */
   static async handleApiError(status: number): Promise<boolean> {
     if (status === 401) {
-      // Unauthorized - token might be expired
-      console.log('🔄 401 Unauthorized, attempting token refresh...');
       const newToken = await this.refreshTokenIfNeeded();
       return !!newToken; // Return true if refresh succeeded
     }
