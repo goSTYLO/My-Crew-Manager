@@ -1,21 +1,23 @@
 Title: EventEase Event Management Platform
-Summary: Build an event management platform that suggests venues, vendors, and schedules events.
+Summary: EventEase is a wedding and conference planning platform that uses AI to suggest venues and vendors, schedule events, and manage guest lists. It aims to reduce planning overhead for teams.
 Roles:
 - Product Manager
 - Frontend Developer
 - Backend Developer
 - Designer
-- AI Engineer
+- Database Administrator
 Features:
-- Venue Suggestion
-- Vendor Search
-- Event Scheduler
-- Notifications
+- Venue Search
+- Vendor Booking
+- Guest List Management
+- Notification System
+- Scheduling Tools
 Goals:
-- Implement venue suggestion feature
-- Develop vendor search functionality
-- Create event scheduler
-- Integrate notification system
+- Build venue search feature
+- Implement vendor booking system
+- Develop guest list management module
+- Create notification system
+- Design scheduling tools
 Timeline:
 Week 1: Define scope from goals, Design feature architecture
 Week 2: Implement core backend flows, Build frontend interfaces

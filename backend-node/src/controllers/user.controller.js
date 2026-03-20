@@ -4,12 +4,15 @@ import jwt from 'jsonwebtoken';
 import speakeasy from 'speakeasy';
 import QRCode from 'qrcode';
 import nodemailer from 'nodemailer';
+import { body } from 'express-validator'
 import path from 'path';
 
 import { prisma } from '../lib/prisma.js';
 import { z } from 'zod';
 import { logger } from '../config/logger.js';
 import { UnauthorizedError } from '../middleware/errors.js';
+
+import { EmailService } from '../services/email.service.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || process.env.SECRET_KEY;
 const REFRESH_COOKIE = 'refresh_token';
@@ -144,12 +147,13 @@ async function sendVerificationEmail(email, code, subject, message) {
   const transporter = nodemailer.createTransport({
     host: process.env.EMAIL_HOST || 'smtp.gmail.com',
     port: parseInt(process.env.EMAIL_PORT || '465', 10),
-    secure: process.env.EMAIL_USE_SSL !== 'false',
-    auth: process.env.EMAIL_HOST_USER ? {
-      user: process.env.EMAIL_HOST_USER,
-      pass: process.env.EMAIL_HOST_PASSWORD,
+    secure: process.env.EMAIL_SECURE !== 'false',
+    auth: process.env.EMAIL_USER ? {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,
     } : undefined,
   });
+  logger.debug("Sending verification Email");
   try {
     await transporter.sendMail({
       from: process.env.DEFAULT_FROM_EMAIL || 'no-reply@example.com',
@@ -157,6 +161,7 @@ async function sendVerificationEmail(email, code, subject, message) {
       subject,
       text: message,
     });
+    logger.info(`OTP email sent successfully to ${email}`);
   } catch (err) {
     console.error('Email send error:', err.message);
   }
@@ -443,7 +448,7 @@ export async function emailRequest(req, res, next) {
         updated_at: now,
       },
     });
-    await sendVerificationEmail(lower, code, 'Verify your email for My Crew Manager', `Your verification code is ${code}. It expires in ${VERIFICATION_TTL_MIN} minutes.`);
+    await sendVerificationEmail(lower, code, 'Verify your email for MyCrewManager', `Your verification code is ${code}. It expires in ${VERIFICATION_TTL_MIN} minutes.`);
     return res.status(204).send();
   } catch (err) {
     if (err instanceof z.ZodError) return sendValidationError(res, err);
@@ -478,6 +483,8 @@ export async function emailVerify(req, res, next) {
     if (user && !user.email_verified_at) {
       await prisma.user.update({ where: { user_id: user.user_id }, data: { email_verified_at: new Date() } });
     }
+    
+    logger.info("Email verified successfully");
     return res.json({ verified: true });
   } catch (err) {
     if (err instanceof z.ZodError) return sendValidationError(res, err);

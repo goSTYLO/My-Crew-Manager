@@ -16,6 +16,26 @@ export const authSchemas = {
     password: z.string().min(1).max(128),
     remember_me: z.boolean().optional(),
   }),
+    refreshToken: z.object({
+    refreshToken: z.string(),
+  }),
+
+  resetPassword: z.object({
+    token: z.string(),
+    newPassword: z.string().min(8),
+  }),
+
+  emailRequest: z.object({
+    email: z.string().email(),
+  }),
+
+  emailVerify: z.object({
+    code: z.string().length(6),
+  }),
+
+  verify2FA: z.object({
+    code: z.string().length(6),
+  }),
 };
 
 export const chatSchemas = {

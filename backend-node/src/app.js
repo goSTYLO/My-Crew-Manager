@@ -16,7 +16,13 @@ import { errorHandler } from './middleware/error.middleware.js';
 import { requestIdMiddleware } from './middleware/request-id.middleware.js';
 import { inputSanitizationMiddleware } from './middleware/security.middleware.js';
 
+import { EmailService } from './services/email.service.js';
+
 const app = express();
+
+// Initialize Email Service
+EmailService.initialize();
+
 const uploadsDir = path.resolve(process.cwd(), env.fileUpload.uploadPath || './uploads');
 fs.mkdirSync(uploadsDir, { recursive: true });
 

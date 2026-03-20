@@ -1,60 +1,19 @@
 {
-  "title": "MedAssist Telemedicine Platform",
+  "title": "Medassist Is A Telemedicine Project",
   "summary": null,
-  "features": [
-    "Secure video visits",
-    "AI-assisted symptoms checking",
-    "Scheduling",
-    "Shared patient records",
+  "features": [],
+  "roles": [
+    "Project Manager",
+    "Backend Developer",
+    "Frontend DeveloperFeatures:",
+    "Goals:",
     "Timeline:",
     "Week 1: Define scope from goals, Design feature architecture",
     "Week 2: Implement core backend flows, Build frontend interfaces",
     "Week 3: Integrate modules and APIs, Validate end-to-end behavior",
     "Week 4: Run QA and bug fixes, Deploy and monitor release"
   ],
-  "roles": [
-    "Developer",
-    "Designer",
-    "Healthcare Professional",
-    "goals:",
-    "Create comprehensive telemedicine platform",
-    "Improve patient outcomes",
-    "Reduce healthcare costs"
-  ],
-  "goals": [
-    {
-      "title": "Create comprehensive telemedicine platform",
-      "role": null
-    },
-    {
-      "title": "Improve patient outcomes",
-      "role": null
-    },
-    {
-      "title": "Reduce healthcare costs",
-      "role": null
-    },
-    {
-      "title": "features:",
-      "role": null
-    },
-    {
-      "title": "Secure video visits",
-      "role": null
-    },
-    {
-      "title": "AI-assisted symptoms checking",
-      "role": null
-    },
-    {
-      "title": "Scheduling",
-      "role": null
-    },
-    {
-      "title": "Shared patient records",
-      "role": null
-    }
-  ],
+  "goals": [],
   "timeline": [
     {
       "week_number": 1,
