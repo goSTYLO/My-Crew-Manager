@@ -1,0 +1,120 @@
+{
+  "epics": [
+    {
+      "title": "Build prototype",
+      "description": null,
+      "ai": true,
+      "sub_epics": [
+        {
+          "title": "Planning",
+          "ai": true,
+          "user_stories": [
+            {
+              "title": "As a Product Manager, I want to define the goals for the GreenHome Smart Home System Prototype so that we can build it efficiently and effectively.",
+              "ai": true,
+              "tasks": [
+                {
+                  "title": "Define the goals for the GreenHome Smart Home System Prototype",
+                  "status": "pending",
+                  "ai": true
+                },
+                {
+                  "title": "Develop a detailed plan for building the prototype.",
+                  "status": "pending",
+                  "ai": true
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Add sensors",
+      "description": null,
+      "ai": true,
+      "sub_epics": [
+        {
+          "title": "Building",
+          "ai": true,
+          "user_stories": [
+            {
+              "title": "As a Designer, I want to create a visually appealing and functional design for the GreenHome Smart Home System Prototype that meets the needs of our users.",
+              "ai": true,
+              "tasks": [
+                {
+                  "title": "Design the visual appeal and functionality of the GreenHome Smart Home System Prototype",
+                  "status": "pending",
+                  "ai": true
+                },
+                {
+                  "title": "Create a prototype that incorporates the design elements",
+                  "status": "pending",
+                  "ai": true
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Integrate sensors",
+      "description": null,
+      "ai": true,
+      "sub_epics": [
+        {
+          "title": "Testing",
+          "ai": true,
+          "user_stories": [
+            {
+              "title": "As a Salesperson, I want to test the GreenHome Smart Home System Prototype to ensure that it works as intended and meets the needs of our customers.",
+              "ai": true,
+              "tasks": [
+                {
+                  "title": "Test the GreenHome Smart Home System Prototype",
+                  "status": "pending",
+                  "ai": true
+                },
+                {
+                  "title": "Gather feedback from potential customers to improve the prototype",
+                  "status": "pending",
+                  "ai": true
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Test prototype",
+      "description": null,
+      "ai": true,
+      "sub_epics": [
+        {
+          "title": "Launching",
+          "ai": true,
+          "user_stories": [
+            {
+              "title": "As a User, I want to be able to control my smart home devices using the GreenHome Smart Home System Prototype.",
+              "ai": true,
+              "tasks": [
+                {
+                  "title": "Integrate the sensors into the prototype",
+                  "status": "pending",
+                  "ai": true
+                },
+                {
+                  "title": "Test the integration of the sensors",
+                  "status": "pending",
+                  "ai": true
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

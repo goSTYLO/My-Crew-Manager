@@ -1,0 +1,85 @@
+{
+  "title": "GreenHome Energy Saver",
+  "summary": "GreenHome is a smart home system that tracks energy usage and provides recommendations to reduce consumption. It integrates with appliances and offers real-time alerts for inefficiencies. The platform aims to lower utility bills and promote sustainability.",
+  "features": [
+    "Energy Monitoring",
+    "Appliance Integration",
+    "AI Recommendations",
+    "Alerts"
+  ],
+  "roles": [
+    "Project Manager",
+    "IoT Engineer",
+    "Backend Developer",
+    "Mobile Developer",
+    "QA Engineer"
+  ],
+  "goals": [
+    {
+      "title": "Design energy monitoring system",
+      "role": null
+    },
+    {
+      "title": "Implement appliance integration",
+      "role": null
+    },
+    {
+      "title": "Enable AI recommendations",
+      "role": null
+    },
+    {
+      "title": "Develop alerts module",
+      "role": null
+    },
+    {
+      "title": "Test energy saver system",
+      "role": null
+    }
+  ],
+  "timeline": [
+    {
+      "week_number": 1,
+      "goals": [
+        {
+          "title": "Setup IoT devices"
+        },
+        {
+          "title": "Configure backend APIs"
+        }
+      ]
+    },
+    {
+      "week_number": 2,
+      "goals": [
+        {
+          "title": "Build energy monitoring system"
+        },
+        {
+          "title": "Implement appliance integration"
+        }
+      ]
+    },
+    {
+      "week_number": 3,
+      "goals": [
+        {
+          "title": "Train AI recommendation model"
+        },
+        {
+          "title": "Integrate with dashboard"
+        }
+      ]
+    },
+    {
+      "week_number": 4,
+      "goals": [
+        {
+          "title": "Create alerts module"
+        },
+        {
+          "title": "Test energy saver system"
+        }
+      ]
+    }
+  ]
+}

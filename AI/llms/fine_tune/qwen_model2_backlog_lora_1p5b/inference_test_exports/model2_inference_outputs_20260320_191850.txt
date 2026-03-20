@@ -1,0 +1,116 @@
+MODEL 2 INFERENCE TEST
+Generated: 2026-03-20T19:18:50
+Dataset: c:\Users\Aaron\GitHub Repos\My-Crew-Manager\AI\llms\fine_tune\dataset\model2_part1_to_backlog_epic_v1_flat.jsonl
+Selected rows (1-based): [9]
+USE_LEGACY_INSTRUCTION_PREFIX=False TRAINING_EXACT_PROMPT_ONLY=True SHORT_BACKLOG_CUE='Output backlog:'
+Examples run: 1
+Compliance summary: 0/1
+====================================================================================================
+
+----------------------------------------------------------------------------------------------------
+EXAMPLE 1 (dataset row 9)
+Best strategy: B: training-exact | Score: 107 | Compliant: False
+Checks: epics=0/5, forbidden=True, duplicates=False, generic_tasks=False, malformed_headers=False, format_issues=True, exact_end_marker=False
+Failure gates: goal_epic_mismatch, forbidden_section, format_violation
+
+Proposal / Input:
+=== CityComm Smart Communication Hub ===
+Summary:
+CityComm is a communication hub for city residents to report issues, access services, and receive updates. It integrates AI to categorize reports and prioritize urgent cases. The system aims to improve civic engagement and streamline city services.
+
+Roles:
+Project Manager
+Backend Developer
+Frontend Developer
+AI Engineer
+Community Manager
+QA Engineer
+
+Features:
+Issue Reporting
+Service Access
+AI Categorization
+Notifications
+
+Goals:
+Design issue reporting system
+Implement service access
+Enable AI categorization
+Develop notifications module
+Test communication hub
+
+Timeline:
+Week 1: Setup backend framework, Configure database schema
+Week 2: Build issue reporting system, Implement service access
+Week 3: Train AI categorization model, Integrate with reporting system
+Week 4: Create notifications module, Test communication hub
+
+Model Output:
+Week 5-6: Final testing, Deployment
+* Backend Framework (e.g., Django)
+* Database Schema (e.g., PostgreSQL)
+* Issue Reporting System (e.g., Flask app)
+* Service Access Module (e.g., React app)
+* AI Categorization Model (e.g., TensorFlow or PyTorch)
+* Notifications Module (e.g., JavaScript library)
+Tools:
+GitLab CI/CD Pipeline
+Jenkins Continuous Integration Server
+Docker Containerization
+AWS Cloud Services
+### Project Structure ###
+The project structure includes the following files and directories:
+```
+project/
+├── frontend/
+│   ├── index.html
+│   └── styles.css
+└── backend/
+├── models.py
+├── serializers.py
+├── views.py
+├── settings.py
+├── urls.py
+├── migrations/
+│   ├── __init__.py
+│   ├── migration_0001_initial.py
+│   └── migration_0002_auto_20230718_1947.py
+├── tests/
+│   ├── test_models.py
+│   ├── test_serializers.py
+│   ├── test_views.py
+│   └── test_settings.py
+├── static/
+│   ├── css/
+│   │   ├── main.css
+│   │   └── footer.css
+│   ├── js/
+│   │   ├── main.js
+│   │   └── footer.js
+│   └── images/
+│       ├── logo.png
+│       └── favicon.ico
+├── templates/
+│   ├── base.html
+│   ├── login.html
+│   ├── register.html
+│   ├── dashboard.html
+│   ├── error.html
+│   ├── success.html
+│   └── notification.html
+├── .gitignore
+├── LICENSE.txt
+├── README.md
+├── requirements.txt
+├── setup.py
+├── tests/
+│   ├── test_models.py
+│   ├── test_serializers.py
+│   ├── test_views.py
+│   └── test_settings.py
+├── src/
+│   ├── auth/
+│   │   ├── user.py
+│   │   └── authentication.py
+│   ├── core/
+│

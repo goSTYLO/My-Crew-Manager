@@ -1,0 +1,6 @@
+Epic 1: Issue Reporting
+-Sub-Epic 1: Planning
+-User Story 1: As a Citizen, I want to report an issue so that my problem can be fixed. (citizen)
+-Task 1: Create account
+-Task 2: Search issues by location
+-Task 4

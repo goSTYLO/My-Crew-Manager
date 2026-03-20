@@ -2,6 +2,19 @@
 
 ## [Unreleased] - MERN Backend Migration
 
+### Changed
+
+- **AI** - `TrainModel2_Backlog.ipynb` Step 6: replaced `TRAINING_EXACT_PROMPT_ONLY` / `SHORT_BACKLOG_CUE` with **`PROMPT_MODE`** (`minimal_strict` default, `training_exact`, `legacy`); added compact `_minimal_strict_guide()` after Part 1 for fewer markdown/timeline hallucinations.
+- **AI** - Model 2 microservice / `notebook_step_inference.generate_backlog_from_part1`: default **`BACKLOG_PROMPT_MODE=minimal_strict`** (shared [`backlog_minimal_strict_prompt.py`](AI/backlog_minimal_strict_prompt.py)) to match Step 6; `legacy` retains old guided `Input/Backlog` path.
+- **AI** - Backlog generation token budgets match Step 6 for non-legacy (**420** / retry **500**); `_sanitize_backlog_response` strips prompt-echo lines and stops at “The following are some examples…”-style meta.
+- **AI** - `notebook_step_inference`: post-decode **`_repair_backlog_flat_shape`** — cap tasks per story at 2, insert **`Epic N:`** from parsed goals when the model stacks extra `-Sub-Epic` lines, **truncate tail** when a 2nd+ Sub-Epic appears under the final goal (removes stray “phase” blocks); stricter VRAM unload between overview and backlog loads; backlog **`repetition_penalty`** 1.18.
+- **AI** - Backlog **`max_new_tokens`** scales with goal/epic count beyond five (**`BACKLOG_TOKENS_PER_EPIC_OVER_5`**, default 95; **`BACKLOG_MAX_NEW_TOKENS_CAP`**, default 1024) so long overviews (e.g. 7+ goals) are not truncated at 420/500 tokens; minimal_strict echo filter only drops lines matching **`^Total epics:`** (avoids broad “goals” substring false positives).
+- **AI** - **`generated_parsers.parse_training_part1_to_overview`** parses Model 2 flat JSONL **`prompt`** fields; **`test_microservice.py`** supports **`--list-jsonl`**, **`--jsonl-indices`**, **`--jsonl-start`** / **`--jsonl-count`**, **`--show-gold`** for backlog-only batch runs from the dataset.
+- **AI** - **`test_microservice.py`** default run uses editable **`TEST_PROPOSALS`**: **phase 1** all overviews (Model 1 once), **phase 2** all backlogs (Model 2 once); outputs **`test_output_*_{1..N}`**; backlog sanitizer drops stray **`-Task N`** lines without a description (decoder fragments).
+- **AI** - **`_extract_goal_epic_titles`**: no longer stops at the first blank line inside **Goals** (fixes single-epic token budget when bullets are separated by empty lines); backlog meta strip cuts at **Note:** / completion boilerplate; adaptive **`max_new_tokens`** / **`repetition_penalty`** tuned for 6+ goals.
+- **AI** - **`BACKLOG_MAX_GOALS_FED`** (default **5**): truncate Part 1 **Goals** to the first N items before Model 2 (aligns with training; set **0** for no cap).
+- **AI** - Backlog recovery: **retry pass** uses lower **`_backlog_retry_repetition_penalty`**; optional **second retry** (`BACKLOG_ENABLE_SECOND_RETRY`, default off); **`_repair_backlog_flat_shape`** now **dedupes** a second `Epic 1:` run, **snaps** `Epic N:` titles to **Goals**, normalizes **Sub-Epic/User Story** indices to 1, strips guide-echo parentheticals.
+
 ### Added
 
 - **AI LLM Optimization (Phase 1–3)**:

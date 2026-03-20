@@ -1,0 +1,97 @@
+{
+  "title": "CityComm",
+  "summary": "CityComm is a city service platform that connects citizens with city services through an online portal. It uses TypeScript for the backend and React frontend. The platform integrates with Google maps and AI for service categorization. It aims to reduce citizen frustration and improve service delivery.",
+  "features": [
+    "Issue Reporting",
+    "Service Access",
+    "Categorization",
+    "Citizen Feedback",
+    "Pilot Phase",
+    "Full Scale Implementation",
+    "Survey Evaluation",
+    "Citizen Advocacy"
+  ],
+  "roles": [
+    "Backend Developer",
+    "Frontend Developer",
+    "AI Engineer",
+    "Map Engineer",
+    "Citizen Advocate"
+  ],
+  "goals": [
+    {
+      "title": "Develop issue reporting feature",
+      "role": null
+    },
+    {
+      "title": "Implement service access",
+      "role": null
+    },
+    {
+      "title": "Train AI for categorisation",
+      "role": null
+    },
+    {
+      "title": "Design citizen feedback form",
+      "role": null
+    },
+    {
+      "title": "Launch pilot phase",
+      "role": null
+    },
+    {
+      "title": "Complete full-scale implementation",
+      "role": null
+    },
+    {
+      "title": "Evaluate citizen advocacy",
+      "role": null
+    }
+  ],
+  "timeline": [
+    {
+      "week_number": 1,
+      "goals": [
+        {
+          "title": "Define scope from goals"
+        },
+        {
+          "title": "Design feature architecture"
+        }
+      ]
+    },
+    {
+      "week_number": 2,
+      "goals": [
+        {
+          "title": "Implement core backend flows"
+        },
+        {
+          "title": "Build frontend interfaces"
+        }
+      ]
+    },
+    {
+      "week_number": 3,
+      "goals": [
+        {
+          "title": "Integrate modules and APIs"
+        },
+        {
+          "title": "Validate end-to-end behavior"
+        }
+      ]
+    },
+    {
+      "week_number": 4,
+      "goals": [
+        {
+          "title": "Run QA and bug fixes"
+        },
+        {
+          "title": "Deploy and monitor release"
+        }
+      ]
+    }
+  ]
+}

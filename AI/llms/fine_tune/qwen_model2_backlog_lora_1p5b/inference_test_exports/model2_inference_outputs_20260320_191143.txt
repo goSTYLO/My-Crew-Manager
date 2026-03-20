@@ -1,0 +1,79 @@
+MODEL 2 TRAINING-ALIGNED INFERENCE TEST
+Generated: 2026-03-20T19:11:43
+Dataset: c:\Users\Aaron\GitHub Repos\My-Crew-Manager\AI\llms\fine_tune\dataset\model2_part1_to_backlog_epic_v1_flat.jsonl
+Selected rows (1-based): [9]
+USE_LEGACY_INSTRUCTION_PREFIX=False SHORT_BACKLOG_CUE='Output backlog:'
+Examples run: 1
+Compliance summary: 0/1
+====================================================================================================
+
+----------------------------------------------------------------------------------------------------
+EXAMPLE 1 (dataset row 9)
+Best strategy: B: training-aligned | Score: 120 | Compliant: False
+Checks: epics=5/5, forbidden=False, duplicates=False, generic_tasks=False, malformed_headers=False, format_issues=False, exact_end_marker=False
+Failure gates: invalid_sub_epic_cardinality
+
+Proposal / Input:
+=== CityComm Smart Communication Hub ===
+Summary:
+CityComm is a communication hub for city residents to report issues, access services, and receive updates. It integrates AI to categorize reports and prioritize urgent cases. The system aims to improve civic engagement and streamline city services.
+
+Roles:
+Project Manager
+Backend Developer
+Frontend Developer
+AI Engineer
+Community Manager
+QA Engineer
+
+Features:
+Issue Reporting
+Service Access
+AI Categorization
+Notifications
+
+Goals:
+Design issue reporting system
+Implement service access
+Enable AI categorization
+Develop notifications module
+Test communication hub
+
+Timeline:
+Week 1: Setup backend framework, Configure database schema
+Week 2: Build issue reporting system, Implement service access
+Week 3: Train AI categorization model, Integrate with reporting system
+Week 4: Create notifications module, Test communication hub
+
+Model Output:
+Epic 1: Issue Reporting System - Complete the initial implementation of an issue reporting system that allows users to submit complaints or concerns about various aspects of their community life. This will include features such as user authentication, category tagging, and notification settings.
+Epic 2: Service Access Module - Develop a feature allowing users to access specific services within the city based on their reported issue type. This should be integrated seamlessly into the existing issue reporting system.
+Epic 3: AI Categorization Model - Train a machine learning algorithm capable of automatically classifying incoming reports into categories relevant to the city's needs. This will help in prioritizing urgent cases and improving overall efficiency.
+Epic 4: Notifications Module - Design and implement a notification system that alerts users when their reported issue has been resolved or if new information becomes available regarding it. This will ensure timely feedback and transparency among citizens.
+Epic 5: Testing CommHub - Conduct thorough testing across all modules to identify any bugs or performance bottlenecks before final deployment. Ensure that the communication hub functions smoothly and efficiently for both end-users and city officials alike.
+### Project Management Plan ###
+- **Epic 1:** Issue Reporting System
+- **Tasks:** User Authentication, Category Tagging, Notification Settings
+- **Estimate:** 7 days
+- **Dependencies:** None
+- **Epic 2:** Service Access Module
+- **Tasks:** Integration with Existing System, Seamless Functionality
+- **Estimate:** 8 days
+- **Dependencies:** Epic 1
+- **Epic 3:** AI Categorization Model
+- **Tasks:** Training Algorithm, Priority Setting
+- **Estimate:** 9 days
+- **Dependencies:** Epic 2
+- **Epic 4:** Notifications Module
+- **Tasks:** Notification Design, Implementation
+- **Estimate:** 6 days
+- **Dependencies:** Epic 3
+- **Epic 5:** Testing CommHub
+- **Tasks:** Bug Identification, Performance Optimization
+- **Estimate:** 10 days
+- **Dependencies:** All Epics
+### Backlog Estimation ###
+- **Total Epics:** 5
+- **Remaining Tasks:** 45 days
+- **Available Resources:** 10 developers, 2 QA engineers, 1 project manager, 1 frontend developer, 1 backend developer
+### Milestone Break

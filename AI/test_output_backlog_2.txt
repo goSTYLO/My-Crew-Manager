@@ -1,0 +1,20 @@
+Epic 1: Build prototype
+-Sub-Epic 1: Planning
+-User Story 1: As a Product Manager, I want to define the goals for the GreenHome Smart Home System Prototype so that we can build it efficiently and effectively.
+-Task 1: Define the goals for the GreenHome Smart Home System Prototype
+-Task 2: Develop a detailed plan for building the prototype.
+Epic 2: Add sensors
+-Sub-Epic 1: Building
+-User Story 1: As a Designer, I want to create a visually appealing and functional design for the GreenHome Smart Home System Prototype that meets the needs of our users.
+-Task 1: Design the visual appeal and functionality of the GreenHome Smart Home System Prototype
+-Task 2: Create a prototype that incorporates the design elements
+Epic 3: Integrate sensors
+-Sub-Epic 1: Testing
+-User Story 1: As a Salesperson, I want to test the GreenHome Smart Home System Prototype to ensure that it works as intended and meets the needs of our customers.
+-Task 1: Test the GreenHome Smart Home System Prototype
+-Task 2: Gather feedback from potential customers to improve the prototype
+Epic 4: Test prototype
+-Sub-Epic 1: Launching
+-User Story 1: As a User, I want to be able to control my smart home devices using the GreenHome Smart Home System Prototype.
+-Task 1: Integrate the sensors into the prototype
+-Task 2: Test the integration of the sensors

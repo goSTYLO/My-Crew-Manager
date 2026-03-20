@@ -1,0 +1,149 @@
+{
+  "epics": [
+    {
+      "title": "Develop issue reporting feature",
+      "description": null,
+      "ai": true,
+      "sub_epics": [
+        {
+          "title": "Planning",
+          "ai": true,
+          "user_stories": [
+            {
+              "title": "As a Citizen, I want to report an issue so that my problem can be fixed.",
+              "ai": true,
+              "tasks": [
+                {
+                  "title": "Create an account",
+                  "status": "pending",
+                  "ai": true
+                },
+                {
+                  "title": "Search for an issue",
+                  "status": "pending",
+                  "ai": true
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Implement service access",
+      "description": null,
+      "ai": true,
+      "sub_epics": [
+        {
+          "title": "Planning",
+          "ai": true,
+          "user_stories": [
+            {
+              "title": "As a Citizen, I want to access city services so that I can get help when needed.",
+              "ai": true,
+              "tasks": [
+                {
+                  "title": "Sign up for services",
+                  "status": "pending",
+                  "ai": true
+                },
+                {
+                  "title": "Find available services",
+                  "status": "pending",
+                  "ai": true
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Train AI for categorisation",
+      "description": null,
+      "ai": true,
+      "sub_epics": [
+        {
+          "title": "Planning",
+          "ai": true,
+          "user_stories": [
+            {
+              "title": "As a Citizen, I want to receive categorized information about city services so that I know what to expect.",
+              "ai": true,
+              "tasks": [
+                {
+                  "title": "Register for services",
+                  "status": "pending",
+                  "ai": true
+                },
+                {
+                  "title": "Get categorized information",
+                  "status": "pending",
+                  "ai": true
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Design citizen feedback form",
+      "description": null,
+      "ai": true,
+      "sub_epics": [
+        {
+          "title": "Planning",
+          "ai": true,
+          "user_stories": [
+            {
+              "title": "As a Citizen, I want to provide feedback on city services so that I can make improvements.",
+              "ai": true,
+              "tasks": [
+                {
+                  "title": "Submit feedback",
+                  "status": "pending",
+                  "ai": true
+                },
+                {
+                  "title": "Review feedback",
+                  "status": "pending",
+                  "ai": true
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Launch pilot phase",
+      "description": null,
+      "ai": true,
+      "sub_epics": [
+        {
+          "title": "Planning",
+          "ai": true,
+          "user_stories": [
+            {
+              "title": "As a Citizen, I want to participate in a pilot phase of the CityComm platform so that I can test new features and give suggestions.",
+              "ai": true,
+              "tasks": [
+                {
+                  "title": "Join pilot program",
+                  "status": "pending",
+                  "ai": true
+                },
+                {
+                  "title": "Test new features",
+                  "status": "pending",
+                  "ai": true
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

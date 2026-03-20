@@ -1,0 +1,149 @@
+{
+  "epics": [
+    {
+      "title": "Build a robust backend for adaptive learning",
+      "description": null,
+      "ai": true,
+      "sub_epics": [
+        {
+          "title": "Build the backend",
+          "ai": true,
+          "user_stories": [
+            {
+              "title": "As a Software Developer, I want to implement the backend so that it can support adaptive learning.",
+              "ai": true,
+              "tasks": [
+                {
+                  "title": "Write the API documentation",
+                  "status": "pending",
+                  "ai": true
+                },
+                {
+                  "title": "Implement the backend flow",
+                  "status": "pending",
+                  "ai": true
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Develop adaptive algorithms for personalized feedback",
+      "description": null,
+      "ai": true,
+      "sub_epics": [
+        {
+          "title": "Develop the adaptive algorithms",
+          "ai": true,
+          "user_stories": [
+            {
+              "title": "As a Software Developer, I want to develop the adaptive algorithms so that they can provide personalized feedback.",
+              "ai": true,
+              "tasks": [
+                {
+                  "title": "Write the algorithm logic",
+                  "status": "pending",
+                  "ai": true
+                },
+                {
+                  "title": "Implement the adaptive feedback",
+                  "status": "pending",
+                  "ai": true
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Implement interactive quizzes for self-assessment",
+      "description": null,
+      "ai": true,
+      "sub_epics": [
+        {
+          "title": "Implement the quizzes",
+          "ai": true,
+          "user_stories": [
+            {
+              "title": "As a Software Developer, I want to create the quizzes so that students can assess their own progress.",
+              "ai": true,
+              "tasks": [
+                {
+                  "title": "Create the quiz questions",
+                  "status": "pending",
+                  "ai": true
+                },
+                {
+                  "title": "Implement the quiz functionality",
+                  "status": "pending",
+                  "ai": true
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Design a course management system for student tracking",
+      "description": null,
+      "ai": true,
+      "sub_epics": [
+        {
+          "title": "Design the course management system",
+          "ai": true,
+          "user_stories": [
+            {
+              "title": "As a Educator, I want to design the course management system so that I can track student progress easily.",
+              "ai": true,
+              "tasks": [
+                {
+                  "title": "Design the course structure",
+                  "status": "pending",
+                  "ai": true
+                },
+                {
+                  "title": "Implement the course tracking",
+                  "status": "pending",
+                  "ai": true
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Continuously improve and iterate",
+      "description": null,
+      "ai": true,
+      "sub_epics": [
+        {
+          "title": "Improve the platform",
+          "ai": true,
+          "user_stories": [
+            {
+              "title": "As a Software Developer, I want to continuously improve the platform by fixing bugs and adding new features.",
+              "ai": true,
+              "tasks": [
+                {
+                  "title": "Fix bugs in the backend",
+                  "status": "pending",
+                  "ai": true
+                },
+                {
+                  "title": "Add new features to the platform",
+                  "status": "pending",
+                  "ai": true
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

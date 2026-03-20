@@ -1,0 +1,73 @@
+MODEL 2 INFERENCE TEST
+Generated: 2026-03-20T19:41:29
+Dataset: c:\Users\Aaron\GitHub Repos\My-Crew-Manager\AI\llms\fine_tune\dataset\model2_part1_to_backlog_epic_v1_flat.jsonl
+Selected rows (1-based): [9]
+PROMPT_MODE=minimal_strict
+Examples run: 1
+Compliance summary: 1/1
+====================================================================================================
+
+----------------------------------------------------------------------------------------------------
+EXAMPLE 1 (dataset row 9)
+Best strategy: B: minimal-strict | Score: 145 | Compliant: True
+Checks: epics=5/5, forbidden=False, duplicates=False, generic_tasks=False, malformed_headers=False, format_issues=False, exact_end_marker=False
+
+Proposal / Input:
+=== CityComm Smart Communication Hub ===
+Summary:
+CityComm is a communication hub for city residents to report issues, access services, and receive updates. It integrates AI to categorize reports and prioritize urgent cases. The system aims to improve civic engagement and streamline city services.
+
+Roles:
+Project Manager
+Backend Developer
+Frontend Developer
+AI Engineer
+Community Manager
+QA Engineer
+
+Features:
+Issue Reporting
+Service Access
+AI Categorization
+Notifications
+
+Goals:
+Design issue reporting system
+Implement service access
+Enable AI categorization
+Develop notifications module
+Test communication hub
+
+Timeline:
+Week 1: Setup backend framework, Configure database schema
+Week 2: Build issue reporting system, Implement service access
+Week 3: Train AI categorization model, Integrate with reporting system
+Week 4: Create notifications module, Test communication hub
+
+Model Output:
+Epic 1: Issue Reporting System
+-Sub-Epic 1: Planning Phase
+-User Story 1: As a Resident, I want to submit an issue online so that my concerns are addressed quickly. (Full User Story Only.)
+-Task 1: Set up project management tools
+-Task 2: Design user interface for submitting issues
+Epic 2: Service Access Module
+-Sub-Epic 2: Implementation Phase
+-User Story 2: As a Citizen, I want to easily find information about available services so that I can make informed decisions. (Full User Story Only.)
+-Task 1: Develop API endpoints for accessing services
+-Task 2: Implement search functionality for finding specific services
+Epic 3: AI Categorization Module
+-Sub-Epic 3: Development Phase
+-User Story 3: As a Community Member, I want to be able to request assistance based on my needs so that resources are allocated efficiently. (Full User Story Only.)
+-Task 1: Train machine learning algorithm for categorizing issues
+-Task 2: Integrate AI into issue submission process
+Epic 4: Notifications Module
+-Sub-Epic 4: Testing Phase
+-User Story 4: As a User, I want to receive timely reminders of upcoming events so that I don't miss important deadlines. (Full User Story Only.)
+-Task 1: Develop notification system using email templates
+-Task 2: Ensure all users have received initial notifications
+Epic 5: Communication Hub Integration
+-Sub-Epic 5: Deployment Phase
+-User Story 5: As a City Official, I want to ensure effective communication between citizens and city officials so that feedback is promptly addressed. (Full User Story Only.)
+-Task 1: Connect communication hub to existing systems
+-Task 2: Deploy communication hub to public-facing platforms
+Note: This task list assumes that the team has already established the necessary infrastructure and personnel before beginning work on any given sub-epic. If there are additional requirements or constraints related to the development of the communication hub, they should be included here. For example, if the team plans to integrate external APIs or databases, it would be helpful to know what data sources will be used and how they will be integrated. Similarly, if the team anticipates needing to handle large volumes of traffic during peak hours, it may need to plan ahead for increased server capacity

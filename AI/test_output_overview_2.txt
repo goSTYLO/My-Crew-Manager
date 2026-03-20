@@ -1,0 +1,23 @@
+Title: GreenHome Smart Home System Prototype
+Summary: GreenHome is a home automation system designed to reduce energy consumption and promote sustainability.
+Roles:
+- Product Manager
+- Engineer
+- Designer
+- Salesperson
+Features:
+- Energy tracking
+- Real-time alerts
+- Smart appliances integration
+- User interface
+Goals:
+- Build prototype
+- Add sensors
+- Integrate sensors
+- Test prototype
+- Launch GreenHome
+Timeline:
+Week 1: Setup project, Define goals, Create prototype
+Week 2: Add sensors, Configure prototype
+Week3: Integrate sensors, Test prototype
+Week4: Finalize prototype, Launch GreenHome

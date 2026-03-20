@@ -1,0 +1,50 @@
+MODEL 2 HARDENED STRICT INFERENCE TEST
+Generated: 2026-03-20T18:53:23
+Dataset: c:\Users\Aaron\GitHub Repos\My-Crew-Manager\AI\llms\fine_tune\dataset\model2_part1_to_backlog_epic_v1_flat.jsonl
+Selected rows (1-based): [9]
+Strict prompt: hardened inline compact with format DO NOTs
+Format validator: enabled
+Repetition penalty: 1.15
+Examples run: 1
+Compliance summary: 0/1
+====================================================================================================
+
+----------------------------------------------------------------------------------------------------
+EXAMPLE 1 (dataset row 9)
+Best strategy: B: hardened strict | Score: 111 | Compliant: False
+Checks: epics=0/5, forbidden=False, duplicates=False, generic_tasks=True, malformed_headers=False, format_issues=False, exact_end_marker=True
+Failure gates: goal_epic_mismatch, generic_tasks
+
+Proposal / Input:
+=== CityComm Smart Communication Hub ===
+Summary:
+CityComm is a communication hub for city residents to report issues, access services, and receive updates. It integrates AI to categorize reports and prioritize urgent cases. The system aims to improve civic engagement and streamline city services.
+
+Roles:
+Project Manager
+Backend Developer
+Frontend Developer
+AI Engineer
+Community Manager
+QA Engineer
+
+Features:
+Issue Reporting
+Service Access
+AI Categorization
+Notifications
+
+Goals:
+Design issue reporting system
+Implement service access
+Enable AI categorization
+Develop notifications module
+Test communication hub
+
+Timeline:
+Week 1: Setup backend framework, Configure database schema
+Week 2: Build issue reporting system, Implement service access
+Week 3: Train AI categorization model, Integrate with reporting system
+Week 4: Create notifications module, Test communication hub
+
+Model Output:

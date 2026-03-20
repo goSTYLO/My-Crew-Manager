@@ -1,0 +1,23 @@
+Title: EventEase Event Management Platform
+Summary: Build an event management platform that suggests venues, vendors, and schedules events.
+Roles:
+- Product Manager
+- Frontend Developer
+- Backend Developer
+- Designer
+- AI Engineer
+Features:
+- Venue Suggestion
+- Vendor Search
+- Event Scheduler
+- Notifications
+Goals:
+- Implement venue suggestion feature
+- Develop vendor search functionality
+- Create event scheduler
+- Integrate notification system
+Timeline:
+Week 1: Define scope from goals, Design feature architecture
+Week 2: Implement core backend flows, Build frontend interfaces
+Week 3: Integrate modules and APIs, Validate end-to-end behavior
+Week 4: Run QA and bug fixes, Deploy and monitor release

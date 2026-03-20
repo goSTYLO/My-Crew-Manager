@@ -1,0 +1,120 @@
+{
+  "epics": [
+    {
+      "title": "Implement venue suggestion feature",
+      "description": null,
+      "ai": true,
+      "sub_epics": [
+        {
+          "title": "Planning",
+          "ai": true,
+          "user_stories": [
+            {
+              "title": "As a Product Manager, I want to suggest venues for events so that users can choose the best location for their event.",
+              "ai": true,
+              "tasks": [
+                {
+                  "title": "Create database schema for venue data",
+                  "status": "pending",
+                  "ai": true
+                },
+                {
+                  "title": "Implement API endpoints for venue suggestions",
+                  "status": "pending",
+                  "ai": true
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Develop vendor search functionality",
+      "description": null,
+      "ai": true,
+      "sub_epics": [
+        {
+          "title": "Build",
+          "ai": true,
+          "user_stories": [
+            {
+              "title": "As a Frontend Developer, I want to build a search function for vendors so that users can find the right service providers for their event.",
+              "ai": true,
+              "tasks": [
+                {
+                  "title": "Create database schema for vendor data",
+                  "status": "pending",
+                  "ai": true
+                },
+                {
+                  "title": "Implement API endpoints for vendor search",
+                  "status": "pending",
+                  "ai": true
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Create event scheduler",
+      "description": null,
+      "ai": true,
+      "sub_epics": [
+        {
+          "title": "Build",
+          "ai": true,
+          "user_stories": [
+            {
+              "title": "As a Backend Developer, I want to build a scheduling tool for events so that users can plan their schedule easily.",
+              "ai": true,
+              "tasks": [
+                {
+                  "title": "Create database schema for event data",
+                  "status": "pending",
+                  "ai": true
+                },
+                {
+                  "title": "Implement API endpoints for event scheduling",
+                  "status": "pending",
+                  "ai": true
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Integrate notification system",
+      "description": null,
+      "ai": true,
+      "sub_epics": [
+        {
+          "title": "Build",
+          "ai": true,
+          "user_stories": [
+            {
+              "title": "As a Designer, I want to create a notification system for events so that users are informed about upcoming events.",
+              "ai": true,
+              "tasks": [
+                {
+                  "title": "Create database schema for notification data",
+                  "status": "pending",
+                  "ai": true
+                },
+                {
+                  "title": "Implement API endpoints for notifications",
+                  "status": "pending",
+                  "ai": true
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

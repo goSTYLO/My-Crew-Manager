@@ -1,0 +1,81 @@
+MODEL 2 INFERENCE TEST
+Generated: 2026-03-20T20:15:13
+Dataset: c:\Users\Aaron\GitHub Repos\My-Crew-Manager\AI\llms\fine_tune\dataset\model2_part1_to_backlog_epic_v1_flat.jsonl
+Selected rows (1-based): [8]
+PROMPT_MODE=minimal_strict
+Examples run: 1
+Compliance summary: 0/1
+====================================================================================================
+
+----------------------------------------------------------------------------------------------------
+EXAMPLE 1 (dataset row 8)
+Best strategy: B: minimal-strict | Score: 112 | Compliant: False
+Checks: epics=1/5, forbidden=False, duplicates=False, generic_tasks=False, malformed_headers=False, format_issues=False, exact_end_marker=False
+Failure gates: goal_epic_mismatch, invalid_sub_epic_cardinality
+
+Proposal / Input:
+=== GreenHome Energy Saver ===
+Summary:
+GreenHome is a smart home system that tracks energy usage and provides recommendations to reduce consumption. It integrates with appliances and offers real-time alerts for inefficiencies. The platform aims to lower utility bills and promote sustainability.
+
+Roles:
+Project Manager
+IoT Engineer
+Backend Developer
+Mobile Developer
+QA Engineer
+
+Features:
+Energy Monitoring
+Appliance Integration
+AI Recommendations
+Alerts
+
+Goals:
+Design energy monitoring system
+Implement appliance integration
+Enable AI recommendations
+Develop alerts module
+Test energy saver system
+
+Timeline:
+Week 1: Setup IoT devices, Configure backend APIs
+Week 2: Build energy monitoring system, Implement appliance integration
+Week 3: Train AI recommendation model, Integrate with dashboard
+Week 4: Create alerts module, Test energy saver system
+
+Model Output:
+Epic 1: Design energy monitoring system
+-Sub-Epic 1: Planning
+-User Story 1: As a Project Manager, I want to design an energy monitoring system so that we can track energy usage and provide recommendations to reduce consumption. (Full User Story Only.)
+-Task 1: Define project scope and requirements
+-Task 2: Research existing solutions and technologies
+-Task 3: Develop wireframes and prototypes
+-Task 4: Conduct usability testing
+-Task 5: Finalize design plan and budget
+-Sub-Epic 1: Build energy monitoring system
+-User Story 1: As a Backend Developer, I want to build an energy monitoring system so that it integrates with appliances and offers real-time alerts for inefficiencies. (Full User Story Only.)
+-Task 1: Write API documentation
+-Task 2: Implement core functionality
+-Task 3: Integrate with appliances
+-Task 4: Add real-time alerting
+-Task 5: Optimize performance and scalability
+-Sub-Epic 1: Implement appliance integration
+-User Story 1: As a Mobile Developer, I want to implement appliance integration into the energy monitoring system so that users can easily control their appliances remotely. (Full User Story Only.)
+-Task 1: Design mobile app interface
+-Task 2: Develop mobile app logic
+-Task 3: Integrate with API endpoints
+-Task 4: Test compatibility across different platforms
+-Task 5: Deploy and launch app
+-Sub-Epic 1: Enable AI recommendations
+-User Story 1: As a QA Engineer, I want to enable AI recommendations within the energy monitoring system so that users receive personalized suggestions based on their energy usage data. (Full User Story Only.)
+-Task 1: Analyze user feedback and insights
+-Task 2: Develop AI algorithm
+-Task 3: Integrate with frontend
+-Task 4: Test accuracy and reliability
+-Task 5: Deploy and integrate with backend
+-Sub-Epic 1: Create alerts module
+-User Story 1: As a Project Manager, I want to create an alerts module within the energy monitoring system so that users are notified when there are potential issues with their energy usage. (Full User Story Only.)
+-Task 1: Identify critical thresholds
+-Task 2: Develop alert notification system
+-Task 3: Integrate

@@ -1,0 +1,22 @@
+Title: EduLearn Online Course Platform
+Summary: EduLearn is an online course platform that uses AI tutoring, interactive quizzes, and personalized learning paths to help students worldwide improve their skills. The platform's backend supports real-time processing and machine-learning models for adaptive feedback. Our team aims to build a scalable backend, develop adaptive algorithms, and design a user-friendly course management system.
+Roles:
+- AI Engineer
+- Software Developer
+- Educator
+Features:
+- Adaptive Learning
+- Interactive Quizzes
+- Personalized Learning Paths
+- Real-Time Processing
+- Machine Learning Models
+Goals:
+- Build a robust backend for adaptive learning
+- Develop adaptive algorithms for personalized feedback
+- Implement interactive quizzes for self-assessment
+- Design a course management system for student tracking
+Timeline:
+Week 1: Define scope from goals, Design feature architecture
+Week 2: Implement core backend flows, Build frontend interfaces
+Week 3: Integrate modules and APIs, Validate end-to-end behavior
+Week 4: Run QA and bug fixes, Deploy and monitor release

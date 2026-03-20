@@ -1,0 +1,25 @@
+Epic 1: Develop issue reporting feature
+-Sub-Epic 1: Planning
+-User Story 1: As a Citizen, I want to report an issue so that my problem can be fixed.
+-Task 1: Create an account
+-Task 2: Search for an issue
+Epic 2: Implement service access
+-Sub-Epic 1: Planning
+-User Story 1: As a Citizen, I want to access city services so that I can get help when needed.
+-Task 1: Sign up for services
+-Task 2: Find available services
+Epic 3: Train AI for categorisation
+-Sub-Epic 1: Planning
+-User Story 1: As a Citizen, I want to receive categorized information about city services so that I know what to expect.
+-Task 1: Register for services
+-Task 2: Get categorized information
+Epic 4: Design citizen feedback form
+-Sub-Epic 1: Planning
+-User Story 1: As a Citizen, I want to provide feedback on city services so that I can make improvements.
+-Task 1: Submit feedback
+-Task 2: Review feedback
+Epic 5: Launch pilot phase
+-Sub-Epic 1: Planning
+-User Story 1: As a Citizen, I want to participate in a pilot phase of the CityComm platform so that I can test new features and give suggestions.
+-Task 1: Join pilot program
+-Task 2: Test new features

@@ -1,0 +1,104 @@
+{
+  "title": "MedAssist Telemedicine Platform",
+  "summary": null,
+  "features": [
+    "Secure video visits",
+    "AI-assisted symptoms checking",
+    "Scheduling",
+    "Shared patient records",
+    "Timeline:",
+    "Week 1: Define scope from goals, Design feature architecture",
+    "Week 2: Implement core backend flows, Build frontend interfaces",
+    "Week 3: Integrate modules and APIs, Validate end-to-end behavior",
+    "Week 4: Run QA and bug fixes, Deploy and monitor release"
+  ],
+  "roles": [
+    "Developer",
+    "Designer",
+    "Healthcare Professional",
+    "goals:",
+    "Create comprehensive telemedicine platform",
+    "Improve patient outcomes",
+    "Reduce healthcare costs"
+  ],
+  "goals": [
+    {
+      "title": "Create comprehensive telemedicine platform",
+      "role": null
+    },
+    {
+      "title": "Improve patient outcomes",
+      "role": null
+    },
+    {
+      "title": "Reduce healthcare costs",
+      "role": null
+    },
+    {
+      "title": "features:",
+      "role": null
+    },
+    {
+      "title": "Secure video visits",
+      "role": null
+    },
+    {
+      "title": "AI-assisted symptoms checking",
+      "role": null
+    },
+    {
+      "title": "Scheduling",
+      "role": null
+    },
+    {
+      "title": "Shared patient records",
+      "role": null
+    }
+  ],
+  "timeline": [
+    {
+      "week_number": 1,
+      "goals": [
+        {
+          "title": "Define scope from goals"
+        },
+        {
+          "title": "Design feature architecture"
+        }
+      ]
+    },
+    {
+      "week_number": 2,
+      "goals": [
+        {
+          "title": "Implement core backend flows"
+        },
+        {
+          "title": "Build frontend interfaces"
+        }
+      ]
+    },
+    {
+      "week_number": 3,
+      "goals": [
+        {
+          "title": "Integrate modules and APIs"
+        },
+        {
+          "title": "Validate end-to-end behavior"
+        }
+      ]
+    },
+    {
+      "week_number": 4,
+      "goals": [
+        {
+          "title": "Run QA and bug fixes"
+        },
+        {
+          "title": "Deploy and monitor release"
+        }
+      ]
+    }
+  ]
+}

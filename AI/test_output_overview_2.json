@@ -1,0 +1,87 @@
+{
+  "title": "GreenHome Smart Home System Prototype",
+  "summary": "GreenHome is a home automation system designed to reduce energy consumption and promote sustainability.",
+  "features": [
+    "Energy tracking",
+    "Real-time alerts",
+    "Smart appliances integration",
+    "User interface"
+  ],
+  "roles": [
+    "Product Manager",
+    "Engineer",
+    "Designer",
+    "Salesperson"
+  ],
+  "goals": [
+    {
+      "title": "Build prototype",
+      "role": null
+    },
+    {
+      "title": "Add sensors",
+      "role": null
+    },
+    {
+      "title": "Integrate sensors",
+      "role": null
+    },
+    {
+      "title": "Test prototype",
+      "role": null
+    },
+    {
+      "title": "Launch GreenHome",
+      "role": null
+    }
+  ],
+  "timeline": [
+    {
+      "week_number": 1,
+      "goals": [
+        {
+          "title": "Setup project"
+        },
+        {
+          "title": "Define goals"
+        },
+        {
+          "title": "Create prototype"
+        }
+      ]
+    },
+    {
+      "week_number": 2,
+      "goals": [
+        {
+          "title": "Add sensors"
+        },
+        {
+          "title": "Configure prototype"
+        }
+      ]
+    },
+    {
+      "week_number": 3,
+      "goals": [
+        {
+          "title": "Integrate sensors"
+        },
+        {
+          "title": "Test prototype"
+        }
+      ]
+    },
+    {
+      "week_number": 4,
+      "goals": [
+        {
+          "title": "Finalize prototype"
+        },
+        {
+          "title": "Launch GreenHome"
+        }
+      ]
+    }
+  ]
+}

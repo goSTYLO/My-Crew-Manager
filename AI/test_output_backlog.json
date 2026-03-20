@@ -1,0 +1,33 @@
+{
+  "epics": [
+    {
+      "title": "Issue Reporting",
+      "description": null,
+      "ai": true,
+      "sub_epics": [
+        {
+          "title": "Planning",
+          "ai": true,
+          "user_stories": [
+            {
+              "title": "As a Citizen, I want to report an issue so that my problem can be fixed. (citizen)",
+              "ai": true,
+              "tasks": [
+                {
+                  "title": "Create account",
+                  "status": "pending",
+                  "ai": true
+                },
+                {
+                  "title": "Search issues by location",
+                  "status": "pending",
+                  "ai": true
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

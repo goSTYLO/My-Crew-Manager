@@ -1,0 +1,81 @@
+{
+  "title": "EventEase Event Management Platform",
+  "summary": "Build an event management platform that suggests venues, vendors, and schedules events.",
+  "features": [
+    "Venue Suggestion",
+    "Vendor Search",
+    "Event Scheduler",
+    "Notifications"
+  ],
+  "roles": [
+    "Product Manager",
+    "Frontend Developer",
+    "Backend Developer",
+    "Designer",
+    "AI Engineer"
+  ],
+  "goals": [
+    {
+      "title": "Implement venue suggestion feature",
+      "role": null
+    },
+    {
+      "title": "Develop vendor search functionality",
+      "role": null
+    },
+    {
+      "title": "Create event scheduler",
+      "role": null
+    },
+    {
+      "title": "Integrate notification system",
+      "role": null
+    }
+  ],
+  "timeline": [
+    {
+      "week_number": 1,
+      "goals": [
+        {
+          "title": "Define scope from goals"
+        },
+        {
+          "title": "Design feature architecture"
+        }
+      ]
+    },
+    {
+      "week_number": 2,
+      "goals": [
+        {
+          "title": "Implement core backend flows"
+        },
+        {
+          "title": "Build frontend interfaces"
+        }
+      ]
+    },
+    {
+      "week_number": 3,
+      "goals": [
+        {
+          "title": "Integrate modules and APIs"
+        },
+        {
+          "title": "Validate end-to-end behavior"
+        }
+      ]
+    },
+    {
+      "week_number": 4,
+      "goals": [
+        {
+          "title": "Run QA and bug fixes"
+        },
+        {
+          "title": "Deploy and monitor release"
+        }
+      ]
+    }
+  ]
+}

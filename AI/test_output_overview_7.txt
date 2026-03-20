@@ -1,0 +1,29 @@
+=== GreenHome Energy Saver ===
+Summary:
+GreenHome is a smart home system that tracks energy usage and provides recommendations to reduce consumption. It integrates with appliances and offers real-time alerts for inefficiencies. The platform aims to lower utility bills and promote sustainability.
+
+Roles:
+Project Manager
+IoT Engineer
+Backend Developer
+Mobile Developer
+QA Engineer
+
+Features:
+Energy Monitoring
+Appliance Integration
+AI Recommendations
+Alerts
+
+Goals:
+Design energy monitoring system
+Implement appliance integration
+Enable AI recommendations
+Develop alerts module
+Test energy saver system
+
+Timeline:
+Week 1: Setup IoT devices, Configure backend APIs
+Week 2: Build energy monitoring system, Implement appliance integration
+Week 3: Train AI recommendation model, Integrate with dashboard
+Week 4: Create alerts module, Test energy saver system
