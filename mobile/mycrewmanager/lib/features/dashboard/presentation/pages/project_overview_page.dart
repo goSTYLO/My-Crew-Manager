@@ -2,7 +2,8 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:http/http.dart' as http;
+import 'package:dio/dio.dart';
+import 'package:get_it/get_it.dart';
 import 'package:mycrewmanager/features/dashboard/presentation/pages/manage_members_page.dart';
 import 'package:mycrewmanager/features/dashboard/presentation/pages/tasks_page.dart';
 import 'package:mycrewmanager/features/project/presentation/pages/project_backlog_page.dart';
@@ -11,7 +12,6 @@ import 'package:mycrewmanager/features/project/domain/entities/member.dart';
 import 'package:mycrewmanager/features/project/domain/usecases/get_project_members.dart';
 import 'package:mycrewmanager/features/authentication/presentation/bloc/auth_bloc.dart';
 import 'package:mycrewmanager/init_dependencies.dart';
-import 'package:mycrewmanager/core/constants/constants.dart';
 import 'package:mycrewmanager/core/tokenhandlers/token_storage.dart';
 
 class ProjectOverviewPage extends StatefulWidget {
@@ -40,6 +40,7 @@ class _ProjectOverviewPageState extends State<ProjectOverviewPage> {
 
   final GetProjectMembers _getProjectMembers = serviceLocator<GetProjectMembers>();
   final TokenStorage _tokenStorage = serviceLocator<TokenStorage>();
+  final Dio _dio = GetIt.I<Dio>();
 
   @override
   void initState() {
@@ -97,16 +98,20 @@ class _ProjectOverviewPageState extends State<ProjectOverviewPage> {
     });
 
     try {
-      final response = await http.get(
-        Uri.parse('${Constants.baseUrl}ai/projects/${widget.project!.id}/statistics/'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Token ${await _getAuthToken()}',
-        },
+      final token = await _getAuthToken();
+      final response = await _dio.get(
+        'ai/projects/${widget.project!.id}/statistics/',
+        options: Options(
+          headers: {
+            'Authorization': 'Token $token',
+          },
+        ),
       );
 
       if (response.statusCode == 200) {
-        final data = json.decode(response.body);
+        final data = response.data is Map<String, dynamic>
+            ? response.data as Map<String, dynamic>
+            : json.decode(response.data.toString()) as Map<String, dynamic>;
         setState(() {
           isLoadingStatistics = false;
           taskCount = data['task_count'] ?? 0;

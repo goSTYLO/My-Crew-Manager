@@ -21,17 +21,39 @@ class BacklogTask {
 
   factory BacklogTask.fromJson(Map<String, dynamic> json) {
     return BacklogTask(
-      id: json['id'] as int,
-      title: json['title'] as String,
-      status: json['status'] as String,
-      ai: json['ai'] as bool,
-      assignee: json['assignee'] as int?,
+      id: _asInt(json['id']),
+      title: (json['title'] ?? '').toString(),
+      status: (json['status'] ?? '').toString(),
+      ai: _asBool(json['ai']),
+      assignee: _asNullableInt(json['assignee']),
       assigneeDetails: json['assignee_details'] != null 
           ? AssigneeDetails.fromJson(json['assignee_details']) 
           : null,
-      commitTitle: json['commit_title'] as String?,
-      commitBranch: json['commit_branch'] as String?,
+      commitTitle: json['commit_title']?.toString(),
+      commitBranch: json['commit_branch']?.toString(),
     );
+  }
+
+  static int _asInt(dynamic value) {
+    if (value == null) return 0;
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value.toString()) ?? 0;
+  }
+
+  static int? _asNullableInt(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value.toString());
+  }
+
+  static bool _asBool(dynamic value) {
+    if (value is bool) return value;
+    if (value is num) return value != 0;
+    if (value == null) return false;
+    final lowered = value.toString().toLowerCase();
+    return lowered == 'true' || lowered == '1' || lowered == 'yes';
   }
 
   Map<String, dynamic> toJson() {
@@ -61,10 +83,17 @@ class AssigneeDetails {
 
   factory AssigneeDetails.fromJson(Map<String, dynamic> json) {
     return AssigneeDetails(
-      id: json['id'] as int,
-      userName: json['user_name'] as String?,
-      userEmail: json['user_email'] as String?,
+      id: _asInt(json['id']),
+      userName: json['user_name']?.toString(),
+      userEmail: json['user_email']?.toString(),
     );
+  }
+
+  static int _asInt(dynamic value) {
+    if (value == null) return 0;
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value.toString()) ?? 0;
   }
 
   Map<String, dynamic> toJson() {

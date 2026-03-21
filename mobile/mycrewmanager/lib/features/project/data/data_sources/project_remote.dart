@@ -1,4 +1,6 @@
 import 'package:dio/dio.dart';
+import 'package:mycrewmanager/core/constants/constants.dart';
+import 'package:mycrewmanager/core/tokenhandlers/token_storage.dart';
 import 'package:mycrewmanager/features/project/data/models/project_model.dart';
 import 'package:mycrewmanager/features/project/data/models/member_model.dart';
 import 'package:mycrewmanager/features/project/data/models/task_model.dart';
@@ -6,54 +8,123 @@ import 'package:mycrewmanager/features/project/data/models/activity_model.dart';
 
 class ProjectRemoteDataSource {
   final Dio dio;
+  final TokenStorage tokenStorage;
 
-  ProjectRemoteDataSource(this.dio);
+  ProjectRemoteDataSource(this.dio, this.tokenStorage);
+
+  Future<Options> _authOptions() async {
+    final token = await tokenStorage.getToken();
+    final headers = <String, dynamic>{};
+    if (token != null && token.isNotEmpty) {
+      headers['Authorization'] = 'Token $token';
+    }
+    return Options(headers: headers);
+  }
+
+  Future<Response<dynamic>> _get(String path, {Map<String, dynamic>? queryParameters}) async {
+    final uri = Uri.parse(dio.options.baseUrl).resolve(path).toString();
+    logger.d('Projects API GET -> $uri');
+    final response = await dio.get(
+      path,
+      queryParameters: queryParameters,
+      options: await _authOptions(),
+    );
+    logger.d('Projects API GET <- ${response.statusCode} $uri');
+    return response;
+  }
+
+  Future<Response<dynamic>> _post(String path, {dynamic data}) async {
+    final uri = Uri.parse(dio.options.baseUrl).resolve(path).toString();
+    logger.d('Projects API POST -> $uri');
+    final response = await dio.post(
+      path,
+      data: data,
+      options: await _authOptions(),
+    );
+    logger.d('Projects API POST <- ${response.statusCode} $uri');
+    return response;
+  }
+
+  Future<Response<dynamic>> _put(String path, {dynamic data}) async {
+    final uri = Uri.parse(dio.options.baseUrl).resolve(path).toString();
+    logger.d('Projects API PUT -> $uri');
+    final response = await dio.put(
+      path,
+      data: data,
+      options: await _authOptions(),
+    );
+    logger.d('Projects API PUT <- ${response.statusCode} $uri');
+    return response;
+  }
+
+  Future<Response<dynamic>> _patch(String path, {dynamic data}) async {
+    final uri = Uri.parse(dio.options.baseUrl).resolve(path).toString();
+    logger.d('Projects API PATCH -> $uri');
+    final response = await dio.patch(
+      path,
+      data: data,
+      options: await _authOptions(),
+    );
+    logger.d('Projects API PATCH <- ${response.statusCode} $uri');
+    return response;
+  }
+
+  Future<Response<dynamic>> _delete(String path) async {
+    final uri = Uri.parse(dio.options.baseUrl).resolve(path).toString();
+    logger.d('Projects API DELETE -> $uri');
+    final response = await dio.delete(
+      path,
+      options: await _authOptions(),
+    );
+    logger.d('Projects API DELETE <- ${response.statusCode} $uri');
+    return response;
+  }
 
   Future<List<ProjectModel>> getProjects() async {
-    final response = await dio.get('ai/projects/');
+    final response = await _get('ai/projects/');
     final List<dynamic> data = response.data;
     return data.map((json) => ProjectModel.fromJson(json)).toList();
   }
 
   Future<List<ProjectModel>> getMyProjects() async {
-    final response = await dio.get('ai/projects/my-projects/');
+    final response = await _get('ai/projects/my-projects/');
     final List<dynamic> data = response.data;
     return data.map((json) => ProjectModel.fromJson(json)).toList();
   }
 
   Future<ProjectModel> getProject(int id) async {
-    final response = await dio.get('ai/projects/$id/');
+    final response = await _get('ai/projects/$id/');
     return ProjectModel.fromJson(response.data);
   }
 
   Future<ProjectModel> createProject(Map<String, dynamic> body) async {
-    final response = await dio.post('ai/projects/', data: body);
+    final response = await _post('ai/projects/', data: body);
     return ProjectModel.fromJson(response.data);
   }
 
   Future<ProjectModel> updateProject(int id, Map<String, dynamic> body) async {
-    final response = await dio.put('ai/projects/$id/', data: body);
+    final response = await _put('ai/projects/$id/', data: body);
     return ProjectModel.fromJson(response.data);
   }
 
   Future<void> deleteProject(int id) async {
-    await dio.delete('ai/projects/$id/');
+    await _delete('ai/projects/$id/');
   }
 
   Future<Map<String, dynamic>> getProjectBacklog(int id) async {
-    final response = await dio.get('ai/projects/$id/backlog/');
+    final response = await _get('ai/projects/$id/backlog/');
     return response.data;
   }
 
   Future<List<MemberModel>> getProjectMembers(int projectId) async {
-    final response = await dio.get('ai/project-members/?project_id=$projectId');
+    final response = await _get('ai/project-members/', queryParameters: {'project_id': projectId});
     final List<dynamic> data = response.data;
     return data.map((json) => MemberModel.fromJson(json)).toList();
   }
 
   Future<List<TaskModel>> getProjectTasks(int projectId) async {
     // Get tasks from the project's backlog
-    final response = await dio.get('ai/projects/$projectId/backlog/');
+    final response = await _get('ai/projects/$projectId/backlog/');
     final Map<String, dynamic> data = response.data;
     
     List<TaskModel> tasks = [];
@@ -79,7 +150,7 @@ class ProjectRemoteDataSource {
 
   Future<List<TaskModel>> getUserAssignedTasks() async {
     // Get all tasks assigned to the current user
-    final response = await dio.get('ai/story-tasks/user-assigned/');
+    final response = await _get('ai/story-tasks/user-assigned/');
     final Map<String, dynamic> data = response.data;
     
     List<TaskModel> tasks = [];
@@ -92,7 +163,7 @@ class ProjectRemoteDataSource {
   }
 
   Future<List<ActivityModel>> getRecentCompletedTasks() async {
-    final response = await dio.get('ai/story-tasks/recent-completed/');
+    final response = await _get('ai/story-tasks/recent-completed/');
     final Map<String, dynamic> data = response.data;
     List<ActivityModel> activities = [];
     if (data['activities'] != null) {
@@ -112,7 +183,7 @@ class ProjectRemoteDataSource {
       'project_id': projectId,
       'file': await MultipartFile.fromFile(filePath, filename: filePath.split('/').last),
     });
-    final response = await dio.post('ai/proposals/', data: formData);
+    final response = await _post('ai/proposals/', data: formData);
     return response.data as Map<String, dynamic>;
   }
 
@@ -122,14 +193,14 @@ class ProjectRemoteDataSource {
     String? titleOverride,
   }) async {
     final path = 'ai/projects/$projectId/ingest-proposal/$proposalId/';
-    final response = await dio.put(path, data: {
+    final response = await _put(path, data: {
       if (titleOverride != null) 'title': titleOverride,
     });
     return response.data as Map<String, dynamic>;
   }
 
   Future<Map<String, dynamic>> generateBacklog(int projectId) async {
-    final response = await dio.put('ai/projects/$projectId/generate-backlog/');
+    final response = await _put('ai/projects/$projectId/generate-backlog/');
     return response.data as Map<String, dynamic>;
   }
 
@@ -144,7 +215,7 @@ class ProjectRemoteDataSource {
         requestData['commit_title'] = commitTitle ?? 'Task completed';
       }
       
-      final response = await dio.patch('ai/story-tasks/$taskId/', data: requestData);
+      final response = await _patch('ai/story-tasks/$taskId/', data: requestData);
       return TaskModel.fromJson(response.data);
     } catch (e) {
       if (e is DioException) {
@@ -154,7 +225,7 @@ class ProjectRemoteDataSource {
   }
 
   Future<int> bulkAssignTasks(List<Map<String, dynamic>> assignments) async {
-    final response = await dio.post('ai/story-tasks/bulk-assign/', data: {
+    final response = await _post('ai/story-tasks/bulk-assign/', data: {
       'assignments': assignments,
     });
     final data = response.data as Map<String, dynamic>;
@@ -162,7 +233,7 @@ class ProjectRemoteDataSource {
   }
 
   Future<List<String>> getProjectRoles(int projectId) async {
-    final response = await dio.get('ai/project-roles/', queryParameters: {'project_id': projectId});
+    final response = await _get('ai/project-roles/', queryParameters: {'project_id': projectId});
     final List<dynamic> data = response.data;
     return data.map((e) => (e['role'] ?? '').toString()).where((s) => s.isNotEmpty).toList();
   }
@@ -172,7 +243,7 @@ class ProjectRemoteDataSource {
     String? title,
     String? summary,
   }) async {
-    await dio.patch('ai/projects/$projectId/', data: {
+    await _patch('ai/projects/$projectId/', data: {
       if (title != null) 'title': title,
       if (summary != null) 'summary': summary,
     });
@@ -183,7 +254,7 @@ class ProjectRemoteDataSource {
     required String email,
     required String role,
   }) async {
-    final response = await dio.post('ai/project-members/', data: {
+    final response = await _post('ai/project-members/', data: {
       'project': projectId,
       'user_email': email,
       'role': role,
@@ -199,7 +270,7 @@ class ProjectRemoteDataSource {
   }) async {
     try {
       // Create a new project member - backend will check if user exists and handle permissions
-      final response = await dio.post('ai/project-members/', data: {
+      final response = await _post('ai/project-members/', data: {
         'project': projectId,
         'user_name': name,
         'user_email': email,
@@ -221,7 +292,7 @@ class ProjectRemoteDataSource {
 
   Future<void> deleteMember(int id) async {
     try {
-      await dio.delete('ai/project-members/$id/');
+      await _delete('ai/project-members/$id/');
     } catch (e) {
       // Handle specific error messages from the backend
       if (e.toString().contains('Only the project creator can remove members')) {

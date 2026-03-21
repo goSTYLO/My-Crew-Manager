@@ -47,22 +47,24 @@ final serviceLocator = GetIt.I;
 // Logger is imported from constants.dart to use the configured version with logcat output
 
 Future<void> initDependencies() async {
+  serviceLocator
+    ..registerLazySingleton<TokenStorage>(() => TokenStorage())
+    ..registerLazySingleton<Dio>(
+      () => ApiClient(
+        dio: Dio(),
+        tokenStorage: serviceLocator<TokenStorage>(),
+      ).dio,
+    )
+    ..registerFactory(() => InternetConnection())
+    ..registerFactory<ConnectionChecker>(
+      () => ConnectionCheckerImpl(serviceLocator()),
+    );
 
   _initAuth();
   _initProject();
   _initChat();
   _initNotification();
   _initInvitation();
-
-  final dio = Dio();
-  
-  serviceLocator
-    ..registerLazySingleton<TokenStorage>(() => TokenStorage())
-    ..registerLazySingleton(() => ApiClient(dio: dio, tokenStorage: serviceLocator<TokenStorage>()).dio)
-    ..registerFactory(() => InternetConnection())
-    ..registerFactory<ConnectionChecker>(
-      () => ConnectionCheckerImpl(serviceLocator()),
-    );
 }
 
 void _initAuth() {
@@ -102,7 +104,10 @@ void _initProject() {
   serviceLocator
       //Data source
       ..registerFactory<ProjectRemoteDataSource>(
-      () => ProjectRemoteDataSource(serviceLocator<Dio>()),
+      () => ProjectRemoteDataSource(
+        serviceLocator<Dio>(),
+        serviceLocator<TokenStorage>(),
+      ),
     )
           //Use cases
           ..registerFactory(() => GetProjects(serviceLocator()))

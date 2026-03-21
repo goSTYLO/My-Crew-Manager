@@ -17,14 +17,29 @@ class UserStory {
 
   factory UserStory.fromJson(Map<String, dynamic> json) {
     return UserStory(
-      id: json['id'] as int,
-      title: json['title'] as String,
-      ai: json['ai'] as bool,
-      isComplete: json['is_complete'] as bool,
+      id: _asInt(json['id']),
+      title: (json['title'] ?? '').toString(),
+      ai: _asBool(json['ai']),
+      isComplete: _asBool(json['is_complete']),
       tasks: (json['tasks'] as List<dynamic>?)
           ?.map((task) => BacklogTask.fromJson(task))
           .toList() ?? [],
     );
+  }
+
+  static int _asInt(dynamic value) {
+    if (value == null) return 0;
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value.toString()) ?? 0;
+  }
+
+  static bool _asBool(dynamic value) {
+    if (value is bool) return value;
+    if (value is num) return value != 0;
+    if (value == null) return false;
+    final lowered = value.toString().toLowerCase();
+    return lowered == 'true' || lowered == '1' || lowered == 'yes';
   }
 
   Map<String, dynamic> toJson() {

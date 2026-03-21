@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:mycrewmanager/core/constants/constants.dart';
 import 'package:mycrewmanager/core/theme/app_theme.dart';
 import 'package:mycrewmanager/features/authentication/presentation/bloc/auth_bloc.dart';
 import 'package:mycrewmanager/features/project/presentation/bloc/project_bloc.dart';
@@ -10,6 +11,7 @@ import 'package:mycrewmanager/init_dependencies.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await Constants.loadRuntimeConfig();
   await initDependencies();
   runApp(MultiBlocProvider(providers: [
     BlocProvider(create: (_) => serviceLocator<AuthBloc>()),

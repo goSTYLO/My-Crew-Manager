@@ -19,28 +19,51 @@ class TaskModel extends ProjectTask {
     if (json['assignee_details'] != null) {
       // New format with assignee_details
       final assigneeDetails = json['assignee_details'] as Map<String, dynamic>;
-      assigneeId = assigneeDetails['id'] as int?;
-      assigneeName = assigneeDetails['user_name'] as String? ?? assigneeDetails['user_email'] as String?;
+      assigneeId = _asNullableInt(assigneeDetails['id']);
+      assigneeName = (assigneeDetails['user_name'] ?? assigneeDetails['user_email'])?.toString();
     } else if (json['assignee'] != null) {
       // Old format or direct assignee
       if (json['assignee'] is Map) {
-        assigneeId = json['assignee']['id'] as int?;
-        assigneeName = json['assignee']['user_name'] as String? ?? json['assignee']['user_email'] as String?;
+        final assigneeMap = json['assignee'] as Map<String, dynamic>;
+        assigneeId = _asNullableInt(assigneeMap['id']);
+        assigneeName = (assigneeMap['user_name'] ?? assigneeMap['user_email'])?.toString();
       } else {
-        assigneeId = json['assignee'] as int?;
+        assigneeId = _asNullableInt(json['assignee']);
         assigneeName = null; // Only ID available, no name
       }
     }
     
     return TaskModel(
-      id: json['id'] ?? 0,
-      title: json['title'] ?? '',
-      status: json['status'] ?? 'pending',
-      userStoryId: json['user_story'] ?? 0,
-      isAi: json['ai'] ?? false,
+      id: _asInt(json['id']),
+      title: (json['title'] ?? '').toString(),
+      status: (json['status'] ?? 'pending').toString(),
+      userStoryId: _asInt(json['user_story'] ?? json['user_story_id']),
+      isAi: _asBool(json['ai']),
       assigneeId: assigneeId,
       assigneeName: assigneeName,
     );
+  }
+
+  static int _asInt(dynamic value) {
+    if (value == null) return 0;
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value.toString()) ?? 0;
+  }
+
+  static int? _asNullableInt(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value.toString());
+  }
+
+  static bool _asBool(dynamic value) {
+    if (value is bool) return value;
+    if (value is num) return value != 0;
+    if (value == null) return false;
+    final lowered = value.toString().toLowerCase();
+    return lowered == 'true' || lowered == '1' || lowered == 'yes';
   }
 
   Map<String, dynamic> toJson() {

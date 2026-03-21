@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:logger/logger.dart';
 
 class Constants {
@@ -9,13 +11,43 @@ class Constants {
     'Entertainment',
   ];
 
-  // Base URL for API requests
-  // Node backend default: 8001. Django (legacy): 8000.
-  // For Android Emulator: use "http://10.0.2.2:8001/api/" (default)
-  // For Physical Device: use "http://YOUR_IP:8001/api/"
-  // To find your Windows IP: ipconfig | findstr /i "IPv4"
-  // See mobile/docs/ALTERNATIVE_CONNECTION_METHOD.md for details
-  static const baseUrl = "http://192.168.1.4:8001/api/";
+  // Loaded from env.json at app startup; fallback keeps app usable if config read fails.
+  static String baseUrl = 'http://10.0.2.2:8001/api/';
+
+  static Future<void> loadRuntimeConfig() async {
+    try {
+      final raw = await rootBundle.loadString('env.json');
+      final Map<String, dynamic> config = jsonDecode(raw) as Map<String, dynamic>;
+      final apiBase = (config['api_base_url'] as String?)?.trim();
+      if (apiBase == null || apiBase.isEmpty) {
+        logger.w('env.json missing api_base_url; using fallback: $baseUrl');
+        return;
+      }
+
+      final normalized = _normalizeApiBaseUrl(apiBase);
+      baseUrl = normalized;
+      logger.i('Using mobile API base URL: $baseUrl');
+    } catch (e) {
+      logger.e('Failed to load env.json config, using fallback base URL: $baseUrl');
+      logger.e('Config error: $e');
+    }
+  }
+
+  static String _normalizeApiBaseUrl(String apiBaseUrl) {
+    final withScheme = apiBaseUrl.startsWith('http')
+        ? apiBaseUrl
+        : 'http://$apiBaseUrl';
+
+    final noTrailingSlash = withScheme.endsWith('/')
+        ? withScheme.substring(0, withScheme.length - 1)
+        : withScheme;
+
+    if (noTrailingSlash.endsWith('/api')) {
+      return '$noTrailingSlash/';
+    }
+
+    return '$noTrailingSlash/api/';
+  }
 
   static const noConnectionErrorMessage = 'No internet connection';
 }

@@ -12,13 +12,26 @@ class ProjectModel extends Project {
 
   factory ProjectModel.fromJson(Map<String, dynamic> json) {
     return ProjectModel(
-      id: json['id'] ?? 0,
-      title: json['title'] ?? '',
-      summary: json['summary'] ?? '',
-      createdBy: json['created_by'] ?? 0,
-      createdByName: json['created_by_name'] ?? 'Unknown User',
-      createdAt: DateTime.parse(json['created_at'] ?? DateTime.now().toIso8601String()),
+      id: _asInt(json['id']),
+      title: (json['title'] ?? '').toString(),
+      summary: (json['summary'] ?? '').toString(),
+      createdBy: _asInt(json['created_by']),
+      createdByName: (json['created_by_name'] ?? 'Unknown User').toString(),
+      createdAt: _asDateTime(json['created_at']),
     );
+  }
+
+  static int _asInt(dynamic value) {
+    if (value == null) return 0;
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value.toString()) ?? 0;
+  }
+
+  static DateTime _asDateTime(dynamic value) {
+    if (value is DateTime) return value;
+    if (value == null) return DateTime.now();
+    return DateTime.tryParse(value.toString()) ?? DateTime.now();
   }
 
   Map<String, dynamic> toJson() {

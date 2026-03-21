@@ -13,7 +13,7 @@ dependencies:
   # CRITICAL: Core UI and responsive design - DO NOT REMOVE OR MODIFY
   sizer: ^3.1.3              # Required for responsive design system
   flutter_svg: ^2.0.9        # Required for SVG icon support
-  google_fonts: ^6.1.0       # Required for typography (replaces local fonts)
+  google_fonts: ^8.0.2       # Required for typography (replaces local fonts)
   shared_preferences: ^2.2.2 # Required for local data storage
   web: ^1.1.1
   flutter_bloc: ^9.1.1
@@ -25,7 +25,7 @@ dependencies:
   http: ^1.2.2
   fluttertoast: ^9.0.0
   fl_chart: ^1.1.0
-  camera: ^0.11.2+1
+  camera: ^0.12.0+1
   image_picker: ^1.0.4
   permission_handler: ^12.0.1
   file_picker: ^10.3.10
@@ -65,6 +65,7 @@ flutter_icons:
 flutter:
   uses-material-design: true # CRITICAL: Required for Material icon font - DO NOT REMOVE
   assets:
+    - env.json
     - lib/core/assets/images/
   # CRITICAL ASSET MANAGEMENT RULES:
   # - DO NOT ADD NEW ASSET DIRECTORIES (assets/svg/, assets/icons/, etc.)

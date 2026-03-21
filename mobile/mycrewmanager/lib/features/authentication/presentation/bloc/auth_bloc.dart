@@ -56,9 +56,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         
         // Fetch complete user data including profile picture
         try {
-          final dio = Dio();
-          dio.options.headers['Authorization'] = 'Token ${user.token}';
-          dio.options.baseUrl = Constants.baseUrl;
+          final dio = _buildDio(authToken: user.token);
           
           logger.d('📡 Fetching user profile from: ${Constants.baseUrl}user/me/');
           final response = await dio.get('user/me/');
@@ -107,9 +105,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         
         // Fetch complete user data including profile picture
         try {
-          final dio = Dio();
-          dio.options.headers['Authorization'] = 'Token ${user.token}';
-          dio.options.baseUrl = Constants.baseUrl;
+          final dio = _buildDio(authToken: user.token);
           
           final response = await dio.get('user/me/');
           
@@ -179,9 +175,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     // Try to get user data with the existing token
     try {
       logger.d('🔍 Checking existing token validity...');
-      final dio = Dio();
-      dio.options.headers['Authorization'] = 'Token $token';
-      dio.options.baseUrl = Constants.baseUrl;
+      final dio = _buildDio(authToken: token);
       
       final response = await dio.get('user/me/');
       
@@ -237,9 +231,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
     try {
       logger.d('🔄 Refreshing user data...');
-      final dio = Dio();
-      dio.options.headers['Authorization'] = 'Token ${currentState.user.token}';
-      dio.options.baseUrl = Constants.baseUrl;
+      final dio = _buildDio(authToken: currentState.user.token);
       
       final response = await dio.get('user/me/');
       
@@ -266,6 +258,16 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       logger.e('   Stack trace: $stackTrace');
       // Don't emit anything on error to preserve current state
     }
+  }
+
+  Dio _buildDio({required String authToken}) {
+    final dio = Dio();
+    dio.options.headers['Authorization'] = 'Token $authToken';
+    dio.options.baseUrl = Constants.baseUrl;
+    dio.options.connectTimeout = const Duration(seconds: 12);
+    dio.options.receiveTimeout = const Duration(seconds: 12);
+    dio.options.sendTimeout = const Duration(seconds: 12);
+    return dio;
   }
 
 }

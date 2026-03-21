@@ -1,12 +1,16 @@
 import os
 import json
-from dotenv import load_dotenv
+from dotenv import load_dotenv, dotenv_values
 
-# Load root .env
-load_dotenv()
+# Load root .env directly for fresh values
+script_dir = os.path.dirname(os.path.abspath(__file__))
+root_dir = os.path.abspath(os.path.join(script_dir, '..', '..'))
+env_path = os.path.join(root_dir, '.env')
+env_values = dotenv_values(env_path)
 
-# Get mobile API base URL
-mobile_api_url = os.getenv('MOBILE_API_BASE_URL', 'http://localhost:8000')
+# Build mobile API base URL from DEVICE_IP (centralized source of truth)
+device_ip = env_values.get('DEVICE_IP', '192.168.18.50')
+mobile_api_url = f'http://{device_ip}:8001'
 
 # Update mobile env.json
 mobile_env_path = 'mobile/mycrewmanager/env.json'
