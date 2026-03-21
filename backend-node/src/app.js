@@ -92,6 +92,11 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(inputSanitizationMiddleware);
+app.use('/media', (req, res, next) => {
+  // Allow profile images and uploads to be rendered by the web app across origins.
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  next();
+});
 app.use('/media', express.static(uploadsDir));
 
 // Health check

@@ -26,6 +26,7 @@ router.delete('/projects/:id', validateParams(aiSchemas.projectIdParam), ctrl.de
 router.put('/projects/:id/ingest-proposal/:proposal_id', validateParams(aiSchemas.projectIdParam.extend({ proposal_id: aiSchemas.projectIdParam.shape.id })), ctrl.ingestProposal);
 router.put('/projects/:id/generate-overview/', validateParams(aiSchemas.projectIdParam), ctrl.generateOverview);
 router.put('/projects/:id/generate-backlog', validateParams(aiSchemas.projectIdParam), ctrl.generateBacklog);
+router.put('/projects/:id/generate-backlog/', validateParams(aiSchemas.projectIdParam), ctrl.generateBacklog);
 
 router.get('/project-features/', ctrl.listProjectFeatures);
 router.post('/project-features/', ctrl.createProjectFeature);

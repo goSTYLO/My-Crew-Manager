@@ -311,6 +311,97 @@ function buildPart1Timeline(timeline) {
   return Object.keys(out).length ? out : { week1: [], week2: [], week3: [], week4: [] };
 }
 
+function normalizeBacklogPayload(rawData) {
+  const rawEpics = Array.isArray(rawData)
+    ? rawData
+    : Array.isArray(rawData?.epics)
+      ? rawData.epics
+      : Array.isArray(rawData?.backlog?.epics)
+        ? rawData.backlog.epics
+        : [];
+
+  const epics = rawEpics.map((epic, epicIndex) => {
+    const rawSubEpics = epic?.sub_epics || epic?.subEpics || [];
+    return {
+      title: epic?.title || epic?.name || `Epic ${epicIndex + 1}`,
+      description: epic?.description ?? null,
+      ai: epic?.ai !== false,
+      sub_epics: rawSubEpics.map((subEpic, subEpicIndex) => {
+        const rawStories = subEpic?.user_stories || subEpic?.userStories || [];
+        return {
+          title: subEpic?.title || subEpic?.name || `Sub-Epic ${subEpicIndex + 1}`,
+          ai: subEpic?.ai !== false,
+          user_stories: rawStories.map((story, storyIndex) => {
+            const rawTasks = story?.tasks || story?.story_tasks || [];
+            return {
+              title: story?.title || story?.name || `User Story ${storyIndex + 1}`,
+              ai: story?.ai !== false,
+              tasks: rawTasks.map((task, taskIndex) => ({
+                title: task?.title || task?.name || `Task ${taskIndex + 1}`,
+                status: task?.status || 'pending',
+                ai: task?.ai !== false,
+              })),
+            };
+          }),
+        };
+      }),
+    };
+  });
+
+  return { epics };
+}
+
+function buildFallbackBacklogFromPart1(part1) {
+  const featureTitles = (part1?.features || [])
+    .map((f) => (typeof f === 'string' ? f : f?.title || f?.name || ''))
+    .filter(Boolean);
+
+  const goalTitles = (part1?.goals || [])
+    .map((g) => {
+      if (typeof g === 'string') return g;
+      return g?.epic || g?.title || '';
+    })
+    .filter(Boolean);
+
+  const seedTitles = featureTitles.length > 0
+    ? featureTitles
+    : goalTitles.length > 0
+      ? goalTitles
+      : ['Project Foundation'];
+
+  const epics = seedTitles.slice(0, 6).map((title) => ({
+    title,
+    description: `Fallback backlog generated for ${title}.`,
+    ai: true,
+    sub_epics: [
+      {
+        title: `${title} Implementation`,
+        ai: true,
+        user_stories: [
+          {
+            title: `As a stakeholder, I want ${title.toLowerCase()} completed so that project delivery stays on track.`,
+            ai: true,
+            tasks: [
+              {
+                title: `Define requirements for ${title}`,
+                status: 'pending',
+                ai: true,
+              },
+              {
+                title: `Implement and validate ${title}`,
+                status: 'pending',
+                ai: true,
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  }));
+
+  return { epics };
+}
+
 function buildOverviewResponse(project, data) {
   return {
     id: String(project.id),
@@ -376,7 +467,8 @@ export async function generateOverview(req, res, next) {
 }
 
 async function saveBacklogToDb(projectId, data) {
-  const epics = data.epics || [];
+  const normalized = normalizeBacklogPayload(data);
+  const epics = normalized.epics || [];
   const existingEpics = await prisma.ai_api_epic.findMany({ where: { project_id: projectId } });
   for (const e of existingEpics) {
     const subEpics = await prisma.ai_api_subepic.findMany({ where: { epic_id: e.id } });
@@ -525,7 +617,12 @@ export async function generateBacklog(req, res, next) {
     const result = await callAIService('/generate-backlog', { part1_json: part1Json });
     if (result.error) return res.status(result.status).json(result.data);
 
-    await saveBacklogToDb(projectId, result.data);
+    const normalizedAiBacklog = normalizeBacklogPayload(result.data);
+    const backlogToPersist = normalizedAiBacklog.epics.length > 0
+      ? normalizedAiBacklog
+      : buildFallbackBacklogFromPart1(part1);
+
+    await saveBacklogToDb(projectId, backlogToPersist);
     const epics = await getProjectBacklogData(projectId);
     broadcastToProject(projectId, 'backlog_regenerated', 'regenerated', epics, req.user);
     return res.json({ epics });
