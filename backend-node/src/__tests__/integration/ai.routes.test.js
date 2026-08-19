@@ -7,6 +7,8 @@ import { prisma } from '../../lib/prisma.js';
 describe('AI routes (integration)', () => {
   let authToken;
 
+  const makeManualText = (length) => 'A'.repeat(length);
+
   beforeAll(async () => {
     await connectTestDB();
   });
@@ -74,6 +76,70 @@ describe('AI routes (integration)', () => {
       // Accept 200 (Python proxy OK or mocked) or 500 (Python service unavailable)
       expect([200, 500]).toContain(res.status);
       if (res.status === 200) expect(res.body).toHaveProperty('features');
+    });
+  });
+
+  describe('POST /api/ai/proposals/ manual input', () => {
+    test('saves manual proposal text without PDF parsing', async () => {
+      const createProj = await request(app)
+        .post('/api/ai/projects/')
+        .set('Authorization', `Token ${authToken}`)
+        .send({ title: 'Manual Proposal Project' });
+      expect(createProj.status).toBe(201);
+
+      const manualText = makeManualText(320);
+      const res = await request(app)
+        .post('/api/ai/proposals/')
+        .set('Authorization', `Token ${authToken}`)
+        .field('project_id', String(createProj.body.id))
+        .field('manual_description', manualText);
+
+      expect(res.status).toBe(201);
+      expect(res.body).toHaveProperty('proposal_id');
+      expect(res.body.project_id).toBe(String(createProj.body.id));
+      expect(res.body).toHaveProperty('parsed_text_preview');
+
+      const proposal = await prisma.ai_api_proposal.findUnique({
+        where: { id: Number(res.body.proposal_id) },
+      });
+      expect(proposal).not.toBeNull();
+      expect(proposal.parsed_text).toBe(manualText.trim());
+      expect(proposal.file).toBe('manual-entry.txt');
+    });
+
+    test('rejects manual description below minimum length', async () => {
+      const createProj = await request(app)
+        .post('/api/ai/projects/')
+        .set('Authorization', `Token ${authToken}`)
+        .send({ title: 'Manual Validation Project' });
+      expect(createProj.status).toBe(201);
+
+      const res = await request(app)
+        .post('/api/ai/proposals/')
+        .set('Authorization', `Token ${authToken}`)
+        .field('project_id', String(createProj.body.id))
+        .field('manual_description', makeManualText(299));
+
+      expect(res.status).toBe(400);
+      expect(String(res.body.error || '')).toMatch(/manual_description must be between 300 and 900 characters/i);
+    });
+
+    test('rejects request when both file and manual text are provided', async () => {
+      const createProj = await request(app)
+        .post('/api/ai/projects/')
+        .set('Authorization', `Token ${authToken}`)
+        .send({ title: 'Manual Mix Project' });
+      expect(createProj.status).toBe(201);
+
+      const res = await request(app)
+        .post('/api/ai/proposals/')
+        .set('Authorization', `Token ${authToken}`)
+        .field('project_id', String(createProj.body.id))
+        .field('manual_description', makeManualText(320))
+        .attach('file', Buffer.from('%PDF-1.4 mock'), 'doc.pdf');
+
+      expect(res.status).toBe(400);
+      expect(String(res.body.error || '')).toMatch(/provide exactly one proposal input/i);
     });
   });
 

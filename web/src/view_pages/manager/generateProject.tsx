@@ -81,6 +81,10 @@ interface Invitation {
 }
 
 type Step = 'create' | 'upload' | 'analyze' | 'review' | 'generate-backlog' | 'review-backlog' | 'invite';
+type ProposalInputMode = 'pdf' | 'manual';
+
+const MANUAL_PROPOSAL_MIN_LENGTH = 300;
+const MANUAL_PROPOSAL_MAX_LENGTH = 900;
 
 const App: React.FC = () => {
   const { theme } = useTheme();
@@ -96,6 +100,8 @@ const App: React.FC = () => {
   const [goals, setGoals] = useState<Goal[]>([]);
   const [timeline, setTimeline] = useState<TimelineWeek[]>([]);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [manualProposalText, setManualProposalText] = useState('');
+  const [proposalInputMode, setProposalInputMode] = useState<ProposalInputMode>('pdf');
   const [dragActive, setDragActive] = useState(false);
   const [loadingState, setLoadingState] = useState<'analyzing' | 'generating-backlog' | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -238,7 +244,17 @@ const App: React.FC = () => {
         return;
       }
       setUploadedFile(file);
+      setManualProposalText('');
     }
+  };
+
+  const handleProposalInputModeChange = (mode: ProposalInputMode) => {
+    setProposalInputMode(mode);
+    if (mode === 'pdf') {
+      setManualProposalText('');
+      return;
+    }
+    setUploadedFile(null);
   };
   
   // Handle drag-and-drop
@@ -258,6 +274,7 @@ const App: React.FC = () => {
     const file = e.dataTransfer.files?.[0];
     if (file && file.type === 'application/pdf') {
       setUploadedFile(file);
+      setManualProposalText('');
     } else {
       alert('Only PDF files are allowed.');
     }
@@ -323,8 +340,25 @@ const App: React.FC = () => {
 
   // STEP 2: Upload Proposal
   const uploadProposal = async () => {
-    if (!uploadedFile || !createdProjectId) {
-      showWarning('Missing File', 'Please upload a proposal file');
+    if (!createdProjectId) {
+      showWarning('Missing Data', 'Project is required before uploading proposal');
+      return;
+    }
+
+    const manualLength = manualProposalText.trim().length;
+    if (proposalInputMode === 'pdf' && !uploadedFile) {
+      showWarning('Missing File', 'Please upload a proposal PDF file');
+      return;
+    }
+
+    if (
+      proposalInputMode === 'manual' &&
+      (manualLength < MANUAL_PROPOSAL_MIN_LENGTH || manualLength > MANUAL_PROPOSAL_MAX_LENGTH)
+    ) {
+      showWarning(
+        'Invalid Description Length',
+        `Manual description must be between ${MANUAL_PROPOSAL_MIN_LENGTH} and ${MANUAL_PROPOSAL_MAX_LENGTH} characters.`
+      );
       return;
     }
 
@@ -338,8 +372,13 @@ const App: React.FC = () => {
 
     try {
       const formData = new FormData();
-      formData.append('file', uploadedFile);
       formData.append('project_id', createdProjectId);
+      if (proposalInputMode === 'pdf' && uploadedFile) {
+        formData.append('file', uploadedFile);
+      }
+      if (proposalInputMode === 'manual') {
+        formData.append('manual_description', manualProposalText.trim());
+      }
 
       const response = await fetch(`${API_BASE_URL}/ai/proposals/`, {
         method: 'POST',
@@ -2144,47 +2183,115 @@ const App: React.FC = () => {
               </div>
 
               <div>
-                <label className={`block text-sm font-medium mb-2 ${theme === "dark" ? "text-gray-200" : "text-gray-700"}`}>Upload Project Idea (PDF)</label>
-                <div
-                  onDragOver={handleDragOver}
-                  onDragLeave={handleDragLeave}
-                  onDrop={handleDrop}
-                  className={`border-2 border-dashed rounded-lg p-6 text-center transition-all ${
-                    dragActive ? 'border-blue-400 bg-blue-50' : theme === "dark" ? 'border-gray-600 hover:border-gray-500' : 'border-gray-300 hover:border-gray-400'
-                  } cursor-pointer ${loadingState !== null ? 'opacity-50 pointer-events-none' : ''}`}
-                  onClick={() => !loadingState !== null && document.getElementById('fileInput')?.click()}
-                >
-                  <Upload size={32} className={`mx-auto mb-2 ${theme === "dark" ? "text-gray-400" : "text-gray-400"}`} />
-                  <p className={`text-sm ${theme === "dark" ? "text-gray-300" : "text-gray-600"}`}>
-                    {uploadedFile
-                      ? `Selected File: ${uploadedFile.name} (${(uploadedFile.size / 1024).toFixed(2)} KB)`
-                      : 'Click to upload or drag and drop'}
-                  </p>
-                  <p className={`text-xs mt-1 ${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}>PDF files only</p>
+                <label className={`block text-sm font-medium mb-2 ${theme === "dark" ? "text-gray-200" : "text-gray-700"}`}>Proposal Input</label>
 
-                  <input
-                    id="fileInput"
-                    type="file"
-                    accept="application/pdf"
-                    onChange={handleFileChange}
-                    className="hidden"
+                <div className={`mb-4 grid grid-cols-1 sm:grid-cols-2 gap-2`}>
+                  <button
+                    type="button"
+                    onClick={() => handleProposalInputModeChange('pdf')}
                     disabled={loadingState !== null}
-                  />
+                    className={`px-4 py-2 rounded-lg border text-sm font-medium transition-colors ${
+                      proposalInputMode === 'pdf'
+                        ? 'bg-blue-600 text-white border-blue-600'
+                        : theme === "dark"
+                        ? 'bg-gray-900 border-gray-700 text-gray-200 hover:bg-gray-800'
+                        : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                    } disabled:opacity-50 disabled:cursor-not-allowed`}
+                  >
+                    Upload PDF
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleProposalInputModeChange('manual')}
+                    disabled={loadingState !== null}
+                    className={`px-4 py-2 rounded-lg border text-sm font-medium transition-colors ${
+                      proposalInputMode === 'manual'
+                        ? 'bg-blue-600 text-white border-blue-600'
+                        : theme === "dark"
+                        ? 'bg-gray-900 border-gray-700 text-gray-200 hover:bg-gray-800'
+                        : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                    } disabled:opacity-50 disabled:cursor-not-allowed`}
+                  >
+                    Manual Description
+                  </button>
                 </div>
 
-                {uploadedFile && (
-                  <div className={`mt-3 flex items-center justify-between border p-3 rounded-lg ${
-                    theme === "dark" ? "bg-gray-900 border-gray-700" : "bg-gray-50 border-gray-200"
-                  }`}>
-                    <span className={`text-sm truncate ${theme === "dark" ? "text-gray-200" : "text-gray-700"}`}>{uploadedFile.name}</span>
-                    <button
-                      onClick={removeFile}
-                      className="text-red-500 hover:text-red-700 flex items-center gap-1 text-sm"
-                      disabled={loadingState !== null}
+                {proposalInputMode === 'pdf' ? (
+                  <>
+                    <div
+                      onDragOver={handleDragOver}
+                      onDragLeave={handleDragLeave}
+                      onDrop={handleDrop}
+                      className={`border-2 border-dashed rounded-lg p-6 text-center transition-all ${
+                        dragActive ? 'border-blue-400 bg-blue-50' : theme === "dark" ? 'border-gray-600 hover:border-gray-500' : 'border-gray-300 hover:border-gray-400'
+                      } cursor-pointer ${loadingState !== null ? 'opacity-50 pointer-events-none' : ''}`}
+                      onClick={() => loadingState === null && document.getElementById('fileInput')?.click()}
                     >
-                      <X size={14} /> Remove
-                    </button>
-                  </div>
+                      <Upload size={32} className={`mx-auto mb-2 ${theme === "dark" ? "text-gray-400" : "text-gray-400"}`} />
+                      <p className={`text-sm ${theme === "dark" ? "text-gray-300" : "text-gray-600"}`}>
+                        {uploadedFile
+                          ? `Selected File: ${uploadedFile.name} (${(uploadedFile.size / 1024).toFixed(2)} KB)`
+                          : 'Click to upload or drag and drop'}
+                      </p>
+                      <p className={`text-xs mt-1 ${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}>PDF files only</p>
+
+                      <input
+                        id="fileInput"
+                        type="file"
+                        accept="application/pdf"
+                        onChange={handleFileChange}
+                        className="hidden"
+                        disabled={loadingState !== null}
+                      />
+                    </div>
+
+                    {uploadedFile && (
+                      <div className={`mt-3 flex items-center justify-between border p-3 rounded-lg ${
+                        theme === "dark" ? "bg-gray-900 border-gray-700" : "bg-gray-50 border-gray-200"
+                      }`}>
+                        <span className={`text-sm truncate ${theme === "dark" ? "text-gray-200" : "text-gray-700"}`}>{uploadedFile.name}</span>
+                        <button
+                          onClick={removeFile}
+                          className="text-red-500 hover:text-red-700 flex items-center gap-1 text-sm"
+                          disabled={loadingState !== null}
+                        >
+                          <X size={14} /> Remove
+                        </button>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <textarea
+                      value={manualProposalText}
+                      onChange={(e) => setManualProposalText(e.target.value)}
+                      rows={10}
+                      placeholder="Describe the project proposal in at least 3 sentences (300-900 characters)."
+                      className={`w-full p-3 rounded-lg border resize-y focus:outline-none focus:ring-2 focus:ring-blue-400 ${
+                        theme === "dark"
+                          ? 'bg-gray-900 border-gray-700 text-gray-100 placeholder-gray-400'
+                          : 'bg-white border-gray-300 text-gray-800 placeholder-gray-500'
+                      }`}
+                      disabled={loadingState !== null}
+                    />
+                    <div className="mt-2 flex items-center justify-between text-xs">
+                      <p className={theme === "dark" ? 'text-gray-400' : 'text-gray-500'}>
+                        Manual input skips PDF parsing and is saved directly.
+                      </p>
+                      <p
+                        className={
+                          manualProposalText.trim().length < MANUAL_PROPOSAL_MIN_LENGTH ||
+                          manualProposalText.trim().length > MANUAL_PROPOSAL_MAX_LENGTH
+                            ? 'text-red-500'
+                            : theme === "dark"
+                            ? 'text-green-400'
+                            : 'text-green-700'
+                        }
+                      >
+                        {manualProposalText.trim().length}/{MANUAL_PROPOSAL_MAX_LENGTH}
+                      </p>
+                    </div>
+                  </>
                 )}
               </div>
 
@@ -2198,7 +2305,13 @@ const App: React.FC = () => {
                 </button>
                 <button
                   onClick={uploadProposal}
-                  disabled={!uploadedFile || loadingState !== null}
+                  disabled={
+                    loadingState !== null ||
+                    (proposalInputMode === 'pdf'
+                      ? !uploadedFile
+                      : manualProposalText.trim().length < MANUAL_PROPOSAL_MIN_LENGTH ||
+                        manualProposalText.trim().length > MANUAL_PROPOSAL_MAX_LENGTH)
+                  }
                   className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
                   {loadingState !== null ? (

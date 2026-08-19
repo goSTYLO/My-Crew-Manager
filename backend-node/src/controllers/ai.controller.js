@@ -3,6 +3,9 @@ import { broadcast } from '../services/broadcast.service.js';
 import { callAIService } from '../services/ai.service.js';
 import { PDFParse } from 'pdf-parse';
 
+const MANUAL_PROPOSAL_MIN_LENGTH = 300;
+const MANUAL_PROPOSAL_MAX_LENGTH = 900;
+
 function getUserId(req) {
   return req.user?.user_id ?? req.user?._id;
 }
@@ -635,9 +638,27 @@ export async function uploadProposal(req, res, next) {
   try {
     const file = req.file;
     const projectId = req.body.project_id ? Number(req.body.project_id) : null;
+    const manualDescription = typeof req.body.manual_description === 'string'
+      ? req.body.manual_description.trim()
+      : '';
+    const hasFile = Boolean(file);
+    const hasManualDescription = manualDescription.length > 0;
 
-    if (!file || !projectId) {
-      return res.status(400).json({ error: 'Missing file or project_id' });
+    if (!projectId) {
+      return res.status(400).json({ error: 'Missing or invalid project_id' });
+    }
+
+    if ((hasFile && hasManualDescription) || (!hasFile && !hasManualDescription)) {
+      return res.status(400).json({ error: 'Provide exactly one proposal input: file or manual_description' });
+    }
+
+    if (hasManualDescription && (
+      manualDescription.length < MANUAL_PROPOSAL_MIN_LENGTH ||
+      manualDescription.length > MANUAL_PROPOSAL_MAX_LENGTH
+    )) {
+      return res.status(400).json({
+        error: `manual_description must be between ${MANUAL_PROPOSAL_MIN_LENGTH} and ${MANUAL_PROPOSAL_MAX_LENGTH} characters`,
+      });
     }
 
     const project = await prisma.ai_api_project.findUnique({ where: { id: projectId } });
@@ -645,24 +666,31 @@ export async function uploadProposal(req, res, next) {
     const member = await ensureProjectMember(projectId, getUserId(req));
     if (!member) return res.status(403).json({ detail: 'Not a member' });
 
-    if (!file.originalname.toLowerCase().endsWith('.pdf')) {
-      return res.status(400).json({ error: 'Only PDF files are supported' });
-    }
+    let text = '';
+    let proposalFileName = 'manual-entry.txt';
 
-    let text;
-    try {
-      const parser = new PDFParse({ data: file.buffer });
-      const result = await parser.getText();
-      text = result.text || '';
-      await parser.destroy();
-    } catch (e) {
-      return res.status(500).json({ error: `PDF parsing failed: ${e.message}` });
+    if (hasFile) {
+      if (!file.originalname.toLowerCase().endsWith('.pdf')) {
+        return res.status(400).json({ error: 'Only PDF files are supported' });
+      }
+
+      try {
+        const parser = new PDFParse({ data: file.buffer });
+        const result = await parser.getText();
+        text = result.text || '';
+        proposalFileName = file.originalname;
+        await parser.destroy();
+      } catch (e) {
+        return res.status(500).json({ error: `PDF parsing failed: ${e.message}` });
+      }
+    } else {
+      text = manualDescription;
     }
 
     const proposal = await prisma.ai_api_proposal.create({
       data: {
         project_id: projectId,
-        file: file.originalname,
+        file: proposalFileName,
         parsed_text: text,
         uploaded_at: new Date(),
         uploaded_by_id: BigInt(getUserId(req)),
@@ -671,7 +699,7 @@ export async function uploadProposal(req, res, next) {
 
     const preview = text.length > 300 ? text.slice(0, 300) + '...' : text;
     return res.status(201).json({
-      message: 'Proposal uploaded and parsed successfully',
+      message: hasFile ? 'Proposal uploaded and parsed successfully' : 'Manual proposal saved successfully',
       proposal_id: String(proposal.id),
       project_id: String(projectId),
       parsed_text_preview: preview,
